@@ -268,7 +268,7 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun flintMaven(name: String)
 
     abstract fun cleanroomRepos()
-    abstract fun outlandsMaven()
+    abstract fun arcseekersMaven()
     abstract fun fox2codeMaven()
     abstract fun modrinthMaven()
     abstract fun curseMaven(beta: Boolean = false)

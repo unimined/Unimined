@@ -287,15 +287,15 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding cleanroom maven: ${cleanroomMaven["releases"]}")
     }
 
-    val outlandsMaven by lazy {
+    val arcseekersMaven by lazy {
         project.repositories.maven {
             it.name = "outlands"
-            it.url = URI.create("https://maven.outlands.top/releases")
+            it.url = URI.create("https://maven.arcseekers.com/releases")
         }
     }
 
-    override fun outlandsMaven() {
-        project.logger.info("[Unimined] adding outlands maven: $outlandsMaven")
+    override fun arcseekersMaven() {
+        project.logger.info("[Unimined] adding arcseekers maven: $arcseekersMaven")
     }
 
     val fox2codeMaven by lazy {
