@@ -335,6 +335,23 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     }
 
     @JvmOverloads
+    abstract fun plasma(commitName: String, key: String = "plasma", action: MappingEntry.() -> Unit = {})
+
+    @JvmOverloads
+    fun plasma(
+        commitName: String,
+        key: String = "plasma",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        biny(commitName, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
     abstract fun barn(build: Int, key: String = "barn", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
