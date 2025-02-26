@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api.source.generator
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.gradle.api.JavaVersion
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
@@ -11,6 +12,12 @@ import java.nio.file.Path
  * @since 1.2.0
  */
 interface SourceGenerator {
+
+    /**
+     * java version to run decompiler with
+     * @since 1.3.13
+     */
+    var javaVersion: JavaVersion?
 
     /**
      * jvmArgs for the decompiler
