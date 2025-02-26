@@ -40,7 +40,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
     val generator = project.configurations.maybeCreate("sourceGenerator".withSourceSet(provider.minecraft.sourceSet))
 
     override fun generator(dep: Any, action: Dependency.() -> Unit) {
-        if (!generator.isEmpty) throw IllegalStateException("Generator already set")
+        if (!generator.dependencies.isEmpty()) throw IllegalStateException("Generator already set")
         generator.dependencies.add(
             project.dependencies.create(
                 if (dep is String && !dep.contains(":")) {
