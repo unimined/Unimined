@@ -21,7 +21,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
     private val preLaunchTasks = defaultedMapOf<String, MutableList<Any>> { mutableListOf() }
     private val preLaunch = mutableMapOf<String, RunConfig.() -> Unit>()
-    private val actions = mutableMapOf<String, RunConfig.() -> Unit>()
+    private val actions = mutableMapOf<String, Pair<RunConfig.() -> Unit, RunConfig.() -> Unit>>()
     private var all: RunConfig.() -> Unit = {}
 
     fun freezeCheck() {
@@ -54,20 +54,24 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
     override fun config(config: String, action: RunConfig.() -> Unit) {
         freezeCheck()
-        val old = actions[config]
-        actions[config] = {
+        val first = actions[config]?.first ?: {}
+        val old = actions[config]?.second
+        val new: RunConfig.() -> Unit = {
             old?.invoke(this)
             action.invoke(this)
         }
+        actions[config] = first to new
     }
 
     override fun configFirst(config: String, action: RunConfig.() -> Unit) {
         freezeCheck()
-        val old = actions[config]
-        actions[config] = {
+        val old = actions[config]?.first
+        val second = actions[config]?.second ?: {}
+        val new: RunConfig.() -> Unit = {
             action.invoke(this)
             old?.invoke(this)
         }
+        actions[config] = new to second
     }
 
     override fun auth(action: AuthConfig.() -> Unit) {
@@ -111,8 +115,9 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
             val task: TaskProvider<RunConfig> = project.tasks.register("run${action.key.capitalized()}".withSourceSet(minecraft.sourceSet), RunConfig::class.java, minecraft.sourceSet, preRun)
             task.configure {
+                it.apply(action.value.first)
                 it.apply(all)
-                it.apply(action.value)
+                it.apply(action.value.second)
             }
 
             preRun.configure {
