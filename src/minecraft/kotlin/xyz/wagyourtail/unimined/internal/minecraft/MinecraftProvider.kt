@@ -8,7 +8,7 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -29,7 +29,6 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
-import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapSourcesJarTask
 import xyz.wagyourtail.unimined.api.unimined
@@ -69,8 +68,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
-import java.util.function.BiFunction
-import javax.swing.text.html.HTML.Tag.U
 import kotlin.collections.ArrayDeque
 import kotlin.io.path.*
 
