@@ -460,7 +460,9 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
 
         applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
-            from(sourceSet.allSource)
+            if (it) {
+                from(sourceSet.allSource)
+            }
             archiveClassifier.set("${sourceSet.name}-sources")
             from(combinedWithList.map { it.second.allSource })
         }
@@ -469,7 +471,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     private inline fun <reified T> applyDefaultRemapJar(
         inputTaskName: String,
         remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> Unit,
-        crossinline defaultTaskConfiguration: Jar.() -> Unit
+        crossinline defaultTaskConfiguration: Jar.(newTask: Boolean) -> Unit
     ) where T : AbstractRemapJarTask, T : JarInterface<AbstractRemapJarTask> {
 
         var inputTask = project.tasks.findByName(inputTaskName.withSourceSet(sourceSet))
@@ -477,15 +479,12 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default $inputTaskName for $sourceSet")
             inputTask = project.tasks.create(inputTaskName.withSourceSet(sourceSet), Jar::class.java) {
                 it.group = "build"
-                defaultTaskConfiguration(it)
+                defaultTaskConfiguration(it, true)
             }
         } else if (inputTask != null) {
             if (inputTask is Jar) {
                 inputTask.also {
-                    it.from(sourceSet.allSource)
-                    for ((_, sourceSet) in combinedWithList) {
-                        it.from(sourceSet.allSource)
-                    }
+                    defaultTaskConfiguration(it, false)
                 }
             } else {
                 project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
