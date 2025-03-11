@@ -1,0 +1,57 @@
+[versions]
+java = "8"
+kotlin = "2.1.10"
+jb-annotations = "24.1.0"
+
+guava = "33.4.0-jre"
+gson = "2.12.1"
+
+asm = "9.7.1"
+
+tiny-remapper = "0.8.7"
+unimined-mapping-library = "1.0.0-SNAPSHOT"
+
+binarypatcher = "1.1.1"
+
+commons-io = "2.18.0"
+commons-compress = "1.27.1"
+
+access-widener = "2.1.0"
+
+jgit = "5.13.2.202306221912-r"
+
+keyring = "1.0.2"
+minecraftauth = "4.1.1"
+
+junit = "5.12.0"
+
+[libraries]
+jb-annotations = { module = "org.jetbrains:annotations", version.ref = "jb-annotations" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+
+asm = { module = "org.ow2.asm:asm", version.ref = "asm"}
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm"}
+asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm"}
+asm-analysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm"}
+asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm"}
+
+tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-remapper" }
+unimined-mapping-library-jvm = { module = "xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm", version.ref = "unimined-mapping-library" }
+
+binarypatcher = { module = "net.minecraftforge:binarypatcher", version.ref = "binarypatcher" }
+access-widener = { module = "net.fabricmc:access-widener", version.ref = "access-widener" }
+
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+
+java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "keyring" }
+minecraftauth = { module = "net.raphimc:MinecraftAuth", version.ref = "minecraftauth" }
+
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[bundles]
+asm-all = ["asm", "asm-commons", "asm-tree", "asm-analysis", "asm-util"]

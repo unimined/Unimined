@@ -24,7 +24,7 @@
 
 package net.fabricmc.loom.util.kotlin;
 
-import kotlinx.metadata.jvm.KotlinClassMetadata;
+import kotlin.metadata.jvm.KotlinClassMetadata;
 import org.gradle.api.Project;
 
 import java.io.IOException;

@@ -24,12 +24,12 @@
 
 package net.fabricmc.loom.util.kotlin;
 
-import kotlinx.metadata.KmAnnotation;
-import kotlinx.metadata.KmProperty;
-import kotlinx.metadata.internal.extensions.*;
-import kotlinx.metadata.jvm.JvmFieldSignature;
-import kotlinx.metadata.jvm.JvmMethodSignature;
-import kotlinx.metadata.jvm.internal.*;
+import kotlin.metadata.KmAnnotation;
+import kotlin.metadata.KmProperty;
+import kotlin.metadata.internal.extensions.*;
+import kotlin.metadata.jvm.JvmFieldSignature;
+import kotlin.metadata.jvm.JvmMethodSignature;
+import kotlin.metadata.jvm.internal.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;

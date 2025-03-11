@@ -24,34 +24,8 @@
 
 package net.fabricmc.loom.kotlin.remapping
 
-import kotlinx.metadata.ClassName
-import kotlinx.metadata.ExperimentalContextReceivers
-import kotlinx.metadata.KmAnnotation
-import kotlinx.metadata.KmClass
-import kotlinx.metadata.KmClassifier
-import kotlinx.metadata.KmConstructor
-import kotlinx.metadata.KmFlexibleTypeUpperBound
-import kotlinx.metadata.KmFunction
-import kotlinx.metadata.KmLambda
-import kotlinx.metadata.KmPackage
-import kotlinx.metadata.KmProperty
-import kotlinx.metadata.KmType
-import kotlinx.metadata.KmTypeAlias
-import kotlinx.metadata.KmTypeParameter
-import kotlinx.metadata.KmTypeProjection
-import kotlinx.metadata.KmValueParameter
-import kotlinx.metadata.isLocalClassName
-import kotlinx.metadata.jvm.JvmFieldSignature
-import kotlinx.metadata.jvm.JvmMethodSignature
-import kotlinx.metadata.jvm.annotations
-import kotlinx.metadata.jvm.fieldSignature
-import kotlinx.metadata.jvm.getterSignature
-import kotlinx.metadata.jvm.localDelegatedProperties
-import kotlinx.metadata.jvm.setterSignature
-import kotlinx.metadata.jvm.signature
-import kotlinx.metadata.jvm.syntheticMethodForAnnotations
-import kotlinx.metadata.jvm.syntheticMethodForDelegate
-import kotlinx.metadata.jvm.toJvmInternalName
+import kotlin.metadata.*
+import kotlin.metadata.jvm.*
 import org.objectweb.asm.commons.Remapper
 
 @OptIn(ExperimentalContextReceivers::class)

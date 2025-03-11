@@ -1,8 +1,7 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import java.net.URI
 
 plugins {
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version libs.versions.kotlin.get()
     `java-gradle-plugin`
     `maven-publish`
 }
@@ -15,182 +14,112 @@ base {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
     }
 }
 
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(libs.versions.java.get().toInt())
 }
 
 repositories {
-    mavenLocal()
     mavenCentral()
-    maven("https://maven.wagyourtail.xyz/releases/")
-    maven("https://maven.wagyourtail.xyz/snapshots/")
-    maven {
-        url = URI.create("https://maven.neoforged.net/releases")
-    }
-    maven {
-        url = URI.create("https://maven.minecraftforge.net/")
-    }
-    maven {
-        url = URI.create("https://maven.fabricmc.net/")
-    }
+    maven("https://maven.wagyourtail.xyz/releases")
+    maven("https://maven.wagyourtail.xyz/snapshots")
+    maven("https://maven.neoforged.net/releases")
+    maven("https://maven.minecraftforge.net/")
+    maven("https://maven.fabricmc.net/")
     gradlePluginPortal()
-}
-
-fun SourceSet.inputOf(sourceSet: SourceSet) {
-    compileClasspath += sourceSet.compileClasspath
-    runtimeClasspath += sourceSet.runtimeClasspath
 }
 
 fun SourceSet.inputOf(vararg sourceSets: SourceSet) {
     for (sourceSet in sourceSets) {
-        inputOf(sourceSet)
+        compileClasspath += sourceSet.compileClasspath
+        runtimeClasspath += sourceSet.runtimeClasspath
     }
-}
-
-fun SourceSet.outputOf(sourceSet: SourceSet) {
-    compileClasspath += sourceSet.output
-    runtimeClasspath += sourceSet.output
 }
 
 fun SourceSet.outputOf(vararg sourceSets: SourceSet) {
     for (sourceSet in sourceSets) {
-        outputOf(sourceSet)
+        compileClasspath += sourceSet.output
+        runtimeClasspath += sourceSet.output
     }
 }
 
-sourceSets {
-    create("api") {
-        inputOf(main.get())
-    }
-    create("mapping") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"]
-        )
-    }
-    create("source") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["mapping"],
-            sourceSets["api"]
-        )
-    }
-    create("mods") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"],
-            sourceSets["mapping"],
-            sourceSets["source"]
-        )
-    }
-    create("runs") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"]
-        )
-    }
-    create("minecraft") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"],
-            sourceSets["mapping"],
-            sourceSets["mods"],
-            sourceSets["runs"],
-            sourceSets["source"]
-        )
-    }
-    main {
-        outputOf(
-            sourceSets["api"],
-            sourceSets["mapping"],
-            sourceSets["source"],
-            sourceSets["mods"],
-            sourceSets["runs"],
-            sourceSets["minecraft"],
-        )
-    }
-    test {
-        inputOf(
-            main.get()
-        )
-        outputOf(
-            sourceSets["api"],
-            sourceSets["mapping"],
-            sourceSets["source"],
-            sourceSets["mods"],
-            sourceSets["runs"],
-            sourceSets["minecraft"],
-            main.get()
-        )
-    }
+val api by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+}
+
+val mapping by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+    outputOf(api)
+}
+
+val source by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+    outputOf(mapping, api)
+}
+
+val mods by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+    outputOf(api, mapping, source)
+}
+
+val runs by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+    outputOf(api)
+}
+
+val minecraft by sourceSets.creating {
+    inputOf(sourceSets.main.get())
+    outputOf(api, mapping, mods, runs, source)
+}
+
+val main by sourceSets.getting {
+    outputOf(api, mapping, source, mods, runs, minecraft)
+}
+
+val test by sourceSets.getting {
+    inputOf(sourceSets.main.get())
+    outputOf(api, mapping, source, mods, runs, minecraft)
 }
 
 dependencies {
-    testImplementation(kotlin("test"))
-
     runtimeOnly(gradleApi())
+    implementation(kotlin("metadata-jvm"))
+    implementation(libs.jb.annotations)
 
-    // kotlin metadata
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0") {
-        isTransitive = false
-    }
+    implementation(libs.guava)
+    implementation(libs.gson)
 
-    // guava
-    implementation("com.google.guava:guava:33.2.1-jre")
+    implementation(libs.asm)
+    implementation(libs.asm.commons)
+    implementation(libs.asm.tree)
+    implementation(libs.asm.analysis)
+    implementation(libs.asm.util)
 
-    // gson
-    implementation("com.google.code.gson:gson:2.11.0")
-
-    // asm
-    implementation("org.ow2.asm:asm:9.7")
-    implementation("org.ow2.asm:asm-commons:9.7")
-    implementation("org.ow2.asm:asm-tree:9.7")
-    implementation("org.ow2.asm:asm-analysis:9.7")
-    implementation("org.ow2.asm:asm-util:9.7")
-
-    // remapper
-    implementation("net.fabricmc:tiny-remapper:0.8.7") {
+    implementation(libs.unimined.mapping.library.jvm)
+    implementation(libs.tiny.remapper) {
         exclude(group = "org.ow2.asm")
     }
 
-    // mappings
-    implementation("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.0.0-SNAPSHOT")
-    implementation("io.github.oshai:kotlin-logging:6.0.1")
-    implementation("com.squareup.okio:okio:3.7.0")
-    implementation("com.sschr15.annotations:jb-annotations-kmp:24.1.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
-
-    // jetbrains annotations
-    implementation("org.jetbrains:annotations-java5:24.1.0")
-
-    // binpatcher
-    implementation("net.minecraftforge:binarypatcher:1.1.1") {
+    implementation(libs.binarypatcher) {
         exclude(mapOf("group" to "commons-io"))
     }
-    implementation("commons-io:commons-io:2.16.1")
+    implementation(libs.access.widener)
 
-    // pack200 provided by apache commons-compress
-    implementation("org.apache.commons:commons-compress:1.26.1")
+    implementation(libs.commons.io)
+    implementation(libs.commons.compress)
 
-    // aw
-    implementation("net.fabricmc:access-widener:2.1.0")
+    implementation(libs.jgit)
 
-    implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
+    implementation(libs.java.keyring)
+    implementation(libs.minecraftauth)
 
-    implementation("com.github.javakeyring:java-keyring:1.0.2")
-    implementation("net.raphimc:MinecraftAuth:4.0.2")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.jar {
@@ -211,39 +140,26 @@ tasks.jar {
     }
 }
 
-tasks.create("getArtifacts") {
-    doLast {
-        project.configurations.implementation.get().isCanBeResolved = true
-        println(1)
-        for (dependency in project.configurations.implementation.get().resolvedConfiguration.resolvedArtifacts) {
-            println("${dependency.moduleVersion.id.group ?: "unknown"}:${dependency.name}:${dependency.moduleVersion.id.version ?: "unknown"}${dependency.classifier?.let { ":$it" } ?: ""}${dependency.extension?.let { "@$it" } ?: ""}")
-        }
-    }
-}
+val sourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    val source by sourceSets.getting
 
-tasks.create("sourcesJar", Jar::class) {
-    archiveClassifier.set("sources")
     from(
-        sourceSets["api"].allSource,
-        sourceSets["minecraft"].allSource,
-        sourceSets["mapping"].allSource,
-        sourceSets["source"].allSource,
-        sourceSets["mods"].allSource,
-        sourceSets["runs"].allSource,
-        sourceSets["main"].allSource
+        api.allSource,
+        minecraft.allSource,
+        mapping.allSource,
+        source.allSource,
+        mods.allSource,
+        runs.allSource,
+        main.allSource
     )
-    archiveClassifier.set("sources")
 }
 
 tasks.build {
-    dependsOn("sourcesJar")
+    dependsOn(sourcesJar)
 }
 
 tasks.test {
-    javaLauncher = javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    }
-
     useJUnitPlatform()
 
     testLogging {
@@ -266,11 +182,7 @@ publishing {
     repositories {
         maven {
             name = "WagYourMaven"
-            url = if (project.hasProperty("version_snapshot")) {
-                URI.create("https://maven.wagyourtail.xyz/snapshots/")
-            } else {
-                URI.create("https://maven.wagyourtail.xyz/releases/")
-            }
+            url = uri("https://maven.wagyourtail.xyz/" + if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/")
             credentials {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
                 password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
@@ -283,7 +195,7 @@ publishing {
             artifactId = project.properties["archives_base_name"] as String? ?: project.name
             version = project.version as String
 
-            artifact(tasks["sourcesJar"]) {
+            artifact(sourcesJar) {
                 classifier = "sources"
             }
         }
@@ -291,7 +203,7 @@ publishing {
 }
 
 // A task to output a json file with a list of all the test to run
-tasks.register("writeActionsTestMatrix") {
+val writeActionsTestMatrix by tasks.registering {
     doLast {
         val testMatrix = arrayListOf<String>()
 
@@ -302,6 +214,8 @@ tasks.register("writeActionsTestMatrix") {
                 testMatrix.add("xyz.wagyourtail.unimined.test.integration.${className}")
             }
         }
+
+        testMatrix.add("xyz.wagyourtail.unimined.api.mappings.*")
 
         testMatrix.add("xyz.wagyourtail.unimined.util.*")
 
