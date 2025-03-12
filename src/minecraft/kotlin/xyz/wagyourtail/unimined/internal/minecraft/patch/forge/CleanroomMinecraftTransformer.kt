@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.lang.instrument.Instrumentation
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.copyTo
@@ -104,6 +105,12 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
 
     override fun libraryFilter(library: Library): Library? {
         if (library.name.startsWith("oshi-project:")) {
+            return null
+        }
+        if (library.name.startsWith("org.lwjgl") && library.name.substringAfterLast(":").startsWith("2")) {
+            return null
+        }
+        if (library.name.startsWith("net.java.dev.jna:platform:")) {
             return null
         }
         return super.libraryFilter(library)
