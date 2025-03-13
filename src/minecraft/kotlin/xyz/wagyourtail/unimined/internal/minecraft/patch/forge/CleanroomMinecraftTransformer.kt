@@ -137,7 +137,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
             return null
         }
         if (name.startsWith("org.lwjgl") && name.split(":").size > 3) {
-            if (!name.endsWith(lwjglClassifier)) {
+            if (!name.split(":")[2].endsWith(lwjglClassifier)) {
                 return null
             }
         }
