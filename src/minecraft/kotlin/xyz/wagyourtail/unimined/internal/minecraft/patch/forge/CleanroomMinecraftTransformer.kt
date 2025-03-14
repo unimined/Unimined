@@ -53,32 +53,11 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     private val lwjglClassifier = getLwjglClassifier()
 
     private val vanillaExcludesSet = setOf(
-        "com.mojang:patchy:1.3.9",
-        "oshi-project:oshi-core:1.1",
-        "net.java.dev.jna:jna:4.4.0",
-        "net.java.dev.jna:platform:3.4.0",
-        "com.ibm.icu:icu4j-core-mojang:51.2",
-        "net.sf.jopt-simple:jopt-simple:5.0.3",
-        "io.netty:netty-all:4.1.9.Final",
-        "com.google.guava:guava:21.0",
-        "org.apache.commons:commons-lang3:3.5",
-        "commons-io:commons-io:2.5",
-        "commons-codec:commons-codec:1.10",
-        "com.google.code.gson:gson:2.8.0",
-        "org.apache.commons:commons-compress:1.8.1",
-        "org.apache.httpcomponents:httpclient:4.3.3",
-        "commons-logging:commons-logging:1.1.3",
-        "org.apache.httpcomponents:httpcore:4.3.2",
-        "it.unimi.dsi:fastutil:7.1.0",
-        "org.apache.logging.log4j:log4j-api:2.17.1",
-        "org.apache.logging.log4j:log4j-core:2.17.1",
-        "ca.weblite:java-objc-bridge:1.0.0",
-        "net.java.jinput:jinput-platform:2.0.5",
-        "net.java.jinput:jinput:2.0.5",
-        "net.java.jutils:jutils:1.0.0",
-        "org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209",
-        "org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209",
-        "org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209"
+        "com.mojang:patchy:",
+        "oshi-project:oshi-core:",
+        "com.ibm.icu:icu4j-core-mojang:",
+        "net.java.jutils:",
+        "org.lwjgl.lwjgl:"
     )
 
     override fun addMavens() {
@@ -132,14 +111,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     }
 
     override fun libraryFilter(library: Library): Library? {
-        val name = library.name
-        if (vanillaExcludesSet.contains(name)) {
+        if (vanillaExcludesSet.any { library.name.startsWith(it) }) {
             return null
-        }
-        if (name.startsWith("org.lwjgl") && name.split(":").size > 3) {
-            if (!name.split(":")[2].endsWith(lwjglClassifier)) {
-                return null
-            }
         }
         return super.libraryFilter(library)
     }
