@@ -50,8 +50,6 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         }
     })
 
-    private val lwjglClassifier = getLwjglClassifier()
-
     private val vanillaExcludesSet = setOf(
         "com.mojang:patchy:",
         "oshi-project:oshi-core:",
