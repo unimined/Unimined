@@ -133,37 +133,6 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.javaVersion = JavaVersion.VERSION_21
     }
 
-    private fun getLwjglClassifier(): String {
-        val processor = ArchUtils.getProcessor()
-        var classifier = ""
-        if (SystemUtils.IS_OS_WINDOWS) {
-            classifier += "windows"
-            if (processor.isAarch64) {
-                classifier += "-arm64"
-            } else if (processor.is32Bit) {
-                classifier += "-x86"
-            }
-        } else if (SystemUtils.IS_OS_LINUX) {
-            classifier += "linux"
-            if (processor.isAarch64) {
-                classifier += "-arm64"
-            } else if (processor.isRISCV) {
-                classifier += "-riscv64"
-            } else if (processor.isPPC) {
-                classifier += "-ppc64le"
-            } else if (!processor.isX86) {
-                classifier += "-arm32"
-            }
-        } else if (SystemUtils.IS_OS_MAC) {
-            classifier += "macos"
-            if (!processor.isX86) {
-                classifier += "-arm64"
-            }
-        } else if (SystemUtils.IS_OS_FREE_BSD) {
-            classifier = "freebsd"
-        }
-        return classifier
-    }
 
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {
 
