@@ -2,22 +2,13 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.commonskt.utils.gb
+import xyz.wagyourtail.unimined.api.UniminedExtension
 
 class UniminedPlugin: Plugin<Project> {
 
-    val pluginVersion: String = UniminedPlugin::class.java.`package`.implementationVersion ?: "unknown"
-
-    val Long.kb: Long
-        get() = this * 1024L
-
-    val Long.mb: Long
-        get() = this.kb * 1024L
-
-    val Long.gb: Long
-        get() = this.mb * 1024L
-
     override fun apply(project: Project) {
-        project.logger.lifecycle("[Unimined] Plugin Version: $pluginVersion")
+        project.logger.lifecycle("[Unimined] Plugin Version: ${UniminedExtension.pluginVersion}")
 
         if (Runtime.getRuntime().maxMemory() < 2L.gb) {
             project.logger.warn("")

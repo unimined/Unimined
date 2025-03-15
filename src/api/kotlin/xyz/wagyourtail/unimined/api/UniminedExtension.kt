@@ -43,7 +43,17 @@ val Project.uniminedMaybe
  * @since 1.0.0
  */
 @Suppress("OVERLOADS_ABSTRACT", "UNUSED")
-abstract class UniminedExtension(val project: Project) {
+abstract class UniminedExtension(project: Project) : FabricLikeApiExtension(project) {
+
+    companion object {
+
+        val pluginVersion: String = UniminedExtension::class.java.`package`.implementationVersion ?: "unknown"
+
+        val isSnapshot = pluginVersion.endsWith("-SNAPSHOT")
+
+        val snapshotVersion = if (isSnapshot) { pluginVersion.removeSuffix("-SNAPSHOT").substringAfterLast("-") } else ""
+
+    }
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
     var forceReload: Boolean by FinalizeOnRead(project.properties["unimined.forceReload"] == "true")
@@ -54,7 +64,8 @@ abstract class UniminedExtension(val project: Project) {
     @set:ApiStatus.Experimental
     var footgunChecks: Boolean by FinalizeOnRead(true)
 
-    var fabricApi = project.extensions.create("fabricApi", FabricLikeApiExtension::class.java)
+    @Deprecated("functions provided directly by unimined", ReplaceWith("unimined"))
+    val fabricApi = project.extensions.create("fabricApi", FabricLikeApiExtension::class.java)
 
     private val sourceSets by lazy {
         project.sourceSets

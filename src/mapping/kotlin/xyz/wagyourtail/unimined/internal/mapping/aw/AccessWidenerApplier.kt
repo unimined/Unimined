@@ -146,7 +146,7 @@ object AccessWidenerApplier {
         targetNamespace: Namespace,
         mappingsProvider: MappingsProvider
     ): Path {
-        val awList = mutableSetOf<AWReader.AWData>()
+        val awList = mutableListOf<AWReader.AWItem>()
         inputs.forEach {
             runBlocking {
                 val data = AWReader.readData(CharReader(it.readText()))

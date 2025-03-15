@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import java.io.ByteArrayOutputStream
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin.get()
@@ -135,7 +136,19 @@ tasks.jar {
 
     manifest {
         attributes(
-            "Implementation-Version" to project.version
+            "Implementation-Version" to if (project.hasProperty("version_snapshot")) {
+                val stdout = ByteArrayOutputStream()
+                exec {
+                    commandLine("git", "rev-parse", "--short", "HEAD")
+                    standardOutput = stdout
+                }.assertNormalExitValue()
+                buildString {
+                    append(project.version.toString().removeSuffix("-SNAPSHOT"))
+                    append("-")
+                    append(stdout.toString().trim())
+                    append("-SNAPSHOT")
+                }
+            } else project.version
         )
     }
 }

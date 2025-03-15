@@ -19,7 +19,6 @@ import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.source.SourceConfig
-import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapSourcesJarTask
 import xyz.wagyourtail.unimined.api.unimined

@@ -70,19 +70,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
     override suspend fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
+        val newTree = MemoryMappingTree()
 
         if (splitUnmapped && envType == EnvType.JOINED) {
-            Propagator(tree, Namespace("clientOfficial"), setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
-            Propagator(tree, Namespace("serverOfficial"), setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
+            Propagator(tree, Namespace("clientOfficial"), setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"), newTree)
+            Propagator(tree, Namespace("serverOfficial"), setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"), newTree)
         } else {
             Propagator(tree, Namespace("official"), setOf(when (envType) {
                 EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
                 EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
                 EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
-            }!!.toPath())).propagate(tree.namespaces.toSet() - Namespace("official"))
+            }!!.toPath())).propagate(tree.namespaces.toSet() - Namespace("official"), newTree)
         }
 
-        return tree
+        return newTree
     }
 
     private fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {

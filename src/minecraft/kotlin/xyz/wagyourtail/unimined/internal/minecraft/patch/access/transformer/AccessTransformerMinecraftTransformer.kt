@@ -101,7 +101,7 @@ open class AccessTransformerMinecraftTransformer(
         temp.parent.createDirectories()
         temp.deleteIfExists()
 
-        val list = mutableListOf<ATReader.ATData>()
+        val list = mutableListOf<ATReader.ATItem>()
         for (at in accessTransformers) {
             // ensure at's are in modern format, and on disk not a virtual fs, so that processor can read them
             if (legacyATFormat) {
