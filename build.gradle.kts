@@ -1,5 +1,4 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
 plugins {
@@ -18,6 +17,14 @@ base {
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+kotlin {
+    jvmToolchain(8)
 }
 
 repositories {
@@ -244,21 +251,6 @@ tasks.test {
         events.add(TestLogEvent.SKIPPED)
         events.add(TestLogEvent.FAILED)
     }
-}
-
-tasks.withType<JavaCompile> {
-    val targetVersion = 8
-    if (JavaVersion.current().isJava9Compatible) {
-        options.release.set(targetVersion)
-    }
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-
-//    compilerOptions {
-//        freeCompilerArgs.add("-Xjvm-default=all")
-//    }
 }
 
 gradlePlugin {
