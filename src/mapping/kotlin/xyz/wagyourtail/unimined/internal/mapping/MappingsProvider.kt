@@ -36,6 +36,7 @@ import xyz.wagyourtail.unimined.mapping.visitor.fixes.renest
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import kotlin.io.path.*
+import kotlin.time.measureTime
 
 class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
     val unimined: UniminedExtension = project.unimined
@@ -70,20 +71,35 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
     override suspend fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
-        val newTree = MemoryMappingTree()
 
-        if (splitUnmapped && envType == EnvType.JOINED) {
-            Propagator(tree, Namespace("clientOfficial"), setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"), newTree)
-            Propagator(tree, Namespace("serverOfficial"), setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"), newTree)
-        } else {
-            Propagator(tree, Namespace("official"), setOf(when (envType) {
-                EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
-                EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
-                EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
-            }!!.toPath())).propagate(tree.namespaces.toSet() - Namespace("official"), newTree)
+        measureTime {
+            if (splitUnmapped && envType == EnvType.JOINED) {
+                Propagator(
+                    tree,
+                    Namespace("clientOfficial"),
+                    setOf(minecraft.minecraftData.minecraftClientFile.toPath())
+                ).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
+                Propagator(
+                    tree,
+                    Namespace("serverOfficial"),
+                    setOf(minecraft.minecraftData.minecraftServerFile.toPath())
+                ).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
+            } else {
+                Propagator(
+                    tree, Namespace("official"), setOf(
+                        when (envType) {
+                            EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
+                            EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
+                            EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
+                        }!!.toPath()
+                    )
+                ).propagate(tree.namespaces.toSet() - Namespace("official"))
+            }
+        }.also {
+            project.logger.info("Propagated mappings in $it")
         }
 
-        return newTree
+        return tree
     }
 
     private fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
