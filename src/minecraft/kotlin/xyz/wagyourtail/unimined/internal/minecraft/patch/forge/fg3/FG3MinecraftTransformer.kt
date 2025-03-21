@@ -38,9 +38,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import kotlin.io.path.*
 
-open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
-    project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
-) {
+open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer) :
+    JarModMinecraftTransformer(
+        project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
+    ) {
 
     val cacheDir by lazy {
         val forgeUniversal = parent.forge.dependencies.last()
@@ -60,13 +61,19 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
         parent.provider.minecraftRemapper.addResourceRemapper { a, b -> JsCoreModRemapper(project.logger) }
-        val forgeHardcodedNames = setOf("net/minecraftforge/registries/ObjectHolderRegistry", "net/neoforged/neoforge/registries/ObjectHolderRegistry")
-        parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+        val forgeHardcodedNames = setOf(
+            "net/minecraftforge/registries/ObjectHolderRegistry",
+            "net/neoforged/neoforge/registries/ObjectHolderRegistry"
+        )
+        parent.provider.minecraftRemapper.addExtension {
+            StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
-            forgeHardcodedNames.contains(it)
-        } }
+                forgeHardcodedNames.contains(it)
+            }
+        }
         unprotectRuntime = true
-        parent.accessTransformerTransformer.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
+        parent.accessTransformerTransformer.accessTransformerPaths =
+            listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
 
     private val include: Configuration? =
@@ -77,7 +84,11 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
     override fun defaultProdNamespace(): Namespace {
-        return if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
+        return if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(
+                provider.version,
+                "1.20.5"
+            ) >= 0
+        ) {
             provider.mappings.checkedNs("mojmap")
         } else {
             provider.mappings.checkedNs("searge")
@@ -91,8 +102,12 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
 
     override val transform: MutableList<(FileSystem) -> Unit> = (
-            if (parent.provider.version == "1.12.2") { listOf(FixFG2ResourceLoading::fixResourceLoading) } else { emptyList() } +
-            super.transform
+            if (parent.provider.version == "1.12.2") {
+                listOf(FixFG2ResourceLoading::fixResourceLoading)
+            } else {
+                emptyList()
+            } +
+                    super.transform
             ).toMutableList()
 
 
@@ -143,7 +158,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 mapOf()
             )
 
-            config.addStep(config.InjectStep("forgeInject", "patch", mutableMapOf(
+            config.addStep(
+                config.InjectStep(
+                    "forgeInject", "patch", mutableMapOf(
                 "input" to {
                     config.getResultFor("patch").output!!.absolutePathString()
                 },
@@ -152,41 +169,64 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 }
             )))
 
-            config.addStep(config.PatchStep("forgePatch", "forgeInject", mutableMapOf(
-                    "input" to {
-                        config.getResultFor("forgeInject").output!!.absolutePathString()
-                    },
-                    "patches" to {
-                        val origin = userdevCfg["patchesOriginalPrefix"]?.asString ?: "a"
-                        val modified = userdevCfg["patchesModifiedPrefix"]?.asString ?: "b"
-                        if (origin != "a" || modified != "b") {
-                            val output = cacheDir.resolve("forgePatches.jar")
-                            JarArchiveOutputStream(output.outputStream()).use { out ->
-                                forgeUd.toPath().forEachInZip { s, input ->
-                                    if (s.endsWith(".patch")) {
-                                        out.putArchiveEntry(JarArchiveEntry(s))
-                                        val text = input.readBytes().toString(StandardCharsets.UTF_8).lines().map {
-                                            if (it.startsWith("--- $origin")) {
-                                                "--- a/" + it.removePrefix("--- $origin")
-                                            } else if (it.startsWith("+++ $modified")) {
-                                                "+++ b/" + it.removePrefix("+++ $modified")
-                                            } else {
-                                                it
-                                            }
-                                        }.joinToString("\n") + "\n"
-                                        out.write(text.toByteArray(StandardCharsets.UTF_8))
-                                        out.closeArchiveEntry()
-                                    }
+            if (userdevCfg["notchObf"]?.asBoolean == true) {
+                config.insertBefore(
+                    "forgeInject", config.FunctionStep(
+                        "mcpCleanup", null, mutableMapOf(), MCPConfig.Function(
+                            "net.minecraftforge:mcpcleanup:2.3.6",
+                            null,
+                            listOf(
+                                "--input",
+                                "{input}",
+                                "--output",
+                                "{output}"
+                            ),
+                            listOf()
+                        )
+                    ),
+                    mapOf("input" to {
+                        config.getResultFor("mcpCleanup").output!!.absolutePathString()
+                    })
+                )
+            }
+
+            config.addStep(
+                config.PatchStep(
+                "forgePatch", "forgeInject", mutableMapOf(
+                "input" to {
+                    config.getResultFor("forgeInject").output!!.absolutePathString()
+                },
+                "patches" to {
+                    val origin = userdevCfg["patchesOriginalPrefix"]?.asString ?: "a"
+                    val modified = userdevCfg["patchesModifiedPrefix"]?.asString ?: "b"
+                    if (origin != "a" || modified != "b") {
+                        val output = cacheDir.resolve("forgePatches.jar")
+                        JarArchiveOutputStream(output.outputStream()).use { out ->
+                            forgeUd.toPath().forEachInZip { s, input ->
+                                if (s.endsWith(".patch")) {
+                                    out.putArchiveEntry(JarArchiveEntry(s))
+                                    val text = input.readBytes().toString(StandardCharsets.UTF_8).lines().map {
+                                        if (it.startsWith("--- $origin")) {
+                                            "--- a/" + it.removePrefix("--- $origin")
+                                        } else if (it.startsWith("+++ $modified")) {
+                                            "+++ b/" + it.removePrefix("+++ $modified")
+                                        } else {
+                                            it
+                                        }
+                                    }.joinToString("\n") + "\n"
+                                    out.write(text.toByteArray(StandardCharsets.UTF_8))
+                                    out.closeArchiveEntry()
                                 }
                             }
-                            output.absolutePathString()
-                        } else {
-                            forgeUd.absolutePath
                         }
-                    },
-                    "prefix" to {
-                        userdevCfg["patches"].asString
+                        output.absolutePathString()
+                    } else {
+                        forgeUd.absolutePath
                     }
+                },
+                "prefix" to {
+                    userdevCfg["patches"].asString
+                }
             )))
         }
     }
@@ -258,7 +298,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
         val f = cacheDir.resolve(value)
-        if(f.isDirectory()) {
+        if (f.isDirectory()) {
             f.listDirectoryEntries()
         } else {
             listOf(f)
@@ -367,7 +407,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     private fun createClientExtra(
         baseMinecraftClient: MinecraftJar,
-        @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar?,
+        @Suppress("UNUSED_PARAMETER")
+        baseMinecraftServer: MinecraftJar?,
         patchedMinecraft: Path
     ) {
         val clientExtra = patchedMinecraft.parent.createDirectories()
@@ -440,7 +481,11 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         val patchedMC = MinecraftJar(
             inputMC,
-            name = if (parent is NeoForgedMinecraftTransformer && parent.provider.minecraftData.mcVersionCompare(provider.version, "1.20.1") != 0) "neoforge" else "forge",
+            name = if (parent is NeoForgedMinecraftTransformer && parent.provider.minecraftData.mcVersionCompare(
+                    provider.version,
+                    "1.20.1"
+                ) != 0
+            ) "neoforge" else "forge",
             version = forgeUniversal.version!!,
             parentPath = outFolder
         )
@@ -456,15 +501,21 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         } else {
             // get from forge installer
-            project.configurations.detachedConfiguration(project.dependencies.create(
-                "${forgeUniversal.group}:${forgeUniversal.name}:${forgeUniversal.version}:installer"
-            )).resolve().first { it.extension == "jar" }.toPath().readZipInputStreamFor("data/${patchedMC.envType.classifier}.lzma") {
-                outFolder.resolve("binpatches-${patchedMC.envType.classifier}.lzma").apply {
-                    writeBytes(
-                        it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
-                    )
+            project.configurations.detachedConfiguration(
+                project.dependencies.create(
+                    "${forgeUniversal.group}:${forgeUniversal.name}:${forgeUniversal.version}:installer"
+                )
+            )
+                .resolve()
+                .first { it.extension == "jar" }
+                .toPath()
+                .readZipInputStreamFor("data/${patchedMC.envType.classifier}.lzma") {
+                    outFolder.resolve("binpatches-${patchedMC.envType.classifier}.lzma").apply {
+                        writeBytes(
+                            it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+                        )
+                    }
                 }
-            }
         }
 
 
@@ -515,13 +566,15 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun addProperties(config: RunConfig) {
-        config.properties.putAll(mapOf(
+        config.properties.putAll(
+            mapOf(
             "minecraft_classpath_file" to {
                 legacyClasspath.absolutePathString()
             },
             "modules" to {
-                val libs = mapOf(*provider.minecraftLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }
-                    .toTypedArray())
+                val libs =
+                    mapOf(*provider.minecraftLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }
+                        .toTypedArray())
                 userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
                     val dep = libs[it.asString.removeSuffix("@jar")]
                         ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
@@ -614,7 +667,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                     "-Dfml.deobfuscatedEnvironment=true",
                     "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
                 )
-                config.args (
+                config.args(
                     "--tweakClass",
                     parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
                 )
@@ -708,7 +761,10 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.checkedNs("official")) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.checkedNs(
+                "official"
+            )
+        ) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",
@@ -743,7 +799,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             super.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath, side)
         } else {
             if (provider.mappings.checkedNs(obfNamespace) != provider.mappings.devNamespace) {
-                val temp = outputPath.parent.resolve("${outputPath.nameWithoutExtension}-${obfNamespace}.jar")
+                val temp = outputPath.parent.resolve("${outputPath.nameWithoutExtension}-${defaultProdNamespace()}.jar")
                 executeMcp("forgePatch", temp)
                 provider.sourceProvider.sourceRemapper.remap(
                     mapOf(temp to outputPath),
