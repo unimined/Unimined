@@ -7,12 +7,11 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
+import xyz.wagyourtail.unimined.util.suppressLogs
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -116,7 +115,7 @@ open class JarModAgentMinecraftTransformer(
             try {
                 val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
-                val result = SubprocessExecutor.exec(project) {
+                val result = project.javaexec {
                     it.jvmArgs = listOf(
                         "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
                         "-D${JMA_DEBUG}=true")
@@ -127,10 +126,9 @@ open class JarModAgentMinecraftTransformer(
                     )
                     it.mainClass.set("xyz.wagyourtail.unimined.jarmodagent.JarModAgent")
                     it.classpath = jarModAgent
-                }
-                if (result.exitValue != 0) {
-                    throw IOException("Failed to run JarModAgent transformer: ${result.exitValue}")
-                }
+
+                    project.suppressLogs(it)
+                }.assertNormalExitValue().rethrowFailure()
             } catch (e: Exception) {
                 project.logger.error("[Unimined/JarModAgentTransformer] Failed to transform $input")
                 output.deleteIfExists()

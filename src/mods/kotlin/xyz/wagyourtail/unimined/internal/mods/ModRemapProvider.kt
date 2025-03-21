@@ -89,7 +89,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     }
 
     private val originalDepsFiles = defaultedMapOf<Configuration, Map<ResolvedArtifact, File>> {
-        val detached = project.configurations.detachedConfiguration().apply(this.config)
+        val detached = project.configurations.detachedConfiguration().apply(this@ModRemapProvider.config)
         detached.dependencies.addAll(originalDeps[it])
         val resolved = mutableMapOf<ResolvedArtifact, File>()
         project.logger.info("[Unimined/ModRemapper] Original Dep Files: $it")

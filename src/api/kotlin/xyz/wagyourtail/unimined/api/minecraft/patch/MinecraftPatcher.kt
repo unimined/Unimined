@@ -7,6 +7,7 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -71,5 +72,5 @@ interface MinecraftPatcher {
     fun configureRemapJar(task: AbstractRemapJarTask)
 
     @ApiStatus.Internal
-    fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?)
+    fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?, side: EnvType)
 }

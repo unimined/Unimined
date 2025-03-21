@@ -10,16 +10,6 @@ class UniminedPlugin: Plugin<Project> {
     override fun apply(project: Project) {
         project.logger.lifecycle("[Unimined] Plugin Version: ${UniminedExtension.pluginVersion}")
 
-        if (Runtime.getRuntime().maxMemory() < 2L.gb) {
-            project.logger.warn("")
-            project.logger.warn("[Unimined] You have less than 2GB of memory allocated to gradle.")
-            project.logger.warn("[Unimined] This may cause issues with remapping and other tasks.")
-            project.logger.warn("[Unimined] Please allocate more memory to gradle by adding: ")
-            project.logger.warn("[Unimined]   org.gradle.jvmargs=-Xmx2G")
-            project.logger.warn("[Unimined] to your gradle.properties file.")
-            project.logger.warn("")
-        }
-
         project.apply(
             mapOf(
                 "plugin" to "java"
@@ -31,7 +21,31 @@ class UniminedPlugin: Plugin<Project> {
             )
         )
 
-        project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
+        val unimined = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
+
+        if (Runtime.getRuntime().maxMemory() < 2L.gb) {
+            project.logger.warn("")
+            project.logger.warn("[Unimined] You have less than 2GB of memory allocated to gradle.")
+            project.logger.warn("[Unimined] This may cause issues with remapping and other tasks.")
+            project.logger.warn("[Unimined] Please allocate more memory to gradle by adding: ")
+            project.logger.warn("[Unimined]   org.gradle.jvmargs=-Xmx2G")
+            project.logger.warn("[Unimined] to your gradle.properties file.")
+            project.logger.warn("")
+        }
+
+        if (project.gradle.startParameter.isOffline) {
+            project.logger.warn("")
+            project.logger.warn("[Unimined] Gradle is running in offline mode.")
+            project.logger.warn("[Unimined] Will attempt to use cached minecraft metadata files.")
+            project.logger.warn("")
+        }
+
+        if (unimined.forceReload) {
+            project.logger.warn("")
+            project.logger.warn("[Unimined] Force reload is enabled.")
+            project.logger.warn("[Unimined] Ignoring cached minecraft metadata files.")
+            project.logger.warn("")
+        }
     }
 
 }

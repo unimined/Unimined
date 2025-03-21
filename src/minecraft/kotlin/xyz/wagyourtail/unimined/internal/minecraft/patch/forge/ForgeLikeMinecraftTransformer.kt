@@ -303,7 +303,7 @@ abstract class ForgeLikeMinecraftTransformer(
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        return forgeTransformer.transform(minecraft)
+        return accessTransformerTransformer.transform(forgeTransformer.transform(minecraft))
     }
 
     enum class ForgeFiles(val path: String) {
@@ -437,9 +437,10 @@ abstract class ForgeLikeMinecraftTransformer(
         classpath: FileCollection,
         patchedJar: Path,
         outputPath: Path,
-        linemappedPath: Path?
+        linemappedPath: Path?,
+        side: EnvType
     ) {
-        forgeTransformer.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath)
+        forgeTransformer.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath, side)
     }
 
 }

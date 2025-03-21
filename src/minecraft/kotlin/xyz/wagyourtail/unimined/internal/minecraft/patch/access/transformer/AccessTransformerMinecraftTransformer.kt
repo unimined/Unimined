@@ -14,14 +14,13 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor.shouldShowVerboseStderr
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor.shouldShowVerboseStdout
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.getShortSha1
 import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.suppressLogs
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -93,7 +92,7 @@ open class AccessTransformerMinecraftTransformer(
         }
     }
 
-    private fun transform(project: Project, accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
+    fun transform(project: Project, accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
         if (accessTransformers.isEmpty()) return
         if (output.exists()) output.deleteIfExists()
         output.parent.createDirectories()
@@ -137,16 +136,8 @@ open class AccessTransformerMinecraftTransformer(
                     "--atFile",
                     temp.absolutePathString()
                 )
-                if (shouldShowVerboseStdout(project)) {
-                    spec.standardOutput = System.out
-                } else {
-                    spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
-                }
-                if (shouldShowVerboseStderr(project)) {
-                    spec.errorOutput = System.err
-                } else {
-                    spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
-                }
+
+                project.suppressLogs(spec)
             }.assertNormalExitValue().rethrowFailure()
         } catch (e: Exception) {
             output.deleteIfExists()

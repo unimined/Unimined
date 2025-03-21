@@ -4,6 +4,7 @@ package xyz.wagyourtail.unimined.util
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipFile
+import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -13,8 +14,11 @@ import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.file.FileCollection
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType
 import java.io.File
@@ -518,4 +522,25 @@ fun <K, V> MutableMap<K, V>.removeALl(other: Map<K, V>): MutableMap<K, V> {
         remove(it.key, it.value)
     }
     return this
+}
+
+fun Project.shouldShowVerboseStdout(): Boolean {
+    return gradle.startParameter.logLevel < LogLevel.LIFECYCLE
+}
+
+fun Project.shouldShowVerboseStderr(): Boolean {
+    return shouldShowVerboseStdout() || gradle.startParameter.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS
+}
+
+fun Project.suppressLogs(spec: JavaExecSpec) {
+    if (shouldShowVerboseStdout()) {
+        spec.standardOutput = System.out
+    } else {
+        spec.standardOutput = NullOutputStream.INSTANCE
+    }
+    if (shouldShowVerboseStderr()) {
+        spec.errorOutput = System.err
+    } else {
+        spec.errorOutput = NullOutputStream.INSTANCE
+    }
 }

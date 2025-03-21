@@ -16,7 +16,7 @@ abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider
         val linemappedJar = mcDevFile.resolveSibling("${mcDevFile.nameWithoutExtension}-linemapped.jar")
 
         // TODO: add method to get sources from mcProvider (ie run forge 1 step further)
-        provider.mcPatcher.createSourcesJar(provider.sourceSet.compileClasspath, mcDevFile, sourcesJar, linemappedJar)
+        provider.mcPatcher.createSourcesJar(provider.sourceSet.compileClasspath, mcDevFile, sourcesJar, linemappedJar, provider.side)
     }
 
 }

@@ -306,7 +306,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     override fun configureRemapJar(task: AbstractRemapJarTask) {}
 
-    override fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?) {
+    override fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?, side: EnvType) {
         provider.sourceProvider.sourceGenerator.generate(provider.sourceSet.compileClasspath, patchedJar, outputPath, linemappedPath)
     }
 }
