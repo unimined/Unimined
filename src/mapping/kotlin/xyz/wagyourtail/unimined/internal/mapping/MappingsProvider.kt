@@ -481,14 +481,29 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
     }
 
+
+    override fun plasma(commitName: String, key: String, action: MappingEntry.() -> Unit) {
+        unimined.jitpack()
+        val entry = MappingEntry(contentOf(MavenCoords(
+            "com.github.minecraft-cursed-legacy", "Plasma", commitName
+        )), "$key-$commitName").apply {
+            requires("babricIntermediary")
+            provides("plasma" to true)
+            mapNamespace("intermediary" to "babricIntermediary", "named" to "plasma")
+            action()
+        }
+        addDependency(key, entry)
+
+        afterLoad.add {
+            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
+        }
+    }
     
     override fun barn(build: Int, key: String, action: MappingEntry.() -> Unit) {
         unimined.glassLauncherMaven("babric")
         val entry = MappingEntry(contentOf(MavenCoords(
-            "babric",
-            "barn",
-            "${minecraft.version}+build.$build", "v2")
-        ), "$key-$build").apply {
+            "babric", "barn", "${minecraft.version}+build.$build", "v2"
+        )), "$key-$build").apply {
             requires("babricIntermediary")
             provides("barn" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "barn")
@@ -503,9 +518,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
     override fun biny(commitName: String, key: String, action: MappingEntry.() -> Unit) {
         unimined.glassLauncherMaven("releases")
-        val entry = MappingEntry(contentOf(
-            MavenCoords("net.glasslauncher", "biny", "${minecraft.version}+$commitName", "v2")
-        ), "$key-$commitName").apply {
+        val entry = MappingEntry(contentOf(MavenCoords(
+            "net.glasslauncher", "biny", "${minecraft.version}+$commitName", "v2"
+        )), "$key-$commitName").apply {
             requires("babricIntermediary")
             provides("biny" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "biny")
