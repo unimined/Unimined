@@ -123,7 +123,7 @@ open class JarModAgentMinecraftTransformer(
                     it.jvmArgs = listOf(
                         "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
                         "-D${JMA_DEBUG}=true"
-                    ))
+                    )
                     it.args = listOf(
                         input.absolutePathString(),
                         classpath.joinToString(File.pathSeparator) { it.absolutePath },

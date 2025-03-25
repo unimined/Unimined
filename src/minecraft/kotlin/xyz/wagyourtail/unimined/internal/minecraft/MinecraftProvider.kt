@@ -618,7 +618,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
         if (defaultRemapJar) {
-            applyDefaultRemapJar("jar", ::remap) {
+            applyDefaultRemapJar<RemapJarTaskImpl>("jar", ::remap) {
                 from(sourceSet.output)
                 archiveClassifier.set("".withSourceSet(sourceSet))
                 from(combinedWithList.map { it.second.output })
@@ -626,7 +626,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
 
         if (defaultRemapSourcesJar) {
-            applyDefaultRemapJar("sourcesJar", ::remapSources) {
+            applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
                 from(sourceSet.allSource)
                 archiveClassifier.set("${"".withSourceSet(sourceSet)}-sources")
                 from(combinedWithList.map { it.second.allSource })

@@ -111,7 +111,6 @@ class FG2TaskApplyBinPatches(private val project: Project) {
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
-        jis = JarInputStream(ByteArrayInputStream(jarBytes.toByteArray()))
         log("Reading Patches:")
         do {
             try {

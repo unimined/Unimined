@@ -118,30 +118,32 @@ abstract class FabricLikeMinecraftTransformer(
     @set:ApiStatus.Experimental
     override var devMappings: Path? by FinalizeOnRead(LazyMutable {
         if (!provider.obfuscated) return@LazyMutable null
-        provider.localCache
-            .resolve("mappings")
-            .createDirectories()
-            .resolve("intermediary2named-${provider.mappings.exportKey()}.jar")
-            .apply {
-                val file = resolveSibling("mappings.tiny").toFile()
-                val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
-                    location = file
-                    type = TinyV2Writer
-                    sourceNamespace = prodNamespace
-                    targetNamespace = setOf(provider.mappings.devNamespace)
-                    renameNs[prodNamespace] = "intermediary"
-                    renameNs[provider.mappings.devNamespace] = "named"
+        runBlocking {
+            provider.localCache
+                .resolve("mappings")
+                .createDirectories()
+                .resolve("intermediary2named-${provider.mappings.combinedNames()}.jar")
+                .apply {
+                    val file = resolveSibling("mappings.tiny").toFile()
+                    val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
+                        location = file
+                        type = TinyV2Writer
+                        sourceNamespace = prodNamespace
+                        targetNamespace = setOf(provider.mappings.devNamespace)
+                        renameNs[prodNamespace] = "intermediary"
+                        renameNs[provider.mappings.devNamespace] = "named"
+                    }
+                    export.validate()
+                    runBlocking {
+                        export.exportFunc(provider.mappings.resolve())
+                    }
+                    ZipArchiveOutputStream(outputStream()).use {
+                        it.putArchiveEntry(ZipArchiveEntry("mappings/mappings.tiny"))
+                        it.write(file.readBytes())
+                        it.closeArchiveEntry()
+                    }
                 }
-                export.validate()
-                runBlocking {
-                    export.exportFunc(provider.mappings.resolve())
-                }
-                ZipArchiveOutputStream(outputStream()).use {
-                    it.putArchiveEntry(ZipArchiveEntry("mappings/mappings.tiny"))
-                    it.write(file.readBytes())
-                    it.closeArchiveEntry()
-                }
-            }
+        }
     })
 
     init {
