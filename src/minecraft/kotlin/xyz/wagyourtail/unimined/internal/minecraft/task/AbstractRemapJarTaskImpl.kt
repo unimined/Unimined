@@ -31,17 +31,6 @@ abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val pr
         delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
-    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = AbstractRemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
-        val old = delegate.value as MixinRemapOptions.() -> Unit
-        mixinRemapOptions = {
-            old()
-            action()
-        }
-    }
-
-    override var allowImplicitWildcards by FinalizeOnRead(false)
-
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
@@ -82,17 +71,6 @@ abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val pr
     }
 
     private fun afterRemap(afterRemapJar: Path) {
-        // merge in manifest from input jar
-        afterRemapJar.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
-            // write to temp file
-            val inpTmp = temporaryDir.toPath().resolve("input-manifest.MF")
-            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
-                inp.copyTo(out)
-            }
-            this.manifest {
-                it.from(inpTmp)
-            }
-        }
         // copy into output
         from(project.zipTree(afterRemapJar))
         copy()

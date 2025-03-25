@@ -121,7 +121,7 @@ abstract class FabricLikeMinecraftTransformer(
         provider.localCache
             .resolve("mappings")
             .createDirectories()
-            .resolve("intermediary2named.jar")
+            .resolve("intermediary2named-${provider.mappings.exportKey()}.jar")
             .apply {
                 val file = resolveSibling("mappings.tiny").toFile()
                 val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {

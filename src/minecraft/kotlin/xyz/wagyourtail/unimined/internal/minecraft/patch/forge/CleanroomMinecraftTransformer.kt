@@ -103,6 +103,12 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         if (library.name.startsWith("oshi-project:")) {
             return null
         }
+        if (library.name.startsWith("org.lwjgl") && library.name.substringAfterLast(":").startsWith("2")) {
+            return null
+        }
+        if (library.name.startsWith("net.java.dev.jna:platform:")) {
+            return null
+        }
         return super.libraryFilter(library)
     }
 

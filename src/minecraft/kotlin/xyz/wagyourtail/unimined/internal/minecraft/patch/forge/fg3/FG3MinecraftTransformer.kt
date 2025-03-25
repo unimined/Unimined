@@ -636,7 +636,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 addProperties(config)
                 config.mainClass.set(mainClass)
                 config.args = args.map { getArgValue(it) }
-                config.jvmArgs = jvmArgs.map { getArgValue(it) }
+                config.jvmArgs(jvmArgs.map { getArgValue(it) })
                 config.jvmArgs(props.map { "-D${it.key}=${getArgValue(it.value)}" })
                 config.environment["FORGE_SPEC"] = userdevCfg.get("spec").asNumber.toString()
                 config.environment.putAll(env.map { it.key to getArgValue(it.value) })
@@ -681,7 +681,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 addProperties(config)
                 config.mainClass.set(mainClass)
                 config.args = args.map { getArgValue(it) }
-                config.jvmArgs = jvmArgs.map { getArgValue(it) }
+                config.jvmArgs(jvmArgs.map { getArgValue(it) })
                 config.jvmArgs(props.map { "-D${it.key}=${getArgValue(it.value)}" })
                 config.environment["FORGE_SPEC"] = userdevCfg.get("spec").asNumber.toString()
                 config.environment.putAll(env.map { it.key to getArgValue(it.value) })

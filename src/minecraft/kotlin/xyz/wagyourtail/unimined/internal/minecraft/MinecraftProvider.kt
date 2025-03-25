@@ -8,9 +8,11 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.Jar
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.commonskt.jvm.deleteIfExists
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
@@ -109,6 +111,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         it.setTransitive(false)
     }
 
+    init {
+        replaceLibraryVersion("ca\\.weblite", "java-objc-bridge", "natives-osx") { null }
+    }
+
     override fun from(project: Project, sourceSet: SourceSet) {
         val delegate = MinecraftProvider::class.getField("mcPatcher")!!.getDelegate(this) as FinalizeOnRead<FinalizeOnWrite<MinecraftPatcher>>
         if (delegate.finalized || (delegate.value as FinalizeOnWrite<MinecraftPatcher>).finalized) {
@@ -137,7 +143,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         // remove unimined deps
     }
 
-    override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
+    override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit): TaskProvider<RemapJarTask> {
         val remapTask = project.tasks.register(name, RemapJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
@@ -147,9 +153,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             it.action()
             mcPatcher.configureRemapJar(it)
         }
+        return remapTask as TaskProvider<RemapJarTask>
     }
 
-    override fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit) {
+    override fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit): TaskProvider<RemapSourcesJarTask> {
         val remapTask = project.tasks.register(name, RemapSourcesJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
@@ -159,6 +166,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             it.action()
             mcPatcher.configureRemapJar(it)
         }
+        return remapTask as TaskProvider<RemapSourcesJarTask>
     }
 
     override val mergedOfficialMinecraftFile: File? by lazy {
@@ -533,7 +541,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    override fun replaceLibraryVersion(
+    override final fun replaceLibraryVersion(
         @Language("regex")
         group: String,
         @Language("regex")
@@ -610,7 +618,19 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
         if (defaultRemapJar) {
-            applyDefaultRemapJars()
+            applyDefaultRemapJar("jar", ::remap) {
+                from(sourceSet.output)
+                archiveClassifier.set("".withSourceSet(sourceSet))
+                from(combinedWithList.map { it.second.output })
+            }
+        }
+
+        if (defaultRemapSourcesJar) {
+            applyDefaultRemapJar("sourcesJar", ::remapSources) {
+                from(sourceSet.allSource)
+                archiveClassifier.set("${"".withSourceSet(sourceSet)}-sources")
+                from(combinedWithList.map { it.second.allSource })
+            }
         }
 
         // apply minecraft patcher changes
@@ -821,7 +841,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
             mainClass.set(minecraftData.metadata.mainClass)
-            jvmArgs = minecraftData.metadata.getJVMArgs() + betacraftArgs
+            jvmArgs(minecraftData.metadata.getJVMArgs() + betacraftArgs)
             args = minecraftData.metadata.getGameArgs()
 
             (mcPatcher as AbstractMinecraftTransformer).applyClientRunTransform(this)

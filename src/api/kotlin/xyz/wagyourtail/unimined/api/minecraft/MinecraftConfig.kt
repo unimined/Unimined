@@ -9,6 +9,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.TaskProvider
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -98,6 +99,11 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
      * should unimined add the default "remapJar" task to this sourceSet?
      */
     var defaultRemapJar: Boolean by FinalizeOnRead(true)
+
+    /**
+     * should unimined add the default "remapSourcesJar" task to this sourceSet?
+     */
+    var defaultRemapSourcesJar: Boolean by FinalizeOnRead(false)
 
     /**
      * if the jar task for defaultRemapJar doesn't exist, should unimined create it?
@@ -226,39 +232,39 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
     }
 
-    fun remap(task: Task) {
-        remap(task) {}
+    fun remap(task: Task): TaskProvider<RemapJarTask> {
+        return remap(task) {}
     }
 
-    fun remap(task: Task, action: RemapJarTask.() -> Unit) {
-        remap(task, "remap${task.name.capitalized()}", action)
+    fun remap(task: Task, action: RemapJarTask.() -> Unit): TaskProvider<RemapJarTask> {
+        return remap(task, "remap${task.name.capitalized()}", action)
     }
 
     fun remap(
         task: Task,
         @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
-    ) {
-        remap(task) {
+    ): TaskProvider<RemapJarTask> {
+        return remap(task) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun remap(task: Task, name: String) {
-        remap(task, name) {}
+    fun remap(task: Task, name: String): TaskProvider<RemapJarTask> {
+        return remap(task, name) {}
     }
 
-    abstract fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit)
+    abstract fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit): TaskProvider<RemapJarTask>
 
     fun remap(
         task: Task,
         name: String,
         @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
-    ) {
-        remap(task, name) {
+    ): TaskProvider<RemapJarTask> {
+        return remap(task, name) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -268,15 +274,15 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     /**
      * @since 1.3.10
      */
-    fun remapSources(task: Task) {
-        remapSources(task) {}
+    fun remapSources(task: Task): TaskProvider<RemapSourcesJarTask> {
+        return remapSources(task) {}
     }
 
     /**
      * @since 1.3.10
      */
-    fun remapSources(task: Task, action: RemapSourcesJarTask.() -> Unit) {
-        remapSources(task, "remap${task.name.capitalized()}", action)
+    fun remapSources(task: Task, action: RemapSourcesJarTask.() -> Unit): TaskProvider<RemapSourcesJarTask> {
+        return remapSources(task, "remap${task.name.capitalized()}", action)
     }
 
     /**
@@ -286,8 +292,8 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         task: Task,
         @DelegatesTo(value = RemapSourcesJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
-    ) {
-        remapSources(task) {
+    ): TaskProvider<RemapSourcesJarTask> {
+        return remapSources(task) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -297,14 +303,14 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     /**
      * @since 1.3.10
      */
-    fun remapSources(task: Task, name: String) {
-        remapSources(task, name) {}
+    fun remapSources(task: Task, name: String): TaskProvider<RemapSourcesJarTask> {
+        return remapSources(task, name) {}
     }
 
     /**
      * @since 1.3.10
      */
-    abstract fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit)
+    abstract fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit): TaskProvider<RemapSourcesJarTask>
 
     /**
      * @since 1.3.10
@@ -314,8 +320,8 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         name: String,
         @DelegatesTo(value = RemapSourcesJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
-    ) {
-        remapSources(task, name) {
+    ): TaskProvider<RemapSourcesJarTask> {
+        return remapSources(task, name) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

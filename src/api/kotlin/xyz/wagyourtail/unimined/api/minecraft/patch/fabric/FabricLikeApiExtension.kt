@@ -161,7 +161,7 @@ open class FabricLikeApiExtension(val project: Project) {
         },
         "legacyFabric" to object : APILocations(project) {
             override fun getUrl(version: String): String {
-                return "https://repo.legacyfabric.net/repository/legacyfabric/net/legacyfabric/legacy-fabric-api/legacy-fabric-api/$version/legacy-fabric-api-$version.pom"
+                return "https://maven.legacyfabric.net/net/legacyfabric/legacy-fabric-api/legacy-fabric-api/$version/legacy-fabric-api-$version.pom"
             }
 
             override fun full(version: String): String {

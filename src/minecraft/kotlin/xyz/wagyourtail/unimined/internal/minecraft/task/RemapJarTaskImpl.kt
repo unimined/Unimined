@@ -110,12 +110,12 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
                 target.deleteIfExists()
                 throw e
             }
-            remapper.finish()
-            target.openZipFileSystem(mapOf("mutable" to true)).use {
-                betterMixinExtension.insertExtra(tag, it)
-            }
-            project.logger.info("[Unimined/RemapJar ${path}] remapped $fromNs -> $toNs (end time: ${System.currentTimeMillis()})")
         }.join()
+        remapper.finish()
+        target.openZipFileSystem(mapOf("mutable" to true)).use {
+            betterMixinExtension.insertExtra(tag, it)
+        }
+        project.logger.info("[Unimined/RemapJar ${path}] remapped $fromNs -> $toNs (end time: ${System.currentTimeMillis()})")
     }
 
 }

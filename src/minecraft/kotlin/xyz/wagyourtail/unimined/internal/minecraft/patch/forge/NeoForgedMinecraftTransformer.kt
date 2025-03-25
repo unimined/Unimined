@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
@@ -68,11 +69,13 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
         val forgeDep = forge.dependencies.first()
         if (provider.version != "1.20.1") {
             project.logger.info("setting `disableRefmap()` in mixinRemap")
-            task.mixinRemap {
-                if (SemVerUtils.matches(forgeDep.version!!.substringBefore("-"), ">=20.2.84")) {
-                    enableMixinExtra()
+            if (task is RemapJarTask) {
+                task.mixinRemap {
+                    if (SemVerUtils.matches(forgeDep.version!!.substringBefore("-"), ">=20.2.84")) {
+                        enableMixinExtra()
+                    }
+                    disableRefmap()
                 }
-                disableRefmap()
             }
         }
     }

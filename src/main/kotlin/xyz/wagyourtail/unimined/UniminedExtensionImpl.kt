@@ -142,7 +142,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     val legacyFabricMaven by lazy {
         project.repositories.maven {
             it.name = "legacyFabric"
-            it.url = URI.create("https://repo.legacyfabric.net/repository/legacyfabric")
+            it.url = URI.create("https://maven.legacyfabric.net")
         }
     }
     override fun legacyFabricMaven() {
@@ -432,13 +432,14 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                 it.excludeGroup("com.mojang")
                 // 1.21 natives-macos-patch missing
                 it.excludeGroup("org.lwjgl")
-                // native jar missing on central
-                it.excludeGroup("ca.weblite")
             }
         }
-        project.repositories.maven {
-            it.name = "minecraft"
-            it.url = URI.create("https://libraries.minecraft.net/")
+        project.repositories.maven { repo ->
+            repo.name = "minecraft"
+            repo.url = URI.create("https://libraries.minecraft.net/")
+            repo.content {
+                it.excludeGroup("ca.weblite")
+            }
         }
         project.repositories.all { repo ->
             if (repo != modsRemapRepo) {

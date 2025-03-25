@@ -43,7 +43,7 @@ open class AccessTransformerMinecraftTransformer(
 
     override var accessTransformerPaths: List<String> by FinalizeOnRead(listOf())
 
-    override var dependency: Dependency by FinalizeOnRead(if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.0") else project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
+    override var dependency: Dependency by FinalizeOnRead(if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.2") else project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
 
     override var atMainClass: String by FinalizeOnRead(if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) "net.neoforged.accesstransformer.cli.TransformerProcessor" else "net.neoforged.accesstransformer.TransformerProcessor")
 

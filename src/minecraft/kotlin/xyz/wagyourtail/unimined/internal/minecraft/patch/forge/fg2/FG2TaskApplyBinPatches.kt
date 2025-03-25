@@ -111,6 +111,7 @@ class FG2TaskApplyBinPatches(private val project: Project) {
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
+        jis = JarInputStream(ByteArrayInputStream(jarBytes.toByteArray()))
         log("Reading Patches:")
         do {
             try {
@@ -133,7 +134,7 @@ class FG2TaskApplyBinPatches(private val project: Project) {
     @Throws(IOException::class)
     private fun readPatch(patchEntry: JarEntry, jis: JarInputStream): ClassPatch {
         log("\t%s", patchEntry.name)
-        val input = ByteStreams.newDataInput(ByteStreams.toByteArray(jis))
+        val input = ByteStreams.newDataInput(jis.readBytes())
         val name = input.readUTF()
         val sourceClassName = input.readUTF()
         val targetClassName = input.readUTF()

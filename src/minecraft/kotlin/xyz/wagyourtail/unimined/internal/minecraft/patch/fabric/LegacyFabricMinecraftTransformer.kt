@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -43,8 +44,10 @@ open class LegacyFabricMinecraftTransformer(
     override fun configureRemapJar(task: AbstractRemapJarTask) {
         if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
             project.logger.info("enabling mixin extra")
-            task.mixinRemap {
-                enableMixinExtra()
+            if (task is RemapJarTask) {
+                task.mixinRemap {
+                    enableMixinExtra()
+                }
             }
         }
     }

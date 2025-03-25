@@ -55,7 +55,7 @@ open class RiftMinecraftTransformer(
 
         if (rift == null) rift = project.dependencies.create("org.dimdev:rift:${provider.version}")
 
-        project.configurations.getByName("modImplementation").dependencies.add(rift)
+        project.configurations.getByName("modImplementation".withSourceSet(provider.sourceSet)).dependencies.add(rift)
 
         super.apply()
     }

@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 
@@ -30,8 +31,10 @@ open class OfficialFabricMinecraftTransformer(
     override fun configureRemapJar(task: AbstractRemapJarTask) {
         if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
             project.logger.info("enabling mixin extra")
-            task.mixinRemap {
-                enableMixinExtra()
+            if (task is RemapJarTask) {
+                task.mixinRemap {
+                    enableMixinExtra()
+                }
             }
         }
     }

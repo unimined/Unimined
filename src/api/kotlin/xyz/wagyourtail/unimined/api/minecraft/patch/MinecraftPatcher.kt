@@ -20,7 +20,7 @@ import java.nio.file.Path
 interface MinecraftPatcher {
 
     fun name(): String {
-        return this::class.simpleName!!
+        return this::class.simpleName ?: error("MinecraftPatcher class simpleName is null, override name() instead")
     }
 
     @get:ApiStatus.Internal
