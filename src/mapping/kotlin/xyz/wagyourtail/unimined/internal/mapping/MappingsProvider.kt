@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
 import MemoryMapping
+import com.google.gson.JsonParser
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
 import okio.buffer
@@ -35,6 +36,8 @@ import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.mapping.visitor.fixes.renest
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.net.URI
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 import kotlin.time.measureTime
 
@@ -117,22 +120,21 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
 
-    override fun intermediary(key: String, action: MappingEntry.() -> Unit) {
+    override fun intermediary() {
         unimined.fabricMaven()
-        addDependency(key, MappingEntry(contentOf(
+        addDependency("intermediary", MappingEntry(contentOf(
             MavenCoords(
                 "net.fabricmc",
                 "intermediary",
                 minecraft.version,
                 "v2"
             )
-        ), key).apply {
+        ), "intermediary").apply {
             provides("intermediary" to false)
-            action()
         })
     }
 
-    override fun calamus(key: String, action: MappingEntry.() -> Unit) {
+    override fun calamus() {
         unimined.ornitheMaven()
         val environment = if (splitUnmapped && ornitheGenVersion < 2) {
             when (envType) {
@@ -143,7 +145,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         } else {
             ""
         }
-        addDependency(key, MappingEntry(
+        addDependency("calamus", MappingEntry(
             contentOf(ornitheGenRevisionTransform(
                 MavenCoords(
                 "net.ornithemc",
@@ -152,7 +154,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "v2"
             )
             )),
-            key
+            "calamus"
         ).apply {
             provides("calamus" to false)
             mapNamespace("intermediary", "calamus")
@@ -170,14 +172,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     }
                 }
             }
-            action()
         })
     }
 
-    
-    override fun legacyIntermediary(key: String, action: MappingEntry.() -> Unit) {
+    override fun legacyIntermediary() {
         unimined.legacyFabricMaven()
-        addDependency(key, MappingEntry(
+        addDependency("legacyIntermediary", MappingEntry(
             contentOf(legacyFabricRevisionTransform(
                 MavenCoords(
                 "net.legacyfabric",
@@ -186,18 +186,17 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "v2"
             )
             )),
-            key
+            "legacyIntermediary"
         ).apply {
             provides("legacyIntermediary" to false)
             mapNamespace("intermediary", "legacyIntermediary")
-            action()
         })
     }
 
-    
-    override fun babricIntermediary(key: String, action: MappingEntry.() -> Unit) {
+
+    override fun babricIntermediary() {
         unimined.glassLauncherMaven("babric")
-        addDependency(key, MappingEntry(contentOf(MavenCoords("babric", "intermediary", minecraft.version, "v2")), key).apply {
+        addDependency("babricIntermediary", MappingEntry(contentOf(MavenCoords("babric", "intermediary", minecraft.version, "v2")), "babricIntermediary").apply {
             provides("babricIntermediary" to false)
             when (envType) {
                 EnvType.CLIENT -> {
@@ -216,12 +215,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 }
             }
             mapNamespace("intermediary", "babricIntermediary")
-            action()
         })
     }
 
-    
-    override fun searge(version: String, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun searge(version: String) {
         unimined.minecraftForgeMaven()
         val mappings = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.12.2") < 0) {
             MavenCoords("de.oceanlabs.mcp", "mcp", version, "srg", "zip")
@@ -229,9 +227,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             MavenCoords("de.oceanlabs.mcp", "mcp_config", version, null,"zip")
         }
         if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.16.5") > 0) {
-            postProcessDependency(key, {
+            postProcessDependency("searge", {
                 mojmap()
-                addDependency(key, MappingEntry(contentOf(mappings), "$key-$version").apply {
+                addDependency("searge", MappingEntry(contentOf(mappings), "searge-$version").apply {
                     mapNamespace("obf" to "official")
                     provides("srg" to false)
                 })
@@ -255,24 +253,22 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                         }
                     })
                 }
-                action()
             }
         } else {
-            addDependency(key, MappingEntry(contentOf(mappings), "$key-$version").apply {
+            addDependency("searge", MappingEntry(contentOf(mappings), "searge-$version").apply {
                 provides("searge" to false)
                 mapNamespace("source" to "official", "target" to "searge")
-                action()
             })
         }
     }
 
-    
-    override fun mojmap(key: String, action: MappingEntry.() -> Unit) {
+
+    override fun mojmap() {
         val mappings = when (envType) {
             EnvType.CLIENT, EnvType.JOINED -> "client"
             EnvType.SERVER -> "server"
         }
-        addDependency(key, MappingEntry(contentOf(
+        addDependency("mojmap", MappingEntry(contentOf(
             MavenCoords(
                 "net.minecraft",
                 "$mappings-mappings",
@@ -280,16 +276,15 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 null,
                 "txt"
             )),
-            key
+            "mojmap"
         ).apply {
             mapNamespace("source" to "mojmap", "target" to "official")
             provides("mojmap" to true)
-            action()
         })
     }
 
-    
-    override fun mcp(channel: String, version: String, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun mcp(channel: String, version: String) {
         if (channel == "legacy") {
             unimined.wagYourMaven("releases")
         } else {
@@ -297,7 +292,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
         if (envType == EnvType.JOINED && splitUnmapped) throw UnsupportedOperationException("MCP mappings are not supported in joined environments before 1.3")
         val mappings = "de.oceanlabs.mcp:mcp_${channel}:${version}@zip"
-        addDependency(key, MappingEntry(contentOf(mappings), "$key-$channel-$version").apply {
+        addDependency("mcp", MappingEntry(contentOf(mappings), "mcp-$channel-$version").apply {
             subEntry { _, format ->
                 when (format.reader) {
                     is RetroguardReader, SrgReader -> {
@@ -313,14 +308,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                      }
                 }
             }
-            action()
         })
     }
 
 
-    override fun retroMCP(version: String, key: String, action: MappingEntry.() -> Unit) {
+    override fun retroMCP(version: String) {
         unimined.mcphackersIvy()
-        addDependency(key, MappingEntry(contentOf(MavenCoords("io.github.mcphackers", "mcp", version, extension = "zip")), "$key-$version").apply {
+        addDependency("retroMCP", MappingEntry(contentOf(MavenCoords("io.github.mcphackers", "mcp", version, extension = "zip")), "retroMCP-$version").apply {
             mapNamespace("named" to "retroMCP")
             if (splitUnmapped) {
                 when (envType) {
@@ -343,11 +337,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 }
             }
             provides("retroMCP" to true)
-            action()
         })
     }
 
-    override fun unknownThingy(version: String, format: String, key: String, action: MappingEntry.() -> Unit) {
+    override fun unknownThingy(version: String, format: String) {
         if (!minecraft.version.startsWith("1.4"))
             throw UnsupportedOperationException("Unknown Thingy is only supported for Minecraft 1.4")
         unimined.sleepingTownMaven()
@@ -359,7 +352,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "tsrg2" -> MavenCoords("com.unascribed", "unknownthingy", version, extension = "tsrg2")
                 else -> MavenCoords("com.unascribed", "unknownthingy", version, extension = "tsrg")
             }
-        ), "$key-$version").apply {
+        ), "unknownThingy-$version").apply {
             when (format.lowercase()) {
                 "tiny", "tinyv1", "tinyv2" -> mapNamespace("named" to "unknownThingy")
                 "tsrg2" -> mapNamespace("obf" to "official", "srg" to "unknownThingy")
@@ -368,17 +361,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }
 
             provides("unknownThingy" to true)
-            action()
         }
-        addDependency(key, entry)
+        addDependency("unknownThingy", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    
-    override fun yarn(build: Int, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun yarn(build: Int) {
         unimined.fabricMaven()
         val entry = MappingEntry(contentOf(
             MavenCoords(
@@ -386,26 +378,58 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             "yarn",
             minecraft.version + "+build.$build",
             "v2"
-        )), "$key-$build"
+        )), "yarn-$build"
         ).apply {
             requires("intermediary")
             mapNamespace("named" to "yarn")
             provides("yarn" to true)
-            action()
         }
-        addDependency(key, entry)
+        addDependency("yarn", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    override fun yarnv1(build: Int, key: String, action: MappingEntry.() -> Unit) {
-        TODO("Not yet implemented")
+    override fun yarnv1(build: Int) {
+        unimined.fabricMaven()
+        val yarn = project.configurations.detachedConfiguration(project.dependencies.create("net.fabricmc:yarn:${minecraft.version}+build.${build}")).resolve()
+        val jar = yarn.first { it.extension == "jar" }
+        val v1Folder = unimined.getGlobalCache().resolve("yarnv1").createDirectories()
+        val temp = v1Folder.resolve("yarnv1-${minecraft.version}+build.$build.tiny")
+        jar.toPath().readZipInputStreamFor("mappings/mappings.tiny") {
+            it.copyTo(temp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+        }
+        val output = v1Folder.resolve("yarnv1-${minecraft.version}+build.$build-filled.tiny")
+
+        project.javaexec {
+            it.classpath = project.configurations.detachedConfiguration(
+                project.dependencies.create(
+                    "net.fabricmc:stitch:0.6.2"
+                )
+            )
+            it.mainClass.set("net.fabricmc.stitch.Main")
+            it.args = listOf(
+                "proposeFieldNames",
+                minecraft.minecraftData.minecraftClientFile.absolutePath,
+                temp.absolutePathString(),
+                output.absolutePathString()
+            )
+        }.assertNormalExitValue().rethrowFailure()
+
+        mapping(output.toFile(), "yarnv1-$build") {
+            provides("yarnv1" to true)
+            mapNamespace("named" to "yarnv1")
+            requires("intermediary")
+
+            afterLoad.add {
+                renest(requires.name, *provides.map { it.first.name }.toTypedArray())
+            }
+        }
     }
 
-    
-    override fun feather(build: Int, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun feather(build: Int) {
         unimined.ornitheMaven()
         val vers = if (splitUnmapped && ornitheGenVersion < 2) {
             if (envType == EnvType.JOINED) throw UnsupportedOperationException("Feather mappings are not supported in joined environments before 1.3")
@@ -420,7 +444,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     "feather",
                     vers,
                     "v2"
-                ))), "$key-$build"
+                ))), "feather-$build"
         ).apply {
             requires("calamus")
             provides("feather" to true)
@@ -448,9 +472,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
                 })
             }
-            action()
         }
-        addDependency(key, entry)
+        addDependency("feather", entry)
 
         afterLoad.add {
 //            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
@@ -458,7 +481,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
 
-    override fun legacyYarn(build: Int, key: String, action: MappingEntry.() -> Unit) {
+    override fun legacyYarn(build: Int) {
         unimined.legacyFabricMaven()
         val entry = MappingEntry(
             contentOf(legacyFabricRevisionTransform(
@@ -467,58 +490,55 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "yarn",
                 "${minecraft.version}+build.$build",
                 "v2"
-            ))), "$key-$build"
+            ))), "legacyYarn-$build"
         ).apply {
             requires("legacyIntermediary")
             provides("legacyYarn" to true)
             mapNamespace("intermediary" to "legacyIntermediary", "named" to "legacyYarn")
-            action()
         }
-        addDependency(key, entry)
+        addDependency("legacyYarn", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    
-    override fun barn(build: Int, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun barn(build: Int) {
         unimined.glassLauncherMaven("babric")
         val entry = MappingEntry(contentOf(MavenCoords(
             "babric",
             "barn",
             "${minecraft.version}+build.$build", "v2")
-        ), "$key-$build").apply {
+        ), "barn-$build").apply {
             requires("babricIntermediary")
             provides("barn" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "barn")
-            action()
         }
-        addDependency(key, entry)
+        addDependency("barn", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    override fun biny(commitName: String, key: String, action: MappingEntry.() -> Unit) {
+    override fun biny(commitName: String) {
         unimined.glassLauncherMaven("releases")
         val entry = MappingEntry(contentOf(
             MavenCoords("net.glasslauncher", "biny", "${minecraft.version}+$commitName", "v2")
-        ), "$key-$commitName").apply {
+        ), "biny-$commitName").apply {
             requires("babricIntermediary")
             provides("biny" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "biny")
-            action()
         }
-        addDependency(key, entry)
+        addDependency("biny", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    override fun nostalgia(build: Int, key: String, action: MappingEntry.() -> Unit) {
+    override fun nostalgia(build: Int) {
         unimined.wispForestMaven()
         val entry = MappingEntry(contentOf(
             MavenCoords(
@@ -526,20 +546,19 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "nostalgia",
                 "${minecraft.version}+build.$build",
                 "v2"
-            )), "$key-$build"
+            )), "nostalgia-$build"
         ).apply {
             requires("babricIntermediary")
             provides("nostalgia" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "nostalgia")
-            action()
         }
-        addDependency(key, entry)
+        addDependency("nostalgia", entry)
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    override fun quilt(build: Int, key: String, action: MappingEntry.() -> Unit) {
+    override fun quilt(build: Int) {
         unimined.quiltMaven()
         val entry = MappingEntry(contentOf(
             MavenCoords(
@@ -547,30 +566,29 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "quilt-mappings",
             "${minecraft.version}+build.$build",
                 "intermediary-v2"
-            )), "$key-$build"
+            )), "quilt-$build"
         ).apply {
             requires("intermediary")
             provides("quilt" to true)
-            action()
         }
-        addDependency(key, entry)
+        addDependency("quilt", entry)
 
         afterLoad.add {
             renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
-    
-    override fun forgeBuiltinMCP(version: String, key: String, action: MappingEntry.() -> Unit) {
+
+    override fun forgeBuiltinMCP(version: String) {
         unimined.minecraftForgeMaven()
-        addDependency(key, MappingEntry(contentOf(
+        addDependency("forgeBuiltinMCP", MappingEntry(contentOf(
             MavenCoords(
                 "net.minecraftforge",
                 "forge",
                 "${minecraft.version}-$version",
                 "src",
                 "zip"
-            )), "$key-$version"
+            )), "forgeBuiltinMCP-$version"
         ).apply {
             subEntry {_, format ->
                 when (format.reader) {
@@ -585,7 +603,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     }
                 }
             }
-            action()
         })
     }
 
@@ -593,33 +610,112 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         mcVersion: String,
         version: String,
         checked: Boolean,
-        key: String,
-        action: MappingEntry.() -> Unit
     ) {
         unimined.parchmentMaven()
-        addDependency(key, MappingEntry(contentOf(
+        addDependency("parchment", MappingEntry(contentOf(
             MavenCoords(
                 "org.parchmentmc.data",
                 "parchment-$mcVersion",
                 version,
                 if (checked) "checked" else null,
                 "zip"
-            )), "$key-$version"
+            )), "parchment-$version"
         ).apply {
             requires("mojmap")
             mapNamespace("source" to "mojmap")
             provides("mojmap" to true)
+        })
+    }
+
+    override fun spigotDev(mcVersion: String) {
+        val buildInfo = project.cachingDownload(
+            URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json"),
+            cachePath = unimined.getGlobalCache().resolve("spigot/$mcVersion/build-info.json")
+        ).let {
+            JsonParser.parseString(it.readText()).asJsonObject
+        }
+
+        val version = buildInfo["refs"].asJsonObject["BuildData"].asString
+        val buildData = project.cachingDownload(
+            URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip"),
+            cachePath = unimined.getGlobalCache().resolve("spigot/$mcVersion/build-data.zip")
+        )
+
+        val (layerMojmap, hasMembers) = buildData.readZipInputStreamFor("info.json") { ifs ->
+            val info = ifs.reader().use { JsonParser.parseReader(it).asJsonObject }
+
+            info.has("mappingsUrl") to info.has("memberMappings")
+        }
+
+        if (layerMojmap) {
+            project.logger.lifecycle("[Unimined/MappingsProvider] Layering mojmap on top of spigot")
+            postProcessDependency("spigotDev", {
+                mojmap()
+                mapping(buildData.toFile(), "spigotDev") {
+                    mapNamespace("spigot", "spigot_dev")
+                    provides("spigot_dev" to true)
+                    requires("mojmap")
+
+                    afterLoad.add {
+                        renest(requires.name, *provides.map { it.first.name }.toTypedArray())
+                    }
+                }
+            }) {
+                insertInto.add {
+
+                    it.delegator(object : Delegator() {
+                        val spigot = Namespace("spigot_dev")
+                        val mojmap = Namespace("mojmap")
+
+                        override fun visitField(
+                            delegate: ClassVisitor,
+                            names: Map<Namespace, Pair<String, FieldDescriptor?>>
+                        ): FieldVisitor? {
+                            val names = names.toMutableMap()
+                            if (mojmap in names) {
+                                names[spigot] = names[mojmap]!!
+                            }
+                            return super.visitField(delegate, names)
+                        }
+
+                        override fun visitMethod(
+                            delegate: ClassVisitor,
+                            names: Map<Namespace, Pair<String, MethodDescriptor?>>
+                        ): MethodVisitor? {
+                            if (hasMembers) {
+                                return super.visitMethod(delegate, names)
+                            }
+                            val names = names.toMutableMap()
+                            if (mojmap in names) {
+                                names[spigot] = names[mojmap]!!
+                            }
+                            return super.visitMethod(delegate, names)
+                        }
+                    })
+
+                }
+            }
+        } else {
+            mapping(buildData.toFile(), "spigotDev") {
+                mapNamespace("spigot", "spigot_dev")
+                provides("spigot_dev" to true)
+
+                afterLoad.add {
+                    renest(requires.name, *provides.map { it.first.name }.toTypedArray())
+                }
+            }
+        }
+    }
+
+    override fun mapping(dependency: String, key: String, action: MappingEntry.() -> Unit) {
+        val coords = MavenCoords(dependency)
+        addDependency(key, MappingEntry(contentOf(coords), "$key-${coords.version}").apply {
             action()
         })
     }
 
-    override fun spigotDev(mcVersion: String, key: String, action: MappingEntry.() -> Unit) {
-        TODO("Not yet implemented")
-    }
-    
-    override fun mapping(dependency: String, key: String, action: MappingEntry.() -> Unit) {
-        val coords = MavenCoords(dependency)
-        addDependency(key, MappingEntry(contentOf(coords), "$key-${coords.version}").apply {
+    override fun mapping(dependency: MavenCoords, key: String, action: MappingEntry.() -> Unit) {
+        addDependency(key, MappingEntry(contentOf(dependency), "$key-${dependency.version}").apply {
             action()
         })
     }
