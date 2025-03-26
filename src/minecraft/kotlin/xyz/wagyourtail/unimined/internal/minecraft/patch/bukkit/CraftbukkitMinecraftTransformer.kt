@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
 import org.w3c.dom.Element
+import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -13,6 +14,15 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools.BuildToolsExecutor
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.FieldVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.MethodVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import kotlin.io.path.copyTo
@@ -135,40 +145,55 @@ open class CraftbukkitMinecraftTransformer(
         return super.transform(patchedJar)
     }
 
+    private fun MappingsConfig<*>.spigotProd() {
+        postProcessDependency("spigotProd", {
+            spigotDev()
+        }) {
+            provides("spigot_prod" to true)
+            mapNamespace("spigotDev", "spigotProd")
 
-//    private fun MappingsConfig.spigotProd(key: String = "spigot_prod", action: MappingDepConfig.() -> Unit = {}) {
-//        val provider = MappingsProvider(project, provider, "spigot-prod")
-//        provider.apply {
-//            spigotDev(key = "spigot_prod") {
-//                mapNamespace("spigot_dev", "spigot_prod")
-//                if (executor.versionInfo.mappingsUrl == null) {
-//                    forwardVisitor { visitor, _, _ ->
-//                        PackageRemappingVisitor(
-//                            visitor,
-//                            setOf("spigot_prod"),
-//                            listOf("net/minecraft/server/**" to "net/minecraft/server/${executor.minecraftVersion}")
-//                        )
-//                    }
-//                }
-//                memberNameReplacer("spigot_prod", "official", setOf("method", "field", "method_arg", "method_var"))
-//                clearOutputs()
-//                outputs("spigot_prod", false) { listOf("official") }
-//            }
-//        }
-//        provider.resolveMappingTree()
-//        mapping(project.dependencies.create(
-//            project.files(provider.mappingCacheFile()),
-//        ), key) {
-//            outputs("spigot_prod", false) {
-//                if ("spigot_dev" in getNamespaces()) {
-//                    listOf("official", "spigot_dev")
-//                } else {
-//                    listOf("official")
-//                }
-//            }
-//            action()
-//        }
-//    }
+            insertInto.add {
+                it.delegator(object : Delegator() {
+                    val official = Namespace("official")
+                    val spigotProd = Namespace("spigotProd")
+
+
+                    override fun visitClass(
+                        delegate: MappingVisitor,
+                        names: Map<Namespace, InternalName>
+                    ): ClassVisitor? {
+                        var spigotProdName = names[spigotProd]
+                        if (executor.versionInfo.mappingsUrl == null) {
+                            if (spigotProdName != null) {
+                                if (spigotProdName.value.startsWith("net/minecraft/server/")) {
+                                    val newName = spigotProdName.value.replaceFirst("net/minecraft/server/", "net/minecraft/server/${executor.minecraftVersion}/")
+                                    val names = names.toMutableMap()
+                                    names[spigotProd] = InternalName.unchecked(newName)
+                                    return super.visitClass(delegate, names)
+                                }
+                            }
+                        }
+                        return super.visitClass(delegate, names)
+                    }
+
+                    override fun visitMethod(
+                        delegate: ClassVisitor,
+                        names: Map<Namespace, Pair<String, MethodDescriptor?>>
+                    ): MethodVisitor? {
+                        return null
+                    }
+
+                    override fun visitField(
+                        delegate: ClassVisitor,
+                        names: Map<Namespace, Pair<String, FieldDescriptor?>>
+                    ): FieldVisitor? {
+                        return null
+                    }
+
+                })
+            }
+        }
+    }
 
 
     val groups: String by lazy {

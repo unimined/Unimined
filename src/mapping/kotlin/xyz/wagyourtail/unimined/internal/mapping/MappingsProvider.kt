@@ -652,8 +652,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             postProcessDependency("spigotDev", {
                 mojmap()
                 mapping(buildData.toFile(), "spigotDev") {
-                    mapNamespace("spigot", "spigot_dev")
-                    provides("spigot_dev" to true)
+                    mapNamespace("spigot", "spigotDev")
+                    provides("spigotDev" to true)
                     requires("mojmap")
 
                     afterLoad.add {
@@ -664,7 +664,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 insertInto.add {
 
                     it.delegator(object : Delegator() {
-                        val spigot = Namespace("spigot_dev")
+                        val spigot = Namespace("spigotDev")
                         val mojmap = Namespace("mojmap")
 
                         override fun visitField(
@@ -697,8 +697,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }
         } else {
             mapping(buildData.toFile(), "spigotDev") {
-                mapNamespace("spigot", "spigot_dev")
-                provides("spigot_dev" to true)
+                mapNamespace("spigot", "spigotDev")
+                provides("spigotDev" to true)
 
                 afterLoad.add {
                     renest(requires.name, *provides.map { it.first.name }.toTypedArray())
