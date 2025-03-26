@@ -9,7 +9,7 @@ gson = "2.12.1"
 asm = "9.7.1"
 
 tiny-remapper = "0.8.7"
-unimined-mapping-library = "1.0.0"
+unimined-mapping-library = "1.0.0-SNAPSHOT"
 
 binarypatcher = "1.1.1"
 
