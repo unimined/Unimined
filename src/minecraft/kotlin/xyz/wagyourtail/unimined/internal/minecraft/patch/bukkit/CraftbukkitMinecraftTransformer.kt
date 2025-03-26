@@ -165,7 +165,7 @@ open class CraftbukkitMinecraftTransformer(
                         var spigotProdName = names[spigotProd]
                         if (executor.versionInfo.mappingsUrl == null) {
                             if (spigotProdName != null) {
-                                val newName = "net/minecraft/server/${executor.minecraftVersion}/" + spigotProdName.value.substringAfterLast("/")
+                                val newName = "net/minecraft/server/v${executor.minecraftVersion}/" + spigotProdName.value.substringAfterLast("/")
                                 val names = names.toMutableMap()
                                 names[spigotProd] = InternalName.unchecked(newName)
                                 return super.visitClass(delegate, names)
