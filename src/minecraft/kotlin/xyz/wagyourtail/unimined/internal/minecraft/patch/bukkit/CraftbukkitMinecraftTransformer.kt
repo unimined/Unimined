@@ -83,7 +83,7 @@ open class CraftbukkitMinecraftTransformer(
     override fun beforeMappingsResolve() {
         super.beforeMappingsResolve()
         provider.mappings {
-//            spigotProd()
+            spigotProd()
         }
     }
 
