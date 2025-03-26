@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools.BuildToolsExecutor
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -62,7 +63,7 @@ open class CraftbukkitMinecraftTransformer(
         )
     }
 
-    override fun defaultProdNamespace() = provider.mappings.checkedNs("spigot_prod")
+    override fun defaultProdNamespace() = provider.mappings.checkedNs("spigotProd")
 
     val CPL_GROUPS = "cpl.pluginGroups"
 
@@ -137,7 +138,7 @@ open class CraftbukkitMinecraftTransformer(
             minecraft,
             name = providerName,
             patches = minecraft.patches + listOf(executor.version + "-${executor.buildInfo.name}"),
-            mappingNamespace = provider.mappings.checkedNs("spigot_prod"),
+            mappingNamespace = provider.mappings.checkedNs("spigotProd"),
         )
 
         outputFile.copyTo(patchedJar.path, overwrite = true)
@@ -145,18 +146,17 @@ open class CraftbukkitMinecraftTransformer(
         return super.transform(patchedJar)
     }
 
-    private fun MappingsConfig<*>.spigotProd() {
+    private fun MappingsConfig<out MappingsConfig<*>>.spigotProd() {
         postProcessDependency("spigotProd", {
-            spigotDev()
+            this@postProcessDependency.spigotDev()
         }) {
-            provides("spigot_prod" to true)
             mapNamespace("spigotDev", "spigotProd")
+            provides("spigotProd" to false)
 
             insertInto.add {
                 it.delegator(object : Delegator() {
                     val official = Namespace("official")
                     val spigotProd = Namespace("spigotProd")
-
 
                     override fun visitClass(
                         delegate: MappingVisitor,
@@ -165,12 +165,10 @@ open class CraftbukkitMinecraftTransformer(
                         var spigotProdName = names[spigotProd]
                         if (executor.versionInfo.mappingsUrl == null) {
                             if (spigotProdName != null) {
-                                if (spigotProdName.value.startsWith("net/minecraft/server/")) {
-                                    val newName = spigotProdName.value.replaceFirst("net/minecraft/server/", "net/minecraft/server/${executor.minecraftVersion}/")
-                                    val names = names.toMutableMap()
-                                    names[spigotProd] = InternalName.unchecked(newName)
-                                    return super.visitClass(delegate, names)
-                                }
+                                val newName = "net/minecraft/server/${executor.minecraftVersion}/" + spigotProdName.value.substringAfterLast("/")
+                                val names = names.toMutableMap()
+                                names[spigotProd] = InternalName.unchecked(newName)
+                                return super.visitClass(delegate, names)
                             }
                         }
                         return super.visitClass(delegate, names)

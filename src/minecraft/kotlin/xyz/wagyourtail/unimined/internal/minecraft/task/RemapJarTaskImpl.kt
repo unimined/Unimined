@@ -26,6 +26,19 @@ import kotlin.io.path.outputStream
 abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
     AbstractRemapJarTaskImpl(provider), RemapJarTask {
 
+    @get:Internal
+    protected var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
+
+
+    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
+        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = RemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
+        val old = delegate.value as MixinRemapOptions.() -> Unit
+        mixinRemapOptions = {
+            old()
+            action()
+        }
+    }
+
     private fun afterRemap(afterRemapJar: Path) {
         // merge in manifest from input jar
         afterRemapJar.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
@@ -117,5 +130,6 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
         }
         project.logger.info("[Unimined/RemapJar ${path}] remapped $fromNs -> $toNs (end time: ${System.currentTimeMillis()})")
     }
+
 
 }

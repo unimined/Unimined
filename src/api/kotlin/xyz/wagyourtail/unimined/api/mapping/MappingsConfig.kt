@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.mapping.util.Scoped
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MavenCoords
@@ -23,7 +24,8 @@ import java.io.File
  * @since 1.0.0
  */
 @Suppress("OVERLOADS_ABSTRACT", "UNUSED")
-abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val minecraft: MinecraftConfig, subKey: String? = null) :
+@Scoped
+abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val minecraft: MinecraftConfig, subKey: String? = null) :
     MappingResolver<T>(buildString {
         append(project.path)
         append(minecraft.sourceSet.name)
@@ -148,15 +150,15 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
 
     @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun mapping(dependency: String, key: String = MavenCoords(dependency).artifact, action: MappingEntry.() -> Unit = {})
+    abstract fun mapping(dependency: String, key: String = MavenCoords(dependency).artifact, action: @Scoped MappingResolver<T>.MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun mapping(dependency: MavenCoords, key: String = dependency.artifact, action: MappingEntry.() -> Unit = {})
+    abstract fun mapping(dependency: MavenCoords, key: String = dependency.artifact, action: @Scoped MappingResolver<T>.MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun mapping(dependency: File, key: String = dependency.nameWithoutExtension, action: MappingEntry.() -> Unit = {})
+    abstract fun mapping(dependency: File, key: String = dependency.nameWithoutExtension, action: @Scoped MappingResolver<T>.MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental

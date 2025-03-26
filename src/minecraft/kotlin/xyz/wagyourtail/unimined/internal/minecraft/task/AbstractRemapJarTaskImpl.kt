@@ -18,9 +18,6 @@ import kotlin.io.path.*
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): AbstractRemapJarTask() {
 
-    @get:Internal
-    protected var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
-
     override fun devNamespace(namespace: String) {
         val delegate: FinalizeOnRead<Namespace> = AbstractRemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })

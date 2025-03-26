@@ -30,6 +30,7 @@ import xyz.wagyourtail.unimined.mapping.propogator.Propagator
 import xyz.wagyourtail.unimined.mapping.resolver.ContentProvider
 import xyz.wagyourtail.unimined.mapping.tree.LazyMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.mapping.util.Scoped
 import xyz.wagyourtail.unimined.mapping.visitor.*
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
@@ -41,6 +42,7 @@ import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 import kotlin.time.measureTime
 
+@Scoped
 class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
     val unimined: UniminedExtension = project.unimined
 
@@ -236,6 +238,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }) {
                 mapNamespace("srg" to "searge")
                 provides("searge" to false)
+
                 insertInto.add {
                     it.delegator(object: Delegator() {
                         val searge = Namespace("searge")
@@ -652,7 +655,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             postProcessDependency("spigotDev", {
                 mojmap()
                 mapping(buildData.toFile(), "spigotDev") {
-                    mapNamespace("spigot", "spigotDev")
+                    mapNamespace("target", "spigotDev")
+                    mapNamespace("source", "official")
                     provides("spigotDev" to true)
                     requires("mojmap")
 
@@ -697,7 +701,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }
         } else {
             mapping(buildData.toFile(), "spigotDev") {
-                mapNamespace("spigot", "spigotDev")
+                mapNamespace("source", "official")
+                mapNamespace("target", "spigotDev")
                 provides("spigotDev" to true)
 
                 afterLoad.add {
