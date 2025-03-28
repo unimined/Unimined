@@ -11,13 +11,13 @@ import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools.BuildToolsExecutor
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
 import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.FieldVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
@@ -146,9 +146,9 @@ open class CraftbukkitMinecraftTransformer(
         return super.transform(patchedJar)
     }
 
-    private fun MappingsConfig<out MappingsConfig<*>>.spigotProd() {
+    private fun MappingResolver<out MappingsConfig<*>>.spigotProd() {
         postProcessDependency("spigotProd", {
-            this@postProcessDependency.spigotDev()
+            spigotDev()
         }) {
             mapNamespace("spigotDev", "spigotProd")
             provides("spigotProd" to false)

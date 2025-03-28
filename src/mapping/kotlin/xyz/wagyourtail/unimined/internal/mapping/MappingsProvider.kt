@@ -28,31 +28,39 @@ import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.propogator.Propagator
 import xyz.wagyourtail.unimined.mapping.resolver.ContentProvider
+import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
 import xyz.wagyourtail.unimined.mapping.tree.LazyMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.mapping.util.Scoped
 import xyz.wagyourtail.unimined.mapping.visitor.*
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
-import xyz.wagyourtail.unimined.mapping.visitor.fixes.renest
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.net.URI
 import java.nio.file.StandardOpenOption
+import kotlin.collections.toMutableMap
 import kotlin.io.path.*
 import kotlin.time.measureTime
 
 @Scoped
-class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
+open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
     val unimined: UniminedExtension = project.unimined
 
-    override fun createForPostProcess(key: String): MappingsProvider {
-        return MappingsProvider(project, minecraft, key)
+    override fun createForPostProcess(key: String, action: MemoryMappingTree.() -> Unit): MappingsProvider {
+        return object : MappingsProvider(project, minecraft, key) {
+
+            override suspend fun afterLoad(tree: MemoryMappingTree) {
+                super.afterLoad(tree)
+                tree.action()
+            }
+
+        }
     }
 
     val mappings = project.configurations.detachedConfiguration()
 
-    var stubMappings: LazyMappingTree? = null
+    private var stubMappings: LazyMappingTree? = null
 
     override var legacyFabricGenVersion by FinalizeOnRead(1)
     override var ornitheGenVersion by FinalizeOnRead(1)
@@ -364,12 +372,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }
 
             provides("unknownThingy" to true)
+            renest()
         }
         addDependency("unknownThingy", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
 
@@ -386,12 +391,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("intermediary")
             mapNamespace("named" to "yarn")
             provides("yarn" to true)
+            renest()
         }
         addDependency("yarn", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
     override fun yarnv1(build: Int) {
@@ -424,10 +426,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             provides("yarnv1" to true)
             mapNamespace("named" to "yarnv1")
             requires("intermediary")
-
-            afterLoad.add {
-                renest(requires.name, *provides.map { it.first.name }.toTypedArray())
-            }
+            renest()
         }
     }
 
@@ -452,6 +451,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("calamus")
             provides("feather" to true)
             mapNamespace("intermediary" to "calamus", "named" to "feather")
+            renest()
             insertInto.add {
                 it.delegator(object: Delegator() {
                     val calamus = Namespace("calamus")
@@ -477,10 +477,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             }
         }
         addDependency("feather", entry)
-
-        afterLoad.add {
-//            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
 
@@ -498,12 +494,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("legacyIntermediary")
             provides("legacyYarn" to true)
             mapNamespace("intermediary" to "legacyIntermediary", "named" to "legacyYarn")
+            renest()
         }
         addDependency("legacyYarn", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
 
@@ -517,12 +510,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("babricIntermediary")
             provides("barn" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "barn")
+            renest()
         }
         addDependency("barn", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
     override fun biny(commitName: String) {
@@ -533,12 +523,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("babricIntermediary")
             provides("biny" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "biny")
+            renest()
         }
         addDependency("biny", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
     override fun nostalgia(build: Int) {
@@ -554,11 +541,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             requires("babricIntermediary")
             provides("nostalgia" to true)
             mapNamespace("intermediary" to "babricIntermediary", "named" to "nostalgia")
+            renest()
         }
         addDependency("nostalgia", entry)
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
     override fun quilt(build: Int) {
@@ -573,12 +558,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         ).apply {
             requires("intermediary")
             provides("quilt" to true)
+            renest()
         }
         addDependency("quilt", entry)
-
-        afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
-        }
     }
 
 
@@ -660,9 +642,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     provides("spigotDev" to true)
                     requires("mojmap")
 
-                    afterLoad.add {
-                        renest(requires.name, *provides.map { it.first.name }.toTypedArray())
-                    }
+                    renest()
                 }
             }) {
                 insertInto.add {
@@ -705,27 +685,37 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 mapNamespace("target", "spigotDev")
                 provides("spigotDev" to true)
 
-                afterLoad.add {
-                    renest(requires.name, *provides.map { it.first.name }.toTypedArray())
-                }
+                renest()
             }
         }
     }
 
-    override fun mapping(dependency: String, key: String, action: MappingEntry.() -> Unit) {
+    override fun mapping(
+        dependency: String,
+        key: String,
+        action: @Scoped (MappingResolver<MappingsProvider>.MappingEntry.() -> Unit)
+    ) {
         val coords = MavenCoords(dependency)
         addDependency(key, MappingEntry(contentOf(coords), "$key-${coords.version}").apply {
             action()
         })
     }
 
-    override fun mapping(dependency: MavenCoords, key: String, action: MappingEntry.() -> Unit) {
+    override fun mapping(
+        dependency: MavenCoords,
+        key: String,
+        action: @Scoped (MappingResolver<MappingsProvider>.MappingEntry.() -> Unit)
+    ) {
         addDependency(key, MappingEntry(contentOf(dependency), "$key-${dependency.version}").apply {
             action()
         })
     }
 
-    override fun mapping(dependency: File, key: String, action: MappingEntry.() -> Unit) {
+    override fun mapping(
+        dependency: File,
+        key: String,
+        action: @Scoped (MappingResolver<MappingsProvider>.MappingEntry.() -> Unit)
+    ) {
         addDependency(key, MappingEntry(contentOf(dependency), key).apply {
             action()
         })
@@ -747,6 +737,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         return MappingContentProvider(dep, file.extension)
     }
 
+    override suspend fun afterLoad(tree: MemoryMappingTree) {
+        if (stubMappings != null) {
+            stubMappings!!.lazyAccept(tree)
+        }
+        super.afterLoad(tree)
+    }
+
     override fun hasStubs(): Boolean {
         return stubMappings != null
     }
@@ -764,9 +761,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         get() {
             if (stubMappings == null) {
                 stubMappings = LazyMappingTree()
-                afterLoad.add {
-                    stubMappings!!.lazyAccept(this)
-                }
             }
             return MemoryMapping(stubMappings!!)
         }
@@ -777,9 +771,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
         if (stubMappings == null) {
             stubMappings = LazyMappingTree()
-            afterLoad.add {
-                stubMappings!!.lazyAccept(this)
-            }
         }
         MappingDSL(stubMappings!!).apply {
             namespace(*namespaces)
