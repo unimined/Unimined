@@ -359,7 +359,11 @@ abstract class FabricLikeMinecraftTransformer(
             Files.createDirectories(includeCache)
             var errored = false
             for (dep in deps) {
-                if (dep.file.extension != "jar") continue
+                if (dep.file.extension != "jar") {
+                    project.logger.info("[Unimined/Fabric] Include skipping non-jar dependency ${dep.file}")
+                } else {
+                    project.logger.info("[Unimined/Fabric] Include ${dep.name}-${dep.moduleVersion.id.version}.jar")
+                }
                 try {
                     val source = dep.file.toPath()
                     val path = jars.resolve("${dep.name}-${dep.moduleVersion.id.version}.jar")
