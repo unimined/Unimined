@@ -8,6 +8,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedDependency
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
@@ -339,7 +341,8 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     private fun insertIncludes(output: Path) {
-        if (include.dependencies.isEmpty()) {
+        val deps = include.resolvedConfiguration.resolvedArtifacts
+        if (deps.isEmpty()) {
             return
         }
         output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
@@ -355,14 +358,13 @@ abstract class FabricLikeMinecraftTransformer(
             Files.createDirectories(jars)
             Files.createDirectories(includeCache)
             var errored = false
-            for (dep in include.dependencies) {
-                val files = include.getFiles(dep, "jar")
-                if (files.isEmpty) continue
+            for (dep in deps) {
+                if (dep.file.extension != "jar") continue
                 try {
-                    val source = files.singleFile.toPath()
-                    val path = jars.resolve("${dep.name}-${dep.version}.jar")
+                    val source = dep.file.toPath()
+                    val path = jars.resolve("${dep.name}-${dep.moduleVersion.id.version}.jar")
                     if (!source.zipContains(modJsonName)) {
-                        val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
+                        val cachePath = includeCache.resolve("${dep.name}-${dep.moduleVersion.id.version}.jar")
                         if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
                             try {
                                 ZipArchiveOutputStream(
@@ -382,12 +384,12 @@ abstract class FabricLikeMinecraftTransformer(
                                     val innerjson = JsonObject()
                                     innerjson.addProperty("schemaVersion", 1)
                                     var artifactString = ""
-                                    if (dep.group != null) {
-                                        artifactString += dep.group!!.replace(".", "_") + "_"
+                                    if (dep.moduleVersion.id.group != null) {
+                                        artifactString += dep.moduleVersion.id.group.replace(".", "_") + "_"
                                     }
                                     artifactString += dep.name
                                     innerjson.addProperty("id", artifactString.lowercase())
-                                    innerjson.addProperty("version", dep.version)
+                                    innerjson.addProperty("version", dep.moduleVersion.id.version)
                                     innerjson.addProperty("name", dep.name)
                                     val custom = JsonObject()
                                     custom.addProperty("fabric-loom:generated", true)
@@ -422,7 +424,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    protected abstract fun addIncludeToModJson(json: JsonObject, dep: Dependency, path: String)
+    protected abstract fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String)
 
     private fun insertAW(output: Path) {
         if (accessWidener != null && !skipInsertAw) {
