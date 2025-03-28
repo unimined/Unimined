@@ -6,12 +6,10 @@ import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.mapping.EnvType
 import java.io.InputStreamReader
 import java.nio.file.Files
 import kotlin.io.path.absolutePathString
