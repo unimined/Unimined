@@ -161,7 +161,7 @@ val sourcesJar by tasks.getting(Jar::class) {
         api.allSource,
         minecraft.allSource,
         mapping.allSource,
-        source.allSource,
+        sourceSets["source"].allSource,
         mods.allSource,
         runs.allSource,
         main.allSource
