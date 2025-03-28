@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
@@ -105,7 +106,7 @@ open class FlintMinecraftTransformer(
         this.insertAccessWidener(output)
     }
 
-    override fun addIncludeToModJson(json: JsonObject, dep: Dependency, path: String) {
+    override fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String) {
         throw UnsupportedOperationException("Flint does not support nested modules yet")
     }
 
