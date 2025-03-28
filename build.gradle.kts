@@ -18,6 +18,8 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
     }
+
+    withSourcesJar()
 }
 
 kotlin {
@@ -154,10 +156,7 @@ tasks.jar {
     }
 }
 
-val sourcesJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("sources")
-    val source by sourceSets.getting
-
+val sourcesJar by tasks.getting(Jar::class) {
     from(
         api.allSource,
         minecraft.allSource,
@@ -201,15 +200,6 @@ publishing {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
                 password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
             }
-        }
-    }
-    publications {
-        create<MavenPublication>("pluginMaven") {
-
-            artifact(sourcesJar) {
-                classifier = "sources"
-            }
-
         }
     }
 }

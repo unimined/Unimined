@@ -15,8 +15,10 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.getFiles
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Writer
-import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -48,6 +50,14 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
             }
         }
     })
+
+    private val vanillaExcludesSet = setOf(
+        "com.mojang:patchy:",
+        "oshi-project:oshi-core:",
+        "com.ibm.icu:icu4j-core-mojang:",
+        "net.java.jutils:",
+        "org.lwjgl.lwjgl:"
+    )
 
     override fun addMavens() {
         project.unimined.cleanroomRepos()
@@ -100,7 +110,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     }
 
     override fun libraryFilter(library: Library): Library? {
-        if (library.name.startsWith("oshi-project:")) {
+        if (vanillaExcludesSet.any { library.name.startsWith(it) }) {
             return null
         }
         if (library.name.startsWith("org.lwjgl") && library.name.substringAfterLast(":").startsWith("2")) {
@@ -127,6 +137,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         }
         config.javaVersion = JavaVersion.VERSION_21
     }
+
 
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {
 
