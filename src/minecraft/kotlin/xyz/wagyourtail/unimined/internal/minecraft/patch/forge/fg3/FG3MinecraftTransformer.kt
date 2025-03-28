@@ -9,6 +9,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
@@ -551,7 +552,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
-    private fun addIncludeToMetadata(json: JsonObject, dep: Dependency, path: String) {
+    private fun addIncludeToMetadata(json: JsonObject, dep: ResolvedArtifact, path: String) {
         var jars = json.get("jars")?.asJsonArray
         if (jars == null) {
             jars = JsonArray()
@@ -559,21 +560,19 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
         jars.add(JsonObject().apply {
             add("identifier", JsonObject().apply {
-                addProperty("group", dep.group)
+                addProperty("group", dep.moduleVersion.id.group)
                 addProperty("artifact", dep.name)
             })
             add("version", JsonObject().apply {
-                addProperty("range", "[${dep.version},)")
-                addProperty("artifactVersion", dep.version)
+                addProperty("range", "[${dep.moduleVersion.id.version},)")
+                addProperty("artifactVersion", dep.moduleVersion.id.version)
             })
             addProperty("path", path)
         })
     }
 
     private fun doJarJar(remapJarTask: AbstractRemapJarTask, output: Path) {
-        if (include!!.dependencies.isEmpty()) {
-            return
-        }
+        val deps = include!!.resolvedConfiguration.resolvedArtifacts
         output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
             val json = JsonObject()
             val jarDir = fs.getPath("META-INF/jarjar/")
@@ -581,17 +580,15 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
             jarDir.createDirectories()
             var errored = false
-            for (dep in include.dependencies) {
+            for (dep in deps) {
                 try {
-                    val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
+                    val path = jarDir.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
                     if (!path.exists()) {
-                        val files = include.getFiles(dep) { it.extension == "jar" }
-                        if (files.isEmpty) continue
-                        files.singleFile.toPath()
-                            .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
+                        dep.file.toPath()
+                            .copyTo(jarDir.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar"), true)
                     }
 
-                    addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
+                    addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
                 } catch (e: Exception) {
                     project.logger.error("Failed on $dep", e)
                     errored = true
