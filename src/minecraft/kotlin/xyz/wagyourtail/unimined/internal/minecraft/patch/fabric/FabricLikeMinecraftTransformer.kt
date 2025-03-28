@@ -366,9 +366,9 @@ abstract class FabricLikeMinecraftTransformer(
                 }
                 try {
                     val source = dep.file.toPath()
-                    val path = jars.resolve("${dep.name}-${dep.moduleVersion.id.version}.jar")
+                    val path = jars.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
                     if (!source.zipContains(modJsonName)) {
-                        val cachePath = includeCache.resolve("${dep.name}-${dep.moduleVersion.id.version}.jar")
+                        val cachePath = includeCache.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
                         if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
                             try {
                                 ZipArchiveOutputStream(
@@ -392,6 +392,9 @@ abstract class FabricLikeMinecraftTransformer(
                                         artifactString += dep.moduleVersion.id.group.replace(".", "_") + "_"
                                     }
                                     artifactString += dep.name
+                                    if (dep.classifier != null) {
+                                        artifactString += "_${dep.classifier}"
+                                    }
                                     innerjson.addProperty("id", artifactString.lowercase())
                                     innerjson.addProperty("version", dep.moduleVersion.id.version)
                                     innerjson.addProperty("name", dep.name)
