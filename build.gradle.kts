@@ -21,6 +21,8 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(8))
     }
+
+    withSourcesJar()
 }
 
 kotlin {
@@ -225,8 +227,7 @@ tasks.create("getArtifacts") {
     }
 }
 
-tasks.create("sourcesJar", Jar::class) {
-    archiveClassifier.set("sources")
+val sourcesJar by tasks.getting(Jar::class) {
     from(
         sourceSets["api"].allSource,
         sourceSets["minecraft"].allSource,
@@ -236,7 +237,6 @@ tasks.create("sourcesJar", Jar::class) {
         sourceSets["runs"].allSource,
         sourceSets["main"].allSource
     )
-    archiveClassifier.set("sources")
 }
 
 tasks.build {
@@ -274,17 +274,6 @@ publishing {
             credentials {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
                 password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
-            }
-        }
-    }
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = project.group as String
-            artifactId = project.properties["archives_base_name"] as String? ?: project.name
-            version = project.version as String
-
-            artifact(tasks["sourcesJar"]) {
-                classifier = "sources"
             }
         }
     }
