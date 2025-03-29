@@ -380,6 +380,9 @@ abstract class FabricLikeMinecraftTransformer(
                                     if (dep.classifier != null) {
                                         artifactString += "_${dep.classifier}"
                                     }
+                                    if (artifactString.length > 64) {
+                                        artifactString = artifactString.substring(0, 50) + artifactString.getSha256(0, 14)
+                                    }
                                     innerjson.addProperty("id", artifactString.lowercase())
                                     innerjson.addProperty("version", dep.moduleVersion.id.version)
                                     innerjson.addProperty("name", dep.name)
