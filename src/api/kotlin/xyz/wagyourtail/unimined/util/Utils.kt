@@ -18,6 +18,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType
@@ -268,11 +269,18 @@ fun <K, V> HashMap<K, V>.getSha1(): String {
 
 fun <K, V> HashMap<K, V>.getShortSha1(): String = getSha1().substring(0, 7)
 
-fun String.getSha1(): String {
+fun String.getSha1(from: Int = 0, to: Int = 40): String {
     val digestSha1 = MessageDigest.getInstance("SHA-1")
     digestSha1.update(toByteArray())
     val hashBytes = digestSha1.digest()
-    return hashBytes.joinToString("") { String.format("%02x", it)}
+    return hashBytes.joinToString("") { String.format("%02x", it) }.substring(from, to)
+}
+
+fun String.getSha256(from: Int = 0, to: Int = 64): String {
+    val digestSha256 = MessageDigest.getInstance("SHA-256")
+    digestSha256.update(toByteArray())
+    val hashBytes = digestSha256.digest()
+    return hashBytes.joinToString("") { String.format("%02x", it) }.substring(from, to)
 }
 
 fun String.getShortSha1() = getSha1().substring(0, 7)
