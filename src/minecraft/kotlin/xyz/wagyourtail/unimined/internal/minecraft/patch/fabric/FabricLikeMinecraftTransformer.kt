@@ -389,7 +389,7 @@ abstract class FabricLikeMinecraftTransformer(
                                     innerjson.addProperty("schemaVersion", 1)
                                     var artifactString = ""
                                     if (dep.moduleVersion.id.group != null) {
-                                        artifactString += dep.moduleVersion.id.group.replace(".", "_") + "_"
+                                        artifactString += dep.moduleVersion.id.group + "_"
                                     }
                                     artifactString += dep.name
                                     if (dep.classifier != null) {
@@ -398,7 +398,7 @@ abstract class FabricLikeMinecraftTransformer(
                                     if (artifactString.length > 64) {
                                         artifactString = artifactString.substring(0, 50) + artifactString.getSha256(0, 14)
                                     }
-                                    innerjson.addProperty("id", artifactString.lowercase())
+                                    innerjson.addProperty("id", artifactString.replace(".", "_").lowercase())
                                     innerjson.addProperty("version", dep.moduleVersion.id.version)
                                     innerjson.addProperty("name", dep.name)
                                     val custom = JsonObject()
