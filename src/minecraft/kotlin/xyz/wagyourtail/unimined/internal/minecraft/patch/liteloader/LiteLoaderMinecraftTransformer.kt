@@ -9,14 +9,14 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.util.cachingDownload
 import kotlin.io.path.reader
 
 class LiteLoaderMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
-) : AbstractMinecraftTransformer(project, provider, "Rift"), LiteLoaderPatcher {
+) : JarModAgentMinecraftTransformer(project, provider, providerName = "LiteLoader"), LiteLoaderPatcher {
 
     private var liteloader: Dependency? = null
 
@@ -45,6 +45,8 @@ class LiteLoaderMinecraftTransformer(
         if (liteloader == null) {
             loader(provider.version + "-SNAPSHOT")
         }
+
+        jarModConfiguration.dependencies.add(liteloader)
 
         val version = liteloader?.version ?: error("liteloader version not set")
 
