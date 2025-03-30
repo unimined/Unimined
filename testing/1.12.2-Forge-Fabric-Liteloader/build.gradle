@@ -25,6 +25,10 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+    liteloader {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
 }
 
 repositories {
@@ -70,6 +74,17 @@ unimined.minecraft(sourceSets.forge) {
 
     defaultRemapJar = true
 }
+
+unimined.minecraft(sourceSets.liteloader) {
+    combineWith(sourceSets.main)
+
+    liteloader {
+    }
+
+    defaultRemapJar = true
+}
+
+
 
 configurations {
     mainImplementation

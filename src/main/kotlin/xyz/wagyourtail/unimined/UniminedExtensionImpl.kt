@@ -428,10 +428,14 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     val liteloaderMaven by lazy {
         project.repositories.maven {
             it.name = "liteloader"
-            it.url = URI.create("http://dl.liteloader.com/versions/")
+            it.url = URI.create("https://dl.liteloader.com/versions/")
             it.content {
                 it.includeGroup("com.mumfrey")
             }
+            it.metadataSources {
+                it.artifact()
+            }
+            it.isAllowInsecureProtocol = true
         }
     }
 
@@ -441,12 +445,15 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     val legacyLiteloaderMaven by lazy {
         project.repositories.ivy {
-            it.url = URI.create("http://dl.liteloader.com/redist/legacy/")
+            it.url = URI.create("https://dl.liteloader.com/redist/legacy/")
             it.patternLayout {
                 it.artifact("[artifact]_[revision].[ext]")
             }
             it.content {
                 it.includeModule("com.mumfrey", "liteloader")
+            }
+            it.metadataSources {
+                it.artifact()
             }
         }
     }

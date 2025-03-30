@@ -28,4 +28,4 @@ pluginManagement {
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.12.2-Forge-Fabric'
+rootProject.name = '1.12.2-Forge-Fabric-Liteloader'

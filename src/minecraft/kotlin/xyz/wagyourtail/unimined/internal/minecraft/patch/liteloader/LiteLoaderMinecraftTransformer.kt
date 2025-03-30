@@ -9,14 +9,14 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.util.cachingDownload
 import kotlin.io.path.reader
 
 class LiteLoaderMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
-) : JarModAgentMinecraftTransformer(project, provider, providerName = "LiteLoader"), LiteLoaderPatcher {
+) : JarModMinecraftTransformer(project, provider, providerName = "LiteLoader"), LiteLoaderPatcher {
 
     private var liteloader: Dependency? = null
 
@@ -46,11 +46,11 @@ class LiteLoaderMinecraftTransformer(
             loader(provider.version + "-SNAPSHOT")
         }
 
-        jarModConfiguration.dependencies.add(liteloader)
-
         val version = liteloader?.version ?: error("liteloader version not set")
 
         if (versions != null) {
+            provider.mods.modImplementation.dependencies.add(liteloader)
+
             val versions = if (version.endsWith("SNAPSHOT")) {
                 val versions = versions!!["snapshots"].asJsonObject
                 versions
@@ -58,17 +58,20 @@ class LiteLoaderMinecraftTransformer(
                 versions!!["artefacts"].asJsonObject
             }
             versions.getAsJsonArray("libraries")?.let { addLibraries(it) }
-            for ((key, value) in versions.getAsJsonObject("com.mumfrey:liteloader:").asJsonObject.entrySet()) {
+            for ((key, value) in versions.getAsJsonObject("com.mumfrey:liteloader").asJsonObject.entrySet()) {
                 if (value.asJsonObject["version"].asString == version) {
                     value.asJsonObject.getAsJsonArray("libraries")?.let { addLibraries(it) }
                     val tweakClass = value.asJsonObject["tweakClass"]?.asString
                     if (tweakClass != null) {
                         this.tweakClass = tweakClass
+                        return
                     }
                 }
             }
 
             throw IllegalStateException("failed to find liteloader version: $version")
+        } else {
+            jarModConfiguration.dependencies.add(liteloader)
         }
     }
 
