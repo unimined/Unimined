@@ -1,0 +1,8 @@
+{
+  "required": true,
+  "package": "com.example.liteloader.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MainMenuMixin"
+  ]
+}

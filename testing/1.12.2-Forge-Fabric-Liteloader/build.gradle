@@ -127,3 +127,11 @@ processForgeResources {
         expand "version": project.version
     }
 }
+
+processLiteloaderResources {
+    inputs.property "version", project.version
+
+    filesMatching("litemod.json") {
+        expand "version": project.version
+    }
+}
