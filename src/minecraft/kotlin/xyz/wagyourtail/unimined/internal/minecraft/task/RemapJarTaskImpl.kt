@@ -6,7 +6,6 @@ import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
@@ -89,7 +88,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         val tag = remapper.createInputTag()
-        project.logger.debug("[Unimined/RemapJar ${path}] input: $from")
+        logger.debug("[Unimined/RemapJar ${path}] input: $from")
         betterMixinExtension.readClassPath(remapper, *classpathList).thenCompose {
             project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
             betterMixinExtension.readInput(remapper, tag, from)

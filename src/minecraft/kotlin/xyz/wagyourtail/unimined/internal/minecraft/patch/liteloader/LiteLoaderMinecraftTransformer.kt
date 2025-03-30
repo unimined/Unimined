@@ -42,6 +42,10 @@ class LiteLoaderMinecraftTransformer(
     var tweakClass: String? = null
 
     override fun apply() {
+        if (liteloader == null) {
+            loader(provider.version + "-SNAPSHOT")
+        }
+
         val version = liteloader?.version ?: error("liteloader version not set")
 
         if (versions != null) {
