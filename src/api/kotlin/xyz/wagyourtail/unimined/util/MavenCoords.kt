@@ -5,13 +5,16 @@ import kotlin.jvm.JvmInline
 @JvmInline
 value class MavenCoords(val value: String) {
 
-    constructor(group: String, artifact: String, version: String, classifier: String? = null, extension: String? = null): this(buildString {
+    constructor(group: String, artifact: String, version: String? = null, classifier: String? = null, extension: String? = null): this(buildString {
         append(group)
         append(':')
         append(artifact)
-        append(':')
-        append(version)
+        if (version != null) {
+            append(':')
+            append(version)
+        }
         if (classifier != null) {
+            if (version == null) throw IllegalArgumentException("Cannot have classifier without version")
             append(':')
             append(classifier)
         }
@@ -22,16 +25,22 @@ value class MavenCoords(val value: String) {
     })
 
     val parts: List<String>
-        get() = value.split(":")
+        get() = value.substringBeforeLast('@').split(":", limit = 4)
 
-    val group: String
-        get() = parts[0]
+    val group: String?
+        get() {
+            if (parts.size < 2) return null
+            return parts[0]
+        }
 
     val artifact: String
-        get() = parts[1]
+        get() {
+            if (parts.size < 2) return value
+            return parts[1]
+        }
 
-    val version: String
-        get() = parts[2]
+    val version: String?
+        get() = parts.getOrNull(2)
 
     val classifier: String?
         get() = parts.getOrNull(3)
@@ -42,16 +51,20 @@ value class MavenCoords(val value: String) {
 
     val fileName: String
         get() = buildString {
-        append(artifact)
-        append('-')
-        append(version)
-        if (classifier != null) {
+            append(artifact)
             append('-')
-            append(classifier)
+            if (version == null) {
+                append("unspecified")
+            } else {
+                append(version)
+            }
+            if (classifier != null) {
+                append('-')
+                append(classifier)
+            }
+            append('.')
+            append(extension)
         }
-        append('.')
-        append(extension)
-    }
 
     override fun toString() = value
 

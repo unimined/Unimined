@@ -126,7 +126,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         if (ornitheGenVersion < 2) {
             return mavenCoords
         }
-        return MavenCoords(mavenCoords.group, "${mavenCoords.artifact}-gen$ornitheGenVersion", mavenCoords.version, mavenCoords.classifier, mavenCoords.extension)
+        return MavenCoords(mavenCoords.group!!, "${mavenCoords.artifact}-gen$ornitheGenVersion", mavenCoords.version, mavenCoords.classifier, mavenCoords.extension)
     }
 
 

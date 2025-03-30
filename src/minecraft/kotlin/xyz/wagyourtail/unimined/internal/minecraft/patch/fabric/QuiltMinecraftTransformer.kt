@@ -77,7 +77,7 @@ open class QuiltMinecraftTransformer(
         project.unimined.fabricMaven()
     }
 
-    override fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String) {
+    override fun addIncludeToModJson(json: JsonObject, path: String) {
         val quilt_loader = json.get("quilt_loader").asJsonObject
         var jars = quilt_loader.get("jars")?.asJsonArray
         if (jars == null) {

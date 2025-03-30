@@ -13,6 +13,7 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ShowStacktrace
@@ -551,4 +552,48 @@ fun Project.suppressLogs(spec: JavaExecSpec) {
     } else {
         spec.errorOutput = NullOutputStream.INSTANCE
     }
+}
+
+fun ResolvedArtifactResult.getCoords(): MavenCoords {
+    val owner = this.variant.owner
+
+    var location = if (owner is ModuleComponentIdentifier) {
+        MavenCoords(owner.group, owner.module, owner.version)
+    } else {
+        null
+    }
+
+    val capabilityLocations = this.variant.capabilities.map {
+        MavenCoords(it.group, it.name, it.version)
+    }
+
+    if (!capabilityLocations.isEmpty() && (location == null || !capabilityLocations.contains(location))) {
+        location = capabilityLocations[0]
+    }
+
+    if (location == null) {
+        error("unknown dependency type ${this.variant.owner}")
+    }
+
+    val classifierPrefix = "${location.artifact}-${location.version}-"
+
+    if (this.file.name.startsWith(classifierPrefix)) {
+        location = MavenCoords(
+            location.group!!,
+            location.artifact,
+            location.version,
+            this.file.nameWithoutExtension.substring(classifierPrefix.length),
+            this.file.extension
+        )
+    } else {
+        location = MavenCoords(
+            location.group!!,
+            location.artifact,
+            location.version,
+            null,
+            this.file.extension
+        )
+    }
+
+    return location
 }

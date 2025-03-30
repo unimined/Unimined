@@ -6,17 +6,12 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.api.artifacts.ResolvedArtifact
-import org.gradle.api.artifacts.ResolvedDependency
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
@@ -341,7 +336,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     private fun insertIncludes(output: Path) {
-        val deps = include.resolvedConfiguration.resolvedArtifacts
+        val deps = include.incoming.artifacts.resolvedArtifacts.get()
         if (deps.isEmpty()) {
             return
         }
@@ -359,16 +354,22 @@ abstract class FabricLikeMinecraftTransformer(
             Files.createDirectories(includeCache)
             var errored = false
             for (dep in deps) {
-                if (dep.file.extension != "jar") {
-                    project.logger.info("[Unimined/Fabric] Include skipping non-jar dependency ${dep.file}")
+                val location = dep.getCoords()
+
+                if (location.version == null) {
+                    error("Attempted to nest dependency with unknown version ${dep.variant.owner}")
+                }
+
+                if (location.extension != "jar") {
+                    project.logger.info("[Unimined/Fabric] Skipping $location because it is not a jar")
                 } else {
-                    project.logger.info("[Unimined/Fabric] Include ${dep.name}-${dep.moduleVersion.id.version}.jar")
+                    project.logger.info("[Unimined/Fabric] Adding $location to jar")
                 }
                 try {
                     val source = dep.file.toPath()
-                    val path = jars.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
+                    val path = jars.resolve(location.fileName)
                     if (!source.zipContains(modJsonName)) {
-                        val cachePath = includeCache.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
+                        val cachePath = includeCache.resolve(location.fileName)
                         if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
                             try {
                                 ZipArchiveOutputStream(
@@ -388,19 +389,19 @@ abstract class FabricLikeMinecraftTransformer(
                                     val innerjson = JsonObject()
                                     innerjson.addProperty("schemaVersion", 1)
                                     var artifactString = ""
-                                    if (dep.moduleVersion.id.group != null) {
-                                        artifactString += dep.moduleVersion.id.group + "_"
+                                    if (location.group != null) {
+                                        artifactString += location.group + "_"
                                     }
-                                    artifactString += dep.name
-                                    if (dep.classifier != null) {
-                                        artifactString += "_${dep.classifier}"
+                                    artifactString += location.artifact
+                                    if (location.classifier != null) {
+                                        artifactString += "_${location.classifier}"
                                     }
                                     if (artifactString.length > 64) {
                                         artifactString = artifactString.substring(0, 50) + artifactString.getSha256(0, 14)
                                     }
                                     innerjson.addProperty("id", artifactString.replace(".", "_").lowercase())
-                                    innerjson.addProperty("version", dep.moduleVersion.id.version)
-                                    innerjson.addProperty("name", dep.name)
+                                    innerjson.addProperty("version",location.version)
+                                    innerjson.addProperty("name", location.artifact)
                                     val custom = JsonObject()
                                     custom.addProperty("fabric-loom:generated", true)
                                     custom.addProperty("unimined:generated", true)
@@ -421,7 +422,7 @@ abstract class FabricLikeMinecraftTransformer(
                         source.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
                     }
 
-                    addIncludeToModJson(json, dep, path.toString().removePrefix("/"))
+                    addIncludeToModJson(json, path.toString().removePrefix("/"))
                 } catch (e: Exception) {
                     project.logger.error("Failed on $dep", e)
                     errored = true
@@ -434,7 +435,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    protected abstract fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String)
+    protected abstract fun addIncludeToModJson(json: JsonObject, path: String)
 
     private fun insertAW(output: Path) {
         if (accessWidener != null && !skipInsertAw) {

@@ -78,7 +78,7 @@ abstract class FabricMinecraftTransformer(
     }
 
 
-    override fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String) {
+    override fun addIncludeToModJson(json: JsonObject, path: String) {
         var jars = json.get("jars")?.asJsonArray
         if (jars == null) {
             jars = JsonArray()
