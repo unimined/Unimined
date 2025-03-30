@@ -27,7 +27,7 @@ class LiteLoaderMinecraftTransformer(
     }
 
     val versions: JsonObject? by lazy {
-        val file = project.cachingDownload("http://dl.liteloader.com/versions/versions.json")
+        val file = project.cachingDownload("https://dl.liteloader.com/versions/versions.json")
         val json = file.reader().use { JsonParser.parseReader(it) }.asJsonObject.getAsJsonObject("versions")
 
         json.getAsJsonObject(provider.version)
