@@ -283,6 +283,9 @@ abstract class UniminedExtension(project: Project) : FabricLikeApiExtension(proj
     abstract fun sonatypeStaging()
     abstract fun jitpack()
 
+    abstract fun legacyLiteloaderMaven()
+    abstract fun liteloaderMaven()
+
     @ScheduledForRemoval
     @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
     fun babricMaven() = glassLauncherMaven("babric")

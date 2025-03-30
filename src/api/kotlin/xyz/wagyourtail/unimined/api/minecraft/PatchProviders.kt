@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import java.lang.UnsupportedOperationException
@@ -641,6 +642,40 @@ interface PatchProviders {
         rift {}
     }
 
+    /**
+     * enables the liteloader patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.4.0
+     */
+    fun liteloader(action: LiteLoaderPatcher.() -> Unit)
+
+    /**
+     * enables the liteloader patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.4.0
+     */
+    fun liteloader(
+        @DelegatesTo(
+            value = LiteLoaderPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>) {
+        liteloader {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the liteloader patcher.
+     * @since 1.4.0
+     */
+    fun liteloader() {
+        liteloader {}
+    }
+
+
     @ApiStatus.Experimental
     fun <T: MinecraftPatcher> customPatcher(mcPatcher: T, action: T.() -> Unit)
+
 }

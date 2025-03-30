@@ -425,6 +425,36 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    val liteloaderMaven by lazy {
+        project.repositories.maven {
+            it.name = "liteloader"
+            it.url = URI.create("http://dl.liteloader.com/versions/")
+            it.content {
+                it.includeGroup("com.mumfrey")
+            }
+        }
+    }
+
+    override fun liteloaderMaven() {
+        project.logger.info("[Unimined] adding Liteloader maven: $liteloaderMaven")
+    }
+
+    val legacyLiteloaderMaven by lazy {
+        project.repositories.ivy {
+            it.url = URI.create("http://dl.liteloader.com/redist/legacy/")
+            it.patternLayout {
+                it.artifact("[artifact]_[revision].[ext]")
+            }
+            it.content {
+                it.includeModule("com.mumfrey", "liteloader")
+            }
+        }
+    }
+
+    override fun legacyLiteloaderMaven() {
+        project.logger.info("[Unimined] adding Legacy Liteloader maven: $legacyLiteloaderMaven")
+    }
+
     init {
         project.repositories.mavenCentral { repo ->
             repo.content {

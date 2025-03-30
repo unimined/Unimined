@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
@@ -31,6 +32,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.CleanroomMinecraf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.liteloader.LiteLoaderMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
@@ -112,6 +114,10 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
     @Deprecated("use prodNamespace instead", replaceWith = ReplaceWith("prodNamespace"))
     override fun setProdNamespace(namespace: String) {
         prodNamespace(namespace)
+    }
+
+    override fun prodNamespace(namespace: String) {
+        patchers.forEach { it.prodNamespace(namespace) }
     }
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
@@ -207,6 +213,12 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val rift = RiftMinecraftTransformer(project, provider)
         rift.action()
         patchers.add(rift)
+    }
+
+    override fun liteloader(action: LiteLoaderPatcher.() -> Unit) {
+        val liteloader = LiteLoaderMinecraftTransformer(project, provider)
+        liteloader.action()
+        patchers.add(liteloader)
     }
 
     @ApiStatus.Experimental

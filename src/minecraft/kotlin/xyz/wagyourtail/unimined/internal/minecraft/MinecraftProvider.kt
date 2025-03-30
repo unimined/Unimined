@@ -29,6 +29,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
@@ -48,6 +49,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.CleanroomMinecraf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.liteloader.LiteLoaderMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
@@ -378,6 +380,14 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         mcPatcher = RiftMinecraftTransformer(project, this).also {
             patcherAction = {
                 action(it as RiftPatcher)
+            }
+        }
+    }
+
+    override fun liteloader(action: LiteLoaderPatcher.() -> Unit) {
+        mcPatcher = LiteLoaderMinecraftTransformer(project, this).also {
+            patcherAction = {
+                action(it as LiteLoaderPatcher)
             }
         }
     }
