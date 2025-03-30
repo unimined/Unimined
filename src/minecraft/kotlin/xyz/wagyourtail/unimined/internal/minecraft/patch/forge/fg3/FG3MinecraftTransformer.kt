@@ -722,6 +722,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     private fun doJarJar(remapJarTask: AbstractRemapJarTask, output: Path) {
         val deps = include!!.resolvedConfiguration.resolvedArtifacts
+        if (deps.isEmpty()) {
+            return
+        }
         output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
             val json = JsonObject()
             val jarDir = fs.getPath("META-INF/jarjar/")
