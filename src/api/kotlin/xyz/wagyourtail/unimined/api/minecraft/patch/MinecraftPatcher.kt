@@ -19,6 +19,8 @@ import java.nio.file.Path
  */
 interface MinecraftPatcher {
 
+    val supportedEnvs: Set<EnvType>
+
     fun name(): String {
         return this::class.simpleName ?: error("MinecraftPatcher class simpleName is null, override name() instead")
     }

@@ -34,6 +34,8 @@ open class CraftbukkitMinecraftTransformer(
     providerName: String = "craftbukkit"
 ) : AbstractMinecraftTransformer(project, provider, providerName), CraftbukkitPatcher {
 
+    override val supportedEnvs = setOf(EnvType.SERVER)
+
     val cache by lazy {
         project.unimined.getLocalCache(provider.sourceSet).resolve("spigot")
     }

@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.cachingDownload
 import kotlin.io.path.reader
 
@@ -17,6 +18,8 @@ class LiteLoaderMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
 ) : JarModMinecraftTransformer(project, provider, providerName = "LiteLoader"), LiteLoaderPatcher {
+
+    override val supportedEnvs = setOf(EnvType.CLIENT)
 
     private var liteloader: Dependency? = null
 

@@ -77,6 +77,7 @@ unimined.minecraft(sourceSets.forge) {
 
 unimined.minecraft(sourceSets.liteloader) {
     combineWith(sourceSets.main)
+    side("client")
 
     liteloader {
     }

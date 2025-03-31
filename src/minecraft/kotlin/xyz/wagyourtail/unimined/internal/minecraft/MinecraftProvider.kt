@@ -597,6 +597,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
         patcherAction(mcPatcher)
 
+        if (side !in mcPatcher.supportedEnvs) {
+            throw IllegalStateException("Side $side is not supported by ${mcPatcher.name()}, supported sides are ${mcPatcher.supportedEnvs}")
+        }
+
         createMojmapIvy()
 
         project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] before mappings $sourceSet")

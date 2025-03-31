@@ -36,6 +36,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val providerName: String
 ): MinecraftPatcher {
 
+    override val supportedEnvs = EnvType.entries.toSet()
+
     open val merger: ClassMerger = ClassMerger()
 
     override var prodNamespace by FinalizeOnRead(LazyMutable {
