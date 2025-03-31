@@ -46,6 +46,8 @@ class LiteLoaderMinecraftTransformer(
 
     override fun apply() {
         if (liteloader == null) {
+            project.logger.warn("[Unimined/LiteLoader] No version set for liteloader, defaulting to \"${provider.version}-SNAPSHOT\"")
+            project.logger.warn("[Unimined/LiteLoader] If this fails, set the version manually in liteloader { loader(\"version\") }")
             loader(provider.version + "-SNAPSHOT")
         }
 

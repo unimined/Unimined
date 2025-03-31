@@ -79,8 +79,7 @@ unimined.minecraft(sourceSets.liteloader) {
     combineWith(sourceSets.main)
     side("client")
 
-    liteloader {
-    }
+    liteloader()
 
     defaultRemapJar = true
 }
