@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
@@ -674,6 +675,35 @@ interface PatchProviders {
         liteloader {}
     }
 
+    /**
+     * enables the paper patcher.
+     * @since 1.4.0
+     */
+    fun paper() {
+        paper {}
+    }
+
+    /**
+     * enables the paper patcher.
+     * @since 1.4.0
+     */
+    fun paper(action: PaperPatcher.() -> Unit)
+
+    /**
+     * enables the paper patcher.
+     * @since 1.4.0
+     */
+    fun paper(
+        @DelegatesTo(
+            value = PaperPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>) {
+        paper {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
 
     @ApiStatus.Experimental
     fun <T: MinecraftPatcher> customPatcher(mcPatcher: T, action: T.() -> Unit)

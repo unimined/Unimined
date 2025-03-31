@@ -17,6 +17,11 @@ unimined.useGlobalCache = false
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
+sourceSets {
+    spigot
+    paper
+}
+
 unimined.minecraft {
     version project.minecraft_version
     side "server"
@@ -26,8 +31,21 @@ unimined.minecraft {
         mojmap()
     }
 
+}
+
+unimined.minecraft(sourceSets.spigot) {
+    combineWith(sourceSets.main)
+
     spigot {
         loader "1.16.5"
+    }
+}
+
+unimined.minecraft(sourceSets.paper) {
+    combineWith(sourceSets.main)
+
+    paper {
+        loader "794"
     }
 
 }

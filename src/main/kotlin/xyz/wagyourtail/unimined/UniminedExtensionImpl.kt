@@ -462,6 +462,16 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Legacy Liteloader maven: $legacyLiteloaderMaven")
     }
 
+    val paperMaven by lazy {
+        project.repositories.maven {
+            it.url = URI.create("https://repo.papermc.io/repository/maven-public/")
+        }
+    }
+
+    override fun paperMaven() {
+        project.logger.info("[Unimined] adding Paper maven: $paperMaven")
+    }
+
     init {
         project.repositories.mavenCentral { repo ->
             repo.content {

@@ -21,6 +21,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
@@ -43,6 +44,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTra
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.PaperMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.*
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.CleanroomMinecraftTransformer
@@ -388,6 +390,14 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         mcPatcher = LiteLoaderMinecraftTransformer(project, this).also {
             patcherAction = {
                 action(it as LiteLoaderPatcher)
+            }
+        }
+    }
+
+    override fun paper(action: PaperPatcher.() -> Unit) {
+        mcPatcher = PaperMinecraftTransformer(project, this).also {
+            patcherAction = {
+                action(it as PaperPatcher)
             }
         }
     }

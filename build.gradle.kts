@@ -111,6 +111,8 @@ dependencies {
     implementation(libs.binarypatcher) {
         exclude(mapOf("group" to "commons-io"))
     }
+    implementation(libs.jbsdiff)
+
     implementation(libs.access.widener)
 
     implementation(libs.commons.io)

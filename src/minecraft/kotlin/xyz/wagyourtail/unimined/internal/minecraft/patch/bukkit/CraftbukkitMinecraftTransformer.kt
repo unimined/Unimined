@@ -109,6 +109,10 @@ open class CraftbukkitMinecraftTransformer(
         executor.cloneRepos()
         project.unimined.spigot()
 
+        loadLibraries()
+    }
+
+    open fun loadLibraries() {
         val deps = executor.targetPom.getElementsByTagName("dependencies").item(0).childNodes
 
         (0 until deps.length).forEach { i ->

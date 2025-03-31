@@ -119,13 +119,16 @@ class BuildToolsExecutor(
 
     val targetPom by lazy {
         when (target) {
-            BuildTarget.SPIGOT -> spigotPom
+            BuildTarget.SPIGOT -> {
+                runBuildTools()
+                spigotPom
+            }
             BuildTarget.CRAFTBUKKIT -> cBpom
         }
     }
 
     val version by lazy {
-        targetPom.getElementsByTagName("version").item(0).textContent
+        cBpom.getElementsByTagName("version").item(0).textContent
     }
 
     val minecraftVersion by lazy {

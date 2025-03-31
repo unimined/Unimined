@@ -20,12 +20,14 @@ import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.PaperMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.*
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.CleanroomMinecraftTransformer
@@ -219,6 +221,12 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val liteloader = LiteLoaderMinecraftTransformer(project, provider)
         liteloader.action()
         patchers.add(liteloader)
+    }
+
+    override fun paper(action: PaperPatcher.() -> Unit) {
+        val paper = PaperMinecraftTransformer(project, provider)
+        paper.action()
+        patchers.add(paper)
     }
 
     @ApiStatus.Experimental
