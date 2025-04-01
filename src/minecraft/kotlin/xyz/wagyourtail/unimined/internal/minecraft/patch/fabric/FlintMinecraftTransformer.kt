@@ -106,7 +106,7 @@ open class FlintMinecraftTransformer(
         this.insertAccessWidener(output)
     }
 
-    override fun addIncludeToModJson(json: JsonObject, dep: ResolvedArtifact, path: String) {
+    override fun addIncludeToModJson(json: JsonObject, path: String) {
         throw UnsupportedOperationException("Flint does not support nested modules yet")
     }
 

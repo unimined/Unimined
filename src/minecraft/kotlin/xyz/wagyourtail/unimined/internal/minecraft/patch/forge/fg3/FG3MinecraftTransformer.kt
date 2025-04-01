@@ -552,7 +552,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
-    private fun addIncludeToMetadata(json: JsonObject, dep: ResolvedArtifact, path: String) {
+    private fun addIncludeToMetadata(json: JsonObject, dep: MavenCoords, path: String) {
         var jars = json.get("jars")?.asJsonArray
         if (jars == null) {
             jars = JsonArray()
@@ -560,19 +560,19 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
         jars.add(JsonObject().apply {
             add("identifier", JsonObject().apply {
-                addProperty("group", dep.moduleVersion.id.group)
-                addProperty("artifact", dep.name)
+                addProperty("group", dep.group)
+                addProperty("artifact", dep.artifact)
             })
             add("version", JsonObject().apply {
-                addProperty("range", "[${dep.moduleVersion.id.version},)")
-                addProperty("artifactVersion", dep.moduleVersion.id.version)
+                addProperty("range", "[${dep.version},)")
+                addProperty("artifactVersion", dep.version)
             })
             addProperty("path", path)
         })
     }
 
     private fun doJarJar(remapJarTask: AbstractRemapJarTask, output: Path) {
-        val deps = include!!.resolvedConfiguration.resolvedArtifacts
+        val deps = include!!.incoming.artifacts.resolvedArtifacts.get()
         if (deps.isEmpty()) {
             return
         }
@@ -584,14 +584,20 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             jarDir.createDirectories()
             var errored = false
             for (dep in deps) {
+                val location = dep.getCoords()
+
+                if (location.version == null) {
+                    error("Attempted to nest dependency with unknown version ${dep.variant.owner}")
+                }
+
                 try {
-                    val path = jarDir.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
+                    val path = jarDir.resolve(location.fileName)
                     if (!path.exists()) {
                         dep.file.toPath()
-                            .copyTo(jarDir.resolve("${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar"), true)
+                            .copyTo(jarDir.resolve(location.fileName), true)
                     }
 
-                    addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.moduleVersion.id.version}${dep.classifier?.let { "-$it" } ?: ""}.jar")
+                    addIncludeToMetadata(json, location, "META-INF/jarjar/${location.fileName}")
                 } catch (e: Exception) {
                     project.logger.error("Failed on $dep", e)
                     errored = true

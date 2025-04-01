@@ -4,6 +4,7 @@ package xyz.wagyourtail.unimined.util
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipFile
+import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -12,7 +13,10 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.FileCollection
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
@@ -517,4 +521,69 @@ fun <K, V> MutableMap<K, V>.removeALl(other: Map<K, V>): MutableMap<K, V> {
         remove(it.key, it.value)
     }
     return this
+}
+
+fun Project.shouldShowVerboseStdout(): Boolean {
+    return gradle.startParameter.logLevel < LogLevel.LIFECYCLE
+}
+
+fun Project.shouldShowVerboseStderr(): Boolean {
+    return shouldShowVerboseStdout() || gradle.startParameter.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS
+}
+
+fun Project.suppressLogs(spec: JavaExecSpec) {
+    if (shouldShowVerboseStdout()) {
+        spec.standardOutput = System.out
+    } else {
+        spec.standardOutput = NullOutputStream.INSTANCE
+    }
+    if (shouldShowVerboseStderr()) {
+        spec.errorOutput = System.err
+    } else {
+        spec.errorOutput = NullOutputStream.INSTANCE
+    }
+}
+
+fun ResolvedArtifactResult.getCoords(): MavenCoords {
+    val owner = this.variant.owner
+
+    var location = if (owner is ModuleComponentIdentifier) {
+        MavenCoords(owner.group, owner.module, owner.version)
+    } else {
+        null
+    }
+
+    val capabilityLocations = this.variant.capabilities.map {
+        MavenCoords(it.group, it.name, it.version)
+    }
+
+    if (!capabilityLocations.isEmpty() && (location == null || !capabilityLocations.contains(location))) {
+        location = capabilityLocations[0]
+    }
+
+    if (location == null) {
+        error("unknown dependency type ${this.variant.owner}")
+    }
+
+    val classifierPrefix = "${location.artifact}-${location.version}-"
+
+    if (this.file.name.startsWith(classifierPrefix)) {
+        location = MavenCoords(
+            location.group!!,
+            location.artifact,
+            location.version,
+            this.file.nameWithoutExtension.substring(classifierPrefix.length),
+            this.file.extension
+        )
+    } else {
+        location = MavenCoords(
+            location.group!!,
+            location.artifact,
+            location.version,
+            null,
+            this.file.extension
+        )
+    }
+
+    return location
 }
