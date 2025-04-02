@@ -33,7 +33,7 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG1 transformer")
-        parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
+        parent.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
     override val prodNamespace: MappingNamespaceTree.Namespace
@@ -212,7 +212,7 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+        return parent.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

@@ -28,7 +28,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
-        parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
+        parent.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
@@ -200,7 +200,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+        return parent.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

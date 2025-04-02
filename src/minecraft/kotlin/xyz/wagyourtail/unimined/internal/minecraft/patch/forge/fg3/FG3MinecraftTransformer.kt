@@ -62,7 +62,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             forgeHardcodedNames.contains(it)
         } }
         unprotectRuntime = true
-        parent.accessTransformerTransformer.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
+        parent.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
 
     private val include: Configuration? =
@@ -549,7 +549,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+        return parent.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun addIncludeToMetadata(json: JsonObject, dep: MavenCoords, path: String) {
