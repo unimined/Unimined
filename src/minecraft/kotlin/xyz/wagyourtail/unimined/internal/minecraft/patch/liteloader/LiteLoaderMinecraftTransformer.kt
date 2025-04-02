@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.cachingDownload
 import kotlin.io.path.reader
 
-class LiteLoaderMinecraftTransformer(
+open class LiteLoaderMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
 ) : JarModMinecraftTransformer(project, provider, providerName = "LiteLoader"), LiteLoaderPatcher {

@@ -11,14 +11,13 @@ import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.net.URI
 import java.nio.file.StandardOpenOption
-import kotlin.collections.build
 import kotlin.collections.first
 import kotlin.collections.plus
 import kotlin.collections.setOf
 import kotlin.io.path.outputStream
 import kotlin.io.path.readBytes
 
-class PaperMinecraftTransformer(project: Project,
+open class PaperMinecraftTransformer(project: Project,
                                 provider: MinecraftProvider
 ) : CraftbukkitMinecraftTransformer(project, provider, "paper"), PaperPatcher {
 

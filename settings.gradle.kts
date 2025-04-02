@@ -1,5 +1,3 @@
-import jdk.tools.jlink.resources.plugins
-
 pluginManagement {
     repositories {
         mavenLocal()
