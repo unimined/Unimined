@@ -1,13 +1,10 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.rift
 
-import net.neoforged.accesstransformer.AccessTransformer
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
-import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -15,7 +12,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -23,7 +19,7 @@ import java.io.File
 open class RiftMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
-) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerPatcher, AccessConvert by AccessConvertImpl(project, provider) {
+) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
 
     private var rift: Dependency? = null
 
