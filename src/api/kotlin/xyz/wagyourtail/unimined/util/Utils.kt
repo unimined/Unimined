@@ -19,7 +19,6 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType

@@ -1,10 +1,13 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.SemVerUtils
 
 open class OrnitheFabricMinecraftTransformer(
     project: Project,
@@ -12,6 +15,22 @@ open class OrnitheFabricMinecraftTransformer(
 ): LegacyFabricMinecraftTransformer(project, provider) {
 
     override val defaultProdNamespace: String = "calamus"
+
+    override fun configureRemapJar(task: AbstractRemapJarTask) {
+        task.manifest {
+            it.attributes(mapOf(
+                "Calamus-Generation" to provider.mappings.ornitheGenVersion.toString()
+            ))
+        }
+        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
+            project.logger.info("enabling mixin extra")
+            if (task is RemapJarTask) {
+                task.mixinRemap {
+                    enableMixinExtra()
+                }
+            }
+        }
+    }
 
     override fun addIntermediaryMappings() {
         provider.mappings {
