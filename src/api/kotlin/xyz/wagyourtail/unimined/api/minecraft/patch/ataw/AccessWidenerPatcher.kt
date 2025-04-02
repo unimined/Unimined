@@ -34,4 +34,5 @@ interface AccessWidenerPatcher : MinecraftPatcher, AccessConvert {
     fun accessWidener(file: File) {
         accessWidener = file
     }
+
 }

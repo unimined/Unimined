@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
@@ -37,6 +38,7 @@ import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
@@ -339,7 +341,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     }
 
     override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
-        mcPatcher = AccessWidenerMinecraftTransformer(project, this).also {
+        mcPatcher = AccessWidenerMinecraftTransformer.DefaultTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }
@@ -347,7 +349,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     }
 
     override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
-        mcPatcher = AccessTransformerMinecraftTransformer(project, this).also {
+        mcPatcher = AccessTransformerMinecraftTransformer.DefaultTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

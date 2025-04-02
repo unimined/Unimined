@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
@@ -25,7 +26,11 @@ import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer.Companion.getDefaultDependency
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer.Companion.getDependencyMainClass
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
@@ -41,20 +46,25 @@ abstract class ForgeLikeMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
     providerName: String,
-    val accessTransformerTransformer: AccessTransformerMinecraftTransformer = AccessTransformerMinecraftTransformer(
-        project,
-        provider
-    )
-): AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer>, AccessTransformerPatcher by accessTransformerTransformer {
+): AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer>, AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet)).apply {
         isTransitive = false
     }
 
-    override var accessTransformer: File? = null
+
+    // access transformer fields
+    override var accessTransformer: File? by FinalizeOnRead(null)
+
+    override var accessTransformerPaths: List<String> by FinalizeOnRead(listOf())
+
+    override var atDependency: Dependency by FinalizeOnRead(getDefaultDependency(project, provider))
+
+    override var atMainClass: String by FinalizeOnRead(getDependencyMainClass(project, provider))
+
+
 
     override var customSearge: Boolean by FinalizeOnRead(false)
-
 
     override var canCombine: Boolean
         get() = super.canCombine
@@ -336,7 +346,7 @@ abstract class ForgeLikeMinecraftTransformer(
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return forgeTransformer.afterRemap(baseMinecraft)
+        return super<AccessTransformerMinecraftTransformer>.afterRemap(forgeTransformer.afterRemap(baseMinecraft))
     }
 
     val groups: String by lazy {

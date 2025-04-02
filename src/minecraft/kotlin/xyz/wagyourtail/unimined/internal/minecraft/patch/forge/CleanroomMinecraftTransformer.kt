@@ -1,8 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonObject
-import org.apache.commons.lang3.ArchUtils
-import org.apache.commons.lang3.SystemUtils
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
@@ -21,7 +19,6 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getFiles
 import java.io.File
-import java.lang.instrument.Instrumentation
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
@@ -32,8 +29,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnRead(CleanroomFG3(project, this))
 
     init {
-        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
-        accessTransformerTransformer.atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
+        atDependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
+        atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
     }
 
     @get:ApiStatus.Internal

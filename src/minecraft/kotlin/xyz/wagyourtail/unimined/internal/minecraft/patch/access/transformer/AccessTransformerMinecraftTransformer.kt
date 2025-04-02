@@ -17,31 +17,44 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImp
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.getShortSha1
 import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.suppressLogs
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-open class AccessTransformerMinecraftTransformer(
-    project: Project,
-    provider: MinecraftProvider,
-    providerName: String = "accessTransformer",
-) : AbstractMinecraftTransformer(
-    project,
-    provider,
-    providerName
-), AccessTransformerPatcher, AccessConvert by AccessConvertImpl(project, provider) {
+interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, AccessConvert {
 
-    override var accessTransformer: File? by FinalizeOnRead(null)
+    companion object {
+        fun getDefaultDependency(project: Project, provider: MinecraftProvider): Dependency {
+            return if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21)
+                project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.2")
+            else
+                project.dependencies.create("net.neoforged:accesstransformers:9.0.3")
+        }
 
-    override var accessTransformerPaths: List<String> by FinalizeOnRead(listOf())
+        fun getDependencyMainClass(project: Project, provider: MinecraftProvider): String {
+            return if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21)
+                "net.neoforged.accesstransformer.cli.TransformerProcessor"
+            else
+                "net.neoforged.accesstransformer.TransformerProcessor"
+        }
+    }
 
-    override var dependency: Dependency by FinalizeOnRead(if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.2") else project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
+    val project: Project
 
-    override var atMainClass: String by FinalizeOnRead(if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) "net.neoforged.accesstransformer.cli.TransformerProcessor" else "net.neoforged.accesstransformer.TransformerProcessor")
+    val provider: MinecraftProvider
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+    override var accessTransformer: File?
+
+    override var accessTransformerPaths: List<String>
+
+    override var atDependency: Dependency
+
+    override var atMainClass: String
+
+    fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         baseMinecraft.path.openZipFileSystem().use { fs ->
             val paths = mutableListOf<Path>()
             for (path in accessTransformerPaths) {
@@ -115,7 +128,7 @@ open class AccessTransformerMinecraftTransformer(
                     it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
                 }.get().executablePath.asFile.absolutePath
 
-                spec.classpath = project.configurations.detachedConfiguration(dependency)
+                spec.classpath = project.configurations.detachedConfiguration(atDependency)
                 spec.mainClass.set(atMainClass)
                 spec.args = listOf(
                     "--inJar",
@@ -125,21 +138,31 @@ open class AccessTransformerMinecraftTransformer(
                     "--atFile",
                     temp.absolutePathString()
                 )
-                if (AccessTransformerApplier.shouldShowVerboseStdout(project)) {
-                    spec.standardOutput = System.out
-                } else {
-                    spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
-                }
-                if (AccessTransformerApplier.shouldShowVerboseStderr(project)) {
-                    spec.errorOutput = System.err
-                } else {
-                    spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
-                }
+                project.suppressLogs(spec)
             }.assertNormalExitValue().rethrowFailure()
         } catch (e: Exception) {
             output.deleteIfExists()
             throw e
         }
+    }
+
+    class DefaultTransformer(
+        project: Project,
+        provider: MinecraftProvider,
+    ) : AbstractMinecraftTransformer(project, provider, "accessTransformer"), AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
+
+        override var accessTransformer: File? by FinalizeOnRead(null)
+
+        override var accessTransformerPaths: List<String> by FinalizeOnRead(listOf())
+
+        override var atDependency: Dependency by FinalizeOnRead(getDefaultDependency(project, provider))
+
+        override var atMainClass: String by FinalizeOnRead(getDependencyMainClass(project, provider))
+
+        override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+            return super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft)
+        }
+
     }
 
 }

@@ -28,7 +28,7 @@ interface AccessTransformerPatcher : MinecraftPatcher, AccessConvert {
      * dependency for access transformer processor.
      */
     @set:ApiStatus.Experimental
-    var dependency: Dependency
+    var atDependency: Dependency
 
     /**
      * set the access transformer file to apply to the minecraft jar.
