@@ -8,7 +8,7 @@ import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.TreeMap
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.jar.Manifest
 import kotlin.io.path.inputStream

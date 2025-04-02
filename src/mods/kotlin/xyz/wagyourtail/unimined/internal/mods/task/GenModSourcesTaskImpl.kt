@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.internal.mods.task
 
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.mod.task.GenModSourcesTask
 import xyz.wagyourtail.unimined.internal.mods.ModRemapProvider
 import xyz.wagyourtail.unimined.internal.mods.ModsProvider

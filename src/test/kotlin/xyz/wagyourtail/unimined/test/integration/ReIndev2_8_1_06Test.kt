@@ -4,7 +4,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import xyz.wagyourtail.unimined.util.*
+import xyz.wagyourtail.unimined.util.runTestProject
 
 class ReIndev2_8_1_06Test {
     @ParameterizedTest

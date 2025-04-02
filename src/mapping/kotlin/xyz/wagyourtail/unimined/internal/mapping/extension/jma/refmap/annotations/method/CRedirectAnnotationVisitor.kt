@@ -3,12 +3,10 @@ package xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotatio
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.ArrayVisitorWrapper
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations.CSliceAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations.CTargetAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.DescAnnotationVisitor
 
 @Suppress("UNUSED_PARAMETER")
 open class CRedirectAnnotationVisitor(

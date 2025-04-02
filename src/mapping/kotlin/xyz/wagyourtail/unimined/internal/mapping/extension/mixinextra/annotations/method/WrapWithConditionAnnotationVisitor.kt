@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.annotations.method
 
-import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.MixinExtra

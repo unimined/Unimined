@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined.internal.minecraft.transform.fixes
 
 import org.objectweb.asm.*
 import java.nio.file.FileSystem
-import kotlin.io.path.*
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+import kotlin.io.path.writeBytes
 
 object FixFG2Coremods {
 

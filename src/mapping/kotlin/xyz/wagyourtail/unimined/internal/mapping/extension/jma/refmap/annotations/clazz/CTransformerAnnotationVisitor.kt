@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations.clazz
 
-import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
