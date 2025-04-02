@@ -73,8 +73,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
         unprotectRuntime = true
-        parent.accessTransformerPaths =
-            listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
+        parent.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
 
     private val include: Configuration? =

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.rift
 
+import net.neoforged.accesstransformer.AccessTransformer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -32,16 +33,6 @@ open class RiftMinecraftTransformer(
     override var legacyATFormat: Boolean by FinalizeOnRead(false)
     override var atMainClass: String by FinalizeOnRead(AccessTransformerMinecraftTransformer.getDependencyMainClass(project, provider))
 
-    override var prodNamespace: Namespace
-        get() = super.prodNamespace
-        set(value) {
-            super.prodNamespace = value
-        }
-
-    override fun prodNamespace(namespace: String) {
-        super.prodNamespace(namespace)
-    }
-
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         rift = (if (dep is String && !dep.contains(":")) {
                 project.dependencies.create("org.dimdev:rift:$dep")
@@ -69,8 +60,7 @@ open class RiftMinecraftTransformer(
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        // TODO: Apply Rift AccessTransformer probably
-        return super.afterRemap(baseMinecraft)
+        return super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft)
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
