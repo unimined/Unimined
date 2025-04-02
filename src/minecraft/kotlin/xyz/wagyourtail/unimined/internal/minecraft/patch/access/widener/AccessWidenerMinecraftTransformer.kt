@@ -15,19 +15,13 @@ import java.io.File
 import kotlin.io.path.exists
 
 
-open class AccessWidenerMinecraftTransformer(
-    project: Project,
-    provider: MinecraftProvider,
-    providerName: String = "accessWidener",
-) : AbstractMinecraftTransformer(
-    project,
-    provider,
-    providerName
-), AccessWidenerPatcher, AccessConvert by AccessConvertImpl(project, provider) {
+interface AccessWidenerMinecraftTransformer : AccessWidenerPatcher, AccessConvert {
 
-    override var accessWidener: File? by FinalizeOnRead(null)
+    val project: Project
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+    val provider: MinecraftProvider
+
+    fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         if (accessWidener == null) return baseMinecraft
         return applyAW(baseMinecraft)
     }
@@ -58,4 +52,13 @@ open class AccessWidenerMinecraftTransformer(
         } else baseMinecraft
     }
 
+    class DefaultTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(project, provider, "accessWidener"), AccessWidenerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
+
+        override var accessWidener: File? by FinalizeOnRead(null)
+
+        override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+            return super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft)
+        }
+
+    }
 }

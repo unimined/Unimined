@@ -5,23 +5,32 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.withSourceSet
+import java.io.File
 
 open class RiftMinecraftTransformer(
     project: Project,
-    provider: MinecraftProvider,
-    private val accessTransformerMinecraftTransformer: AccessTransformerMinecraftTransformer = AccessTransformerMinecraftTransformer(project, provider, "Rift")
-) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerPatcher by accessTransformerMinecraftTransformer {
+    provider: MinecraftProvider
+) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerPatcher, AccessConvert by AccessConvertImpl(project, provider) {
 
     private var rift: Dependency? = null
+
+    override var accessTransformer: File? by FinalizeOnRead(null)
+    override var accessTransformerPaths: List<String> by FinalizeOnRead(emptyList())
+    override var atDependency: Dependency by FinalizeOnRead(AccessTransformerMinecraftTransformer.getDefaultDependency(project, provider))
+    override var legacyATFormat: Boolean by FinalizeOnRead(false)
+    override var atMainClass: String by FinalizeOnRead(AccessTransformerMinecraftTransformer.getDependencyMainClass(project, provider))
 
     override var prodNamespace: Namespace
         get() = super.prodNamespace
@@ -31,7 +40,6 @@ open class RiftMinecraftTransformer(
 
     override fun prodNamespace(namespace: String) {
         super.prodNamespace(namespace)
-        accessTransformerMinecraftTransformer.prodNamespace(namespace)
     }
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {

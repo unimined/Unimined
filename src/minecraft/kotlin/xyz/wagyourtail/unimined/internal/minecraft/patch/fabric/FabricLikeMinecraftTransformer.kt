@@ -8,8 +8,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
@@ -19,6 +17,9 @@ import xyz.wagyourtail.unimined.internal.mapping.ii.InterfaceInjectionMinecraftT
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseLibrary
@@ -42,16 +43,17 @@ abstract class FabricLikeMinecraftTransformer(
     providerName: String,
     val modJsonName: String,
     val accessWidenerJsonKey: String,
-    private val accessWidenerTransformer: AccessWidenerMinecraftTransformer = AccessWidenerMinecraftTransformer(project, provider, providerName),
 ): AbstractMinecraftTransformer(
     project,
     provider,
     providerName
-), FabricLikePatcher, AccessWidenerPatcher by accessWidenerTransformer {
+), FabricLikePatcher, AccessWidenerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
 
     companion object {
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
+
+    override var accessWidener: File? by FinalizeOnRead(null)
 
     val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
         provider.minecraftLibraries.extendsFrom(it)
@@ -108,7 +110,6 @@ abstract class FabricLikeMinecraftTransformer(
 
     override fun prodNamespace(namespace: String) {
         super.prodNamespace(namespace)
-        accessWidenerTransformer.prodNamespace(namespace)
     }
 
     @get:ApiStatus.Internal
@@ -254,7 +255,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(accessWidenerTransformer.afterRemap(baseMinecraft))
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft))
 
     private fun applyInterfaceInjection(baseMinecraft: MinecraftJar): MinecraftJar {
         val injections = hashMapOf<String, List<String>>()

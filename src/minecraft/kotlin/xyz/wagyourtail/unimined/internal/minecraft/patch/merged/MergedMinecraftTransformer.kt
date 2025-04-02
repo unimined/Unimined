@@ -188,13 +188,13 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
     }
 
     override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
-        val aw = AccessWidenerMinecraftTransformer(project, provider)
+        val aw = AccessWidenerMinecraftTransformer.DefaultTransformer(project, provider)
         aw.action()
         patchers.add(aw)
     }
 
     override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
-        val at = AccessTransformerMinecraftTransformer(project, provider)
+        val at = AccessTransformerMinecraftTransformer.DefaultTransformer(project, provider)
         at.action()
         patchers.add(at)
     }

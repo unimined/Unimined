@@ -73,7 +73,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
         unprotectRuntime = true
-        parent.accessTransformerTransformer.accessTransformerPaths =
+        parent.accessTransformerPaths =
             listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
 
@@ -147,7 +147,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             config.insertBefore("decompile", config.FileProviderStep("applyAts", null, mutableMapOf()) {
                 val input = Paths.get(variables.getValue("input").invoke())
                 val output = it.resolve("applyAtsOutput.jar")
-                parent.accessTransformerTransformer.transform(project, ats, input, output)
+                parent.transform(project, ats, input, output)
                 output
             }, mapOf("input" to {
                 config.getResultFor("applyAts").output!!.absolutePathString()
@@ -698,7 +698,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+        return parent.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun addIncludeToMetadata(json: JsonObject, dep: MavenCoords, path: String) {

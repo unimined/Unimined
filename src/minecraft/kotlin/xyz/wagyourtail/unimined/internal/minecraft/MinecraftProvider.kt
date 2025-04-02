@@ -12,12 +12,10 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.commonskt.jvm.deleteIfExists
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
@@ -347,7 +345,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     }
 
     override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
-        mcPatcher = AccessWidenerMinecraftTransformer(project, this).also {
+        mcPatcher = AccessWidenerMinecraftTransformer.DefaultTransformer(project, this).also {
             patcherAction = {
                 action(it as AccessWidenerPatcher)
             }
@@ -355,7 +353,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     }
 
     override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
-        mcPatcher = AccessTransformerMinecraftTransformer(project, this).also {
+        mcPatcher = AccessTransformerMinecraftTransformer.DefaultTransformer(project, this).also {
             patcherAction = {
                 action(it as AccessTransformerPatcher)
             }

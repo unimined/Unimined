@@ -30,8 +30,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnRead(CleanroomFG3(project, this))
 
     init {
-        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
-        accessTransformerTransformer.atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
+        atDependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
+        atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
     }
 
     @get:ApiStatus.Internal

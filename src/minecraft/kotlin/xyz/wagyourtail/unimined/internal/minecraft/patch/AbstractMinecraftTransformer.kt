@@ -31,7 +31,7 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.*
 
 abstract class AbstractMinecraftTransformer protected constructor(
-    protected val project: Project,
+    val project: Project,
     val provider: MinecraftProvider,
     val providerName: String
 ): MinecraftPatcher {

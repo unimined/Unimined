@@ -24,8 +24,8 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
     override var useUnionRelaunch: Boolean by FinalizeOnRead(provider.minecraftData.mcVersionCompare(provider.version, "1.20.3") >= 0)
 
     init {
-        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
-        accessTransformerTransformer.atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
+        atDependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
+        atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
     }
 
     override fun addMavens() {
