@@ -1,5 +1,7 @@
+import jdk.tools.jlink.resources.plugins
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin.get()

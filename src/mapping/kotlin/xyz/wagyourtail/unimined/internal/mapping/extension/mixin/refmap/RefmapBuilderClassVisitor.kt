@@ -8,10 +8,7 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.clazz.MixinAnnotationVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.method.*
 import java.util.concurrent.atomic.AtomicBoolean
-
 
 typealias ClassAnnotationPredicate = (
         descriptor: String,

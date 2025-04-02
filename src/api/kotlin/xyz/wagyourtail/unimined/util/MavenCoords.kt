@@ -1,7 +1,5 @@
 package xyz.wagyourtail.unimined.util
 
-import kotlin.jvm.JvmInline
-
 @JvmInline
 value class MavenCoords(val value: String) {
 

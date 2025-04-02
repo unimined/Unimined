@@ -1,14 +1,10 @@
 import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
-import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.FieldVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.method.AbstractMethodAnnotationVisitor
-import java.util.concurrent.atomic.AtomicBoolean
 
 class CShadowFieldAnnotationVisitor(
     descriptor: String,

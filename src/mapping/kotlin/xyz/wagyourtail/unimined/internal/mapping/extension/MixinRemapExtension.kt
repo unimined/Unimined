@@ -14,9 +14,9 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgentMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.hard.JMAHard
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.JMARefmap
-import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgentMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.OfficialMixinMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.BaseMixinHard
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor

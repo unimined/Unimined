@@ -1,18 +1,16 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
-import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 

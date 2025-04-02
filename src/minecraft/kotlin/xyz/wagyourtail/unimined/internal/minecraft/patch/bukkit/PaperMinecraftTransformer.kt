@@ -6,17 +6,15 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.mapping.EnvType
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.cachingDownload
-import xyz.wagyourtail.unimined.util.readZipContents
-import xyz.wagyourtail.unimined.util.readZipInputStreamFor
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.net.URI
 import java.nio.file.StandardOpenOption
+import kotlin.collections.build
+import kotlin.collections.first
+import kotlin.collections.plus
+import kotlin.collections.setOf
 import kotlin.io.path.outputStream
 import kotlin.io.path.readBytes
 

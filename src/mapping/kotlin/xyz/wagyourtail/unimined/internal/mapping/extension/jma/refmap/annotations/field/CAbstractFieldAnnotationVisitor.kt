@@ -7,7 +7,6 @@ import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.splitFieldNameAndDescriptor
-import xyz.wagyourtail.unimined.internal.mapping.extension.splitMethodNameAndDescriptor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
