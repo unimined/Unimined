@@ -56,7 +56,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         "oshi-project:oshi-core:",
         "com.ibm.icu:icu4j-core-mojang:",
         "net.java.jutils:",
-        "org.lwjgl.lwjgl:"
+        "org.lwjgl.lwjgl:",
+        "io.netty:netty-all:"
     )
 
     override fun addMavens() {

@@ -53,8 +53,7 @@ open class PaperMinecraftTransformer(project: Project,
         val content = paper.toPath().readZipContents()
         // find patch
         val patch = content.first {
-            it == "paperMC.patch" ||
-                    it.matches(patchName)
+            it == "paperMC.patch" || it.matches(patchName)
         }
 
         output.path.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { os ->
