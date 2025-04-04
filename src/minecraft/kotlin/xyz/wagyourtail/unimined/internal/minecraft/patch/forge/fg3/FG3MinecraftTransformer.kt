@@ -461,7 +461,6 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments currently.")
             }
             // run mcp_config to rename
-
             val output = MinecraftJar(
                 minecraft,
                 parentPath = outFolder,
