@@ -305,7 +305,7 @@ abstract class ForgeLikeMinecraftTransformer(
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        return transform(forgeTransformer.transform(minecraft))
+        return forgeTransformer.transform(minecraft)
     }
 
     enum class ForgeFiles(val path: String) {
