@@ -193,7 +193,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return parent.afterRemap(fixForge(baseMinecraft))
+        return fixForge(baseMinecraft)
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
