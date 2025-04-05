@@ -9,6 +9,7 @@ import okio.source
 import okio.use
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
@@ -26,6 +27,8 @@ import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.propagator.CachedInheritanceTree
+import xyz.wagyourtail.unimined.mapping.propagator.InheritanceTree
 import xyz.wagyourtail.unimined.mapping.propogator.Propagator
 import xyz.wagyourtail.unimined.mapping.resolver.ContentProvider
 import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
@@ -83,36 +86,42 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
     }
 
-    override suspend fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
+    override suspend fun applyInheritanceTree(tree: MemoryMappingTree, apply: suspend (InheritanceTree) -> Unit) {
+        if (splitUnmapped && envType == EnvType.JOINED) {
+            val clientPropagator = Propagator(
+                tree,
+                Namespace("clientOfficial"),
+                setOf(minecraft.minecraftData.minecraftClientFile.toPath())
+            )
 
-        measureTime {
-            if (splitUnmapped && envType == EnvType.JOINED) {
-                Propagator(
-                    tree,
-                    Namespace("clientOfficial"),
-                    setOf(minecraft.minecraftData.minecraftClientFile.toPath())
-                ).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
-                Propagator(
-                    tree,
-                    Namespace("serverOfficial"),
-                    setOf(minecraft.minecraftData.minecraftServerFile.toPath())
-                ).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
-            } else {
-                Propagator(
-                    tree, Namespace("official"), setOf(
-                        when (envType) {
-                            EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
-                            EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
-                            EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
-                        }!!.toPath()
-                    )
-                ).propagate(tree.namespaces.toSet() - Namespace("official"))
-            }
-        }.also {
-            project.logger.info("Propagated mappings in $it")
+//            writeInheritanceTree(envType.name, clientPropagator)
+
+            apply(clientPropagator)
+
+            val serverPropagator = Propagator(
+                tree,
+                Namespace("serverOfficial"),
+                setOf(minecraft.minecraftData.minecraftServerFile.toPath())
+            )
+
+//            writeInheritanceTree(envType.name, serverPropagator)
+
+            apply(serverPropagator)
+        } else {
+            val propagator = Propagator(
+                tree, Namespace("official"), setOf(
+                    when (envType) {
+                        EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
+                        EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
+                        EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
+                    }!!.toPath()
+                )
+            )
+
+//            writeInheritanceTree(envType.name, propagator)
+
+            apply(propagator)
         }
-
-        return tree
     }
 
     private fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
@@ -778,9 +787,17 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
     }
 
+    val cacheFolder by lazy {
+        if (hasStubs()) {
+            unimined.getLocalCache().resolve("mappings/${minecraft.version}")
+        } else {
+            minecraft.minecraftData.mcVersionFolder.resolve("mappings")
+        }
+    }
+
     override suspend fun fromCache(key: String): MemoryMappingTree? {
-        val mappingFile = if (hasStubs()) { unimined.getLocalCache().resolve("mappings") } else { minecraft.minecraftData.mcVersionFolder }.resolve("mappings-${key}.umf")
-        if (!mappingFile.exists() || unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
+        val mappingFile = cacheFolder.resolve("mappings-${key}.umf")
+        if (!mappingFile.exists() || unimined.forceReload) {
             mappingFile.deleteIfExists()
             return null
         }
@@ -789,14 +806,35 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
     }
 
+    fun readInheritanceTree(key: String, tree: MemoryMappingTree): InheritanceTree? {
+        val mappingFile = cacheFolder.resolve("mappings-${key}.umf_it")
+        if (!mappingFile.exists() || unimined.forceReload) {
+            mappingFile.deleteIfExists()
+            return null
+        }
+        mappingFile.inputStream().use {
+            return CachedInheritanceTree(tree, StringCharReader(it.readBytes().toString(Charsets.UTF_8)))
+        }
+    }
+
+    fun writeInheritanceTree(key: String, tree: InheritanceTree) {
+        val mappingFile = cacheFolder.resolve("mappings-${key}.umf_it")
+        mappingFile.parent?.createDirectories()
+        val tmp = mappingFile.resolveSibling(mappingFile.name + ".tmp")
+        tmp.bufferedWriter().use {
+            CachedInheritanceTree.write(tree, it::append)
+        }
+        tmp.moveTo(mappingFile, true)
+    }
+
     override suspend fun writeCache(key: String, tree: MemoryMappingTree) {
-        val mappingFile = if (hasStubs()) { unimined.getLocalCache().resolve("mappings") } else { minecraft.minecraftData.mcVersionFolder }.resolve("mappings-${key}.umf")
+        val mappingFile = cacheFolder.resolve("mappings-${key}.umf")
         mappingFile.parent?.createDirectories()
         val tmp = mappingFile.resolveSibling(mappingFile.name + ".tmp")
         tmp.bufferedWriter().use {
             tree.accept(UMFWriter.write(it::append))
         }
-        tmp.moveTo(mappingFile)
+        tmp.moveTo(mappingFile, true)
     }
 
     override fun configure(action: MappingsConfig<*>.() -> Unit) {
