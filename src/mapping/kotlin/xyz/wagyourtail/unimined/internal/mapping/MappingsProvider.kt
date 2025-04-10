@@ -885,8 +885,9 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                         fromClassName = names[srcName]!!.toString()
                         toClassName = names[dstName]!!.toString()
                         acceptor.acceptClass(fromClassName, toClassName)
+                        return super.visitClass(delegate, names)
                     }
-                    return super.visitClass(delegate, names)
+                    return null
                 }
 
                 override fun visitMethod(
@@ -899,12 +900,11 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                         val toMethodName = names[dstName]!!.first
                         fromMethod = memberOf(fromClassName, fromMethodName, fromMethodDesc.toString())
                         acceptor.acceptMethod(fromMethod, toMethodName)
+                        if (remapLocals) {
+                            return super.visitMethod(delegate, names)
+                        }
                     }
-                    return if (remapLocals) {
-                        super.visitMethod(delegate, names)
-                    } else {
-                        null
-                    }
+                    return null
                 }
 
                 override fun visitField(
