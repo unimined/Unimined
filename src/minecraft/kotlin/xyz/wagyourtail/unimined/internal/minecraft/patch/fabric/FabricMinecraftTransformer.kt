@@ -9,6 +9,8 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
@@ -146,4 +148,23 @@ abstract class FabricMinecraftTransformer(
             }
         }
     }
+
+    override fun configureRemapJar(task: AbstractRemapJarTask) {
+        task.manifest {
+            it.attributes(mapOf(
+                "Fabric-Minecraft-Version" to provider.version,
+                "Fabric-Loader-Version" to fabricDep.version,
+            ))
+        }
+        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
+            project.logger.info("enabling mixin extra")
+            if (task is RemapJarTask) {
+                task.mixinRemap {
+                    enableMixinExtra()
+                }
+            }
+        }
+    }
+
+    open fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {}
 }
