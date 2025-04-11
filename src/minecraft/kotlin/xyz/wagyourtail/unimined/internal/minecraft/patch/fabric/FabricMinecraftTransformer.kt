@@ -164,6 +164,8 @@ abstract class FabricMinecraftTransformer(
                 }
             }
         }
+
+        additionalRemapJarConfiguration(task)
     }
 
     open fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {}
