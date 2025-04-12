@@ -1,14 +1,28 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig
 
 import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
+import okio.buffer
+import okio.source
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry
 import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.FormatReader
+import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.EmptyMappingVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
@@ -117,7 +131,10 @@ class MCPConfig(
                         Paths.get(variables.getValue("input").invoke())
                     }
                     "listLibraries" -> ListLibrariesStep(name, prevStep, vars)
-                    "strip" -> StripStep(name, prevStep, vars)
+                    "strip" -> {
+                        vars["mappings"] = { extractData("mappings").absolutePathString() }
+                        StripStep(name, prevStep, vars)
+                    }
                     "inject" -> {
                         vars["inject"] = { extractData("inject").absolutePathString() }
                         InjectStep(name, prevStep, vars)
@@ -279,6 +296,7 @@ class MCPConfig(
                     it.args(function.args.mapVariables(output))
                     it.jvmArgs(function.jvmargs.mapVariables(output))
 
+                    project.logger.info("[Unimined/MCPConfig] Executing: ${it.executable} ${it.jvmArgs} ${it.mainClass} ${it.args}")
                     project.suppressLogs(it)
                 }.assertNormalExitValue().rethrowFailure()
 
@@ -308,10 +326,40 @@ class MCPConfig(
             val input = Paths.get(variables.getValue("input").invoke())
             val output = dir.resolve("${name}Output.jar")
 
+            val mappingPath = Paths.get(variables.getValue("mappings").invoke())
+            val mappings = mutableSetOf<String>()
+            val mappingNs = Namespace("source")
+            runBlocking {
+                mappingPath.source().buffer().use {
+                    val format = FormatRegistry.autodetectFormat(EnvType.JOINED, mappingPath.name, it) ?: error("Failed to detect mapping format for $mappingPath")
+                    format.read(
+                        StringCharReader(it.readUtf8().replace("\r", "")),
+                        null,
+                        EmptyMappingVisitor().delegator(object : Delegator() {
+
+                            override fun visitClass(
+                                delegate: MappingVisitor,
+                                names: Map<Namespace, InternalName>
+                            ): ClassVisitor? {
+                                names[mappingNs]?.let {
+                                    mappings.add(it.toString())
+                                }
+                                return null
+                            }
+                        }),
+                        EnvType.JOINED,
+                        mapOf<String, String>("obf" to "source")
+                    )
+                }
+            }
+
+
             JarArchiveOutputStream(output.outputStream()).use { out ->
                 input.forEachInZip { name, inputStream ->
                     if (!name.endsWith(".class")) return@forEachInZip
-                    out.putArchiveEntry(JarArchiveEntry(trimLeadingSlash(name)))
+                    val className = trimLeadingSlash(name).removeSuffix(".class")
+                    if (!mappings.contains(className)) return@forEachInZip
+                    out.putArchiveEntry(JarArchiveEntry("$className.class"))
                     inputStream.copyTo(out)
                     out.closeArchiveEntry()
                 }
