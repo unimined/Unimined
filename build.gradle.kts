@@ -244,8 +244,6 @@ val writeActionsTestMatrix by tasks.registering {
             }
         }
 
-        testMatrix.add("xyz.wagyourtail.unimined.api.mappings.*")
-
         testMatrix.add("xyz.wagyourtail.unimined.util.*")
 
         val json = groovy.json.JsonOutput.toJson(testMatrix)

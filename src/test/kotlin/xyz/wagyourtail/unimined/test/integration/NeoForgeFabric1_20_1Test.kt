@@ -6,12 +6,12 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
-class NeoForgedForgeFabric1_20_2Test {
+class NeoForgeFabric1_20_1Test {
     @ParameterizedTest
     @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
-    fun test_neoforged_fabric_1_20_2(gradleVersion: String) {
+    fun test_neoforge_fabric_1_20_1(gradleVersion: String) {
         try {
-            val result = runTestProject("1.20.2-NeoForged-Forge-Fabric", gradleVersion)
+            val result = runTestProject("1.20.1-NeoForge-Fabric", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {

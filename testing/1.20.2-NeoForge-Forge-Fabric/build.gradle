@@ -58,7 +58,7 @@ unimined.minecraft(sourceSets.fabric) {
 unimined.minecraft(sourceSets.neoforge) {
     combineWith(sourceSets.main)
 
-    neoForged {
+    neoForge {
         loader project.neoforge_version
         mixinConfig "modid.mixins.json"
     }

@@ -12,7 +12,7 @@ base {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -43,14 +43,7 @@ unimined.minecraft {
     version project.minecraft_version
 
     mappings {
-        intermediary()
-        yarn(1)
-
-        stubs(["intermediary", "yarn"]) {
-            c(["net/minecraft/class_1927"]) {
-                m(["method_55109;()Lnet/minecraft/class_243;", "getPos"])
-            }
-        }
+        mojmap()
     }
 
     defaultRemapJar = false
@@ -69,7 +62,7 @@ unimined.minecraft(sourceSets.fabric) {
 unimined.minecraft(sourceSets.neoforge) {
     combineWith(sourceSets.main)
 
-    neoForged {
+    neoForge {
         loader project.neoforge_version
         mixinConfig "modid.mixins.json"
     }

@@ -21,7 +21,7 @@ unimined.useGlobalCache = false
 
 sourceSets {
     fabric
-    forge
+    neoforge
 }
 
 repositories {
@@ -54,11 +54,11 @@ unimined.minecraft(sourceSets.fabric) {
     defaultRemapJar = true
 }
 
-unimined.minecraft(sourceSets.forge) {
+unimined.minecraft(sourceSets.neoforge) {
     combineWith(sourceSets.main)
 
-    neoForged {
-        loader project.forge_version
+    neoForge {
+        loader project.neoforge_version
         mixinConfig "modid.mixins.json"
     }
 
@@ -83,7 +83,7 @@ processFabricResources {
     }
 }
 
-processForgeResources {
+processNeoforgeResources {
     inputs.property "version", project.version
 
     filesMatching("META-INF/mods.toml") {
