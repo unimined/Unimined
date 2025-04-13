@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="unimined"
+                 name="Unimined"
+                 start-page="starter-topic.md">
+
+    <toc-element topic="starter-topic.md"/>
+    <toc-element topic="Usage.md">
+        <toc-element topic="Setup.md"/>
+        <toc-element topic="Mappings.md"/>
+        <toc-element topic="Modloaders.md"/>
+        <toc-element topic="Remapping.md"/>
+        <toc-element topic="Standard-Libraries.md"/>
+        <toc-element topic="Multi-SourceSet-Multi-Project.md"/>
+        <toc-element topic="Run-Config.md">
+            <toc-element topic="Auth.md"/>
+        </toc-element>
+    </toc-element>
+</instance-profile>

@@ -33,3 +33,6 @@ testing/**/.gradle
 testing/**/build
 testing/**/.idea
 testing/**/run
+
+Writerside/v.list
+docs/

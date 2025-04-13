@@ -187,6 +187,7 @@ tasks.test {
 }
 
 tasks.dokkaHtml {
+    outputDirectory.set(projectDir.resolve("docs/api-docs/"))
     dokkaSourceSets {
         named("main") {
             suppress = true
@@ -194,6 +195,17 @@ tasks.dokkaHtml {
         named("api") {
             suppress = false
         }
+    }
+    doFirst {
+        file("Writerside/v.list").writeText(
+            """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
+                <vars>
+                    <var name="version" value="${project.version}"/>
+                </vars>
+            """.trimIndent()
+        )
     }
 }
 

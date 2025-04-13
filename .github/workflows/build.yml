@@ -40,9 +40,9 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GH_PAGES }}
         with:
-          source_folder: 'build/dokka/html/'
+          source_folder: 'docs/'
           destination_repo: 'unimined/unimined.github.io'
-          destination_folder: 'api-docs/unimined/${{ steps.gradle_properties.outputs.version }}'
+          destination_folder: 'unimined'
           destination_branch: 'main'
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
