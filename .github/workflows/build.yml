@@ -41,8 +41,9 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GH_PAGES }}
         with:
           source-files: 'build/dokka/html/'
-          destination-username: 'gh-actions'
-          destination-repository: 'unimined/unimined.github.io'
+          destination-username: 'unimined'
+          destination-repository: 'unimined.github.io'
           destination-directory: 'api-docs/${{ steps.gradle_properties.outputs.version }}'
+          commit-username: 'github-actions[bot]'
           commit-email: 'github-actions[bot]@users.noreply.github.com'
           commit-message: 'Update API Docs for Release ${{ steps.gradle_properties.outputs.version }}'
