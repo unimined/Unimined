@@ -74,8 +74,7 @@ jobs:
 
       - name: Unzip
         run: |
-          mkdir -p docs/unimined
-          unzip docs.zip -d docs/
+          unzip artifacts/webHelpUNIMINED2-all.zip -d docs/
 
       - name: Upload Site
         if: github.event_name != 'pull_request'
