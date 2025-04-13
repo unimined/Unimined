@@ -36,7 +36,7 @@ jobs:
         run: ./gradlew dokkaHtml
 
       - name: Upload Site
-        uses: datalbry/copy_folder_to_another_repo_action@v1.0.1
+        uses: datalbry/copy_folder_to_another_repo_action@1.0.1
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GH_PAGES }}
         with:
