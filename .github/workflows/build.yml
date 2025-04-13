@@ -35,15 +35,48 @@ jobs:
       - name: Build Site
         run: ./gradlew dokkaHtml
 
+      - name: Define instance id and artifacts
+        id: define-ids
+        run: |
+          INSTANCE=${INSTANCE#*/}
+          INSTANCE_ID_UPPER=$(echo "$INSTANCE" | tr '[:lower:]' '[:upper:]')
+          ARTIFACT="webHelp${INSTANCE_ID_UPPER}2-all.zip"
+          ALGOLIA_ARTIFACT="algolia-indexes-${INSTANCE_ID_UPPER}.zip"
+          
+          # Print the values
+          echo "INSTANCE_ID_UPPER: $INSTANCE_ID_UPPER"
+          echo "ARTIFACT: $ARTIFACT"
+          echo "ALGOLIA_ARTIFACT: $ALGOLIA_ARTIFACT"
+          
+          # Set the environment variables and outputs
+          echo "INSTANCE_ID_UPPER=$INSTANCE_ID_UPPER" >> $GITHUB_ENV
+          echo "ARTIFACT=$ARTIFACT" >> $GITHUB_ENV
+          echo "ALGOLIA_ARTIFACT=$ALGOLIA_ARTIFACT" >> $GITHUB_ENV
+          echo "artifact=$ARTIFACT" >> $GITHUB_OUTPUT
+          echo "algolia_artifact=$ALGOLIA_ARTIFACT" >> $GITHUB_OUTPUT
+
+      - name: Build docs using Writerside Docker builder
+        uses: JetBrains/writerside-github-action@v4
+        with:
+          instance: ${{ env.INSTANCE }}
+          docker-version: ${{ env.DOCKER_VERSION }}
+          is-group: ${{ env.IS_GROUP }}
+          artifact: docs.zip
+
+      - name: Unzip
+        run: |
+          unzip artifacts/webHelpUNIMINED2-all.zip -d docs/
+
       - name: Upload Site
+        if: github.event_name != 'pull_request'
         uses: datalbry/copy_folder_to_another_repo_action@1.0.1
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GH_PAGES }}
         with:
           source_folder: 'docs/'
           destination_repo: 'unimined/unimined.github.io'
-          destination_folder: 'unimined'
+          destination_folder: '/unimined/${{ steps.gradle_properties.outputs.version }}'
           destination_branch: 'main'
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_msg: 'Update API Docs for Release ${{ steps.gradle_properties.outputs.version }}'
+          commit_msg: 'Update API Docs for ${{ steps.gradle_properties.outputs.version }}'
