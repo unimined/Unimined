@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
-import MemoryMapping
 import com.google.gson.JsonParser
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
@@ -13,6 +12,7 @@ import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
+import xyz.wagyourtail.unimined.api.mapping.dsl.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType

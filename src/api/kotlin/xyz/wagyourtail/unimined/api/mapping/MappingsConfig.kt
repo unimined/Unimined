@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.api.mapping
 
-import MemoryMapping
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import kotlinx.coroutines.runBlocking
@@ -8,6 +7,7 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
+import xyz.wagyourtail.unimined.api.mapping.dsl.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
