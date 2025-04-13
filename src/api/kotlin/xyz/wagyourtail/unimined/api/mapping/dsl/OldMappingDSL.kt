@@ -1,4 +1,5 @@
 @file:Suppress("unused")
+package xyz.wagyourtail.unimined.api.mapping.dsl
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
