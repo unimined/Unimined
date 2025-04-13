@@ -28,3 +28,27 @@ jobs:
         with:
           name: Unimined Snapshot Artifacts
           path: ./build/libs/
+
+
+      - name: Load Gradle Properties
+        uses: christian-draeger/read-properties@1.1.1
+        id: gradle_properties
+        with:
+          path: './gradle.properties'
+          properties: 'version'
+
+      - name: Build Site
+        run: ./gradlew dokkaHtml
+
+      - name: Upload Site
+        if: github.event_name != 'pull_request'
+        uses: nkoppel/push-files-to-another-repository@v1.1.4
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GH_PAGES }}
+        with:
+          source-files: 'build/dokka/html/'
+          destination-username: 'gh-actions'
+          destination-repository: 'unimined/unimined.github.io'
+          destination-directory: 'api-docs/${{ steps.gradle_properties.outputs.version }}-SNAPSHOT'
+          commit-email: 'github-actions[bot]@users.noreply.github.com'
+          commit-message: 'Update API Docs for Release ${{ steps.gradle_properties.outputs.version }}-SNAPSHOT'

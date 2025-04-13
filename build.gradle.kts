@@ -4,6 +4,7 @@ import java.io.File
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin.get()
+    alias(libs.plugins.dokka)
     `java-gradle-plugin`
     `maven-publish`
 }
@@ -182,6 +183,17 @@ tasks.test {
         events.add(TestLogEvent.PASSED)
         events.add(TestLogEvent.SKIPPED)
         events.add(TestLogEvent.FAILED)
+    }
+}
+
+tasks.dokkaHtml {
+    dokkaSourceSets {
+        named("main") {
+            suppress = true
+        }
+        named("api") {
+            suppress = false
+        }
     }
 }
 
