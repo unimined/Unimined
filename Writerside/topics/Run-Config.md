@@ -24,5 +24,27 @@ unimined.minecraft {
 }
 
 ```
+</tab>
+<tab id="Kotlin-Run-Config" title="Kotlin" group-key="kotlin">
+
+
+```kotlin
+
+unimined.minecraft {
+    ...
+    runs {
+        off = true // disable all run configurations
+        config("client") {
+           disabled = true // disable the runClient task
+            
+            javaVersion = JavaVersion.VERSION_1_8 // change the java version
+            args.add("--my-arg") // add an argument to the runClient task
+        }
+    }
+}
+
+```
+</tab>
+</tabs>
 
 for more details on what can be changed in the run configurations, see [RunConfig](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.runs/-run-config/index.html)
