@@ -27,15 +27,4 @@ open class OfficialFabricMinecraftTransformer(
             } else project.dependencies.create(dep)).apply(action)
         )
     }
-
-    override fun configureRemapJar(task: AbstractRemapJarTask) {
-        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
-            project.logger.info("enabling mixin extra")
-            if (task is RemapJarTask) {
-                task.mixinRemap {
-                    enableMixinExtra()
-                }
-            }
-        }
-    }
 }

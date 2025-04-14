@@ -41,19 +41,11 @@ open class LegacyFabricMinecraftTransformer(
         project.unimined.legacyFabricMaven()
     }
 
-    override fun configureRemapJar(task: AbstractRemapJarTask) {
+    override fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {
         task.manifest {
             it.attributes(mapOf(
                 "Legacy-Fabric-Intermediary-Version" to provider.mappings.legacyFabricGenVersion.toString()
             ))
-        }
-        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
-            project.logger.info("enabling mixin extra")
-            if (task is RemapJarTask) {
-                task.mixinRemap {
-                    enableMixinExtra()
-                }
-            }
         }
     }
 

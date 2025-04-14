@@ -16,19 +16,11 @@ open class OrnitheFabricMinecraftTransformer(
 
     override val defaultProdNamespace: String = "calamus"
 
-    override fun configureRemapJar(task: AbstractRemapJarTask) {
+    override fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {
         task.manifest {
             it.attributes(mapOf(
                 "Calamus-Generation" to provider.mappings.ornitheGenVersion.toString()
             ))
-        }
-        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
-            project.logger.info("enabling mixin extra")
-            if (task is RemapJarTask) {
-                task.mixinRemap {
-                    enableMixinExtra()
-                }
-            }
         }
     }
 
