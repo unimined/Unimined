@@ -6,12 +6,12 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
-class ForgeFabric1_12_2Test {
+class ForgeFabricLiteloader1_12_2Test {
     @ParameterizedTest
     @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
-    fun test_forge_fabric_1_12_2(gradleVersion: String) {
+    fun test_forge_fabric_liteloader_1_12_2(gradleVersion: String) {
         try {
-            val result = runTestProject("1.12.2-Forge-Fabric", gradleVersion)
+            val result = runTestProject("1.12.2-Forge-Fabric-Liteloader", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {

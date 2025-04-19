@@ -11,13 +11,14 @@ jobs:
       fail-fast: false
       matrix:
         gradle: [
-          8.8, # version used by buildscript
+          8.10.2, # version used by buildscript
           8 # latest
         ]
         java: [
-          17
+          17,
+          21
         ]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container:
       image: gradle:${{ matrix.gradle }}-jdk${{ matrix.java }}
       options: --user root
@@ -31,9 +32,9 @@ jobs:
     # Lets wait to ensure it builds before going running tests
     needs: build
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container:
-      image: gradle:8.8-jdk17
+      image: gradle:8.10.2-jdk17
       options: --user root
 
     steps:
@@ -52,12 +53,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [17]
+        java: [21]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container:
-      image: gradle:8.8-jdk${{ matrix.java }}
+      image: gradle:8.10.2-jdk${{ matrix.java }}
       options: --user root
 
     steps:
@@ -84,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [17]
+        java: [21]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: windows-2022

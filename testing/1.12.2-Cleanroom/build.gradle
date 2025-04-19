@@ -13,8 +13,13 @@ base {
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+
+    withSourcesJar()
+}
 
 repositories {
     maven {

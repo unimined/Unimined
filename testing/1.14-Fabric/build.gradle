@@ -29,7 +29,7 @@ unimined.minecraft {
 
     mappings {
         intermediary()
-        yarnv1(1)
+        yarnv1(21)
     }
 
     fabric {
