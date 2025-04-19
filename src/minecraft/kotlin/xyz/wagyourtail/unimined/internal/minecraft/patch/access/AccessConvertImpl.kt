@@ -113,4 +113,30 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         ).toFile()
     }
 
+    override fun atLegacy2aw(input: String, output: String, namespace: String) =
+        atLegacy2aw(File(input), File(output), namespace)
+
+    override fun atLegacy2aw(input: String, output: String) = atLegacy2aw(File(input), File(output))
+    override fun atLegacy2aw(input: String) = atLegacy2aw(File(input))
+    override fun atLegacy2aw(input: File) = atLegacy2aw(input, provider.mappings.devNamespace.name)
+    override fun atLegacy2aw(input: File, namespace: String) = atLegacy2aw(
+        input,
+        provider.sourceSet.resources.srcDirs.first().resolve("${project.name.withSourceSet(provider.sourceSet)}.accesswidener"),
+        namespace
+    )
+
+    override fun atLegacy2aw(input: File, output: File) = atLegacy2aw(input, output, provider.mappings.devNamespace)
+    override fun atLegacy2aw(input: File, output: File, namespace: String): File = atLegacy2aw(input, output, Namespace(namespace))
+    private fun atLegacy2aw(input: File, output: File, namespace: Namespace): File {
+        return runBlocking {
+            AccessTransformerApplier.at2aw(
+                input.toPath(),
+                output.toPath(),
+                namespace.name,
+                provider.mappings.resolve(),
+                true,
+                project.logger
+            ).toFile()
+        }
+    }
 }

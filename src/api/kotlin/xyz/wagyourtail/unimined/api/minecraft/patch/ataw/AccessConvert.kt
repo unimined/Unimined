@@ -102,4 +102,46 @@ interface AccessConvert {
      * convert access transformer to access widener.
      */
     fun at2aw(input: File, output: File, namespace: String): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: String, output: String, namespace: String): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: String, output: String): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: String): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: File): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: File, namespace: String): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: File, output: File): File
+
+    /**
+     * convert legacy access transformer (mc version <= 1.7.10) to access widener.
+     * @since 1.4.1
+     */
+    fun atLegacy2aw(input: File, output: File, namespace: String): File
 }
