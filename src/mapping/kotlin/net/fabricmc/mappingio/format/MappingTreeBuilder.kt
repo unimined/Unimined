@@ -263,7 +263,7 @@ class MappingTreeBuilder {
         reader: BufferedReader,
         inputs: MappingInputBuilder,
         type: BetterMappingFormat = detectHeader(reader, fname)
-            ?: throw IllegalArgumentException("cannot detect mapping format")
+            ?: throw IllegalArgumentException("cannot detect mapping format for ${fname}, first line: ${reader.lines().findFirst().orElse(null)}")
     ) {
         val input = inputs.build(fname, type)
         if (input.exclude) return
