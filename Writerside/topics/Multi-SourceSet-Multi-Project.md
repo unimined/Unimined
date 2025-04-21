@@ -237,7 +237,7 @@ unimined.minecraft {
     }
     
     // if you don't want to build/remap a "common" jar
-    if (sourceSet == sourceSets.main) {
+    if (project.name == "common") {
         defaultRemapJar = false
     }
 }
@@ -263,7 +263,7 @@ unimined.minecraft {
     }
     
     // if you don't want to build/remap a "common" jar
-    if (sourceSet == sourceSets.main.get()) {
+    if (project.name == "common") {
         defaultRemapJar = false
     }
 }
@@ -300,7 +300,7 @@ val fabricLoaderVersion: String by extra
 unimined.minecraft {
     combineWith(":common:main") // combine with common, for identifying both together as one mod for dev runs 
     fabric {
-        loader fabricLoaderVersion
+        loader(fabricLoaderVersion)
         accessWidener("../common/src/main/resources/accessWidenerName.aw")
     }
 }
@@ -331,7 +331,7 @@ val forgeVersion: String by extra
 unimined.minecraft {
     combineWith(":common:main") // combine with common, for identifying both together as one mod for dev runs 
     minecraftForge {
-        loader forgeVersion
+        loader(forgeVersion)
         accessTransformer aw2at("../common/src/main/resources/accessWidenerName.aw")
     }
 }
