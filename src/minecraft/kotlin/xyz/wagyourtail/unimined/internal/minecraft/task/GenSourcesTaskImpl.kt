@@ -17,6 +17,10 @@ abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider
 
         // TODO: add method to get sources from mcProvider (ie run forge 1 step further)
         provider.mcPatcher.createSourcesJar(provider.sourceSet.compileClasspath, mcDevFile, sourcesJar, linemappedJar, provider.side)
+        logger.info("[Unimined/GenSources ${this.path}] sources jar generated at $sourcesJar")
+        if (linemappedJar != null) {
+            logger.info("[Unimined/GenSources ${this.path}] linemapped jar generated at $linemappedJar")
+        }
     }
 
 }
