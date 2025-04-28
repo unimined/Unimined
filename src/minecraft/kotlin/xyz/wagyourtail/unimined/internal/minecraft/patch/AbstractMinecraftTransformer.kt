@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixInnerClasses
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
@@ -166,7 +167,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     protected open val transform = listOf<(FileSystem) -> Unit>(
-        FixParamAnnotations::apply
+        FixParamAnnotations::apply,
     )
 
     @ApiStatus.Internal
@@ -223,6 +224,27 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.8.2") < 0) {
+            val fixedInners = MinecraftJar(
+                baseMinecraft,
+                patches = baseMinecraft.patches + listOf("fixInners")
+            )
+
+            if (fixedInners.path.exists() && !project.unimined.forceReload) {
+                return fixedInners
+            }
+
+            val temp = fixedInners.path.resolveSibling(fixedInners.path.nameWithoutExtension + "-temp.jar")
+            baseMinecraft.path.copyTo(temp, StandardCopyOption.REPLACE_EXISTING)
+
+            temp.openZipFileSystem().use { fs ->
+                FixInnerClasses.apply(fs)
+            }
+
+            temp.moveTo(fixedInners.path, StandardCopyOption.REPLACE_EXISTING)
+
+            return fixedInners
+        }
         return baseMinecraft
     }
 

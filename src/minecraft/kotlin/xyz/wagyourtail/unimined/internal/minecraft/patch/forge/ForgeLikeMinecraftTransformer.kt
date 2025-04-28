@@ -367,7 +367,7 @@ abstract class ForgeLikeMinecraftTransformer(
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return super<AccessTransformerMinecraftTransformer>.afterRemap(forgeTransformer.afterRemap(baseMinecraft))
+        return super<AbstractMinecraftTransformer>.afterRemap(super<AccessTransformerMinecraftTransformer>.afterRemap(forgeTransformer.afterRemap(baseMinecraft)))
     }
 
     val groups: String by lazy {

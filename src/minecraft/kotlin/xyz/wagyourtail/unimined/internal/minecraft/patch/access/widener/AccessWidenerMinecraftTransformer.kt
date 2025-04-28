@@ -57,7 +57,7 @@ interface AccessWidenerMinecraftTransformer : AccessWidenerPatcher, AccessConver
         override var accessWidener: File? by FinalizeOnRead(null)
 
         override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-            return super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft)
+            return super<AbstractMinecraftTransformer>.afterRemap(super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft))
         }
 
     }
