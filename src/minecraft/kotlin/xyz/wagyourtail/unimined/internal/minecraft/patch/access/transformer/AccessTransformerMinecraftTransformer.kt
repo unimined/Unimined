@@ -160,7 +160,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         override var atMainClass: String by FinalizeOnRead(getDependencyMainClass(project, provider))
 
         override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-            return super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft)
+            return super<AbstractMinecraftTransformer>.afterRemap(super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft))
         }
 
     }

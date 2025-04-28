@@ -58,7 +58,7 @@ open class RiftMinecraftTransformer(
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        return super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft)
+        return super<AbstractMinecraftTransformer>.afterRemap(super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft))
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

@@ -239,7 +239,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft))
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = super<AbstractMinecraftTransformer>.afterRemap(applyInterfaceInjection(super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft)))
 
     private fun applyInterfaceInjection(baseMinecraft: MinecraftJar): MinecraftJar {
         val injections = hashMapOf<String, List<String>>()
