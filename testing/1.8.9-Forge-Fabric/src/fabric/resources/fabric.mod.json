@@ -23,7 +23,8 @@
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "modid.mixins.json",
+    "modid-fabric.mixins.json"
   ],
 
   "depends": {

@@ -10,7 +10,13 @@ import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
+class AtAnnotationVisitor(
+    parent: AnnotationVisitor?,
+    remap: AtomicBoolean,
+    private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(
+    Constant.ASM_VERSION,
+    parent
+) {
     private val remapAt by lazy { AtomicBoolean(remap.get()) }
 
     private var targetName: String? = null
@@ -50,18 +56,20 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
         }
     }
 
-    private val targetField = Regex("^(L[^;]+;|[^.]+?\\.)([^:]+):(.+)$")
-    private val targetMethod = Regex("^(L[^;]+;|[^.]+?\\.)([^(]+)\\s*([^>]+)$")
+    companion object {
+        val targetField = Regex("^(L[^;]+;|[^.]+?\\.)([^:]+):(.+)$")
+        val targetMethod = Regex("^(L[^;]+;|[^.]+?\\.)([^(]+)\\s*([^>]+)$")
 
-
-    private fun matchToParts(match: MatchResult): Triple<String, String, String> {
-        val targetOwner = match.groupValues[1].let {
-            if (it.startsWith("L") && it.endsWith(";")) it.substring(
-                1,
-                it.length - 1
-            ) else it.substring(0, it.length - 1)
+        fun matchToParts(match: MatchResult): Triple<String, String, String> {
+            val targetOwner = match.groupValues[1].let {
+                if (it.startsWith("L") && it.endsWith(";")) it.substring(
+                    1,
+                    it.length - 1
+                ) else it.substring(0, it.length - 1)
+            }
+            return Triple(targetOwner, match.groupValues[2], match.groupValues[3])
         }
-        return Triple(targetOwner, match.groupValues[2], match.groupValues[3])
+
     }
 
     override fun visitEnd() {

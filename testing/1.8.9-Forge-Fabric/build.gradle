@@ -89,6 +89,7 @@ sourceSets {
 dependencies {
     // we need this in main where it isn't by default
     mainImplementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
+    fabricImplementation("io.github.llamalad7:mixinextras-fabric:0.5.0-beta.5")
 }
 
 jar {

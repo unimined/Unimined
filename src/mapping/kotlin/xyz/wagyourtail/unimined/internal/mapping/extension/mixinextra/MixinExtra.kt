@@ -19,6 +19,10 @@ object MixinExtra {
 
     }
 
+    object AnnotationElement {
+        const val FIELD = "field"
+    }
+
     fun refmapBuilder(refmapBuilder: RefmapBuilderClassVisitor) {
 
         refmapBuilder.methodAnnotationVisitors.addAll(listOf(
