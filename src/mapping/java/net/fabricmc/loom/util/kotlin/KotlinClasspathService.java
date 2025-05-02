@@ -56,27 +56,19 @@ public class KotlinClasspathService implements KotlinClasspath {
 
         return getOrCreate(
             project,
-            KotlinPluginUtils.getKotlinPluginVersion(project),
-            KotlinPluginUtils.getKotlinMetadataVersion()
+            KotlinPluginUtils.getKotlinPluginVersion(project)
         );
     }
 
-    public static synchronized KotlinClasspathService getOrCreate(Project project, String kotlinVersion, String kotlinMetadataVersion) {
-        return cache.computeIfAbsent(project, (i) -> create(project, kotlinVersion, kotlinMetadataVersion));
+    public static synchronized KotlinClasspathService getOrCreate(Project project, String kotlinVersion) {
+        return cache.computeIfAbsent(project, (i) -> create(project, kotlinVersion));
     }
 
-    private static KotlinClasspathService create(Project project, String kotlinVersion, String kotlinMetadataVersion) {
-        Dependency metadataDependency;
-        if (kotlinVersion.startsWith("1.")) {
-            // Load kotlinx-metadata-jvm like this to work around: https://github.com/gradle/gradle/issues/14727
-            metadataDependency = project.getDependencies().create("org.jetbrains.kotlinx:kotlinx-metadata-jvm:" + kotlinMetadataVersion);
-        } else {
-            metadataDependency = project.getDependencies().create("org.jetbrains.kotlin:kotlin-metadata-jvm:" + kotlinMetadataVersion);
-        }
+    private static KotlinClasspathService create(Project project, String kotlinVersion) {
         // Create a detached config to resolve the kotlin std lib for the provided version.
         Configuration detachedConfiguration = project.getConfigurations().detachedConfiguration(
             project.getDependencies().create("org.jetbrains.kotlin:kotlin-stdlib:" + kotlinVersion),
-            metadataDependency
+            project.getDependencies().create("org.jetbrains.kotlin:kotlin-metadata-jvm:" + kotlinVersion)
         );
 
         Set<URL> classpath = detachedConfiguration.getFiles().stream()

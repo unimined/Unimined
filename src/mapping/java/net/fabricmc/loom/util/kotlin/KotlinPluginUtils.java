@@ -24,7 +24,6 @@
 
 package net.fabricmc.loom.util.kotlin;
 
-import kotlin.metadata.jvm.KotlinClassMetadata;
 import org.gradle.api.Project;
 
 import java.io.IOException;
@@ -57,7 +56,4 @@ public class KotlinPluginUtils {
         return props.getProperty(property);
     }
 
-    public static String getKotlinMetadataVersion() {
-        return KotlinClassMetadata.class.getPackage().getImplementationVersion().split("-")[0];
-    }
 }
