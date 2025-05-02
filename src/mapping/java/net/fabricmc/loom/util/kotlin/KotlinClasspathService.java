@@ -27,6 +27,7 @@ package net.fabricmc.loom.util.kotlin;
 import org.gradle.api.Project;
 import org.gradle.api.UncheckedIOException;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.MalformedURLException;
@@ -61,16 +62,21 @@ public class KotlinClasspathService implements KotlinClasspath {
     }
 
     public static synchronized KotlinClasspathService getOrCreate(Project project, String kotlinVersion, String kotlinMetadataVersion) {
-        final String id = String.format("kotlinclasspath:%s:%s", kotlinVersion, kotlinMetadataVersion);
         return cache.computeIfAbsent(project, (i) -> create(project, kotlinVersion, kotlinMetadataVersion));
     }
 
     private static KotlinClasspathService create(Project project, String kotlinVersion, String kotlinMetadataVersion) {
+        Dependency metadataDependency;
+        if (kotlinVersion.startsWith("1.")) {
+            // Load kotlinx-metadata-jvm like this to work around: https://github.com/gradle/gradle/issues/14727
+            metadataDependency = project.getDependencies().create("org.jetbrains.kotlinx:kotlinx-metadata-jvm:" + kotlinMetadataVersion);
+        } else {
+            metadataDependency = project.getDependencies().create("org.jetbrains.kotlin:kotlin-metadata-jvm:" + kotlinMetadataVersion);
+        }
         // Create a detached config to resolve the kotlin std lib for the provided version.
         Configuration detachedConfiguration = project.getConfigurations().detachedConfiguration(
             project.getDependencies().create("org.jetbrains.kotlin:kotlin-stdlib:" + kotlinVersion),
-            // Load kotlinx-metadata-jvm like this to work around: https://github.com/gradle/gradle/issues/14727
-            project.getDependencies().create("org.jetbrains.kotlinx:kotlinx-metadata-jvm:" + kotlinMetadataVersion)
+            metadataDependency
         );
 
         Set<URL> classpath = detachedConfiguration.getFiles().stream()
