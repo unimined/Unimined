@@ -88,6 +88,22 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         val tag = remapper.createInputTag()
+
+        val remapperList = arrayListOf<OutputConsumerPath.ResourceRemapper>()
+
+        if (remapAccessWidener.getOrElse(true)!!) remapperList.add(AccessWidenerApplier.AwRemapper(
+            AccessWidenerApplier.nsName(provider.mappings, fromNs),
+            AccessWidenerApplier.nsName(provider.mappings, toNs),
+        ))
+
+        if (remapAccessTransformer.getOrElse(false)!!) remapperList.add(AccessTransformerApplier.AtRemapper(
+            project.logger,
+            fromNs,
+            toNs,
+            isLegacy = remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!,
+            mappings = provider.mappings.resolve()
+        ))
+
         logger.debug("[Unimined/RemapJar ${path}] input: $from")
         betterMixinExtension.readClassPath(remapper, *classpathList).thenCompose {
             project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
@@ -101,19 +117,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
                         it.addNonClassFiles(
                             from,
                             remapper,
-                            listOf(
-                                AccessWidenerApplier.AwRemapper(
-                                    AccessWidenerApplier.nsName(provider.mappings, fromNs),
-                                    AccessWidenerApplier.nsName(provider.mappings, toNs),
-                                ),
-                                AccessTransformerApplier.AtRemapper(
-                                    project.logger,
-                                    fromNs,
-                                    toNs,
-                                    isLegacy = remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!,
-                                    mappings = provider.mappings.resolve()
-                                ),
-                            )
+                            remapperList
                         )
                         remapper.apply(it, tag)
                     }

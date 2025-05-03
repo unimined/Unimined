@@ -17,6 +17,24 @@ interface RemapJarTask : JarInterface<AbstractRemapJarTask>, RemapOptions {
     @get:Optional
     val remapATToLegacy: Property<Boolean?>
 
+    /**
+     * Enable remapping of access wideners in the jar.
+     * Enabled by default
+     * @since 1.4.1
+     */
+    @get:Input
+    @get:Optional
+    val remapAccessWidener: Property<Boolean?>
+
+    /**
+     * Enable remapping of access transformers in the jar.
+     * Enabled by default
+     * @since 1.4.1
+     */
+    @get:Input
+    @get:Optional
+    val remapAccessTransformer: Property<Boolean?>
+
     fun mixinRemap(action: MixinRemapOptions.() -> Unit)
 
     fun mixinRemap(
