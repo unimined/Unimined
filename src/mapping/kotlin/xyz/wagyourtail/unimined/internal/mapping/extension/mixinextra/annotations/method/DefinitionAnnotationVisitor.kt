@@ -15,19 +15,28 @@ import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 
-class DefinitionAnnotationVisitor(descriptor: String,
-      visible: Boolean,
-      parent: AnnotationVisitor,
-      methodAccess: Int,
-      methodName: String,
-      methodDescriptor: String,
-      methodSignature: String?,
-      methodExceptions: Array<out String>?,
+class DefinitionAnnotationVisitor(
+      parent: AnnotationVisitor?,
       private val refmapBuilder: RefmapBuilderClassVisitor
 )  : AnnotationVisitor(
     Constant.ASM_VERSION,
     parent
 ) {
+
+    constructor(
+        descriptor: String,
+        visible: Boolean,
+        parent: AnnotationVisitor,
+        methodAccess: Int,
+        methodName: String,
+        methodDescriptor: String,
+        methodSignature: String?,
+        methodExceptions: Array<out String>?,
+        refmapBuilder: RefmapBuilderClassVisitor
+    ) : this(
+        parent,
+        refmapBuilder
+    )
 
     protected val remap = AtomicBoolean(refmapBuilder.remap.get())
 
