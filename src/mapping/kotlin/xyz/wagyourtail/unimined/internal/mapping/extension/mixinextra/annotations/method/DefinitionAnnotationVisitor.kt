@@ -229,6 +229,7 @@ class DefinitionAnnotationVisitor(
             }
 
         }
+        super.visitEnd()
     }
 
 }
