@@ -113,7 +113,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         mainClass = json.get("mainClass").asString
         val args = json.get("minecraftArguments").asString
         provider.addLibraries(libraries)
-        tweakClassClient = args.split("--tweakClass")[1].trim()
+        tweakClassClient = args.split("--tweakClass")[1].trim().substringBefore(" ")
     }
 
     override fun libraryFilter(library: Library): Library? {

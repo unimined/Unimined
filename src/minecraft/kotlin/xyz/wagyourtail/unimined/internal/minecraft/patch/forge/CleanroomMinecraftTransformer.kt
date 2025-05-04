@@ -107,7 +107,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         provider.addLibraries(libraries.filter {
             !it.name.startsWith("com.cleanroommc:cleanroom:")
         })
-        tweakClassClient = args.split("--tweakClass")[1].trim()
+        tweakClassClient = args.split("--tweakClass")[1].trim().substringBefore(" ")
     }
 
     override fun libraryFilter(library: Library): Library? {

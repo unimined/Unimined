@@ -62,7 +62,7 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
         mainClass = json.get("mainClass").asString
         val args = json.get("minecraftArguments").asString
         provider.addLibraries(libraries.filter { !it.name.startsWith("net.neoforged:forge:") || !it.name.startsWith("net.neoforged:neoforge:") })
-        tweakClassClient = args.split("--tweakClass")[1].trim()
+        tweakClassClient = args.split("--tweakClass")[1].trim().substringBefore(" ")
     }
 
     override fun configureRemapJar(task: AbstractRemapJarTask) {
