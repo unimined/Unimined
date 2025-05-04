@@ -66,6 +66,7 @@ object FixFG2Coremods {
                                     )
                                     val l0 = Label()
                                     visitJumpInsn(Opcodes.IFEQ, l0)
+                                    visitFrame(Opcodes.F_SAME, 0, null, 0, null)
                                     // cpw.mods.fml.relauncher.CoreModManager#tweaker or net.minecraftforge.fml.relauncher.CoreModManager#tweaker
                                     visitFieldInsn(
                                         Opcodes.GETSTATIC,
@@ -107,6 +108,7 @@ object FixFG2Coremods {
                                     visitInsn(Opcodes.POP)
                                     visitInsn(Opcodes.RETURN)
                                     visitLabel(l0)
+                                    visitFrame(Opcodes.F_SAME, 0, null, 0, null)
                                 }
                             }
                         } else {
@@ -172,11 +174,11 @@ object FixFG2Coremods {
                         val l0 = Label()
                         mv.visitLabel(l0)
                         mv.visitFrame(
-                            Opcodes.F_APPEND,
-                            2,
-                            arrayOf<Any?>("java/util/ArrayList", "[Ljava/lang/String;"),
+                            Opcodes.F_FULL,
+                            5,
+                            arrayOf<Any?>("[Ljava/io/File;", "java/util/ArrayList", "[Ljava/lang/String;", Opcodes.INTEGER, Opcodes.INTEGER),
                             0,
-                            null
+                            arrayOf()
                         )
                         mv.visitVarInsn(Opcodes.ILOAD, 4)
                         mv.visitVarInsn(Opcodes.ILOAD, 3)
@@ -294,8 +296,8 @@ object FixFG2Coremods {
                         mv2.visitLabel(l2)
                         mv2.visitFrame(
                             Opcodes.F_APPEND,
-                            2,
-                            arrayOf<Any?>("[Ljava/lang/String;", Opcodes.INTEGER),
+                            3,
+                            arrayOf<Any?>("[Ljava/lang/String;", Opcodes.INTEGER, Opcodes.INTEGER),
                             0,
                             null
                         )
