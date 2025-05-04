@@ -67,6 +67,9 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
     private fun applyATs(baseMinecraft: MinecraftJar, ats: List<Path>): MinecraftJar {
         project.logger.lifecycle("[Unimined/ForgeTransformer] Applying ATs $ats")
         return if (accessTransformer != null) {
+            if (!accessTransformer!!.exists()) {
+                throw IllegalStateException("Access transformer file $accessTransformer does not exist")
+            }
             project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
             val output = MinecraftJar(
                 baseMinecraft,
@@ -143,6 +146,10 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
             output.deleteIfExists()
             throw e
         }
+    }
+
+    override fun accessTransformer(file: String) {
+        accessTransformer = project.file(file)
     }
 
     class DefaultTransformer(

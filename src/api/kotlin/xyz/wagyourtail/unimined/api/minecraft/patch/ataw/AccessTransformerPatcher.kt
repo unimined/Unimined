@@ -41,16 +41,14 @@ interface AccessTransformerPatcher : MinecraftPatcher, AccessConvert {
      */
     @Deprecated(message = "", replaceWith = ReplaceWith("accessTransformer(file)"))
     fun setAccessTransformer(file: String) {
-        accessTransformer = File(file)
+        accessTransformer(file)
     }
 
     /**
      * set the access transformer file to apply to the minecraft jar.
      * @since 1.0.0
      */
-    fun accessTransformer(file: String) {
-        accessTransformer = File(file)
-    }
+    fun accessTransformer(file: String)
 
     /**
      * set the access transformer file to apply to the minecraft jar.
