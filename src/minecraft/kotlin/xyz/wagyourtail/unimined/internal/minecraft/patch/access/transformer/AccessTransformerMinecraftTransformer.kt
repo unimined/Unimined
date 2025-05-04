@@ -68,7 +68,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         project.logger.lifecycle("[Unimined/ForgeTransformer] Applying ATs $ats")
         return if (accessTransformer != null) {
             if (!accessTransformer!!.exists()) {
-                throw IllegalStateException("Access transformer file $accessTransformer does not exist")
+                throw IllegalStateException("Access transformer file ${accessTransformer!!.absolutePath} does not exist")
             }
             project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
             val output = MinecraftJar(
