@@ -668,7 +668,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 )
                 config.args(
                     "--tweakClass",
-                    parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
+                    parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"
                 )
                 config.environment["MOD_CLASSES"] = parent.groups
             } else {
