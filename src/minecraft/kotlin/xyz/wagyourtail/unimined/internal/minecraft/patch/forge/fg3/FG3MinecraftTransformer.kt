@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -87,8 +88,13 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
 
     override val transform: MutableList<(FileSystem) -> Unit> = (
-            if (parent.provider.version == "1.12.2") { listOf(FixFG2ResourceLoading::fixResourceLoading) } else { emptyList() } +
-            super.transform
+            if (parent.provider.version == "1.12.2") {
+                listOf(FixFG2Coremods::fixCoremods)
+                listOf(FixFG2ResourceLoading::fixResourceLoading)
+            } else {
+                emptyList()
+            } +
+                    super.transform
             ).toMutableList()
 
 
