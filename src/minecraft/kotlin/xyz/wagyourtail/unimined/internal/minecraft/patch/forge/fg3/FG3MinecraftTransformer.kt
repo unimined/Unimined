@@ -26,6 +26,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMin
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.MCPConfig
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
@@ -103,6 +104,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override val transform: MutableList<(FileSystem) -> Unit> = (
             if (parent.provider.version == "1.12.2") {
+                listOf(FixFG2Coremods::fixCoremods)
                 listOf(FixFG2ResourceLoading::fixResourceLoading)
             } else {
                 emptyList()
