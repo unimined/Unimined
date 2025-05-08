@@ -49,7 +49,7 @@ open class JarModMinecraftTransformer(
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         if (combinedNames.isEmpty()) {
-            return super.transform(minecraft)
+            return minecraft
         }
         return minecraft.let(consumerApply {
             val target = MinecraftJar(
@@ -57,7 +57,7 @@ open class JarModMinecraftTransformer(
                 patches = minecraft.patches + providerName + combinedNames
             )
             if (target.path.exists() && !project.unimined.forceReload) {
-                return@consumerApply super.transform(target)
+                return@consumerApply target
             }
 
             val jarmod = jarModConfiguration.resolve().toMutableSet()
@@ -82,12 +82,13 @@ open class JarModMinecraftTransformer(
                             )
                         }
                     }
+                    transform.forEach { it(out) }
                 }
             } catch (e: Throwable) {
                 target.path.deleteIfExists()
                 throw e
             }
-            super.transform(target)
+            target
         })
     }
 }
