@@ -34,6 +34,7 @@ object FixFG2Coremods {
                                     descriptor: String,
                                     isInterface: Boolean
                                 ) {
+                                    // 1.7-1.11
                                     if (owner.endsWith("FileListHelper") && name == "sortFileList") {
                                         // call File[] unimined$addClasspath(File[] files)
                                         super.visitMethodInsn(
@@ -45,6 +46,38 @@ object FixFG2Coremods {
                                         )
                                     }
                                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                    // 1.12.2
+                                    if (owner.endsWith("LibraryManager") && name == "gatherLegacyCanidates") {
+                                        super.visitInsn(Opcodes.DUP)
+                                        // new File[0];
+                                        super.visitLdcInsn(0)
+                                        super.visitTypeInsn(Opcodes.ANEWARRAY, "java/io/File")
+                                        // call File[] unimined$addClasspath(File[] files)
+                                        super.visitMethodInsn(
+                                            Opcodes.INVOKESTATIC,
+                                            file.substring(0, file.length - 6),
+                                            "unimined\$addClasspath",
+                                            "([Ljava/io/File;)[Ljava/io/File;",
+                                            false
+                                        )
+                                        // Arrays.asList
+                                        super.visitMethodInsn(
+                                            Opcodes.INVOKESTATIC,
+                                            "java/util/Arrays",
+                                            "asList",
+                                            "([Ljava/lang/Object;)Ljava/util/List;",
+                                            false
+                                        )
+                                        // List<File>.addAll(Collection<? extends File> c)
+                                        super.visitMethodInsn(
+                                            Opcodes.INVOKEINTERFACE,
+                                            "java/util/List",
+                                            "addAll",
+                                            "(Ljava/util/Collection;)Z",
+                                            true
+                                        )
+                                        super.visitInsn(Opcodes.POP)
+                                    }
                                 }
                             }
                         } else if (name == "handleCascadingTweak") {
