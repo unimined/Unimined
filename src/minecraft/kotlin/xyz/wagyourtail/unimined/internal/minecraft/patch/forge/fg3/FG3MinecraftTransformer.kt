@@ -104,8 +104,10 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override val transform: MutableList<(FileSystem) -> Unit> = (
             if (parent.provider.version == "1.12.2") {
-                listOf(FixFG2Coremods::fixCoremods)
-                listOf(FixFG2ResourceLoading::fixResourceLoading)
+                listOf(
+                    FixFG2Coremods::fixCoremods,
+                    FixFG2ResourceLoading::fixResourceLoading
+                )
             } else {
                 emptyList()
             } +
