@@ -96,7 +96,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
             AccessWidenerApplier.nsName(provider.mappings, toNs),
         ))
 
-        if (remapAccessTransformer.getOrElse(false)!!) remapperList.add(AccessTransformerApplier.AtRemapper(
+        if (remapAccessTransformer.getOrElse(true)!!) remapperList.add(AccessTransformerApplier.AtRemapper(
             project.logger,
             fromNs,
             toNs,
