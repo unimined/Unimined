@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ResolvedArtifact
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -169,4 +170,32 @@ abstract class FabricMinecraftTransformer(
     }
 
     open fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {}
+
+    override fun configureRuntimeMappings(export: ExportMappingsTask.Export) {
+        val targetNs = {
+            if (provider.mappings.checkedNsOrNull("clientOfficial") != null ||
+                provider.mappings.checkedNsOrNull("serverOfficial") != null ||
+                provider.mappings.checkedNsOrNull("client") != null ||
+                provider.mappings.checkedNsOrNull("server") != null) {
+                setOf(
+                    provider.mappings.checkedNsOrNull("clientOfficial") ?: provider.mappings.checkedNs("client"),
+                    provider.mappings.checkedNsOrNull("serverOfficial") ?: provider.mappings.checkedNs("server"),
+                    provider.mappings.devNamespace
+                )
+            } else {
+                setOf(prodNamespace, provider.mappings.devNamespace)
+            }
+        }.invoke()
+
+        val sourceNs = if (targetNs.contains(prodNamespace)) {
+            provider.mappings.checkedNs("official")
+        } else {
+            prodNamespace
+        }
+
+        export.sourceNamespace = sourceNs
+        export.targetNamespace = targetNs
+        export.renameNs[prodNamespace] = "intermediary"
+        export.renameNs[provider.mappings.devNamespace] = "named"
+    }
 }
