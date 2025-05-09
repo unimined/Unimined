@@ -84,7 +84,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         it.name = "modsRemap"
         it.dir(getLocalCache().resolve("modTransform").toFile())
         it.content {
-            it.includeGroupByRegex("remapped_.+")
+            it.includeGroupByRegex("remapped_.*")
         }
     }
 
