@@ -320,7 +320,25 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                         provides("searge" to false)
                     }
                     is MCPv3ClassesReader, MCPv3FieldReader, MCPv3MethodReader -> {
+                        mapNamespace("notch" to "official")
                         provides("searge" to false, "mcp" to true)
+                        if (format.reader is MCPv3ClassesReader) {
+                            insertInto.add {
+                                it.delegator(object : Delegator() {
+                                    override fun visitClass(
+                                        delegate: MappingVisitor,
+                                        names: Map<Namespace, InternalName>
+                                    ): ClassVisitor? {
+                                        val names = names.toMutableMap()
+                                        val srgName = names[Namespace("searge")]
+                                        if (srgName != null) {
+                                            names[Namespace("mcp")] = srgName
+                                        }
+                                        return super.visitClass(delegate, names)
+                                    }
+                                })
+                            }
+                        }
                     }
                      else -> {
                          requires("searge")
