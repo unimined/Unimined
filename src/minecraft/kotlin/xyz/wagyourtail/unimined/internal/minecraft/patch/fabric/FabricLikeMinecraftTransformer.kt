@@ -8,6 +8,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
@@ -126,10 +127,7 @@ abstract class FabricLikeMinecraftTransformer(
                     val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                         location = file
                         type = TinyV2Writer
-                        sourceNamespace = prodNamespace
-                        targetNamespace = setOf(provider.mappings.devNamespace)
-                        renameNs[prodNamespace] = "intermediary"
-                        renameNs[provider.mappings.devNamespace] = "named"
+                        configureRuntimeMappings(this)
                     }
                     export.validate()
                     runBlocking {
@@ -506,4 +504,6 @@ abstract class FabricLikeMinecraftTransformer(
         }
         return json
     }
+
+    protected abstract fun configureRuntimeMappings(export: ExportMappingsTask.Export)
 }

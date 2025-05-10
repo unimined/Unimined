@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
@@ -133,5 +134,12 @@ open class FlintMinecraftTransformer(
                 Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
+    }
+
+    override fun configureRuntimeMappings(export: ExportMappingsTask.Export) {
+        export.sourceNamespace = prodNamespace
+        export.targetNamespace = setOf(provider.mappings.devNamespace)
+        export.renameNs[prodNamespace] = "intermediary"
+        export.renameNs[provider.mappings.devNamespace] = "named"
     }
 }
