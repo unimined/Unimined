@@ -75,6 +75,11 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         super.apply()
     }
 
+    private val depNameMap = mapOf(
+        "bcprov-jdk15on-1.47.jar" to "bcprov-jdk15on-147.jar",
+        "bcprov-jdk15on-1.48.jar" to "bcprov-jdk15on-148.jar",
+    )
+
     private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).also {
         provider.minecraftLibraries.extendsFrom(it)
     }
@@ -91,34 +96,34 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         val deps = listOf(
             Pair(
-                Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
+                "guava-12.0.1.jar", project.dependencies.create(
                     "com.google.guava:guava:12.0.1"
                 )
             ),
             Pair(
-                Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
+                "guava-14.0-rc3.jar", project.dependencies.create(
                     "com.google.guava:guava:14.0-rc3"
                 )
             ),
             Pair(
-                Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
+                "asm-all-4.1.jar", project.dependencies.create(
                     "org.ow2.asm:asm-all:4.1"
                 )
             ),
             Pair(
-                Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
+                "bcprov-jdk15on-148.jar", project.dependencies.create(
                     "org.bouncycastle:bcprov-jdk15on:1.48"
                 )
             ),
             Pair(
-                Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
+                "bcprov-jdk15on-147.jar", project.dependencies.create(
                     "org.bouncycastle:bcprov-jdk15on:1.47"
                 )
             ),
         )
 
         deps.forEach { dep ->
-            if (wanted.contains(dep.first.second)) {
+            if (wanted.contains(dep.first)) {
                 forgeDeps.dependencies.add(dep.second)
             }
         }
@@ -203,7 +208,7 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         dynLibFolder.mkdirs()
         for (file in forgeDeps.resolve()) {
             if (file.exists() && file.extension != "pom") {
-                file.copyTo(dynLibFolder.resolve(file.name), overwrite = true)
+                file.copyTo(dynLibFolder.resolve(depNameMap.getOrDefault(file.name, file.name)), overwrite = true)
             }
         }
 
