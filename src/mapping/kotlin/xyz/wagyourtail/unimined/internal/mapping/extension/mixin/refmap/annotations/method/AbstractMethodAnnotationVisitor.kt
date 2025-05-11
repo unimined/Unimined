@@ -125,6 +125,20 @@ abstract class AbstractMethodAnnotationVisitor(
                         }
 
                         if (target.isPresent) continue@outer
+                        else if (targetName == "*") {
+                            // The descriptor classnames may still be possible to remap, even though a wildcard method
+                            // name is provided
+                            val mappedDesc = mapper.asTrRemapper().mapMethodDesc(targetDesc)
+                            if (mappedDesc != targetDesc) {
+                                val mappedClass = resolver.resolveClass(targetClass)
+                                    .map { mapper.mapName(it) }
+                                    .orElse(targetClass)
+                                val mappedPrefix = if (targetClasses.size > 1) "L$mappedClass;*" else "*"
+                                refmap.addProperty(targetMethod, "$mappedPrefix$mappedDesc")
+                                noRefmapAcceptor("$mappedPrefix$mappedDesc")
+                                continue@outer
+                            }
+                        }
                     }
                 }
                 logger.warn(
