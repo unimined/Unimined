@@ -105,6 +105,9 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             patchedMC.path.deleteIfExists()
             applyBinPatches(minecraft, binaryPatchFile, patchedMC)
         }
+
+        addExtraInnerClassMappings(minecraft, patchedMC)
+
         return patchedMC
     }
 

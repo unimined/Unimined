@@ -549,6 +549,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 System.setOut(stdout)
             }
         }
+
+        addExtraInnerClassMappings(inputMC, patchedMC)
+
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
