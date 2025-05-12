@@ -47,36 +47,6 @@ open class JarModMinecraftTransformer(
         jarMod.joinToString("+") { it.name + "-" + it.version }
     }
 
-    fun addExtraInnerClassMappings(prePatched: MinecraftJar, postPatched: MinecraftJar) {
-        val prePatchClasses = prePatched.path.readZipContents().filter { it.endsWith(".class") }.map { it.removeSuffix(".class") }
-        val postPatchClasses = postPatched.path.readZipContents().filter { it.endsWith(".class") }.map { it.removeSuffix(".class") }
-
-        val namespace = prePatched.mappingNamespace
-        val addedClasses = (postPatchClasses - prePatchClasses).sorted()
-
-        runBlocking {
-            val mappings = provider.mappings.resolve()
-            for (className in addedClasses) {
-                if (!className.contains("$") || mappings.getClass(namespace, InternalName.unchecked(className)) != null) continue
-                val outerName = className.substringBeforeLast("$")
-                val innerName = className.substringAfterLast("$")
-                val outerMapping = mappings.getClass(namespace, InternalName.unchecked(outerName))
-                if (outerMapping != null) {
-                    val names = outerMapping.names.mapValues { InternalName.unchecked("${it.value}$${innerName}") }.toMutableMap()
-                    for ((ns, name) in names.toMap()) {
-                        if (mappings.getClass(ns, name) != null) {
-                            names.remove(ns)
-                        }
-                    }
-                    if (names.isNotEmpty()) {
-                        project.logger.lifecycle("[Unimined/JarMod ${project.path}:${provider.sourceSet}] Adding mappings for added inner class $className, $names")
-                        mappings.visitClass(names).visitEnd()
-                    }
-                }
-            }
-        }
-    }
-
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         if (combinedNames.isEmpty()) {
             return minecraft

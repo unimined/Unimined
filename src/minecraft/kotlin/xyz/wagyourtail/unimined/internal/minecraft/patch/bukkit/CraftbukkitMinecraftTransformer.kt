@@ -149,6 +149,8 @@ open class CraftbukkitMinecraftTransformer(
 
         outputFile.copyTo(patchedJar.path, overwrite = true)
 
+        addExtraInnerClassMappings(minecraft, patchedJar)
+
         return super.transform(patchedJar)
     }
 

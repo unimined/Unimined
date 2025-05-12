@@ -62,6 +62,8 @@ open class PaperMinecraftTransformer(project: Project,
             }
         }
 
+        addExtraInnerClassMappings(minecraft, output)
+
         return output
     }
 
