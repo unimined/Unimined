@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
 import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
 import okio.buffer
@@ -252,27 +253,27 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                     mapNamespace("obf" to "official")
                     provides("srg" to false)
                 })
-            }) {
-                mapNamespace("srg" to "searge")
-                provides("searge" to false)
+            }, {
+                val searge = Namespace("searge")
+                val mojmap = Namespace("mojmap")
 
-                insertInto.add {
-                    it.delegator(object: Delegator() {
-                        val searge = Namespace("searge")
-                        val mojmap = Namespace("mojmap")
-
-                        override fun visitClass(
-                            delegate: MappingVisitor,
-                            names: Map<Namespace, InternalName>
-                        ): ClassVisitor? {
-                            return if (mojmap in names) {
-                                super.visitClass(delegate, names + (searge to names[mojmap]!!))
-                            } else {
-                                super.visitClass(delegate, names)
-                            }
+                accept(delegator(object: Delegator() {
+                    override fun visitClass(
+                        delegate: MappingVisitor,
+                        names: Map<Namespace, InternalName>
+                    ): ClassVisitor? {
+                        return if (mojmap in names) {
+                            super.visitClass(delegate, names + (searge to names[mojmap]!!))
+                        } else {
+                            super.visitClass(delegate, names)
                         }
-                    })
+                    }
+                }))
+                runBlocking {
+                    fillMissingNames(Namespace("srg") to setOf(Namespace("searge")))
                 }
+            }) {
+                provides("searge" to false)
             }
         } else {
             addDependency("searge", MappingEntry(contentOf(mappings), "searge-$version").apply {
