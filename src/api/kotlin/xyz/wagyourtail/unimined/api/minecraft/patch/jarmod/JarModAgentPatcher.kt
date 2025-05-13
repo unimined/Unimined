@@ -23,6 +23,11 @@ interface JarModAgentPatcher : JarModPatcher {
     val jarModAgent: Configuration
 
     /**
+     * if the "agent" part should actually be enabled
+     */
+    var enableJarModAgent: Boolean
+
+    /**
      * @since 1.0.0
      * add a transforms file to the jar mod agent
      */
@@ -35,4 +40,3 @@ interface JarModAgentPatcher : JarModPatcher {
     fun transforms(transforms: List<String>)
 
     fun agentVersion(vers: String)
-}
