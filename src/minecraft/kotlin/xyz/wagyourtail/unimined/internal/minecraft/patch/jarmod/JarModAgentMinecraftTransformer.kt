@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -48,6 +49,8 @@ open class JarModAgentMinecraftTransformer(
         provider.minecraftLibraries.extendsFrom(it)
     }
 
+    override var enableJarModAgent by FinalizeOnRead(true)
+
     val jmaFile by lazy {
         jarModAgent.resolve().first { it.extension == "jar" }.toPath()
     }
@@ -75,8 +78,10 @@ open class JarModAgentMinecraftTransformer(
     }
 
     override fun apply() {
-        if (jarModAgent.dependencies.isEmpty()) {
-            agentVersion("0.1.4-SNAPSHOT")
+        if (enableJarModAgent) {
+            if (jarModAgent.dependencies.isEmpty()) {
+                agentVersion("0.1.4-SNAPSHOT")
+            }
         }
 
         super.apply()
@@ -93,6 +98,9 @@ open class JarModAgentMinecraftTransformer(
     }
 
     private fun applyJarModAgent(config: RunConfig) {
+        if (!enableJarModAgent) {
+            return
+        }
         if (transforms.isNotEmpty()) {
             config.jvmArgs("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
         }
@@ -113,7 +121,7 @@ open class JarModAgentMinecraftTransformer(
         }
 
         @Suppress("DEPRECATION")
-        return if (compiletimeTransforms && transforms.isNotEmpty() && task is RemapJarTask) {
+        return if (enableJarModAgent && compiletimeTransforms && transforms.isNotEmpty() && task is RemapJarTask) {
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${task}...")
             val output = getTempFilePath("${input.nameWithoutExtension}-jma", ".jar")
             Files.copy(input, output)
