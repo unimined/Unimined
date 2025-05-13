@@ -45,7 +45,6 @@ import java.net.URI
 import java.nio.file.StandardOpenOption
 import kotlin.collections.toMutableMap
 import kotlin.io.path.*
-import kotlin.time.measureTime
 
 @Scoped
 open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
