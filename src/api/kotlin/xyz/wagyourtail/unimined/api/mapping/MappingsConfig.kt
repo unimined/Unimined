@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.api.mapping.dsl.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
+import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.mapping.util.Scoped
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
@@ -225,7 +226,7 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
 
     abstract fun configure(action: MappingsConfig<*>.() -> Unit)
 
-    override suspend fun resolve(): MemoryMappingTree {
+    override suspend fun resolve(): AbstractMappingTree {
         return super.resolve()
     }
 

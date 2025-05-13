@@ -353,7 +353,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     }
                     if (names.isNotEmpty()) {
                         project.logger.lifecycle("[Unimined/JarMod ${project.path}:${provider.sourceSet}] Adding mappings for added inner class $className, $names")
-                        mappings.visitClass(names).visitEnd()
+                        mappings.visitClass(names)?.visitEnd()
                     }
                 }
             }

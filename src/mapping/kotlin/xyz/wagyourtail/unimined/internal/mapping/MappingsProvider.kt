@@ -33,6 +33,7 @@ import xyz.wagyourtail.unimined.mapping.propagator.InheritanceTree
 import xyz.wagyourtail.unimined.mapping.propogator.Propagator
 import xyz.wagyourtail.unimined.mapping.resolver.ContentProvider
 import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
+import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.LazyMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.mapping.util.Scoped
@@ -814,14 +815,16 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
     }
 
-    override suspend fun fromCache(key: String): MemoryMappingTree? {
+    override suspend fun fromCache(key: String): AbstractMappingTree? {
         val mappingFile = cacheFolder.resolve("mappings-${key}.umf")
         if (!mappingFile.exists() || unimined.forceReload) {
             mappingFile.deleteIfExists()
             return null
         }
         mappingFile.source().buffer().use {
-            return UMFReader.read(it)
+            val lazy = LazyMappingTree()
+            UMFReader.read(it, lazy)
+            return lazy
         }
     }
 
@@ -846,7 +849,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         tmp.moveTo(mappingFile, true)
     }
 
-    override suspend fun writeCache(key: String, tree: MemoryMappingTree) {
+    override suspend fun writeCache(key: String, tree: AbstractMappingTree) {
         val mappingFile = cacheFolder.resolve("mappings-${key}.umf")
         mappingFile.parent?.createDirectories()
         val tmp = mappingFile.resolveSibling(mappingFile.name + ".tmp")
@@ -890,7 +893,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                 throw IllegalArgumentException("Target namespace $dstName not found in mappings")
             }
 
-            mappings.accept(EmptyMappingVisitor().delegator(object : Delegator() {
+            val visitor = EmptyMappingVisitor().delegator(object : Delegator() {
                 lateinit var fromClassName: String
                 lateinit var toClassName: String
                 lateinit var fromMethod: IMappingProvider.Member
@@ -966,7 +969,13 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                 }
 
 
-            }))
+            })
+
+            if (mappings is LazyMappingTree) {
+                mappings.nonLazyAccept(visitor)
+            } else {
+                mappings.accept(visitor)
+            }
         }
     }
 
