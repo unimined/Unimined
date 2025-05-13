@@ -119,7 +119,7 @@ open class JarModAgentMinecraftTransformer(
             try {
                 val classpath = (task as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
-                val result = project.javaexec {
+                val result = project.providers.javaexec {
                     it.jvmArgs = listOf(
                         "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
                         "-D${JMA_DEBUG}=true"
@@ -133,7 +133,7 @@ open class JarModAgentMinecraftTransformer(
                     it.classpath = jarModAgent
 
                     project.suppressLogs(it)
-                }.assertNormalExitValue().rethrowFailure()
+                }.result.get().assertNormalExitValue().rethrowFailure()
             } catch (e: Exception) {
                 project.logger.error("[Unimined/JarModAgentTransformer] Failed to transform $input")
                 output.deleteIfExists()

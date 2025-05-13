@@ -145,12 +145,12 @@ class BuildToolsExecutor(
 
         if (!targetFile.exists() || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/BuildTools] running build tools")
-            project.javaexec {
+            project.providers.javaexec {
                 it.classpath(project.files(buildTools))
                 it.mainClass.set("org.spigotmc.builder.Bootstrap")
                 it.args("--compile", target.name.lowercase(), "--dont-update", "--dev")
                 it.workingDir = cache.toFile()
-            }.rethrowFailure().assertNormalExitValue()
+            }.result.get().rethrowFailure().assertNormalExitValue()
         }
 
         return targetFile

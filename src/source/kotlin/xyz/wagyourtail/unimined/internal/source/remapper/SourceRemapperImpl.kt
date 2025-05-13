@@ -86,7 +86,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
         }
 
         // run remap
-        project.javaexec { spec ->
+        project.providers.javaexec { spec ->
             spec.classpath(sourceRemapper)
             spec.mainClass.set("com.replaymod.gradle.remap.MainKt")
             spec.args = listOf(
@@ -101,7 +101,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
             )
             specConfig(spec)
             project.logger.info("[Unimined/SourceRemapper]    ${spec.args!!.joinToString(" ")}")
-        }.rethrowFailure().assertNormalExitValue()
+        }.result.get().rethrowFailure().assertNormalExitValue()
 
     }
 

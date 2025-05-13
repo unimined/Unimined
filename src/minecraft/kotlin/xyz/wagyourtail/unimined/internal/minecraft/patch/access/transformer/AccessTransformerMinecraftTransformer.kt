@@ -124,7 +124,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
             ATWriter.writeData(list, it::append)
         }
         try {
-            project.javaexec { spec ->
+            project.providers.javaexec { spec ->
                 if (useToolchains) {
                     val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
                     spec.executable = toolchain.launcherFor {
@@ -147,7 +147,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
                     temp.absolutePathString()
                 )
                 project.suppressLogs(spec)
-            }.assertNormalExitValue().rethrowFailure()
+            }.result.get().assertNormalExitValue().rethrowFailure()
         } catch (e: Exception) {
             output.deleteIfExists()
             throw e

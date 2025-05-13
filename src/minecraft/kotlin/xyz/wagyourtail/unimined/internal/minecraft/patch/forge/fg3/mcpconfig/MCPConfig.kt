@@ -265,7 +265,7 @@ class MCPConfig(
             if (!output.exists() || project.unimined.forceReload) {
                 output.deleteIfExists()
 
-                project.javaexec {
+                project.providers.javaexec {
                     if (useToolchains) {
                         val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
                         if (function.java_version != null) {
@@ -307,7 +307,7 @@ class MCPConfig(
 
                     project.logger.info("[Unimined/MCPConfig] Executing: ${it.executable} ${it.jvmArgs} ${it.mainClass} ${it.args}")
                     project.suppressLogs(it)
-                }.assertNormalExitValue().rethrowFailure()
+                }.result.get().assertNormalExitValue().rethrowFailure()
 
             }
 
