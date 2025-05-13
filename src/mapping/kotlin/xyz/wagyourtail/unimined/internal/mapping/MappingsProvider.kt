@@ -971,11 +971,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
             })
 
-            if (mappings is LazyMappingTree) {
-                mappings.nonLazyAccept(visitor)
-            } else {
-                mappings.accept(visitor)
-            }
+            mappings.accept(visitor)
         }
     }
 
