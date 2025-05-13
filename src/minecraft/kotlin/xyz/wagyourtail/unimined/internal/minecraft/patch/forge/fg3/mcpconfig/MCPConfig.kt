@@ -7,6 +7,7 @@ import okio.source
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry
 import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream
 import org.gradle.api.GradleException
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -40,6 +41,8 @@ class MCPConfig(
     private val provider: MinecraftProvider,
     private val project: Project
 ) {
+
+    var useToolchains by FinalizeOnRead(true)
 
     private val configJson by lazy {
         mcpConfig.readZipInputStreamFor("config.json") {
@@ -263,23 +266,29 @@ class MCPConfig(
                 output.deleteIfExists()
 
                 project.javaexec {
-                    val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-                    if (function.java_version != null) {
-                        it.executable = try {
-                            toolchain.launcherFor {
-                                it.languageVersion.set(JavaLanguageVersion.of(function.java_version.toInt()))
-                            }.get()
-                        } catch (e: GradleException) {
-                            throw IllegalStateException("Failed to find java version ${function.java_version}", e)
-                        }.executablePath.asFile.absolutePath
+                    if (useToolchains) {
+                        val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                        if (function.java_version != null) {
+                            it.executable = try {
+                                toolchain.launcherFor {
+                                    it.languageVersion.set(JavaLanguageVersion.of(function.java_version.toInt()))
+                                }.get()
+                            } catch (e: GradleException) {
+                                throw IllegalStateException("Failed to find java version ${function.java_version}", e)
+                            }.executablePath.asFile.absolutePath
+                        } else {
+                            it.executable = try {
+                                toolchain.launcherFor {
+                                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion.toInt()))
+                                }.get()
+                            } catch (e: GradleException) {
+                                throw IllegalStateException("Failed to find java version ${function.java_version}", e)
+                            }.executablePath.asFile.absolutePath
+                        }
                     } else {
-                        it.executable = try {
-                            toolchain.launcherFor {
-                                it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion.toInt()))
-                            }.get()
-                        } catch (e: GradleException) {
-                            throw IllegalStateException("Failed to find java version ${function.java_version}", e)
-                        }.executablePath.asFile.absolutePath
+                        if (JavaVersion.current() < JavaVersion.toVersion(function.java_version)) {
+                            error("current java version ${JavaVersion.current()} is less than required java version ${function.java_version} to run ${function.version}")
+                        }
                     }
 
                     val mainClass: String
