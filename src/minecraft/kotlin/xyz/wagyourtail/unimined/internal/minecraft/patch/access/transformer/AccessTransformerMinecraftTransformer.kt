@@ -48,8 +48,6 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
 
     val provider: MinecraftProvider
 
-    var useToolchains: Boolean
-
     fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         baseMinecraft.path.openZipFileSystem().use { fs ->
             val paths = mutableListOf<Path>()

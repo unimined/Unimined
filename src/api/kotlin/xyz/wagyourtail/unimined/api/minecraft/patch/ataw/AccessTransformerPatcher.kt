@@ -36,6 +36,11 @@ interface AccessTransformerPatcher : MinecraftPatcher, AccessConvert {
      */
     var legacyATFormat: Boolean
 
+    @set:ApiStatus.Experimental
+    var useToolchains: Boolean
+
+    var atMainClass: String
+
     /**
      * set the access transformer file to apply to the minecraft jar.
      */
@@ -66,5 +71,4 @@ interface AccessTransformerPatcher : MinecraftPatcher, AccessConvert {
         accessTransformer = file
     }
 
-    var atMainClass: String
 }
