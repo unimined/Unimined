@@ -139,7 +139,6 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.javaVersion = JavaVersion.VERSION_21
     }
 
-
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {
 
         // override binpatches.pack.lzma meaning it's `userdev3`

@@ -21,6 +21,8 @@ open class RiftMinecraftTransformer(
     provider: MinecraftProvider
 ) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
 
+    override var useToolchains: Boolean by FinalizeOnRead(true)
+
     private var rift: Dependency? = null
 
     override var accessTransformer: File? by FinalizeOnRead(null)

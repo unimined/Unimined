@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer.Companion.getDefaultDependency
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer.Companion.getDependencyMainClass
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
@@ -49,6 +50,26 @@ abstract class ForgeLikeMinecraftTransformer(
     provider: MinecraftProvider,
     providerName: String,
 ): AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer>, AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
+
+
+    private var useToolchainsIntl by FinalizeOnRead(true)
+
+    override var useToolchains: Boolean
+        get() {
+            val transformer = forgeTransformer
+            return if (transformer is FG3MinecraftTransformer) {
+                transformer.mcpConfigRunner.useToolchains
+            } else {
+                useToolchainsIntl
+            }
+        }
+        set(value) {
+            if (forgeTransformer is FG3MinecraftTransformer) {
+                (forgeTransformer as FG3MinecraftTransformer).mcpConfigRunner.useToolchains = value
+            } else {
+                useToolchainsIntl = value
+            }
+        }
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet)).apply {
         isTransitive = false

@@ -48,6 +48,8 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
 
     val provider: MinecraftProvider
 
+    var useToolchains: Boolean
+
     fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         baseMinecraft.path.openZipFileSystem().use { fs ->
             val paths = mutableListOf<Path>()
@@ -125,10 +127,16 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         }
         try {
             project.javaexec { spec ->
-                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-                spec.executable = toolchain.launcherFor {
-                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
-                }.get().executablePath.asFile.absolutePath
+                if (useToolchains) {
+                    val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                    spec.executable = toolchain.launcherFor {
+                        it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
+                    }.get().executablePath.asFile.absolutePath
+                } else {
+                    if (JavaVersion.current() < provider.minecraftData.metadata.javaVersion) {
+                        error("current java version ${JavaVersion.current()} is less than required java version ${provider.minecraftData.metadata.javaVersion} to run access transformer")
+                    }
+                }
 
                 spec.classpath = project.configurations.detachedConfiguration(atDependency)
                 spec.mainClass.set(atMainClass)
@@ -156,6 +164,8 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         project: Project,
         provider: MinecraftProvider,
     ) : AbstractMinecraftTransformer(project, provider, "accessTransformer"), AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
+
+        override var useToolchains: Boolean by FinalizeOnRead(true)
 
         override var accessTransformer: File? by FinalizeOnRead(null)
 
