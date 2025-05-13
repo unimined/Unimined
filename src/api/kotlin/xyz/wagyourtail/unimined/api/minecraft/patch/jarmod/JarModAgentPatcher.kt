@@ -24,6 +24,7 @@ interface JarModAgentPatcher : JarModPatcher {
 
     /**
      * if the "agent" part should actually be enabled
+     * @since 1.3.15
      */
     var enableJarModAgent: Boolean
 
@@ -40,3 +41,4 @@ interface JarModAgentPatcher : JarModPatcher {
     fun transforms(transforms: List<String>)
 
     fun agentVersion(vers: String)
+}
