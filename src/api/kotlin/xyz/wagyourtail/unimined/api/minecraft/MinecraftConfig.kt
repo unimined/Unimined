@@ -480,4 +480,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
 
     @get:ApiStatus.Internal
     abstract val combinedWithList: MutableSet<Pair<Project, SourceSet>>
+
+    @get:ApiStatus.Internal
+    val forgeMCVersion by lazy { if (version == "1.4") "1.4.0" else if (version == "1.0") "1.0.0" else version }
 }

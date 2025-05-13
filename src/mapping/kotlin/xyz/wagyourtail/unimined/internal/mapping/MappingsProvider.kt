@@ -593,13 +593,12 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
 
     override fun forgeBuiltinMCP(version: String) {
-        val mcVer = if (minecraft.version == "1.4") "1.4.0" else minecraft.version
         unimined.minecraftForgeMaven()
         addDependency("forgeBuiltinMCP", MappingEntry(contentOf(
             MavenCoords(
                 "net.minecraftforge",
                 "forge",
-                "${mcVer}-$version",
+                "${minecraft.forgeMCVersion}-$version",
                 "src",
                 "zip"
             )), "forgeBuiltinMCP-$version"

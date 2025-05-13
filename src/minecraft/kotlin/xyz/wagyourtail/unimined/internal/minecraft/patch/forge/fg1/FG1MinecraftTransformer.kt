@@ -40,12 +40,11 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         get() = parent.merger
 
     override fun beforeMappingsResolve() {
-        val mcVer = if (provider.version == "1.4") "1.4.0" else provider.version
         val forge = parent.forge.dependencies.first()
         provider.mappings.apply {
             if (!parent.customSearge && canCombine)
                 provider.mappings {
-                    forgeBuiltinMCP(forge.version!!.substringAfter("${mcVer}-"))
+                    forgeBuiltinMCP(forge.version!!.substringAfter("${provider.forgeMCVersion}-"))
                 }
         }
     }
