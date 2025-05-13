@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.cachingDownload
+import xyz.wagyourtail.unimined.util.execOps
 import java.net.URI
 import java.nio.file.Path
 import javax.xml.parsers.DocumentBuilderFactory
@@ -145,12 +146,12 @@ class BuildToolsExecutor(
 
         if (!targetFile.exists() || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/BuildTools] running build tools")
-            project.providers.javaexec {
+            project.execOps.javaexec {
                 it.classpath(project.files(buildTools))
                 it.mainClass.set("org.spigotmc.builder.Bootstrap")
                 it.args("--compile", target.name.lowercase(), "--dont-update", "--dev")
                 it.workingDir = cache.toFile()
-            }.result.get().rethrowFailure().assertNormalExitValue()
+            }.rethrowFailure().assertNormalExitValue()
         }
 
         return targetFile

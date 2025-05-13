@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.execOps
 import xyz.wagyourtail.unimined.util.getShortSha1
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.suppressLogs
@@ -124,14 +125,14 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
             ATWriter.writeData(list, it::append)
         }
         try {
-            project.providers.javaexec { spec ->
+            project.execOps.javaexec { spec ->
                 if (useToolchains) {
                     val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
                     spec.executable = toolchain.launcherFor {
                         it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
                     }.get().executablePath.asFile.absolutePath
                 } else {
-                    if (JavaVersion.current() < provider.minecraftData.metadata.javaVersion) {
+                    if (JavaVersion.current() < (provider.minecraftData.metadata.javaVersion)) {
                         error("current java version ${JavaVersion.current()} is less than required java version ${provider.minecraftData.metadata.javaVersion} to run access transformer")
                     }
                 }
@@ -147,7 +148,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
                     temp.absolutePathString()
                 )
                 project.suppressLogs(spec)
-            }.result.get().assertNormalExitValue().rethrowFailure()
+            }.assertNormalExitValue().rethrowFailure()
         } catch (e: Exception) {
             output.deleteIfExists()
             throw e

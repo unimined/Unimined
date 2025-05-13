@@ -136,7 +136,7 @@ class FoxLoaderMinecraftTransformer(
         project.logger.info(transformed.path.absolutePathString())
         project.logger.info(newPath.absolutePathString())
 
-        project.providers.javaexec {
+        project.execOps.javaexec {
             it.classpath = foxLoaderInvoker
             it.mainClass.set("com/fox2code/foxloader/invoker/Main")
             it.args(
@@ -144,7 +144,7 @@ class FoxLoaderMinecraftTransformer(
                 newPath.absolutePathString(),
                 "false", isClient.toString()
             )
-        }.result.get().assertNormalExitValue().rethrowFailure()
+        }.assertNormalExitValue().rethrowFailure()
 
         return transformed.copy(path = newPath)
     }

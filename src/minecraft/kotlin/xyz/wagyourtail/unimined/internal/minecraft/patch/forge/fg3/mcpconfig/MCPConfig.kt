@@ -265,7 +265,8 @@ class MCPConfig(
             if (!output.exists() || project.unimined.forceReload) {
                 output.deleteIfExists()
 
-                project.providers.javaexec {
+                project
+                project.execOps.javaexec {
                     if (useToolchains) {
                         val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
                         if (function.java_version != null) {
@@ -286,7 +287,7 @@ class MCPConfig(
                             }.executablePath.asFile.absolutePath
                         }
                     } else {
-                        if (JavaVersion.current() < JavaVersion.toVersion(function.java_version)) {
+                        if (JavaVersion.current() < (JavaVersion.toVersion(function.java_version) ?: JavaVersion.VERSION_1_8)) {
                             error("current java version ${JavaVersion.current()} is less than required java version ${function.java_version} to run ${function.version}")
                         }
                     }
@@ -307,7 +308,7 @@ class MCPConfig(
 
                     project.logger.info("[Unimined/MCPConfig] Executing: ${it.executable} ${it.jvmArgs} ${it.mainClass} ${it.args}")
                     project.suppressLogs(it)
-                }.result.get().assertNormalExitValue().rethrowFailure()
+                }.assertNormalExitValue().rethrowFailure()
 
             }
 

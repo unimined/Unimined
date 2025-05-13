@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.srg.SrgWriter
+import xyz.wagyourtail.unimined.util.execOps
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.file.Path
@@ -86,7 +87,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
         }
 
         // run remap
-        project.providers.javaexec { spec ->
+        project.execOps.javaexec { spec ->
             spec.classpath(sourceRemapper)
             spec.mainClass.set("com.replaymod.gradle.remap.MainKt")
             spec.args = listOf(
@@ -101,7 +102,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
             )
             specConfig(spec)
             project.logger.info("[Unimined/SourceRemapper]    ${spec.args!!.joinToString(" ")}")
-        }.result.get().rethrowFailure().assertNormalExitValue()
+        }.rethrowFailure().assertNormalExitValue()
 
     }
 

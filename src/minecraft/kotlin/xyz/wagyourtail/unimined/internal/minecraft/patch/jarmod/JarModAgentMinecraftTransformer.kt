@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.util.execOps
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import xyz.wagyourtail.unimined.util.suppressLogs
 import xyz.wagyourtail.unimined.util.withSourceSet
@@ -119,7 +120,7 @@ open class JarModAgentMinecraftTransformer(
             try {
                 val classpath = (task as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
-                val result = project.providers.javaexec {
+                val result = project.execOps.javaexec {
                     it.jvmArgs = listOf(
                         "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
                         "-D${JMA_DEBUG}=true"
@@ -133,7 +134,7 @@ open class JarModAgentMinecraftTransformer(
                     it.classpath = jarModAgent
 
                     project.suppressLogs(it)
-                }.result.get().assertNormalExitValue().rethrowFailure()
+                }.assertNormalExitValue().rethrowFailure()
             } catch (e: Exception) {
                 project.logger.error("[Unimined/JarModAgentTransformer] Failed to transform $input")
                 output.deleteIfExists()

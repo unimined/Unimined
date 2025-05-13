@@ -435,7 +435,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
         val output = v1Folder.resolve("yarnv1-${minecraft.version}+build.$build-filled.tiny")
 
-        project.providers.javaexec {
+        project.execOps.javaexec {
             it.classpath = project.configurations.detachedConfiguration(
                 project.dependencies.create(
                     "net.fabricmc:stitch:0.6.2"
@@ -448,7 +448,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
                 temp.absolutePathString(),
                 output.absolutePathString()
             )
-        }.result.get().assertNormalExitValue().rethrowFailure()
+        }.assertNormalExitValue().rethrowFailure()
 
         mapping(output.toFile(), "yarnv1-$build") {
             provides("yarnv1" to true)
