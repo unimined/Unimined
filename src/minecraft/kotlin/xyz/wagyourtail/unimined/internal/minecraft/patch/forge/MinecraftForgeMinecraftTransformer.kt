@@ -37,11 +37,10 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
             if (!canCombine) {
                 if (provider.side == EnvType.JOINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
-                project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:${provider.side.classifier}@zip")
+                project.dependencies.create("net.minecraftforge:forge:${provider.forgeMCVersion}-${dep}:${provider.side.classifier}@zip")
             } else {
-                val mcVer = if (provider.version == "1.4") "1.4.0" else provider.version
-                val zip = provider.minecraftData.mcVersionCompare(mcVer, "1.6") < 0
-                project.dependencies.create("net.minecraftforge:forge:${mcVer}-${dep}:universal@${if (zip) "zip" else "jar"}")
+                val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
+                project.dependencies.create("net.minecraftforge:forge:${provider.forgeMCVersion}-${dep}:universal@${if (zip) "zip" else "jar"}")
             }
         } else {
             project.dependencies.create(dep)
