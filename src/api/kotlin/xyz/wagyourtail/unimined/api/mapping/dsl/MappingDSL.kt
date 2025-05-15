@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.FieldVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.MethodVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.use
 
 @Scoped
 class MappingDSL(val visitor: MappingVisitor) {
@@ -24,8 +25,8 @@ class MappingDSL(val visitor: MappingVisitor) {
 
     @JvmOverloads
     fun c(vararg names: String?, block: ClassDSL.() -> Unit = {}) {
-        visitor.visitClass(mappings.zip(names.toList()).toMap().filterNotNullValues().mapValues { InternalName.read(it.value) })?.let {
-            ClassDSL(it).block()
+        visitor.visitClass(mappings.zip(names.toList()).toMap().filterNotNullValues().mapValues { InternalName.read(it.value) })?.use {
+            this@MappingDSL.ClassDSL(this).block()
         }
     }
 
@@ -55,8 +56,8 @@ class MappingDSL(val visitor: MappingVisitor) {
                 } else {
                     it.value to null
                 }
-            })?.let {
-                FieldDSL(it).block()
+            })?.use {
+                this@MappingDSL.FieldDSL(this).block()
             }
         }
 
@@ -83,8 +84,8 @@ class MappingDSL(val visitor: MappingVisitor) {
                 } else {
                     it.value to null
                 }
-            })?.let {
-                MethodDSL(it).block()
+            })?.use {
+                this@MappingDSL.MethodDSL(this).block()
             }
         }
 
@@ -105,12 +106,12 @@ class MappingDSL(val visitor: MappingVisitor) {
     }
 
     @Scoped
-    class FieldDSL(val visitor: FieldVisitor) {
+    inner class FieldDSL(val visitor: FieldVisitor) {
 
     }
 
     @Scoped
-    class MethodDSL(val visitor: MethodVisitor) {
+    inner class MethodDSL(val visitor: MethodVisitor) {
 
     }
 }
