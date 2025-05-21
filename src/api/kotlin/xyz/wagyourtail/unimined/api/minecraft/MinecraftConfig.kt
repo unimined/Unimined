@@ -205,6 +205,14 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     fun version(version: String) {
         project.logger.info("setting minecraft version to $version")
         this.version = version
+        afterSetVersion()
+    }
+
+    /**
+     * Performs actions that require the version to be set first
+     */
+    protected open fun afterSetVersion() {
+        // TODO(halotroop2288): Should be a callback instead of an open fun
     }
 
     abstract fun mappings(action: MappingsConfig<*>.() -> Unit)

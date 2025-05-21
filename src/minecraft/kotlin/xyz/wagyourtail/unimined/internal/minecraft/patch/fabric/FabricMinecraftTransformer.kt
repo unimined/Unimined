@@ -4,7 +4,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -12,7 +11,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
-import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.TotalConversionMinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -109,8 +109,8 @@ abstract class FabricMinecraftTransformer(
             "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
             "-Dfabric.classPathGroups=\${classPathGroups}"
         )
-        if (provider is ReIndevProvider) {
-            config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
+        if (provider is TotalConversionMinecraftProvider) {
+            config.jvmArgs("-Dfabric.gameVersion=${provider.baseVersion}")
         }
     }
 

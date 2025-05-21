@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.minecraft.patch.reindev
+package xyz.wagyourtail.unimined.api.minecraft.patch.conversion.reindev
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

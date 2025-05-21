@@ -190,6 +190,48 @@ abstract class UniminedExtension(project: Project) : FabricLikeApiExtension(proj
     }
 
     /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    abstract fun bta(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
+        action: MinecraftConfig.() -> Unit
+    )
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun bta(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        bta(sourceSet, lateApply) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun bta(
+        sourceSets: List<SourceSet>,
+        lateApply: Boolean = false,
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        for (sourceSet in sourceSets) {
+            bta(sourceSet, lateApply, action)
+        }
+    }
+
+    /**
      * @since 1.2.0
      */
     @JvmOverloads
