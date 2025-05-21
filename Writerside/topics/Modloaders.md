@@ -6,14 +6,16 @@ for the most up-to-date list, see [the api code](https://unimined.wagyourtail.xy
 
 * minecraftForge
 * neoForged
-* fabric
+* cleanroom
 * flint
+* fabric
 * quilt
 * rift
+* foxloader
+* liteloader
 * craftbukkit
 * spigot
 * paper
-* liteloader
 
 ### it also supports several *pseudo* modloaders:
 * jarmod
