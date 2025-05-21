@@ -15,17 +15,16 @@
 
   "license": "CC0-1.0",
 
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "com.example.fabric.ExampleModFabric"
+    "client": [
+      "com.example.fabric.ExampleMod"
     ]
   },
   "mixins": [
   ],
 
   "depends": {
-    "minecraft": "1.0.0-beta.7.3",
     "java": ">=8"
   }
 }

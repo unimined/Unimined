@@ -1,0 +1,82 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group 'com.example'
+version '1.0-SNAPSHOT'
+
+base {
+    archivesName = 'UniminedExampleMod'
+}
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+sourceSets {
+    babric {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    modloader {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+
+    maven {
+        name = 'SignalumMavenInfrastructure'
+        url = 'https://maven.thesignalumproject.net/infrastructure'
+    }
+    maven {
+        name = 'SignalumMavenReleases'
+        url = 'https://maven.thesignalumproject.net/releases'
+    }
+}
+
+sourceSets {
+    client
+    server
+}
+
+unimined.bta(sourceSets.client) {
+    version("7.3_03")
+    side("client")
+    channel("release")
+
+    // Recommended configuration for updated dependencies
+    fabric {
+        loader(project.fabric_loader_version)
+    }
+}
+
+unimined.bta(sourceSets.server) {
+    version("7.3_03")
+    side("server")
+    channel("release")
+}
+
+dependencies {
+    clientModImplementation("turniplabs:modmenu-bta:${project.mod_menu_version}")
+    clientModImplementation("turniplabs:halplibe:${project.halplibe_version}")
+    serverModImplementation("turniplabs:halplibe:${project.halplibe_version}")
+}
+
+jar {
+    enabled = false
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
