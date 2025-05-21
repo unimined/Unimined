@@ -1,0 +1,71 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group = 'com.example'
+base.archivesName = 'UniminedExampleMod'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+
+    maven {
+        name = 'SignalumMavenInfrastructure'
+        url = 'https://maven.thesignalumproject.net/infrastructure'
+    }
+    maven {
+        name = 'SignalumMavenReleases'
+        url = 'https://maven.thesignalumproject.net/releases'
+    }
+}
+
+sourceSets {
+    client
+}
+
+unimined {
+    // this is just here so we can test the outputs easier and clean between tests
+    useGlobalCache = false
+
+    bta {
+        version("7.3_03")
+        channel("release")
+
+        // Recommended configuration for updated dependencies
+        fabric {
+            loader(project.fabric_loader_version)
+        }
+
+        dependencies {
+            clientImplementation("net.betterthanadventure:FabricGameProvider:1.0.0:client")
+            clientImplementation("net.betterthanadventure:FabricGameProvider:1.0.0:server")
+            clientImplementation("com.github.Better-Than-Adventure:legacy-lwjgl3:1.0.6")
+            ["SoundSystem", "LibraryJavaSound", "CodecJOrbis", "CodecWAV"].forEach {
+                clientImplementation("com.paulscode:$it:1.0.0-SNAPSHOT")
+            }
+        }
+    }
+}
+
+configurations.configureEach {
+    exclude group: "org.lwjgl.lwjgl"
+}
+
+jar {
+    enabled = false
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
