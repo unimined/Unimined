@@ -4,15 +4,11 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.SemVerUtils
 
 open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
-
-    override var canCombine: Boolean by FinalizeOnRead(true)
+    override var canCombine: Boolean by FinalizeOnRead(LazyMutable { provider.version == "b1.7.3" })
 
     override val defaultProdNamespace: String = "babricIntermediary"
 

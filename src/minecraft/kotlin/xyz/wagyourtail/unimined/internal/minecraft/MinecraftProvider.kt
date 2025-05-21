@@ -77,9 +77,22 @@ import java.util.*
 import kotlin.io.path.*
 
 open class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
+    override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
+        minecraftData.mcVersionCompare(version, "1.3") > -1
+    })
+
     override val minecraftData = MinecraftDownloader(project, this)
 
     override val obfuscated = true
+
+    /**
+     * Whether to apply fixes to inner classes
+     *
+     * Do not apply fix inners to un-obfuscated jars.
+     * They don't need fixes, there are no fixes available,
+     * and Gradle will throw a cryptic error if you try!
+     */
+    open val fixInners = obfuscated
 
     override val mappings = MappingsProvider(project, this)
 
@@ -559,7 +572,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    override final fun replaceLibraryVersion(
+    final override fun replaceLibraryVersion(
         @Language("regex")
         group: String,
         @Language("regex")

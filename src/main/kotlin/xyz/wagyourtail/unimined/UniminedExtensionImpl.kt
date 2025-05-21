@@ -8,7 +8,8 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.bta.BTAProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.capitalized
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.withSourceSet
@@ -22,6 +23,9 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
+            if (minecrafts[sourceSet] !is MinecraftProvider) {
+                throw IllegalStateException("game config for ${sourceSet.name} already exists, and is not minecraft!")
+            }
             if ((minecrafts[sourceSet] as MinecraftProvider).applied) {
                 throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
             } else {
@@ -46,7 +50,9 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun reIndev(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
-            if ((minecrafts[sourceSet] as ReIndevProvider).applied) {
+            if (minecrafts[sourceSet] !is ReIndevProvider) {
+                throw IllegalStateException("game config for ${sourceSet.name} exists and is not reIndev!")
+            } else if ((minecrafts[sourceSet] as ReIndevProvider).applied) {
                 throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
             } else {
                 project.logger.info("[Unimined] registering reIndev config for ${sourceSet.name}")
@@ -66,6 +72,32 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
         minecrafts[sourceSet]?.action()
         if (!lateApply) (minecrafts[sourceSet] as ReIndevProvider).apply()
+    }
+
+    override fun bta(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
+        if (minecrafts.containsKey(sourceSet)) {
+            if (minecrafts[sourceSet] !is BTAProvider) {
+                throw IllegalStateException("game config for ${sourceSet.name} exists and is not bta!")
+            } else if ((minecrafts[sourceSet] as BTAProvider).applied) {
+                throw IllegalStateException("bta config for ${sourceSet.name} already applied, cannot configure further!")
+            } else {
+                project.logger.info("[Unimined] registering bta config for ${sourceSet.name}")
+            }
+        } else {
+            minecrafts[sourceSet] = BTAProvider(project, sourceSet)
+        }
+        minecraftConfiguration.compute(sourceSet) { _, old ->
+            if (old != null) {
+                {
+                    old()
+                    action()
+                }
+            } else {
+                action
+            }
+        }
+        minecrafts[sourceSet]?.action()
+        if (!lateApply) (minecrafts[sourceSet] as BTAProvider).apply()
     }
 
     override fun migrateMappings(sourceSet: SourceSet, action: MigrateMappingsTask.() -> Unit) {

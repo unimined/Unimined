@@ -13,12 +13,11 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
-import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixInnerClasses
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
@@ -38,6 +37,11 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val provider: MinecraftProvider,
     val providerName: String
 ): MinecraftPatcher {
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Experimental
+    open var canCombine: Boolean
+        get() = provider.canCombine
+        set(value) { provider.canCombine = value }
 
     override val supportedEnvs = EnvType.entries.toSet()
 
@@ -50,7 +54,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open fun defaultProdNamespace() = provider.mappings.checkedNs("official")
 
     override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<Namespace> = AbstractMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        val delegate = AbstractMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
@@ -61,10 +65,6 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     override var unprotectRuntime by FinalizeOnRead(false)
-
-    override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
-        provider.minecraftData.mcVersionCompare(provider.version, "1.3") > -1
-    })
 
     fun isAnonClass(node: ClassNode): Boolean =
         node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null }
@@ -226,6 +226,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        if (!provider.fixInners) return baseMinecraft
+
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.8.2") < 0) {
             val fixedInners = MinecraftJar(
                 baseMinecraft,
@@ -259,15 +261,12 @@ abstract class AbstractMinecraftTransformer protected constructor(
         // do nothing
     }
 
-    protected open val includeGlobs = listOf(
-        "*",
-        "META-INF/**",
-        "net/minecraft/**",
-        "com/mojang/blaze3d/**",
-        "com/mojang/realmsclient/**",
-        "paulscode/sound/**",
-        "com/jcraft/**"
-    )
+    /**
+     * Classes that should not be stripped from the combined jar while merging.
+     *
+     * Get the default list from the game provider because it usually knows best.
+     */
+    protected open val includeGlobs by lazy { provider.includeGlobs }
 
     /*
      * only accurate on official mappings
@@ -335,7 +334,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         val postPatchClasses = postPatched.path.readZipContents().filter { it.endsWith(".class") }.map { it.removeSuffix(".class") }
 
         val namespace = prePatched.mappingNamespace
-        val addedClasses = (postPatchClasses - prePatchClasses).sorted()
+        val addedClasses = (postPatchClasses - prePatchClasses.toSet()).sorted()
 
         runBlocking {
             val mappings = provider.mappings.resolve()
