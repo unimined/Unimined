@@ -44,7 +44,7 @@ class BTADownloader(project: Project, override val provider: BTAProvider) : Mine
 	override val minecraftClient: MinecraftJar by lazy {
 		project.logger.info("[Unimined/MinecraftDownloader] retrieving BTA client jar")
 		val clientPath = mcVersionFolder.resolve("bta-$version-client.jar")
-		if (clientPath.exists() || project.unimined.forceReload) {
+		if (!clientPath.exists() || project.unimined.forceReload) {
 			mcVersionFolder.createDirectories()
 			project.cachingDownload(
 				clientBaseURL.resolve("client.jar"),
@@ -68,7 +68,7 @@ class BTADownloader(project: Project, override val provider: BTAProvider) : Mine
 	override val minecraftServer: MinecraftJar by lazy {
 		project.logger.info("[Unimined/MinecraftDownloader] retrieving BTA server jar")
 		val serverPath = mcVersionFolder.resolve("bta-$version-server.jar")
-		if (serverPath.exists() || project.unimined.forceReload) {
+		if (!serverPath.exists() || project.unimined.forceReload) {
 			mcVersionFolder.createDirectories()
 			project.cachingDownload(
 				serverBaseURL.resolve("server.jar"),
