@@ -59,7 +59,7 @@ unimined.minecraft(sourceSets.babric) {
     }
 
     babric {
-        loader "net.fabricmc:fabric-loader:0.16.13"
+        loader "0.16.13"
     }
 
     minecraftRemapper.config {
