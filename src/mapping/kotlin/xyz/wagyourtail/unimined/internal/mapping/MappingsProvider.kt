@@ -216,20 +216,16 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
     override fun babricIntermediary() {
         unimined.glassLauncherMaven("babric")
-        addDependency("babricIntermediary", MappingEntry(contentOf(MavenCoords("babric", "intermediary", minecraft.version, "v2")), "babricIntermediary").apply {
+        addDependency("babricIntermediary", MappingEntry(contentOf(MavenCoords("babric", "intermediary-upstream", minecraft.version, "v2")), "babricIntermediary").apply {
             provides("babricIntermediary" to false)
             when (envType) {
                 EnvType.CLIENT -> {
-                    mapNamespace("client", "official")
                     mapNamespace("clientOfficial", "official")
                 }
                 EnvType.SERVER -> {
-                    mapNamespace("server", "official")
                     mapNamespace("serverOfficial", "official")
                 }
                 EnvType.JOINED -> {
-                    mapNamespace("client", "clientOfficial")
-                    mapNamespace("server", "serverOfficial")
                     provides("serverOfficial" to false)
                     requires("clientOfficial")
                 }
