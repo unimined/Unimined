@@ -23,10 +23,10 @@ object ModLoaderPatches {
         if (fileSystem.getPath("/cpw/mods/fml/common/modloader/ModLoaderHelper.class").exists()) return
 
         if (classNode.methods.any { it.name == "readFromClassPath" }) {
-            System.out.println("ModLoader patch using newer method")
+            println("ModLoader patch using newer method")
             newerURIFix(classNode)
         } else {
-            System.out.println("ModLoader patch using older method")
+            println("ModLoader patch using older method")
             olderURIFix(classNode)
         }
         val classWriter = ClassWriterASM(fileSystem)
@@ -35,7 +35,7 @@ object ModLoaderPatches {
     }
 
     private fun newerURIFix(classNode: ClassNode) {
-        val method = classNode.methods.first { it.name == "init" && it.desc == "()V" }
+        val method = classNode.methods.first { (it.name == "init" || it.name == "a") && it.desc == "()V" }
         // find the lines
         //     L92
         //    LINENUMBER 809 L92
@@ -345,7 +345,7 @@ object ModLoaderPatches {
         if (fileSystem.getPath("/cpw/mods/fml/common/modloader/ModLoaderHelper.class").exists()) return
 
         if (classNode.methods.any { it.name == "readFromClassPath" }) {
-            System.out.println("ModLoader patch pkgs using newer method")
+            println("ModLoader patch pkgs using newer method")
             newerPackageFix(classNode)
         } else {
             throw IllegalStateException("ModLoader patch pkgs should be run after other patches")
@@ -605,7 +605,7 @@ object ModLoaderPatches {
         override fun getCommonSuperClass(type1: String, type2: String): String {
             return try {
                 super.getCommonSuperClass(type1, type2)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // one of the classes was not found, so we now need to calculate it
                 val it1 = buildInheritanceTree(type1)
                 val it2 = buildInheritanceTree(type2)
