@@ -43,8 +43,22 @@ unimined.minecraft {
     version project.minecraft_version
 
     mappings {
-        searge()
-        mcp("stable", "22-1.8.9")
+//        mcp("stable", "22-1.8.9")
+//        searge()
+
+        calamus()
+        feather(28)
+
+        stubs(["searge", "feather"]) {
+            c(["net/minecraft/entity/item/EntityMinecart"]) {
+                // fix conflict with forge added function name
+                m("func_174898_m;()D", "getMaxSpeedVanilla")
+            }
+            c([null, "net/minecraft/util/registry/IdRegistry"]) {
+                // rename from getId, fixes this.getId stack overflow in Forge's Registry class
+                m("func_148757_b;(Ljava/lang/Object;)I", "getByValue")
+            }
+        }
     }
 
     defaultRemapJar = false
