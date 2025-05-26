@@ -6,8 +6,10 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.StringClassNameRemapExtension
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2DeobfEnvironment
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading.fixResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
@@ -28,6 +30,17 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
+        val forgeHardcodedNames = setOf(
+            "net/minecraftforge/registries/ObjectHolderRegistry",
+            "net/minecraftforge/fml/common/registry/ObjectHolderRegistry",
+            "net/neoforged/neoforge/registries/ObjectHolderRegistry"
+        )
+        parent.provider.minecraftRemapper.addExtension {
+            StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+//            it.matches(Regex("^net/minecraftforge/.*"))
+                forgeHardcodedNames.contains(it)
+            }
+        }
         parent.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
@@ -65,6 +78,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     override val transform = (listOf<(FileSystem) -> Unit>(
         FixFG2Coremods::fixCoremods,
         FixFG2ResourceLoading::fixResourceLoading,
+        FixFG2DeobfEnvironment::fixDeobfEnvironment
     ) + super.transform).toMutableList()
 
     override fun apply() {

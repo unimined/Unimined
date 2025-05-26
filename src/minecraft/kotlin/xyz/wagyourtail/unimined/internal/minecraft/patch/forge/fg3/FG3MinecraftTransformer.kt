@@ -29,6 +29,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2DeobfEnvironment
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -57,8 +58,13 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
         parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
-        val forgeHardcodedNames = setOf("net/minecraftforge/registries/ObjectHolderRegistry", "net/neoforged/neoforge/registries/ObjectHolderRegistry")
-        parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+        val forgeHardcodedNames = setOf(
+            "net/minecraftforge/registries/ObjectHolderRegistry",
+            "net/minecraftforge/fml/common/registry/ObjectHolderRegistry",
+            "net/neoforged/neoforge/registries/ObjectHolderRegistry"
+        )
+        parent.provider.minecraftRemapper.addExtension {
+            StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
             forgeHardcodedNames.contains(it)
         } }
@@ -91,7 +97,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             if (parent.provider.version == "1.12.2") {
                 listOf(
                     FixFG2Coremods::fixCoremods,
-                    FixFG2ResourceLoading::fixResourceLoading
+                    FixFG2ResourceLoading::fixResourceLoading,
+                    FixFG2DeobfEnvironment::fixDeobfEnvironment
                 )
             } else {
                 emptyList()
