@@ -49,8 +49,9 @@ class StringClassNameRemapExtension(
                                     // not a class name, would break in remapping
                                     value
                                 } else {
+                                    val dotty = value.contains('.')
                                     val remapped = cls.environment.remapper.map(value.replace('.', '/'))
-                                        .let { it.replace('/', '.') }
+                                        .let { if (dotty) it.replace('/', '.') else it }
                                     if (remapped != value) {
                                         logger.info("[Unimined/TR-StringClassNameRemapper] Remapped $value to $remapped in a string")
                                         remapped
