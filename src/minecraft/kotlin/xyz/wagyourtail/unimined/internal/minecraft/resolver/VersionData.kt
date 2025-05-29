@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.resolver
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.util.OSUtils
@@ -26,7 +27,7 @@ data class VersionData(
     val time: Long,
     val releaseTime: Long,
     val minimumLauncherVersion: Int,
-    val mainClass: String,
+    val mainClass: String?,
     val assetIndex: AssetIndex?,
     val assets: String?,
     val downloads: Map<String, Download>,
@@ -187,7 +188,7 @@ fun parseVersionData(json: JsonObject): VersionData {
                 .toEpochMilli()
         } ?: 0,
         json.get("minimumLauncherVersion")?.asInt ?: 0,
-        json.get("mainClass").asString,
+        json.get("mainClass").let { if (it is JsonNull) null else it.asString },
         json.get("assetIndex")?.asJsonObject?.let { parseAssets(it) },
         json.get("assets")?.asString,
         json.get("downloads").asJsonObject?.let { parseAllDownload(it) } ?: mapOf(),
