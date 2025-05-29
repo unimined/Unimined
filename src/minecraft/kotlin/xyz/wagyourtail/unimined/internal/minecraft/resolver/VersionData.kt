@@ -188,7 +188,7 @@ fun parseVersionData(json: JsonObject): VersionData {
                 .toEpochMilli()
         } ?: 0,
         json.get("minimumLauncherVersion")?.asInt ?: 0,
-        json.get("mainClass").let { if (it is JsonNull) null else it.asString },
+        json.get("mainClass")?.let { if (it is JsonNull) null else it.asString },
         json.get("assetIndex")?.asJsonObject?.let { parseAssets(it) },
         json.get("assets")?.asString,
         json.get("downloads").asJsonObject?.let { parseAllDownload(it) } ?: mapOf(),
