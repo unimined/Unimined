@@ -310,6 +310,7 @@ abstract class UniminedExtension(project: Project) : FabricLikeApiExtension(proj
     abstract fun ornitheMaven()
     abstract fun glassLauncherMaven(name: String)
     abstract fun fox2codeMaven()
+    abstract fun signalumMaven(name: String)
     abstract fun flintMaven(name: String)
     abstract fun spigot()
     abstract fun spongeMaven()

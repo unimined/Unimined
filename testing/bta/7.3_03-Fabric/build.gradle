@@ -11,14 +11,9 @@ repositories {
     mavenLocal()
     mavenCentral()
 
-    maven {
-        name = 'SignalumMavenInfrastructure'
-        url = 'https://maven.thesignalumproject.net/infrastructure'
-    }
-    maven {
-        name = 'SignalumMavenReleases'
-        url = 'https://maven.thesignalumproject.net/releases'
-    }
+    unimined.signalumMaven("infrastructure")
+    unimined.signalumMaven("releases")
+    unimined.jitpack()
 }
 
 sourceSets {

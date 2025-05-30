@@ -360,6 +360,21 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Fox2Code maven: $fox2codeMaven")
     }
 
+    val signalumMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
+        project.repositories.maven {
+            it.name = "Signalum (${name.capitalized()})"
+            it.url = project.uri("https://maven.thesignalumproject.net/$name/")
+            it.metadataSources { ms ->
+                ms.mavenPom()
+                ms.artifact()
+            }
+        }
+    }
+
+    override fun signalumMaven(name: String) {
+        project.logger.info("[Unimined] adding Signalum maven: ${signalumMaven[name]}")
+    }
+
     val modrinthMaven by lazy {
         project.repositories.exclusiveContent { repository ->
             repository.forRepository {
