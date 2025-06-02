@@ -3,6 +3,9 @@ package xyz.wagyourtail.unimined.internal.minecraft.resolver
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import kotlinx.datetime.format.DateTimeComponents
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toJavaLocalDateTime
 import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.OSUtils
@@ -12,7 +15,6 @@ import java.net.MalformedURLException
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
@@ -167,10 +169,10 @@ fun applyGameArgs(
 }
 
 // 2010-07-08T22:00:00+00:00
-val dateTimeFormat: DateTimeFormatter = DateTimeFormatterBuilder()
-    .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-    .appendZoneOrOffsetId()
-    .toFormatter()
+//val dateTimeFormat: DateTimeFormatter = DateTimeFormatterBuilder()
+//    .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+//    .appendZoneOrOffsetId()
+//    .toFormatter()
 
 
 fun parseVersionData(json: JsonObject): VersionData {
@@ -178,12 +180,12 @@ fun parseVersionData(json: JsonObject): VersionData {
         json.get("id").asString,
         json.get("type")?.asString,
         json.get("time")?.asString?.let {
-            LocalDateTime.parse(it, dateTimeFormat)
+            DateTimeComponents.Formats.ISO_DATE_TIME_OFFSET.parse(it).toLocalDateTime().toJavaLocalDateTime()
                 .toInstant(ZoneOffset.UTC)
                 .toEpochMilli()
         } ?: 0,
         json.get("releaseTime")?.asString?.let {
-            LocalDateTime.parse(it, dateTimeFormat)
+            DateTimeComponents.Formats.ISO_DATE_TIME_OFFSET.parse(it).toLocalDateTime().toJavaLocalDateTime()
                 .toInstant(ZoneOffset.UTC)
                 .toEpochMilli()
         } ?: 0,
