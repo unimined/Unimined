@@ -8,16 +8,27 @@ base.archivesName = 'UniminedExampleMod'
 version = '1.0-SNAPSHOT'
 
 repositories {
+    ivy {
+        url = uri("https://github.com/halotroop2288/fabric-game-provider/releases/download/")
+        patternLayout {
+            artifact("[revision]/FabricGameProvider-[revision](-[classifier])(.[ext])")
+        }
+        content {
+            includeModule("com.github.halotroop2288", "fabric-game-provider")
+        }
+        metadataSources {
+            artifact()
+        }
+    }
+
     mavenLocal()
     mavenCentral()
 
     unimined.signalumMaven("infrastructure")
     unimined.signalumMaven("releases")
     unimined.jitpack()
-}
-
-sourceSets {
-    client
+    unimined.wagYourMaven("releases")
+    unimined.wagYourMaven("snapshots")
 }
 
 unimined {
@@ -34,11 +45,13 @@ unimined {
         }
 
         dependencies {
-            clientImplementation("net.betterthanadventure:FabricGameProvider:1.0.0:client")
-            clientImplementation("net.betterthanadventure:FabricGameProvider:1.0.0:server")
-            clientImplementation("com.github.Better-Than-Adventure:legacy-lwjgl3:1.0.6")
+            implementation("com.github.halotroop2288:fabric-game-provider:1.0.0:client")
+            implementation("com.github.halotroop2288:fabric-game-provider:1.0.0:server")
+            implementation("com.github.Better-Than-Adventure:legacy-lwjgl3:1.0.6")
             ["SoundSystem", "LibraryJavaSound", "CodecJOrbis", "CodecWAV"].forEach {
-                clientImplementation("com.paulscode:$it:1.0.0-SNAPSHOT")
+                implementation("com.paulscode:$it:1.0.0-SNAPSHOT") {
+                    transitive = false
+                }
             }
         }
     }
@@ -46,10 +59,6 @@ unimined {
 
 configurations.configureEach {
     exclude group: "org.lwjgl.lwjgl"
-}
-
-jar {
-    enabled = false
 }
 
 java {
