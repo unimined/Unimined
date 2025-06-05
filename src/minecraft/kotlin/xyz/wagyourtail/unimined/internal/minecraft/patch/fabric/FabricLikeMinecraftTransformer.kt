@@ -66,6 +66,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     override var customIntermediaries: Boolean by FinalizeOnRead(!provider.obfuscated)
 
+    override var customGameProvider: Boolean by FinalizeOnRead(false)
+    
     override var skipInsertAw: Boolean by FinalizeOnRead(false)
 
     protected abstract val ENVIRONMENT: String
