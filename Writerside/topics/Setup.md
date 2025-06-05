@@ -1,5 +1,7 @@
 # Setup
 
+Add the following to the `settings.gradle`:
+
 <tabs group="lang">
 <tab id="Groovy-Setup-Settings" title="Groovy" group-key="groovy">
 
@@ -44,7 +46,7 @@ pluginManagement {
 </tab>
 </tabs>
 
-and the following to build.gradle:
+And the following to `build.gradle`:
 
 <tabs group="lang">
 <tab id="Groovy-Setup" title="Groovy" group-key="groovy">
@@ -66,7 +68,7 @@ plugins {
 </tab>
 </tabs>
 
-this will not actually add minecraft to your project as it must be configured.
+**This will not actually add minecraft to your project as it must be configured.**
 
 ## Adding Minecraft
 

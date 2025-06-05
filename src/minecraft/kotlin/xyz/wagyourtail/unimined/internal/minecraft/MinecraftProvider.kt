@@ -571,22 +571,34 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (applied) throw IllegalStateException("minecraft config already applied for $sourceSet")
         libraryReplaceMap.add { dep ->
             val match = dep.split(":")
-            if (match.size == 3) {
-                val (g, n, v) = match
-                if (g.matches(group.toRegex()) && n.matches(name.toRegex())) {
-                    true to version(v)?.let { "$g:$n:$it" }
-                } else {
+            when (match.size) {
+                2 -> {
+                    val (g, n) = match
+                    if (g.matches(group.toRegex()) && n.matches(name.toRegex())) {
+                        true to version(n)?.let { "$g:$n:$it" }
+                    } else {
+                        false to null
+                    }
+                }
+                3 -> {
+                    val (g, n, v) = match
+                    if (g.matches(group.toRegex()) && n.matches(name.toRegex())) {
+                        true to version(v)?.let { "$g:$n:$it" }
+                    } else {
+                        false to null
+                    }
+                }
+                4 -> {
+                    val (g, n, v, c) = match
+                    if (g.matches(group.toRegex()) && n.matches(name.toRegex()) && c.matches(classifier.toRegex())) {
+                        true to version(v)?.let { "$g:$n:$it:$c" }
+                    } else {
+                        false to null
+                    }
+                }
+                else -> {
                     false to null
                 }
-            } else if (match.size == 4) {
-                val (g, n, v, c) = match
-                if (g.matches(group.toRegex()) && n.matches(name.toRegex()) && c.matches(classifier.toRegex())) {
-                    true to version(v)?.let { "$g:$n:$c:$it" }
-                } else {
-                    false to null
-                }
-            } else {
-                false to null
             }
         }
     }
