@@ -38,7 +38,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
         }
     }
 
-    private fun afterRemap(afterRemapJar: Path) {
+    override fun afterRemap(afterRemapJar: Path) {
         // merge in manifest from input jar
         afterRemapJar.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
             // write to temp file
@@ -50,9 +50,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
                 it.from(inpTmp)
             }
         }
-        // copy into output
-        from(project.zipTree(afterRemapJar))
-        copy()
+        super.afterRemap(afterRemapJar)
     }
 
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")

@@ -67,7 +67,7 @@ abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val pr
         project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
     }
 
-    private fun afterRemap(afterRemapJar: Path) {
+    protected open fun afterRemap(afterRemapJar: Path) {
         // copy into output
         from(project.zipTree(afterRemapJar))
         copy()

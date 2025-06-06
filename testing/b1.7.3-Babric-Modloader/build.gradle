@@ -16,6 +16,12 @@ unimined.useGlobalCache = false
 sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(7)
+    }
+}
+
 sourceSets {
     babric {
         compileClasspath += sourceSets.main.output
@@ -94,6 +100,20 @@ dependencies {
 
 jar {
     enabled = false
+}
+
+babricJar {
+    manifest {
+        attributes([
+                "Specification-Title": "UniminedExampleMod",
+                "Specification-Vendor": "WagyourTail",
+                "Specification-Version": "1",
+                "Implementation-Title": "UniminedExampleMod",
+                "Implementation-Version": "${version}",
+                "Implementation-Vendor": "WagyourTail",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
 }
 
 processBabricResources {
