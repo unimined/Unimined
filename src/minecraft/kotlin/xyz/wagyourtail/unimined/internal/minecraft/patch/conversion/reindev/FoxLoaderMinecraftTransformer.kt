@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.minecraft.patch.reindev
+package xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.reindev
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -7,7 +7,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.conversion.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType
@@ -20,7 +20,7 @@ import kotlin.io.path.inputStream
 class FoxLoaderMinecraftTransformer(
     project: Project,
     provider: ReIndevProvider,
-    providerName: String = "FoxLoader"
+    providerName: String = "ReIndev-FoxLoader"
 ) : AbstractReIndevTransformer(project, provider, providerName), FoxLoaderPatcher {
 
     val foxLoaderVersions: Map<String, String> by lazy {

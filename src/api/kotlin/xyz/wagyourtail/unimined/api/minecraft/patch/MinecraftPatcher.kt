@@ -64,10 +64,6 @@ interface MinecraftPatcher {
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
-    var canCombine: Boolean
-
-    @get:ApiStatus.Internal
-    @set:ApiStatus.Experimental
     var unprotectRuntime: Boolean
 
     @ApiStatus.Internal

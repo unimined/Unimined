@@ -22,7 +22,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 import kotlin.time.Duration.Companion.seconds
 
-open class MinecraftDownloader(val project: Project, val provider: MinecraftProvider) : MinecraftData() {
+open class MinecraftDownloader(val project: Project, open val provider: MinecraftProvider) : MinecraftData() {
 
     val version
         get() = provider.version

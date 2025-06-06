@@ -50,8 +50,6 @@ abstract class ForgeLikeMinecraftTransformer(
     provider: MinecraftProvider,
     providerName: String,
 ): AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer>, AccessTransformerMinecraftTransformer, AccessConvert by AccessConvertImpl(project, provider) {
-
-
     private var useToolchainsIntl by FinalizeOnRead(true)
 
     override var useToolchains: Boolean
@@ -84,12 +82,6 @@ abstract class ForgeLikeMinecraftTransformer(
     override var legacyATFormat: Boolean by FinalizeOnRead(false)
 
     override var customSearge: Boolean by FinalizeOnRead(false)
-
-    override var canCombine: Boolean
-        get() = super.canCombine
-        set(value) {
-            super.canCombine = value
-        }
 
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit
         get() = forgeTransformer.onMergeFail

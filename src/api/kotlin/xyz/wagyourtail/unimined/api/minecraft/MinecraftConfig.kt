@@ -80,6 +80,23 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @set:ApiStatus.Internal
     var side by FinalizeOnRead(EnvType.JOINED)
 
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Experimental
+    abstract var canCombine: Boolean
+
+    /**
+     * Classes that should not be stripped from the combined jar while merging.
+     */
+    open val includeGlobs = listOf(
+        "*",
+        "META-INF/**",
+        "net/minecraft/**",
+        "com/mojang/blaze3d/**",
+        "com/mojang/realmsclient/**",
+        "paulscode/sound/**",
+        "com/jcraft/**"
+    )
+
     /**
      * sets the side for minecraft (client, server, combined, or datagen)
      * TODO: make datagen work properly

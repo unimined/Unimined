@@ -52,12 +52,6 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
             patchers.first().onMergeFail = value
         }
 
-    override var canCombine: Boolean
-        get() = patchers.first().canCombine
-        set(value) {
-            patchers.forEach { it.canCombine = value }
-        }
-
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         val mc = patchers.first().merge(clientjar, serverjar)
         if (mc.mappingNamespace != provider.mappings.checkedNs("official")) {

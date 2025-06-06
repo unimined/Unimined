@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.minecraft.patch.reindev
+package xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.reindev
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
@@ -16,7 +16,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.time.Duration
 
-class ReIndevDownloader(project: Project, provider: MinecraftProvider) : MinecraftDownloader(project, provider) {
+class ReIndevDownloader(project: Project, override val provider: ReIndevProvider) : MinecraftDownloader(project, provider) {
 
     val fileBaseURL: URI = URI.create("https://cdn.fox2code.com/files/")
 

@@ -279,8 +279,48 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         }
     }
 
+    private val mojmapIvys by lazy {
+        if (minecraft.minecraftData.hasMappings) {
+            // add provider for client-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Client Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraft.minecraftData.officialClientMappingsFile.name)
+                }
+                ivy.url = minecraft.minecraftData.officialClientMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "client-mappings", minecraft.version)
+                }
+            }
+
+            // add provider for server-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Server Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraft.minecraftData.officialServerMappingsFile.name)
+                }
+                ivy.url = minecraft.minecraftData.officialServerMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "server-mappings", minecraft.version)
+                }
+            }
+        }
+        "mojmap"
+    }
+
+    private fun mojmapIvy() {
+        project.logger.info("[Unimined] resolved $mojmapIvys")
+    }
+
 
     override fun mojmap() {
+        mojmapIvy()
         val mappings = when (envType) {
             EnvType.CLIENT, EnvType.JOINED -> "client"
             EnvType.SERVER -> "server"
