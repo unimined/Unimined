@@ -49,6 +49,20 @@ unimined.minecraft {
 }
 ```
 
+## Mixins on Forge
+
+you need to declare the mixin configuration json for Forge.
+the configuration file should be placed in resources with the provided name.
+
+```gradle
+...
+    minecraftForge {
+        ...
+        mixinConfig "example_mod.mixins.json"
+    }
+...
+```
+
 # Custom Modloaders
 
 you can create a custom modloader by implementing the [MinecraftPatcher](/src/api/kotlin/xyz/wagyourtail/unimined/api/minecraft/patch/MinecraftPatcher.kt) interface.
