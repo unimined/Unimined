@@ -59,6 +59,8 @@ unimined.minecraft {
 
 for more details about what's available within the unimined.minecraft block, see [The Api Source](/src/api/kotlin/xyz/wagyourtail/unimined/api/minecraft/MinecraftConfig.kt) or look below.
 
+note that side `client` is not working in modern Forge.<sup>[ref](https://discord.com/channels/181078474394566657/603348502637969419/1380445184881594418)</sup>
+
 ## Mappings
 
 Mappings provide the ability to remap minecraft into names you can actually use at runtime.
@@ -114,6 +116,29 @@ dependencies {
     modCompileOnly "mod.group:mod.artifact:mod.version"
 }
 ```
+
+<details>
+<summary>build.gradle.kts</summary>
+
+you are recommended to declare them in this style if you are using kts.
+
+```kts
+val modCompileOnly: Configuration by configurations.creating
+configurations.compileOnly.get().extendsFrom(modCompileOnly)
+
+unimined.minecraft {
+    ...
+    mods {
+        remap(modCompileOnly) {
+        }
+    }
+}
+
+// add this after unimined if you want to access `modImplementation` configuration
+val modImplementation by configurations.getting
+```
+
+</details>
 
 ## Remapping Output
 
