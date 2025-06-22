@@ -141,6 +141,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0") {
         isTransitive = false
     }
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 
     // guava
     implementation("com.google.guava:guava:33.2.1-jre")
