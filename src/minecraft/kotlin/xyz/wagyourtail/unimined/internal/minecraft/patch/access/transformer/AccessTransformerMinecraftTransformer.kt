@@ -54,6 +54,12 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
 
     override var atMainClass: String
 
+    /**
+     * whether to use the legacy access transformer format.
+     * @since 1.3.15
+     */
+    var legacyATFormat: Boolean
+
     fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         baseMinecraft.path.openZipFileSystem().use { fs ->
             val paths = mutableListOf<Path>()
@@ -118,7 +124,12 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         ).use {
             for (at in accessTransformers) {
                 // ensure at's are in modern format, and on disk not a virtual fs, so that processor can read them
-                AccessTransformerApplier.toModern(at.bufferedReader()).use { reader ->
+                if (legacyATFormat) {
+                    AccessTransformerApplier.toModern(at.bufferedReader())
+                } else {
+                    at.bufferedReader()
+                }
+               .use { reader ->
                     reader.copyTo(it)
                     it.write("\n")
                 }
@@ -165,6 +176,8 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         override var atDependency: Dependency by FinalizeOnRead(getDefaultDependency(project, provider))
 
         override var atMainClass: String by FinalizeOnRead(getDependencyMainClass(project, provider))
+
+        override var legacyATFormat: Boolean by FinalizeOnRead(false)
 
         override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
             return super<AbstractMinecraftTransformer>.afterRemap(super<AccessTransformerMinecraftTransformer>.afterRemap(baseMinecraft))

@@ -23,7 +23,7 @@ import kotlin.io.path.*
 
 object AccessTransformerApplier {
 
-    class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false, val atPaths: List<String> = emptyList()): OutputConsumerPath.ResourceRemapper {
+    class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false, val atPaths: List<String> = emptyList(), val isLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper {
 
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             return relativePath.name == "accesstransformer.cfg" ||
@@ -39,7 +39,11 @@ object AccessTransformerApplier {
             val output = destinationDirectory.resolve(relativePath)
             output.parent.createDirectories()
             input.bufferedReader().use { reader ->
-                TransformFromLegacyTransformer(reader).use { fromLegacy ->
+                if (isLegacy) {
+                    TransformFromLegacyTransformer(reader)
+                } else {
+                    reader
+                }.use { fromLegacy ->
                     RemapModernTransformer(fromLegacy.buffered(), remapper, logger).use { remapped ->
                         Files.newBufferedWriter(
                             output,

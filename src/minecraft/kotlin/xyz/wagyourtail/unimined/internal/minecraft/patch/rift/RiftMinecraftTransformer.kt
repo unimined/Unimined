@@ -29,6 +29,7 @@ open class RiftMinecraftTransformer(
     override var accessTransformer: File? by FinalizeOnRead(null)
     override var accessTransformerPaths: List<String> by FinalizeOnRead(emptyList())
     override var atDependency: Dependency by FinalizeOnRead(AccessTransformerMinecraftTransformer.getDefaultDependency(project, provider))
+    override var legacyATFormat: Boolean by FinalizeOnRead(false)
     override var atMainClass: String by FinalizeOnRead(AccessTransformerMinecraftTransformer.getDependencyMainClass(project, provider))
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {

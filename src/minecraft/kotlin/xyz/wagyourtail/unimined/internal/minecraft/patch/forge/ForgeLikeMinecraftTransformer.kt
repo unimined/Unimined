@@ -15,7 +15,6 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
@@ -62,7 +61,7 @@ abstract class ForgeLikeMinecraftTransformer(
 
     override var atMainClass: String by FinalizeOnRead(getDependencyMainClass(project, provider))
 
-
+    override var legacyATFormat: Boolean by FinalizeOnRead(false)
 
     override var customSearge: Boolean by FinalizeOnRead(false)
 
@@ -88,7 +87,8 @@ abstract class ForgeLikeMinecraftTransformer(
 
     init {
         addMavens()
-        provider.minecraftRemapper.addResourceRemapper { AccessTransformerApplier.AtRemapper(project.logger) }
+        legacyATFormat = provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
+        provider.minecraftRemapper.addResourceRemapper { AccessTransformerApplier.AtRemapper(project.logger, isLegacy = legacyATFormat) }
     }
 
     fun transforms(transform: String) {
