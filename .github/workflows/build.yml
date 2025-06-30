@@ -1,7 +1,13 @@
 name: Build Release
+
 on:
   release:
     types: [ created ]
+
+env:
+  INSTANCE: 'Writerside/unimined'
+  DOCKER_VERSION: '243.22562'
+
 jobs:
   build:
     runs-on: ubuntu-latest
