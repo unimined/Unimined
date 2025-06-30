@@ -8,18 +8,6 @@ base.archivesName = 'UniminedExampleMod'
 version = '1.0-SNAPSHOT'
 
 repositories {
-    ivy {
-        url = uri("https://github.com/halotroop2288/fabric-game-provider/releases/download/")
-        patternLayout {
-            artifact("[revision]/FabricGameProvider-[revision](-[classifier])(.[ext])")
-        }
-        content {
-            includeModule("com.github.halotroop2288", "fabric-game-provider")
-        }
-        metadataSources {
-            artifact()
-        }
-    }
 
     mavenLocal()
     mavenCentral()
@@ -45,8 +33,6 @@ unimined {
         }
 
         dependencies {
-            implementation("com.github.halotroop2288:fabric-game-provider:1.0.0:client")
-            implementation("com.github.halotroop2288:fabric-game-provider:1.0.0:server")
             implementation("com.github.Better-Than-Adventure:legacy-lwjgl3:1.0.6")
             ["SoundSystem", "LibraryJavaSound", "CodecJOrbis", "CodecWAV"].forEach {
                 implementation("com.paulscode:$it:1.0.0-SNAPSHOT") {
