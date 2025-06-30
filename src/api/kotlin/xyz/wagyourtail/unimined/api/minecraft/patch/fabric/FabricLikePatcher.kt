@@ -45,6 +45,15 @@ interface FabricLikePatcher: MinecraftPatcher, AccessWidenerPatcher {
     var customIntermediaries: Boolean
 
     /**
+     * Whether the user *or* the Unimined game provider
+     * has provided a custom **Fabric game provider**
+     * and should skip over trying to use the built-in Minecraft game provider.
+     *
+     * @since 1.4.0
+     */
+    var customGameProvider: Boolean
+
+    /**
      * @since 1.0.0
      */
     fun loader(dep: Any) {

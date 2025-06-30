@@ -77,9 +77,22 @@ import java.util.*
 import kotlin.io.path.*
 
 open class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
+    override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
+        minecraftData.mcVersionCompare(version, "1.3") > -1
+    })
+
     override val minecraftData = MinecraftDownloader(project, this)
 
     override val obfuscated = true
+
+    /**
+     * Whether to apply fixes to inner classes
+     *
+     * Do not apply fix inners to un-obfuscated jars.
+     * They don't need fixes, there are no fixes available,
+     * and Gradle will throw a cryptic error if you try!
+     */
+    open val fixInners = obfuscated
 
     override val mappings = MappingsProvider(project, this)
 
@@ -207,47 +220,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    private val mojmapIvys by lazy {
-        if (minecraftData.hasMappings) {
-            // add provider for client-mappings
-            project.repositories.ivy { ivy ->
-                ivy.name = "Official Client Mapping Provider"
-                ivy.patternLayout {
-                    it.artifact(minecraftData.officialClientMappingsFile.name)
-                }
-                ivy.url = minecraftData.officialClientMappingsFile.parentFile.toURI()
-                ivy.metadataSources { sources ->
-                    sources.artifact()
-                }
-                ivy.content {
-                    it.includeVersion(mavenGroup, "client-mappings", version)
-                }
-            }
-
-            // add provider for server-mappings
-            project.repositories.ivy { ivy ->
-                ivy.name = "Official Server Mapping Provider"
-                ivy.patternLayout {
-                    it.artifact(minecraftData.officialServerMappingsFile.name)
-                }
-                ivy.url = minecraftData.officialServerMappingsFile.parentFile.toURI()
-                ivy.metadataSources { sources ->
-                    sources.artifact()
-                }
-                ivy.content {
-                    it.includeVersion("net.minecraft", "server-mappings", version)
-                }
-            }
-        }
-        "mojmap"
-    }
-
-    private fun createMojmapIvy() {
-        project.logger.info("[Unimined] resolved $mojmapIvys")
-    }
-
     override fun mappings(action: MappingsConfig<*>.() -> Unit) {
-        createMojmapIvy()
         mappings.configure(action)
     }
 
@@ -559,7 +532,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    override final fun replaceLibraryVersion(
+    final override fun replaceLibraryVersion(
         @Language("regex")
         group: String,
         @Language("regex")
@@ -620,8 +593,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (side !in mcPatcher.supportedEnvs) {
             throw IllegalStateException("Side $side is not supported by ${mcPatcher.name()}, supported sides are ${mcPatcher.supportedEnvs}")
         }
-
-        createMojmapIvy()
 
         project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] before mappings $sourceSet")
         (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()

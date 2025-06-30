@@ -66,6 +66,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     override var customIntermediaries: Boolean by FinalizeOnRead(!provider.obfuscated)
 
+    override var customGameProvider: Boolean by FinalizeOnRead(false)
+    
     override var skipInsertAw: Boolean by FinalizeOnRead(false)
 
     protected abstract val ENVIRONMENT: String
@@ -107,10 +109,6 @@ abstract class FabricLikeMinecraftTransformer(
         if (!provider.obfuscated) return provider.mappings.checkedNs("official")
         if (customIntermediaries) throw IllegalStateException("Custom intermediaries are enabled, but prodNamespace is not overriden")
         return provider.mappings.checkedNs(defaultProdNamespace)
-    }
-
-    override fun prodNamespace(namespace: String) {
-        super.prodNamespace(namespace)
     }
 
     @get:ApiStatus.Internal
@@ -320,10 +318,15 @@ abstract class FabricLikeMinecraftTransformer(
         val icp = provider.localCache.resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
         // resolve intermediary classpath
-        val classpath = (provider.mods.getClasspathAs(
-            prodNamespace,
-            provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
-        ) + provider.getMinecraft(prodNamespace).toFile()).filter { it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip") }
+        val runtimeClasspath = provider.sourceSet.runtimeClasspath.filter {
+            !provider.isMinecraftJar(it.toPath())
+        }.toSet()
+        val classpath = if (!provider.obfuscated) runtimeClasspath
+        else (provider.mods.getClasspathAs(
+            prodNamespace, runtimeClasspath
+        ) + provider.getMinecraft(prodNamespace).toFile()).filter {
+            it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip")
+        }
         // write to file
         icp.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
         icp

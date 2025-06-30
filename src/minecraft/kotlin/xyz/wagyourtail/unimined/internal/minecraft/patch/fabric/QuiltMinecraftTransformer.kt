@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.AbstractTotalConversionMinecraftProvider
 import java.io.InputStreamReader
 import java.nio.file.Files
 import kotlin.io.path.absolutePathString
@@ -106,6 +107,10 @@ open class QuiltMinecraftTransformer(
             "-Dloader.remapClasspathFile=\${intermediaryClasspath}",
             "-Dloader.classPathGroups=\${classPathGroups}"
         )
+        if (customGameProvider) config.jvmArgs("-Dloader.skipMcProvider")
+        if (provider is AbstractTotalConversionMinecraftProvider) {
+            config.jvmArgs("-Dloader.gameVersion=${provider.baseVersion}")
+        }
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
@@ -121,6 +126,10 @@ open class QuiltMinecraftTransformer(
             "-Dloader.remapClasspathFile=\${intermediaryClasspath}",
             "-Dloader.classPathGroups=\${classPathGroups}"
         )
+        if (customGameProvider) config.jvmArgs("-Dloader.skipMcProvider")
+        if (provider is AbstractTotalConversionMinecraftProvider) {
+            config.jvmArgs("-Dloader.gameVersion=${provider.baseVersion}")
+        }
     }
 
     override fun configureRuntimeMappings(export: ExportMappingsTask.Export) {

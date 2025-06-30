@@ -1,8 +1,8 @@
 # Unimined
 
-unified minecraft modding environment with support for legacy environments.
+Unified Minecraft modding environment with support for legacy environments.
 
-for details on usage, see [USAGE.md](./docs/USAGE.md)
+for details on usage, see [the docs](Writerside/topics/starter-topic.md)
 
 ## LTS Branch
 
@@ -12,24 +12,36 @@ In effect, this means that I always support the previous minor version for bugfi
 By consequence, seeing as it's only bugfixes, snapshots on the LTS branch are considered *relatively* stable as well.
 
 ## Supported Loaders
-* Fabric
-* Quilt
-* Forge
-* Neoforge
-* Modloader
-* [JarModAgent](https://github.com/unimined/JarModAgent)
+* [Fabric](https://fabricmc.net)
+* [Quilt](https://quiltmc.org)
+* [Minecraft Forge](https://minecraftforge.net)
+* [Neoforge](https://neoforged.net)
+* [Cleanroom](https://cleanroommc.com)
 * [Flint Loader](https://flintloader.net)
+* [JarModAgent](https://github.com/unimined/JarModAgent)
+* [Rift](https://github.com/DimensionalDevelopment/Rift)
+* [FoxLoader](https://github.com/Fox2Code/FoxLoader)
+* [LiteLoader](https://liteloader.com)
+* [CraftBukkit](https://bukkit.org)
+* [Spigot](https://www.spigotmc.org)
+* [Paper](https://papermc.io)
+* Risugami's ModLoader
 * just plain jarmodding
-* Rift
 
 ## Planned Loaders
-* Bukkit Derrivitives (at least paper)
-* LiteLoader
-* Sponge
-* NilLoader
+* [Sponge](https://spongepowered.org/]Sponge)
+* [NilLoader](https://git.sleeping.town/Nil/NilLoader)
 
 ## Custom Loaders
-yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecraft/PrcraftExampleMod) and it's buildsrc dir.
+Yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecraft/PrcraftExampleMod) and it's buildsrc dir.
+
+## Supported Games / Total Conversion Mods
+* [Minecraft](https://minecraft.net)
+* [Minecraft: ReIndev](https://reindev.miraheze.org/wiki/Reindev_Wiki)
+* [Minecraft: Better Than Adventure](https://betterthanadventure.net)
+
+## Planned Games / Total Conversion Mods
+* [Not So Seecret Saturday](https://www.notsoseecretsaturday.net)
 
 ## TODO
 * stop using artifactural

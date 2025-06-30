@@ -82,7 +82,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
                 remapConfigsResolved[c] = remapSettings
             }
             remapSettings.action()
-            remapSettings.doRemap()
+            if (minecraft.obfuscated) remapSettings.doRemap()
         }
     }
 

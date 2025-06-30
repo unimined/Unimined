@@ -4,7 +4,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -12,7 +11,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
-import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.AbstractTotalConversionMinecraftProvider
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -28,6 +29,9 @@ abstract class FabricMinecraftTransformer(
     "fabric.mod.json",
     "accessWidener"
 ) {
+    override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
+        super.canCombine || SemVerUtils.matches(fabricDep.version!!, ">=0.16.0")
+    })
 
     override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
@@ -37,27 +41,23 @@ abstract class FabricMinecraftTransformer(
     }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > -1) {
+        if (provider.canCombine) {
+            // Game supports merging without processing
             return super.merge(clientjar, serverjar)
-        } else if (this is BabricMinecraftTransformer || SemVerUtils.matches(fabricDep.version!!, ">=0.16.0")) {
-            val INTERMEDIARY = prodNamespace
-            val CLIENT = if (this is BabricMinecraftTransformer) {
-                provider.mappings.checkedNsOrNull("clientOfficial") ?: provider.mappings.checkedNs("client")
-            } else {
-                provider.mappings.checkedNs("clientOfficial")
-            }
-            val SERVER = if (this is BabricMinecraftTransformer) {
-                provider.mappings.checkedNsOrNull("serverOfficial") ?: provider.mappings.checkedNs("server")
-            } else {
-                provider.mappings.checkedNs("serverOfficial")
-            }
+        } else if (this.canCombine) {
+            // The JARs can be combined after mapping and Fabric will load them
+            val intermediary = prodNamespace
+            val client = provider.mappings.checkedNsOrNull("clientOfficial")
+                ?: provider.mappings.checkedNs("client")
+            val server = provider.mappings.checkedNsOrNull("serverOfficial")
+                ?: provider.mappings.checkedNs("server")
             val clientJarFixed = MinecraftJar(
                 clientjar.parentPath,
                 clientjar.name,
                 clientjar.envType,
                 clientjar.version,
                 clientjar.patches,
-                CLIENT,
+                client,
                 clientjar.awOrAt,
                 clientjar.extension,
                 clientjar.path
@@ -68,14 +68,15 @@ abstract class FabricMinecraftTransformer(
                 serverjar.envType,
                 serverjar.version,
                 serverjar.patches,
-                SERVER,
+                server,
                 serverjar.awOrAt,
                 serverjar.extension,
                 serverjar.path
             )
-            val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY)
-            val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY)
-            return super.internalMerge(intermediaryClientJar, intermediaryServerJar)
+            return super.internalMerge(
+                provider.minecraftRemapper.provide(clientJarFixed, intermediary),
+                provider.minecraftRemapper.provide(serverJarFixed, intermediary),
+            )
         }
         throw UnsupportedOperationException("Merging is not supported for this version")
     }
@@ -92,30 +93,17 @@ abstract class FabricMinecraftTransformer(
         })
     }
 
-    override fun applyExtraLaunches() {
-        super.applyExtraLaunches()
-    }
-
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
-        config.properties["intermediaryClasspath"] = {
-            intermediaryClasspath.absolutePathString()
-        }
-        config.properties["classPathGroups"] = {
-            groups
-        }
-        config.jvmArgs(
-            "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
-            "-Dfabric.classPathGroups=\${classPathGroups}"
-        )
-        if (provider is ReIndevProvider) {
-            config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
-        }
+        this.applyRunTransform(config)
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+        this.applyRunTransform(config)
+    }
+
+    open fun applyRunTransform(config: RunConfig) {
         config.properties["intermediaryClasspath"] = {
             intermediaryClasspath.absolutePathString()
         }
@@ -127,8 +115,9 @@ abstract class FabricMinecraftTransformer(
             "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
             "-Dfabric.classPathGroups=\${classPathGroups}"
         )
-        if (provider is ReIndevProvider) {
-            config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
+        if (customGameProvider) config.jvmArgs("-Dfabric.skipMcProvider")
+        if (provider is AbstractTotalConversionMinecraftProvider) {
+            config.jvmArgs("-Dfabric.gameVersion=${provider.baseVersion}")
         }
     }
 
@@ -172,20 +161,20 @@ abstract class FabricMinecraftTransformer(
     open fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {}
 
     override fun configureRuntimeMappings(export: ExportMappingsTask.Export) {
-        val targetNs = {
-            if (provider.mappings.checkedNsOrNull("clientOfficial") != null ||
-                provider.mappings.checkedNsOrNull("serverOfficial") != null ||
-                provider.mappings.checkedNsOrNull("client") != null ||
-                provider.mappings.checkedNsOrNull("server") != null) {
-                setOf(
-                    provider.mappings.checkedNsOrNull("clientOfficial") ?: provider.mappings.checkedNs("client"),
-                    provider.mappings.checkedNsOrNull("serverOfficial") ?: provider.mappings.checkedNs("server"),
-                    provider.mappings.devNamespace
-                )
-            } else {
-                setOf(prodNamespace, provider.mappings.devNamespace)
-            }
-        }.invoke()
+        val targetNs = if (
+            provider.mappings.checkedNsOrNull("clientOfficial") != null ||
+            provider.mappings.checkedNsOrNull("serverOfficial") != null ||
+            provider.mappings.checkedNsOrNull("client") != null ||
+            provider.mappings.checkedNsOrNull("server") != null
+        ) {
+            setOf(
+                provider.mappings.checkedNsOrNull("clientOfficial") ?: provider.mappings.checkedNs("client"),
+                provider.mappings.checkedNsOrNull("serverOfficial") ?: provider.mappings.checkedNs("server"),
+                provider.mappings.devNamespace
+            )
+        } else {
+            setOf(prodNamespace, provider.mappings.devNamespace)
+        }
 
         val sourceNs = if (targetNs.contains(prodNamespace)) {
             provider.mappings.checkedNs("official")
