@@ -226,8 +226,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             for (c in configurations) {
                 val outConf = targetConfigurations[c]
                 project.logger.info("[Unimined/ModRemapper] Supplying original mods to ${c.name}")
+                val deps = originalDeps[c]
                 outConf!!.dependencies.clear()
-                outConf.dependencies.addAll(originalDeps[c])
+                outConf.dependencies.addAll(deps)
             }
         }
     }
