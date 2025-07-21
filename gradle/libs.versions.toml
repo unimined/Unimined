@@ -11,7 +11,9 @@ asm = "9.8"
 tiny-remapper = "0.8.7"
 unimined-mapping-library = "1.2.1"
 
-binarypatcher = "3.0.10"
+binarypatcher = "1.2.2"
+
+commons = "1.0.5-SNAPSHOT"
 
 commons-io = "2.18.0"
 commons-compress = "1.27.1"
@@ -30,6 +32,7 @@ dokka = "2.0.0"
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+commons = { id = "xyz.wagyourtail.commons-gradle", version.ref = "commons" }
 
 [libraries]
 jb-annotations = { module = "org.jetbrains:annotations", version.ref = "jb-annotations" }
@@ -43,11 +46,15 @@ asm-analysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm"}
 asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm"}
 
 tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-remapper" }
-unimined-mapping-library-jvm = { module = "xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm", version.ref = "unimined-mapping-library" }
+unimined-mapping-library = { module = "xyz.wagyourtail.unimined.mapping:unimined-mapping-library", version.ref = "unimined-mapping-library" }
 
 binarypatcher = { module = "net.minecraftforge:binarypatcher", version.ref = "binarypatcher" }
 
 access-widener = { module = "net.fabricmc:access-widener", version.ref = "access-widener" }
+
+commons = { module = "xyz.wagyourtail.commons:commons", version.ref = "commons" }
+commons-kt = { module = "xyz.wagyourtail.commons:commons-kt", version.ref = "commons" }
+commons-gradle = { module = "xyz.wagyourtail.commons:commons-gradle", version.ref = "commons" }
 
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
