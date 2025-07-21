@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
@@ -14,6 +16,13 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.SemVerUtils
+import xyz.wagyourtail.unimined.util.readZipContents
+import java.nio.file.Path
+import java.util.jar.Attributes
+import java.util.jar.Manifest
+import kotlin.collections.set
+import kotlin.io.path.createDirectories
+import kotlin.io.path.outputStream
 
 open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"),
     NeoForgedPatcher<JarModMinecraftTransformer> {
@@ -53,8 +62,7 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
         }
 
-        // only fg3 so far. no custom one yet
-        forgeTransformer = FG3MinecraftTransformer(project, this)
+        forgeTransformer = NeoForgedTransformer(project, this)
     }
 
     override fun parseVersionJson(json: JsonObject) {
@@ -77,6 +85,57 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
                     disableRefmap()
                 }
             }
+        }
+    }
+
+    class NeoForgedTransformer(project: Project, parent: ForgeLikeMinecraftTransformer) : FG3MinecraftTransformer(project, parent) {
+        override fun writeClientExtraManifest(manifestFile: Path, baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar?) {
+            // Neoforge requires Minecraft-Dists to be present in client-extra manifest from 1.21.7
+
+            if (SemVerUtils.matches(provider.version, "<1.21.7")) {
+                return
+            }
+
+            manifestFile.parent.createDirectories()
+
+            val manifest = Manifest()
+            manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            manifest.mainAttributes[Attributes.Name("Minecraft-Dists")] = provider.side.classifier ?: "client server"
+
+            if (provider.side == EnvType.COMBINED && baseMinecraftServer != null) {
+                val mappings = parent.provider.mappings.resolveMappingTree()
+                val officialNamespace = mappings.getNamespaceId("official")
+                val namedNamespace = mappings.getNamespaceId(provider.mappings.devNamespace.name)
+
+                val clientEntries = baseMinecraftClient.path.readZipContents().toSet()
+                val serverEntries = baseMinecraftServer.path.readZipContents().toSet()
+
+                fun mapEntry(name: String): String {
+                    if (!name.endsWith(".class")) {
+                        return name
+                    }
+
+                    return mappings.getClass(name.substring(0, name.length - 6), officialNamespace).getName(namedNamespace) + ".class"
+                }
+
+                for (clientEntry in clientEntries) {
+                    if (clientEntry !in serverEntries) {
+                        val attributes = Attributes()
+                        attributes[Attributes.Name("Minecraft-Dist")] = "client"
+                        manifest.entries[mapEntry(clientEntry)] = attributes
+                    }
+                }
+
+                for (serverEntry in serverEntries) {
+                    if (serverEntry !in clientEntries) {
+                        val attributes = Attributes()
+                        attributes["Minecraft-Dist"] = "server"
+                        manifest.entries[mapEntry(serverEntry)] = attributes
+                    }
+                }
+            }
+
+            manifestFile.outputStream().use(manifest::write)
         }
     }
 
