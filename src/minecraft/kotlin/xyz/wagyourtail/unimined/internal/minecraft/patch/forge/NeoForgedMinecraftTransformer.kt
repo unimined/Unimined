@@ -105,7 +105,7 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             if (provider.side == EnvType.COMBINED && baseMinecraftServer != null) {
                 val mappings = parent.provider.mappings.resolveMappingTree()
                 val officialNamespace = mappings.getNamespaceId("official")
-                val namedNamespace = mappings.getNamespaceId("mojmap")
+                val namedNamespace = mappings.getNamespaceId(provider.mappings.devNamespace.name)
 
                 val clientEntries = baseMinecraftClient.path.readZipContents().toSet()
                 val serverEntries = baseMinecraftServer.path.readZipContents().toSet()
