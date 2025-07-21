@@ -40,8 +40,16 @@ object InterfaceInjectionMinecraftTransformer {
                                 node.interfaces = arrayListOf()
                             }
 
+                            val interfacesWithSignature = mutableMapOf<String, String>()
                             for (injected in injections[target]!!) {
-                                if (!node.interfaces.contains(injected)) node.interfaces.add(injected)
+                                val injectedName = injected.substringBefore('<')
+
+                                if (!node.interfaces.contains(injectedName)) {
+                                    node.interfaces.add(injectedName)
+                                    if (injectedName.length != injected.length) {
+                                        interfacesWithSignature[injectedName] = injected
+                                    }
+                                }
                             }
 
                             if (node.signature != null) {
@@ -54,9 +62,16 @@ object InterfaceInjectionMinecraftTransformer {
                                 }
 
                                 node.signature = resultingSignature.toString()
+                            } else if (interfacesWithSignature.isNotEmpty()) {
+                                node.signature = buildString {
+                                    append('L').append(node.superName).append(';')
+                                    for (itf in node.interfaces) {
+                                        append('L').append(interfacesWithSignature[itf] ?: itf).append(';')
+                                    }
+                                }
                             }
 
-                            node.accept(writer);
+                            node.accept(writer)
                             Files.write(
                                 targetPath,
                                 writer.toByteArray(),
