@@ -44,7 +44,13 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         parent.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
-    override fun defaultProdNamespace() = provider.mappings.checkedNs("searge")
+    override fun defaultProdNamespace(): Namespace {
+        return if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1) {
+            super.defaultProdNamespace()
+        } else {
+            provider.mappings.checkedNs("searge")
+        }
+    }
 
     override val merger: ClassMerger
         get() = parent.merger
