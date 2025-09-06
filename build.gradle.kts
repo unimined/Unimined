@@ -186,27 +186,32 @@ tasks.test {
     }
 }
 
-tasks.dokkaHtml {
-    outputDirectory.set(projectDir.resolve("docs/api-docs/"))
-    dokkaSourceSets {
-        named("main") {
-            suppress = true
-        }
-        named("api") {
-            suppress = false
-        }
-    }
-    doFirst {
-        file("Writerside/v.list").writeText(
-            """
+tasks.dokkaGenerate {
+	doFirst {
+		file("Writerside/v.list").writeText(
+			"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
                 <vars>
                     <var name="version" value="${project.version}"/>
                 </vars>
             """.trimIndent()
-        )
-    }
+		)
+	}
+}
+
+dokka {
+	moduleName.set(project.displayName)
+	dokkaSourceSets.main {
+		suppress = true
+	}
+	dokkaSourceSets.named("api") {
+		suppress = false
+	}
+
+	dokkaPublications.html {
+		outputDirectory.set(projectDir.resolve("docs/api-docs/"))
+	}
 }
 
 gradlePlugin {
