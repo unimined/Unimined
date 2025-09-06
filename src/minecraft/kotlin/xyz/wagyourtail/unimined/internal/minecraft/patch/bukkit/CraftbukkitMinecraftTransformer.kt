@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.w3c.dom.Element
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -26,6 +27,7 @@ import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.nio.file.Path
 import kotlin.io.path.copyTo
 
 open class CraftbukkitMinecraftTransformer(
@@ -33,10 +35,13 @@ open class CraftbukkitMinecraftTransformer(
     provider: MinecraftProvider,
     providerName: String = "craftbukkit"
 ) : AbstractMinecraftTransformer(project, provider, providerName), CraftbukkitPatcher {
+	companion object {
+		const val CPL_GROUPS = "cpl.pluginGroups"
+	}
 
     override val supportedEnvs = setOf(EnvType.SERVER)
 
-    val cache by lazy {
+    val cache: Path by lazy {
         project.unimined.getLocalCache(provider.sourceSet).resolve("spigot")
     }
 
@@ -47,11 +52,11 @@ open class CraftbukkitMinecraftTransformer(
         provider.sourceSet.runtimeClasspath += this
     }
 
-    override var classPathPluginLoader = project.configurations.maybeCreate("classpathPluginLoader".withSourceSet(provider.sourceSet)).apply {
+    override var classPathPluginLoader: Configuration = project.configurations.maybeCreate("classpathPluginLoader".withSourceSet(provider.sourceSet)).apply {
         provider.minecraftLibraries.extendsFrom(this)
     }
 
-    val cplFile by lazy {
+    val cplFile: Path by lazy {
         classPathPluginLoader.resolve().first { it.extension == "jar" }.toPath()
     }
 
@@ -66,8 +71,6 @@ open class CraftbukkitMinecraftTransformer(
     }
 
     override fun defaultProdNamespace() = provider.mappings.checkedNs("spigotProd")
-
-    val CPL_GROUPS = "cpl.pluginGroups"
 
     override fun agentVersion(vers: String) {
         project.unimined.wagYourMaven("releases")
@@ -163,14 +166,13 @@ open class CraftbukkitMinecraftTransformer(
 
             insertInto.add {
                 it.delegator(object : Delegator() {
-                    val official = Namespace("official")
                     val spigotProd = Namespace("spigotProd")
 
                     override fun visitClass(
                         delegate: MappingVisitor,
                         names: Map<Namespace, InternalName>
                     ): ClassVisitor? {
-                        var spigotProdName = names[spigotProd]
+                        val spigotProdName = names[spigotProd]
                         if (executor.versionInfo.mappingsUrl == null) {
                             if (spigotProdName != null) {
                                 val newName = "net/minecraft/server/v${executor.minecraftVersion}/" + spigotProdName.value.substringAfterLast("/")
@@ -213,7 +215,7 @@ open class CraftbukkitMinecraftTransformer(
                 groups.remove(proj to sourceSet)
             }
         }
-        project.logger.info("[Unimined/FabricLike] Classpath groups: ${groups.map { it.key.toPath() + " -> " + it.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
+        project.logger.info("[Unimined/FabricLike] Classpath groups: ${groups.map { entry -> entry.key.toPath() + " -> " + entry.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
         groups.map { entry -> entry.value.flatMap { it.second.output }.joinToString(File.pathSeparator) { it.absolutePath } }.joinToString(
             File.pathSeparator.repeat(2))
     }

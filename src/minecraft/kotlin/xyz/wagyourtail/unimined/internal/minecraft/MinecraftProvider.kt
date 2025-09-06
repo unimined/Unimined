@@ -476,10 +476,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         var inputTask = project.tasks.findByName(inputTaskName.withSourceSet(sourceSet))
         if (inputTask == null && createJarTask) {
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default $inputTaskName for $sourceSet")
-            inputTask = project.tasks.create(inputTaskName.withSourceSet(sourceSet), Jar::class.java) {
+            inputTask = project.tasks.register(inputTaskName.withSourceSet(sourceSet), Jar::class.java) {
                 it.group = "build"
                 defaultTaskConfiguration(it, true)
-            }
+            }.getOrNull()
         } else if (inputTask != null) {
             if (inputTask is Jar) {
                 inputTask.also {
@@ -491,7 +491,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             }
         }
 
-        if (inputTask != null && inputTask is Jar) {
+        if (inputTask != null) {
             val classifier: String = inputTask.archiveClassifier.getOrElse("")
             inputTask.apply {
                 if (classifier.isNotEmpty()) {
@@ -526,8 +526,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             EnvType.JOINED -> {
                 provideRunClientTask("client", project.file("run/client"))
                 provideRunServerTask("server", project.file("run/server"))
-            }
-            else -> {
             }
         }
     }

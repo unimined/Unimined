@@ -105,7 +105,11 @@ open class JarModAgentMinecraftTransformer(
             config.jvmArgs("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
         }
         // priority classpath
-        val priorityClasspath = provider.detectCombineWithSourceSets().map { it.second.output.classesDirs.toMutableSet().also {set-> it.second.output.resourcesDir.let { set.add(it) } } }.flatten()
+        val priorityClasspath = provider.detectCombineWithSourceSets().map { pair ->
+			pair.second.output.classesDirs.toMutableSet().also { set ->
+				pair.second.output.resourcesDir?.let { set.add(it) }
+			}
+		}.flatten()
         if (priorityClasspath.isNotEmpty()) {
             config.jvmArgs("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
         }
@@ -113,20 +117,20 @@ open class JarModAgentMinecraftTransformer(
         //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 
-    override fun beforeRemapJarTask(task: AbstractRemapJarTask, input: Path): Path {
-        if (task is RemapJarTask) {
-            task.mixinRemap {
+    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
+        if (remapJarTask is RemapJarTask) {
+            remapJarTask.mixinRemap {
                 enableJarModAgent()
             }
         }
 
         @Suppress("DEPRECATION")
-        return if (enableJarModAgent && compiletimeTransforms && transforms.isNotEmpty() && task is RemapJarTask) {
-            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${task}...")
+        return if (enableJarModAgent && compiletimeTransforms && transforms.isNotEmpty() && remapJarTask is RemapJarTask) {
+            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask}...")
             val output = getTempFilePath("${input.nameWithoutExtension}-jma", ".jar")
             Files.copy(input, output)
             try {
-                val classpath = (task as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
+                val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
                 val result = project.execOps.javaexec {
                     it.jvmArgs = listOf(
@@ -150,7 +154,7 @@ open class JarModAgentMinecraftTransformer(
             }
             output
         } else {
-            super.beforeRemapJarTask(task, input)
+            super.beforeRemapJarTask(remapJarTask, input)
         }
     }
 

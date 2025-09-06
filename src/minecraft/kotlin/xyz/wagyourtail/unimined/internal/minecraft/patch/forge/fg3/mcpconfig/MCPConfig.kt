@@ -287,7 +287,7 @@ class MCPConfig(
                             }.executablePath.asFile.absolutePath
                         }
                     } else {
-                        if (JavaVersion.current() < (JavaVersion.toVersion(function.java_version) ?: JavaVersion.VERSION_1_8)) {
+                        if (JavaVersion.current() < (JavaVersion.toVersion(function.java_version ?: 8))) {
                             error("current java version ${JavaVersion.current()} is less than required java version ${function.java_version} to run ${function.version}")
                         }
                     }

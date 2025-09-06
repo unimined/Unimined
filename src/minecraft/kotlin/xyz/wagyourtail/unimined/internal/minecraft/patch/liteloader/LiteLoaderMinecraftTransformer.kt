@@ -54,7 +54,7 @@ open class LiteLoaderMinecraftTransformer(
         val version = liteloader?.version ?: error("liteloader version not set")
 
         if (versions != null) {
-            provider.mods.modImplementation.dependencies.add(liteloader)
+            provider.mods.modImplementation.dependencies.add(liteloader!!)
 
             val versions = if (version.endsWith("SNAPSHOT")) {
                 val versions = versions!!["snapshots"].asJsonObject
@@ -76,7 +76,7 @@ open class LiteLoaderMinecraftTransformer(
 
             throw IllegalStateException("failed to find liteloader version: $version")
         } else {
-            jarModConfiguration.dependencies.add(liteloader)
+            jarModConfiguration.dependencies.add(liteloader!!)
         }
     }
 

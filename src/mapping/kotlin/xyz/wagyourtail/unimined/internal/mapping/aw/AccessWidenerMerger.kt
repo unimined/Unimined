@@ -193,7 +193,6 @@ class AccessWidenerMerger(private val namespace: String): AccessWidenerVisitor {
             }
 
             AccessWidenerReader.AccessType.MUTABLE -> access.makeMutable()
-            else -> throw java.lang.UnsupportedOperationException("Unknown access type:$input")
         }
     }
 
