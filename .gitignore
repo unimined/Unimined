@@ -19,10 +19,11 @@
 *.tar.gz
 *.rar
 
-build
-.gradle
+build/
+.gradle/
 !gradle/wrapper/gradle-wrapper.jar
-.idea
+.idea/
+.kotlin/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
@@ -34,5 +35,6 @@ testing/**/build
 testing/**/.idea
 testing/**/run
 
+# Generated Docs
 Writerside/v.list
 docs/
