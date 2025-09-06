@@ -77,7 +77,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
         val betterMixinExtension = MixinRemapExtension(
-            project.gradle.startParameter.logLevel,
+            project.logger,
             allowImplicitWildcards
         )
         betterMixinExtension.enableBaseMixin()

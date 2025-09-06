@@ -134,7 +134,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
         val mixinExtension = MixinRemapExtension(
-                project.gradle.startParameter.logLevel,
+                project.logger,
                 allowImplicitWildcards = true
             )
         mixinExtension.enableBaseMixin()

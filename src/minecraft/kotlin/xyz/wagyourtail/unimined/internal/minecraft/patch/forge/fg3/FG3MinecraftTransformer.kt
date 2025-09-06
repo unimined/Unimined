@@ -69,7 +69,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             "net/neoforged/neoforge/registries/ObjectHolderRegistry"
         )
         parent.provider.minecraftRemapper.addExtension {
-            StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+            StringClassNameRemapExtension(project.logger) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
                 forgeHardcodedNames.contains(it)
             }
