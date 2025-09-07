@@ -28,7 +28,7 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
     @get:Internal
     protected var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
 
-
+	@Suppress("UNCHECKED_CAST")
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
         val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = RemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
         val old = delegate.value as MixinRemapOptions.() -> Unit

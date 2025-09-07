@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package xyz.wagyourtail.unimined.internal.minecraft
 
 import kotlinx.coroutines.runBlocking
