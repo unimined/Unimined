@@ -1,6 +1,12 @@
+import org.eclipse.jgit.api.Git
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import java.io.ByteArrayOutputStream
 import java.io.File
+
+buildscript {
+	dependencies {
+		classpath(libs.jgit)
+	}
+}
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin.get()
@@ -144,15 +150,10 @@ tasks.jar {
     manifest {
         attributes(
             "Implementation-Version" to if (project.hasProperty("version_snapshot")) {
-                val stdout = ByteArrayOutputStream()
-                exec {
-                    commandLine("git", "rev-parse", "--short", "HEAD")
-                    standardOutput = stdout
-                }.assertNormalExitValue()
                 buildString {
                     append(project.version.toString().removeSuffix("-SNAPSHOT"))
                     append("-")
-                    append(stdout.toString().trim())
+                    append(Git.open(rootDir).repository.resolve("HEAD").abbreviate(7).name().trim())
                     append("-SNAPSHOT")
                 }
             } else project.version
@@ -186,27 +187,32 @@ tasks.test {
     }
 }
 
-tasks.dokkaHtml {
-    outputDirectory.set(projectDir.resolve("docs/api-docs/"))
-    dokkaSourceSets {
-        named("main") {
-            suppress = true
-        }
-        named("api") {
-            suppress = false
-        }
-    }
-    doFirst {
-        file("Writerside/v.list").writeText(
-            """
+tasks.dokkaGenerate {
+	doFirst {
+		file("Writerside/v.list").writeText(
+			"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
                 <vars>
                     <var name="version" value="${project.version}"/>
                 </vars>
             """.trimIndent()
-        )
-    }
+		)
+	}
+}
+
+dokka {
+	moduleName.set(project.displayName)
+	dokkaSourceSets.main {
+		suppress = true
+	}
+	dokkaSourceSets.named("api") {
+		suppress = false
+	}
+
+	dokkaPublications.html {
+		outputDirectory.set(projectDir.resolve("docs/api-docs/"))
+	}
 }
 
 gradlePlugin {

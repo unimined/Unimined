@@ -102,7 +102,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun migrateMappings(sourceSet: SourceSet, action: MigrateMappingsTask.() -> Unit) {
 //        MigrateMappingsTaskImpl(project, sourceSet).apply(action)
-        project.tasks.create("migrateMappings".withSourceSet(sourceSet), MigrateMappingsTaskImpl::class.java, sourceSet).apply(action)
+        project.tasks.register("migrateMappings".withSourceSet(sourceSet), MigrateMappingsTaskImpl::class.java, sourceSet).orNull?.apply(action)
     }
 
     private fun getMinecraftDepNames(): Set<String> = minecrafts.values.map { (it as MinecraftProvider).minecraftDepName }.toSet()

@@ -1,9 +1,9 @@
 package xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard
 
-import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import net.fabricmc.tinyremapper.extension.mixin.common.data.MxClass
+import org.gradle.api.logging.Logger
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
@@ -69,11 +69,11 @@ typealias FieldAnnotationVisitor = (
 ) -> AnnotationVisitor
 
 class HardTargetRemappingClassVisitor(
-    delegate: ClassVisitor?,
-    val mixinName: String,
-    val existingMappings: Map<String, String>,
-    val logger: Logger,
-    val onEnd: () -> Unit = {}
+	delegate: ClassVisitor?,
+	val mixinName: String,
+	val existingMappings: Map<String, String>,
+	val logger: Logger,
+	val onEnd: () -> Unit = {}
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
 
     lateinit var mxClass: MxClass

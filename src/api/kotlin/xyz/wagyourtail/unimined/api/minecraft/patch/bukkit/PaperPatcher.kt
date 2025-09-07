@@ -14,8 +14,11 @@ interface PaperPatcher : CraftbukkitPatcher {
         this.build = build
     }
 
-    override fun loader(build: String) {
-        this.build = build.toInt()
+	/**
+	 * [version] build number (must be an integer)
+	 */
+    override fun loader(version: String) {
+        this.build = version.toInt()
     }
 
     @get:ApiStatus.Internal

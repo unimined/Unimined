@@ -5,11 +5,10 @@ import net.fabricmc.tinyremapper.InputTag
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
-import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
-import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logger
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
@@ -33,7 +32,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedDeque
 
 class MixinRemapExtension(
-    loggerLevel: LogLevel = LogLevel.WARN,
+    val logger: Logger,
     allowImplicitWildcards: Boolean = false,
 ) : PerInputTagExtension<MixinRemapExtension.MixinTarget>(), MixinRemapOptions {
 
@@ -50,13 +49,6 @@ class MixinRemapExtension(
     private var metadataReader = mutableListOf<(MixinRemapExtension) -> MixinMetadata>()
     private var modifyHardRemapper: (HardTargetRemappingClassVisitor) -> Unit = {}
     private var modifyRefmapBuilder: (RefmapBuilderClassVisitor) -> Unit = {}
-
-
-    val logger: Logger = Logger(
-        translateLogLevel(
-            loggerLevel
-        )
-    )
 
     var off by FinalizeOnRead(false)
     var noRefmap: Set<String> by FinalizeOnRead(setOf())
@@ -189,7 +181,7 @@ class MixinRemapExtension(
 
         override fun stateProcessor(environment: TrEnvironment) {
             extension.logger.info("[HardTarget] processing state for ${environment.mrjVersion}")
-            val data = CommonData(environment, extension.logger)
+            val data = CommonData(environment)
             try {
                 for (task in tasks[environment.mrjVersion]) {
                     task(data)
@@ -214,7 +206,7 @@ class MixinRemapExtension(
                     }
                     val target = JsonObject()
                     val visitor = RefmapBuilderClassVisitor(
-                        CommonData(cls.environment, extension.logger),
+                        CommonData(cls.environment),
                         cls.name,
                         target,
                         next,
@@ -241,7 +233,7 @@ class MixinRemapExtension(
                     if (!extension.off) {
                         val target = JsonObject()
                         val visitor = RefmapBuilderClassVisitor(
-                            CommonData(cls.environment, extension.logger),
+                            CommonData(cls.environment),
                             cls.name,
                             target,
                             next,
@@ -334,16 +326,5 @@ class MixinRemapExtension(
 
     companion object {
         fun dot(name: String): String = name.replace('/', '.')
-
-
-        fun translateLogLevel(loggerLevel: LogLevel) = when (loggerLevel) {
-            LogLevel.DEBUG -> Logger.Level.INFO
-            LogLevel.INFO -> Logger.Level.INFO
-            LogLevel.WARN -> Logger.Level.WARN
-            LogLevel.ERROR -> Logger.Level.ERROR
-            LogLevel.QUIET -> Logger.Level.ERROR
-            else -> Logger.Level.WARN
-        }
     }
-
 }

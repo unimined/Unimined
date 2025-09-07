@@ -69,7 +69,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             "net/neoforged/neoforge/registries/ObjectHolderRegistry"
         )
         parent.provider.minecraftRemapper.addExtension {
-            StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+            StringClassNameRemapExtension(project.logger) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
                 forgeHardcodedNames.contains(it)
             }
@@ -542,7 +542,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             val stoutLevel = project.gradle.startParameter.logLevel
             val stdout = System.out
             if (stoutLevel > LogLevel.INFO) {
-                System.setOut(PrintStream(NullOutputStream.NULL_OUTPUT_STREAM))
+                System.setOut(PrintStream(NullOutputStream.INSTANCE))
             }
             project.logger.info("Running binpatcher with args: ${args.joinToString(" ")}")
             try {
@@ -568,7 +568,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    val legacyClasspath by lazy {
+    val legacyClasspath: Path by lazy {
         val lcp = provider.localCache.createDirectories().resolve("legacy_classpath.txt")
         lcp.writeText(
             (provider.minecraftLibraries.files + provider.minecraftFileDev + clientExtra.resolve()).joinToString(

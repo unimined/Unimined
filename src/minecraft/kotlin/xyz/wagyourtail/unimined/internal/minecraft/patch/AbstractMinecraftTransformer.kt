@@ -53,7 +53,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open fun defaultProdNamespace() = provider.mappings.checkedNs("official")
 
-    override fun prodNamespace(namespace: String) {
+    @Suppress("UNCHECKED_CAST")
+	override fun prodNamespace(namespace: String) {
         val delegate = AbstractMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }

@@ -13,6 +13,6 @@ interface CraftbukkitPatcher : MinecraftPatcher {
         this.loader = version
     }
 
-    var classPathPluginLoader: Configuration?
+    var classPathPluginLoader: Configuration
     fun agentVersion(vers: String)
 }
