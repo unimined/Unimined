@@ -151,7 +151,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         if (project.isEmpty()) {
             from(this.project.rootProject, this.project.sourceSets.getByName(name))
         } else {
-            val proj = this.project.project(path)
+            val proj = this.project.project(project)
             from(proj, proj.sourceSets.getByName(name))
         }
     }
@@ -186,7 +186,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
             combineWith(this.project.rootProject, this.project.sourceSets.getByName(name))
             return
         } else {
-            val proj = this.project.project(path)
+            val proj = this.project.project(project)
             combineWith(proj, proj.sourceSets.getByName(name))
         }
     }
