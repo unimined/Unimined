@@ -51,6 +51,7 @@ open class DescAnnotationVisitor (parent: AnnotationVisitor?, val remap: AtomicB
                     var types = mutableListOf<Type>()
 
                     override fun visit(name: String?, value: Any) {
+                        super.visit(name, value)
                         types.add(value as Type)
                     }
 
@@ -127,10 +128,9 @@ open class DescAnnotationVisitor (parent: AnnotationVisitor?, val remap: AtomicB
                 if (method.isPresent) {
                     val m = method.get()
                     val mName = mapper.mapName(m)
-                    val mDesc = mapper.mapDesc(m)
-                    refmap.addProperty(value, "$mName$mDesc")
+                    refmap.addProperty(value, mName)
                     if (noRefmap) {
-                        super.visit("value", "$mName$mDesc")
+                        super.visit("value", mName)
                     }
                     super.visitEnd()
                     return
