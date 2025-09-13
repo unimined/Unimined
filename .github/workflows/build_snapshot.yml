@@ -42,7 +42,7 @@ jobs:
           properties: 'version'
 
       - name: Build Site
-        run: ./gradlew -Pversion_snapshot dokkaHtml
+        run: ./gradlew -Pversion_snapshot dokkaGeneratePublicationHtml
 
       - name: Define instance id and artifacts
         id: define-ids
