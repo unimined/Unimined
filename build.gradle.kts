@@ -256,7 +256,7 @@ val writeActionsTestMatrix by tasks.registering {
                 val testName = it.name.replace(".kt", "")
                 val testPath = "xyz.wagyourtail.unimined.test.integration.${testName}"
                 testMatrix.add(mapOf(
-                    "name" to testName,
+                    "name" to formatTestName(testName),
                     "path" to testPath
                 ))
             }
@@ -267,9 +267,21 @@ val writeActionsTestMatrix by tasks.registering {
             "path" to "xyz.wagyourtail.unimined.util.*"
         ))
 
-        val json = groovy.json.JsonOutput.toJson(testMatrix)
+        val json = groovy.json.JsonOutput.toJson(testMatrix.sortedBy { it["name"] })
         val output = file("build/test_matrix.json")
         output.parentFile.mkdir()
         output.writeText(json)
+    }
+}
+
+fun formatTestName(name: String): String {
+    val testName = name.removeSuffix("Test")
+    val index = testName.indexOfFirst { it.isDigit() }
+    return if (index != -1) {
+        val loader = testName.take(index)
+        val version = testName.substring(index).replace("_", ".")
+        "$loader $version"
+    } else {
+       testName
     }
 }
