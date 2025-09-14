@@ -8,8 +8,9 @@ concurrency:
 env:
   JDK_VERSION: 17
 
-shell:
-  bash
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
