@@ -247,18 +247,25 @@ publishing {
 // A task to output a json file with a list of all the test to run
 val writeActionsTestMatrix by tasks.registering {
     doLast {
-        val testMatrix = arrayListOf<String>()
+        val testMatrix = arrayListOf<Map<String, String>>()
 
         val broken = setOf<String>()
 
         file("src/test/kotlin/xyz/wagyourtail/unimined/test/integration").listFiles()?.forEach {
             if (it.name.endsWith("Test.kt") && !broken.contains(it.name)) {
-                val className = it.name.replace(".kt", "")
-                testMatrix.add("xyz.wagyourtail.unimined.test.integration.${className}")
+                val testName = it.name.replace(".kt", "")
+                val testPath = "xyz.wagyourtail.unimined.test.integration.${testName}"
+                testMatrix.add(mapOf(
+                    "name" to testName,
+                    "path" to testPath
+                ))
             }
         }
 
-        testMatrix.add("xyz.wagyourtail.unimined.util.*")
+        testMatrix.add(mapOf(
+            "name" to "Util",
+            "path" to "xyz.wagyourtail.unimined.util.*"
+        ))
 
         val json = groovy.json.JsonOutput.toJson(testMatrix)
         val output = file("build/test_matrix.json")
@@ -266,20 +273,3 @@ val writeActionsTestMatrix by tasks.registering {
         output.writeText(json)
     }
 }
-
-/**
- * Replaces invalid characters in test names for GitHub Actions artifacts.
- */
-abstract class PrintActionsTestName : DefaultTask() {
-    @get:Input
-    @get:Option(option = "name", description = "The test name")
-    abstract val testName: Property<String>;
-
-    @TaskAction
-    fun run() {
-        val sanitised = testName.get().replace('*', '_')
-        File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
-    }
-}
-
-tasks.register<PrintActionsTestName>("printActionsTestName") {}

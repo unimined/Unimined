@@ -78,6 +78,7 @@ jobs:
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}-latest
+    name: "${{ matrix.test.name }} (${{ matrix.os }})"
     steps:
       - uses: actions/checkout@v5
 
@@ -91,7 +92,7 @@ jobs:
           gradle-version: wrapper
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
 
-      - run: ./gradlew printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace
+      - run: ./gradlew test --tests ${{ matrix.test.path }} --stacktrace
         id: test
         env:
           TEST_WARNING_MODE: fail
@@ -99,11 +100,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: "${{ matrix.test }} (${{ matrix.os }}) Results"
+          name: "${{ matrix.test.name }} (${{ matrix.os }}) Results"
           path: "**/build/reports/"
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: "${{ matrix.test }} (${{ matrix.os }}) Heap Dump"
+          name: "${{ matrix.test.name }} (${{ matrix.os }}) Heap Dump"
           path: "*.hprof"
