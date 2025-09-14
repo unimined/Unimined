@@ -6,6 +6,17 @@ group = 'com.example'
 base.archivesName = 'UniminedExampleMod'
 version = '1.0.0'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
+
 sourceSets {
     client
     server
@@ -105,9 +116,4 @@ unimined {
             enabled = true
         }
     }
-}
-
-java {
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
-    toolchain.languageVersion.set(JavaLanguageVersion.of(8))
 }

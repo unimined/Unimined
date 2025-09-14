@@ -7,6 +7,17 @@ group = 'com.example'
 base.archivesName = 'UniminedExampleMod'
 version = '1.0-SNAPSHOT'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
+
 repositories {
 
     mavenLocal()
@@ -45,11 +56,6 @@ unimined {
 
 configurations.configureEach {
     exclude group: "org.lwjgl.lwjgl"
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 processResources {
