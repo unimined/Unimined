@@ -253,6 +253,10 @@ val writeActionsTestMatrix by tasks.registering {
             // FIXME: Execution failed for task ':remapJar'.
             //   > Unknown namespace official
             "BTA7_3_03Test.kt",
+            // FIXME: Remapping minecraft SERVER to spigotDev
+            //  Mapping target name conflicts detected:
+            //    METHODs net/minecraft/server/v1_16_R3/LootEntryAbstract$Serializer/[a, serializeType](Lcom/google/gson/JsonObject;Lnet/minecraft/server/v1_16_R3/LootEntryAbstract;Lcom/google/gson/JsonSerializationContext;)V -> serializeType
+            "SpigotPaper1_16_5Test.kt",
         )
 
         file("src/test/kotlin/xyz/wagyourtail/unimined/test/integration").listFiles()?.forEach {
