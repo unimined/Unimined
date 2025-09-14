@@ -14,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         gradle: [
-          8.7,
-          8.10.2,
-          wrapper,
+          "8.7",
+          "8.10.2",
+          "wrapper",
         ]
 
     runs-on: ubuntu-latest
