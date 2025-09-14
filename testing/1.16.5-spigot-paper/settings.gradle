@@ -29,4 +29,4 @@ pluginManagement {
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.16.5-spigot'
+rootProject.name = '1.16.5-spigot-paper'
