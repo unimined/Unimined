@@ -38,9 +38,12 @@ unimined.minecraft {
         spigotDev()
         mojmap()
 
-        stubs(["official", "spigotDev"]) {
+        stubs(["official", "spigotDev", "spigotProd"]) {
             c(["czq\$b"]) {
-                m(["a", "serializeType0"])
+                m(["a", "serializeType0", "a;(Lcom/google/gson/JsonObject;Lnet/minecraft/server/v1_16_R3/LootEntryAbstract;Lcom/google/gson/JsonSerializationContext;)V"])
+            }
+            c(["gg"]) {
+                m(["a;(Ljava/lang/Object;)I", "getIdVanilla"])
             }
         }
     }
