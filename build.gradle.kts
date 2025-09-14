@@ -1,5 +1,6 @@
 import org.eclipse.jgit.api.Git
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
 
 buildscript {
@@ -24,14 +25,20 @@ base {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
-
     withSourcesJar()
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(8)
+}
+
 kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
+    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
+    }
 }
 
 repositories {
