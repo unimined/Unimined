@@ -149,6 +149,11 @@ class BuildToolsExecutor(
         if (!targetFile.exists() || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/BuildTools] running build tools")
             project.execOps.javaexec {
+                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                it.executable = toolchain.launcherFor {
+                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
+                }.get().executablePath.asFile.absolutePath
+
                 it.classpath(project.files(buildTools))
                 it.mainClass.set("org.spigotmc.builder.Bootstrap")
                 it.args("--compile", target.name.lowercase(), "--dont-update", "--dev")
