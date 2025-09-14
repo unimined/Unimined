@@ -37,6 +37,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: ${{ matrix.gradle }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
 
       - run: ./gradlew build check -x test --stacktrace --warning-mode fail
 
@@ -55,6 +56,10 @@ jobs:
           java-version: ${{ env.JDK_VERSION }}
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
+
       - run: ./gradlew writeActionsTestMatrix --stacktrace
 
       - id: set-matrix
@@ -82,6 +87,10 @@ jobs:
           java-version: ${{ env.JDK_VERSION }}
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
+
       - run: ./gradlew printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace
         id: test
         env:
@@ -91,7 +100,7 @@ jobs:
         if: ${{ failure() }}
         with:
           name: "${{ matrix.test }} (${{ matrix.os }}) Results"
-          path: build/reports/
+          path: "**/build/reports/"
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
