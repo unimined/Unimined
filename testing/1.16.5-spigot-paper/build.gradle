@@ -37,6 +37,12 @@ unimined.minecraft {
     mappings {
         spigotDev()
         mojmap()
+
+        stubs(["official", "spigotDev"]) {
+            c(["czq\$b"]) {
+                m(["a", "serializeType0"])
+            }
+        }
     }
 
 }
