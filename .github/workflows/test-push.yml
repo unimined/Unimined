@@ -99,9 +99,6 @@ jobs:
           gradle-version: wrapper
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
 
-      - if: ${{ matrix.os == 'ubuntu' }}
-        run: git config --global --unset core.autocrlf
-
       - run: ./gradlew test --tests ${{ matrix.test.path }} --stacktrace
         id: test
         env:
