@@ -74,10 +74,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu, windows ]
+        os: [ ubuntu, windows, macos ]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}-latest
+    continue-on-error: ${{ matrix.os == 'macos' }}
     name: "${{ matrix.test.name }} (${{ matrix.os }})"
     steps:
       - uses: actions/checkout@v5
