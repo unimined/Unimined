@@ -25,9 +25,9 @@ jobs:
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            */
+            /*
             !testing/
-            !Writerside
+            !Writerside/
 
       - uses: actions/setup-java@v5
         with:
