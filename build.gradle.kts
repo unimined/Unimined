@@ -9,7 +9,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version libs.versions.kotlin.get()
+    alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
     `java-gradle-plugin`
     `maven-publish`

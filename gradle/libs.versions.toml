@@ -66,3 +66,4 @@ asm-all = ["asm", "asm-commons", "asm-tree", "asm-analysis", "asm-util"]
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
