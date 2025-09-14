@@ -38,6 +38,11 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarnv1(21)
+        stubs(["intermediary", "yarnv1"]) {
+            c(["net/minecraft/class_379"]) {
+                m("method_16798()F", "getBearingX")
+            }
+        }
     }
 
     fabric {
