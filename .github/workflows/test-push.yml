@@ -89,7 +89,9 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: ${{ env.JDK_VERSION }}
+          java-version: |
+            8
+            ${{ env.JDK_VERSION }}
 
       - uses: gradle/actions/setup-gradle@v4
         with:
