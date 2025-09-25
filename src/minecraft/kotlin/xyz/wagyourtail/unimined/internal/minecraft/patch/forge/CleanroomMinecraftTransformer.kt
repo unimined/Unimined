@@ -15,11 +15,13 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getFiles
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Writer
 import java.io.File
+import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
@@ -120,6 +122,9 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         if (library.name.startsWith("net.java.dev.jna:platform:")) {
             return null
         }
+        if (library.name.startsWith("org.apache.httpcomponents:")) {
+            return null
+        }
         return super.libraryFilter(library)
     }
 
@@ -128,6 +133,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
+        config.systemProperties["fml.dev.extrapath"] =
+            provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }
         config.javaVersion = JavaVersion.VERSION_21
     }
 
@@ -136,10 +143,16 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
+        config.systemProperties["fml.dev.extrapath"] =
+            provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }
         config.javaVersion = JavaVersion.VERSION_21
     }
 
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {
+
+        override val transform: MutableList<(FileSystem) -> Unit> = listOf<(FileSystem) -> Unit>(
+            FixParamAnnotations::apply,
+        ).toMutableList()
 
         // override binpatches.pack.lzma meaning it's `userdev3`
         override val userdevClassifier: String = "userdev"
