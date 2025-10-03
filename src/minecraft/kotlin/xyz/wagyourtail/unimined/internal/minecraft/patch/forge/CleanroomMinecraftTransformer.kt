@@ -133,8 +133,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
-        config.systemProperties["fml.dev.extrapath"] =
-            provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }
+        config.jvmArgs("-Dfml.dev.extrapath=\${provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }}")
         config.javaVersion = JavaVersion.VERSION_21
     }
 
@@ -143,8 +142,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
-        config.systemProperties["fml.dev.extrapath"] =
-            provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }
+        config.jvmArgs("-Dfml.dev.extrapath=\${provider.mods.getClasspath().joinToString(File.pathSeparator) { it.absolutePath }}")
         config.javaVersion = JavaVersion.VERSION_21
     }
 
