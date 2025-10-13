@@ -117,13 +117,13 @@ abstract class CAbstractMethodAnnotationVisitor(
                                 .orElse(targetClass)
                             val mappedName = mapper.mapName(targetVal)
                             val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard && mappedName != "<clinit>") "*" else mapper.mapDesc(targetVal)
-                            if (targetClasses.size > 1) {
+//                            if (targetClasses.size > 1) {
                                 refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                 noRefmapAcceptor("$mappedName$mappedDesc")
-                            } else {
-                                refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
-                                noRefmapAcceptor("L$mappedClass;$mappedName$mappedDesc")
-                            }
+//                            } else {
+//                                refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+//                                noRefmapAcceptor("L$mappedClass;$mappedName$mappedDesc")
+//                            }
                         }
 
                         if (target.isPresent) {
