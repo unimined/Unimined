@@ -14,8 +14,16 @@ base {
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
 
 sourceSets {
     spigot
@@ -29,6 +37,15 @@ unimined.minecraft {
     mappings {
         spigotDev()
         mojmap()
+
+        stubs(["official", "spigotDev", "spigotProd"]) {
+            c(["czq\$b"]) {
+                m(["a", "serializeType0", "a;(Lcom/google/gson/JsonObject;Lnet/minecraft/server/v1_16_R3/LootEntryAbstract;Lcom/google/gson/JsonSerializationContext;)V"])
+            }
+            c(["gg"]) {
+                m(["a;(Ljava/lang/Object;)I", "getIdVanilla"])
+            }
+        }
     }
 
 }

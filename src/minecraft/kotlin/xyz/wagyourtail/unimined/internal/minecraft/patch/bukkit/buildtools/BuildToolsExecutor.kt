@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools
 import com.google.gson.JsonParser
 import org.eclipse.jgit.api.Git
 import org.gradle.api.Project
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.cachingDownload
@@ -147,6 +149,11 @@ class BuildToolsExecutor(
         if (!targetFile.exists() || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/BuildTools] running build tools")
             project.execOps.javaexec {
+                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                it.executable = toolchain.launcherFor {
+                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
+                }.get().executablePath.asFile.absolutePath
+
                 it.classpath(project.files(buildTools))
                 it.mainClass.set("org.spigotmc.builder.Bootstrap")
                 it.args("--compile", target.name.lowercase(), "--dont-update", "--dev")

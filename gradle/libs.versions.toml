@@ -1,5 +1,4 @@
 [versions]
-java = "8"
 # Kotlin 2.2.0 is only supported by Gradle 9+. Gradle 9 removes support for Java 8.
 kotlin = "2.1.20"
 dokka = "2.0.0"
@@ -66,3 +65,4 @@ asm-all = ["asm", "asm-commons", "asm-tree", "asm-analysis", "asm-util"]
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

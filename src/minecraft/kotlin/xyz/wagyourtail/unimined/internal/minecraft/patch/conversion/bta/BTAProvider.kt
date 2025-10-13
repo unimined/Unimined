@@ -45,6 +45,7 @@ class BTAProvider(project: Project, sourceSet: SourceSet) : AbstractTotalConvers
 
 	init {
 		mappings.devNamespace = Namespace("official")
+		mappings.splitUnmapped = false
 		replaceLibraryVersion("org.lwjgl.lwjgl", version = "2.9.4+legacyfabric.10")
 	}
 
