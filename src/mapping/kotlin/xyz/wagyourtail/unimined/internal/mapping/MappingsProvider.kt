@@ -19,7 +19,6 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
-import xyz.wagyourtail.unimined.mapping.formats.csrg.CsrgReader.mapPackage
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3ClassesReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3FieldReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3MethodReader
@@ -1035,7 +1034,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
                     if (className.contains("/")) return internalName;
 
-                    return packageMap[pack] + internalName.substring(pack.length)
+                    return packageMap[pack] + className
                 }
 
                 return internalName
