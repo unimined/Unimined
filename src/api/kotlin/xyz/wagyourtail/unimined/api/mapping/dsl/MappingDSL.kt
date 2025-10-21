@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.PackageName
 import xyz.wagyourtail.unimined.mapping.util.Scoped
 import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.FieldVisitor
@@ -42,6 +43,10 @@ class MappingDSL(val visitor: MappingVisitor) {
                 block.call()
             }
         }
+    }
+
+    fun k(vararg names: String?) {
+        visitor.visitPackage(mappings.zip(names.toList()).toMap().filterNotNullValues().mapValues { PackageName.read(it.value) })
     }
 
     @Scoped

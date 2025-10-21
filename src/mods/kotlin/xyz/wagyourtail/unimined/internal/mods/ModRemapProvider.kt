@@ -129,6 +129,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             .skipLocalVariableMapping(true)
             .ignoreConflicts(true)
             .threads(Runtime.getRuntime().availableProcessors())
+            .extraRemapper(provider.mappings.getExtraRemapper(
+                fromNs to toNs
+            ))
         val classpath = KotlinClasspathService.getOrCreateIfRequired(project)
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
