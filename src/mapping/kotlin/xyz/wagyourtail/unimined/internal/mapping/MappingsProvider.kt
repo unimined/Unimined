@@ -9,6 +9,7 @@ import okio.source
 import okio.use
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.objectweb.asm.commons.Remapper
 import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -18,6 +19,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.csrg.CsrgReader.mapPackage
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3ClassesReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3FieldReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3MethodReader
@@ -1007,6 +1009,37 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
             })
 
             mappings.accept(visitor)
+        }
+    }
+
+    override suspend fun getExtraRemapper(remap: Pair<Namespace, Namespace>): Remapper {
+        val mappings = this.resolve()
+
+        val srcName = remap.first
+        val dstName = remap.second
+
+        val packageMap = mappings.packageList()
+            .filter { it.first.contains(srcName) && it.first.contains(dstName) }
+            .associate { it.first[srcName]!!.value to it.first[dstName]!!.value }
+
+        val packages = packageMap.keys
+
+        return object : Remapper() {
+            override fun map(internalName: String?): String? {
+                if (internalName == null) return null
+
+                val pack = packages.filter { internalName.startsWith(it) }.maxByOrNull { it.length }
+
+                if (pack != null) {
+                    val className = internalName.substring(pack.length)
+
+                    if (className.contains("/")) return internalName;
+
+                    return packageMap[pack] + internalName.substring(pack.length)
+                }
+
+                return internalName
+            }
         }
     }
 
