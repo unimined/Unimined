@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonObject
 import kotlinx.coroutines.runBlocking
+import org.apache.commons.lang3.ArchUtils
+import org.apache.commons.lang3.SystemUtils
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
@@ -125,7 +127,44 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         if (library.name.startsWith("org.apache.httpcomponents:")) {
             return null
         }
+        if (library.name.startsWith("ore.lwjgl:") && library.name.split(":").size > 3) {
+            if (library.name.split(":")[3] != getLwjglClassifier()) {
+                return null
+            }
+        }
         return super.libraryFilter(library)
+    }
+
+    private fun getLwjglClassifier(): String {
+        val processor = ArchUtils.getProcessor()
+        var classifier = ""
+        if (SystemUtils.IS_OS_WINDOWS) {
+            classifier += "windows"
+            if (processor.isAarch64) {
+                classifier += "-arm64"
+            } else if (processor.is32Bit) {
+                classifier += "-x86"
+            }
+        } else if (SystemUtils.IS_OS_LINUX) {
+            classifier += "linux"
+            if (processor.isAarch64) {
+                classifier += "-arm64"
+            } else if (processor.isRISCV) {
+                classifier += "-riscv64"
+            } else if (processor.isPPC) {
+                classifier += "-ppc64le"
+            } else if (!processor.isX86) {
+                classifier += "-arm32"
+            }
+        } else if (SystemUtils.IS_OS_MAC) {
+            classifier += "macos"
+            if (!processor.isX86) {
+                classifier += "-arm64"
+            }
+        } else if (SystemUtils.IS_OS_FREE_BSD) {
+            classifier = "freebsd"
+        }
+        return classifier
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
