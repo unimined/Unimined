@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getFiles
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Writer
 import java.io.File
+import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -68,6 +69,14 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         project.unimined.cleanroomRepos()
         project.unimined.arcseekersMaven()
         project.unimined.minecraftForgeMaven()
+        project.repositories.removeIf { it.name == "minecraft" }
+        project.repositories.maven { repo ->
+            repo.name = "minecraft"
+            repo.url = URI.create("https://libraries.minecraft.net/")
+            repo.content {
+                it.excludeGroup("ca.weblite")
+            }
+        }
     }
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
