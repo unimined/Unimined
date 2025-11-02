@@ -181,17 +181,17 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
-        val modClassPath = provider.mods.getClasspath().toMutableSet()
-        config.classpath = config.classpath.minus(project.files(modClassPath))
+        val modClassPath = provider.mods.getClasspath()
+        val extraPath = mutableSetOf<File>()
         config.classpath = config.classpath.filter { 
-            if (it.isDirectory) {
-                modClassPath += it
+            if (it.isDirectory || modClassPath.contains(it)) {
+                extraPath += it
                 false
             } else {
                 true
             }
         }
-        config.jvmArgs("-Dcrl.dev.extrapath=${modClassPath.joinToString(File.pathSeparator) { it.absolutePath }}")
+        config.jvmArgs("-Dcrl.dev.extrapath=${extraPath.joinToString(File.pathSeparator) { it.absolutePath }}")
         config.javaVersion = JavaVersion.VERSION_21
     }
 
@@ -200,17 +200,17 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         config.properties["mcp_to_srg"] = {
             srgToMCPAsTSRG.absolutePathString()
         }
-        val modClassPath = provider.mods.getClasspath().toMutableSet()
-        config.classpath = config.classpath.minus(project.files(modClassPath))
+        val modClassPath = provider.mods.getClasspath()
+        val extraPath = mutableSetOf<File>()
         config.classpath = config.classpath.filter {
-            if (it.isDirectory) {
-                modClassPath += it
+            if (it.isDirectory || modClassPath.contains(it)) {
+                extraPath += it
                 false
             } else {
                 true
             }
         }
-        config.jvmArgs("-Dcrl.dev.extrapath=${modClassPath.joinToString(File.pathSeparator) { it.absolutePath }}")
+        config.jvmArgs("-Dcrl.dev.extrapath=${extraPath.joinToString(File.pathSeparator) { it.absolutePath }}")
     }
 
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {
