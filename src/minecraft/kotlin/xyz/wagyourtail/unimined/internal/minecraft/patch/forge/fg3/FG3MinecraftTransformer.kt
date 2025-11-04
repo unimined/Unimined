@@ -1,11 +1,30 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3
 
+import com.github.javaparser.JavaParser
+import com.github.javaparser.ParserConfiguration
+import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.body.BodyDeclaration
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
+import com.github.javaparser.ast.body.TypeDeclaration
+import com.github.javaparser.ast.visitor.VoidVisitor
+import com.github.javaparser.printer.DefaultPrettyPrinterVisitor
+import com.github.javaparser.printer.configuration.DefaultConfigurationOption
+import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration
+import com.github.javaparser.printer.configuration.Indentation
+import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter
+import com.google.common.base.Splitter
+import com.google.common.collect.ArrayListMultimap
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.binarypatcher.ConsoleTool
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry
 import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream
+import org.apache.commons.io.IOUtils
 import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -33,12 +52,17 @@ import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 import kotlin.io.path.*
+import kotlin.jvm.javaClass
 
 open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer) :
     JarModMinecraftTransformer(
@@ -813,21 +837,144 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         linemappedPath: Path?,
         side: EnvType
     ) {
+        var preATOutputPath = outputPath
+        val shouldAT = isATExists()
+        if (shouldAT) {
+            preATOutputPath = outputPath.parent.resolve("${outputPath.nameWithoutExtension}-pre-at.jar")
+        }
         if (side != EnvType.JOINED) {
-            super.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath, side)
+            super.createSourcesJar(classpath, patchedJar, preATOutputPath, linemappedPath, side)
         } else {
             if (provider.mappings.checkedNs(obfNamespace) != provider.mappings.devNamespace) {
-                val temp = outputPath.parent.resolve("${outputPath.nameWithoutExtension}-${defaultProdNamespace()}.jar")
+                val temp =
+                    preATOutputPath.parent.resolve("${preATOutputPath.nameWithoutExtension}-${defaultProdNamespace()}.jar")
                 executeMcp("forgePatch", temp)
                 provider.sourceProvider.sourceRemapper.remap(
-                    mapOf(temp to outputPath),
+                    mapOf(temp to preATOutputPath),
                     provider.minecraftLibraries,
                     defaultProdNamespace(),
                     provider.mappings.devNamespace
                 )
             } else {
-                executeMcp("forgePatch", outputPath)
+                executeMcp("forgePatch", preATOutputPath)
             }
         }
+        if (shouldAT) {
+            atProcessSourceJar(preATOutputPath, outputPath)
+        }
     }
+
+    private fun isATExists(): Boolean {
+        return parent.accessTransformer != null && parent.accessTransformer!!.exists() && parent.accessTransformer!!.isFile
+    }
+
+    private fun atProcessSourceJar(input: Path, output: Path) {
+        val atmap = ArrayListMultimap.create<String, Modifier>()
+        if (isATExists()) {
+            parent.accessTransformer!!.readLines(StandardCharsets.UTF_8).forEach {
+                val line = Iterables.getFirst(Splitter.on('#').limit(2).split(it), "").trim()
+                if (!line.isEmpty()) {
+                    val parts = Lists.newArrayList(Splitter.on(" ").trimResults().split(line))
+                    var modifyClass = false
+                    var name = ""
+                    var desc = ""
+                    var modifyFinal = false
+                    if (parts.size < 4) {
+                        if (parts.size == 2) {
+                            modifyClass = true
+                        } else {
+                            val nameReference = parts[2]
+                            val parenIdx = nameReference.indexOf('(')
+                            if (parenIdx > 0) {
+                                desc = nameReference.substring(parenIdx)
+                                name = nameReference.take(parenIdx)
+                            } else {
+                                name = nameReference
+                            }
+                        }
+                        val className = parts[1].replace('/', '.')
+                        if (parts[0].endsWith("-f")) {
+                            modifyFinal = true
+                        }
+                        atmap.put(className, Modifier(modifyClass, name, desc, modifyFinal))
+                    }
+                }
+            }
+        }
+
+        val inputJar = JarFile(input.toFile())
+        val parserConfiguration = ParserConfiguration().setLexicalPreservationEnabled(true).setLanguageLevel(
+            ParserConfiguration.LanguageLevel.BLEEDING_EDGE)
+        val parser = JavaParser(parserConfiguration)
+        val outStram = JarOutputStream(FileOutputStream(output.toFile()))
+        
+        inputJar.entries().iterator().forEach { entry ->
+            project.logger.info("Checking jar entry {}", entry.name)
+            if (entry.name.endsWith(".java")) {
+                val cu: CompilationUnit = parser.parse(inputJar.getInputStream(entry)).result.get()
+                val types = mutableListOf<BodyDeclaration<*>>()
+                cu.types.forEach { type ->
+                    type.members.forEach { member -> 
+                        if (member.isClassOrInterfaceDeclaration) {
+                            types.add(member.asClassOrInterfaceDeclaration())
+                        }
+                    }
+                }
+                cu.primaryType.ifPresent { types.add(it) }
+                cu.types.forEach { type ->
+                    if (type.isClassOrInterfaceDeclaration) {
+                        types.add(type)
+                    }
+                }
+                types.forEach { member ->
+                    project.logger.info("Checking class/interface {}", member.asClassOrInterfaceDeclaration().fullyQualifiedName.get())
+                    val modifiers = atmap.get(member.asClassOrInterfaceDeclaration().fullyQualifiedName.get())
+                    if (modifiers.isNotEmpty()) {
+                        modifiers.forEach { modifier ->
+                            if (modifier.modifyClass) {
+                                member.asClassOrInterfaceDeclaration().isPublic = true
+                                member.asClassOrInterfaceDeclaration().isPrivate = false
+                                member.asClassOrInterfaceDeclaration().isProtected = false
+                                if (modifier.modifyFinal) {
+                                    member.asClassOrInterfaceDeclaration().isFinal = false
+                                }
+                            } else if (modifier.desc.isEmpty()) {
+                                member.asClassOrInterfaceDeclaration().fields.forEach { field ->
+                                    project.logger.info("Checking field {}", field.getVariable(0).name)
+                                    if (field.getVariable(0).name.asString() == modifier.name) {
+                                        field.isPublic = true
+                                        field.isPrivate = false
+                                        field.isProtected = false
+                                        if (modifier.modifyFinal) {
+                                            field.isFinal = false
+                                        }
+                                    }
+                                }
+                            } else {
+                                member.asClassOrInterfaceDeclaration().methods.forEach { method ->
+                                    project.logger.info("Checking field {} {}", method.name.asString(), method.toDescriptor())
+                                    if (method.name.asString() == modifier.name && method.toDescriptor() == modifier.desc) {
+                                        method.isPublic = true
+                                        method.isPrivate = false
+                                        method.isProtected = false
+                                        if (modifier.modifyFinal) {
+                                            method.isFinal = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                        
+                val outEntry = ZipEntry(entry.name)
+                outStram.putNextEntry(outEntry)
+                IOUtils.write(LexicalPreservingPrinter.print(cu), outStram, StandardCharsets.UTF_8)
+                outStram.closeEntry()
+            }
+        }
+        outStram.close()
+    }
+
+    data class Modifier(val modifyClass: Boolean, val name: String, val desc: String, val modifyFinal: Boolean)
 }
