@@ -183,6 +183,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         }
         val modClassPath = provider.mods.getClasspath()
         val extraPath = mutableSetOf<File>()
+        project.logger.info("Path before: {}", config.classpath.files.toString())
+        project.logger.info("Mod paths: {}", modClassPath.toString())
         config.classpath = config.classpath.filter { 
             if (it.isDirectory || modClassPath.contains(it)) {
                 extraPath += it
@@ -191,6 +193,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
                 true
             }
         }
+        project.logger.info("Path after: {}", config.classpath.files.toString())
+        project.logger.info("Extra mod paths: {}", extraPath.toString())
         config.jvmArgs("-Dcrl.dev.extrapath=${extraPath.joinToString(File.pathSeparator) { it.absolutePath }}")
         config.javaVersion = JavaVersion.VERSION_21
     }
@@ -202,6 +206,8 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         }
         val modClassPath = provider.mods.getClasspath()
         val extraPath = mutableSetOf<File>()
+        project.logger.info("Path before: {}", config.classpath.files.toString())
+        project.logger.info("Mod paths: {}", modClassPath.toString())
         config.classpath = config.classpath.filter {
             if (it.isDirectory || modClassPath.contains(it)) {
                 extraPath += it
@@ -210,7 +216,10 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
                 true
             }
         }
+        project.logger.info("Path after: {}", config.classpath.files.toString())
+        project.logger.info("Extra mod paths: {}", extraPath.toString())
         config.jvmArgs("-Dcrl.dev.extrapath=${extraPath.joinToString(File.pathSeparator) { it.absolutePath }}")
+        config.javaVersion = JavaVersion.VERSION_21
     }
 
     class CleanroomFG3(project: Project, parent: CleanroomMinecraftTransformer): FG3MinecraftTransformer(project, parent) {

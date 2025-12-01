@@ -131,6 +131,8 @@ dependencies {
     implementation(libs.java.keyring)
     implementation(libs.minecraftauth)
 
+    implementation("com.github.javaparser:javaparser-core:3.27.1")
+
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -228,7 +230,7 @@ publishing {
     repositories {
         maven {
             name = "WagYourMaven"
-            url = uri("https://maven.wagyourtail.xyz/" + if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/")
+            url = uri("https://maven.outlands.top/" + if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/")
             credentials {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
                 password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
