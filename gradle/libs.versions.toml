@@ -25,6 +25,8 @@ access-widener = "2.1.0"
 # JGit 5.x is the last version that supports Java 8.
 jgit = "5.13.3.202401111512-r"
 
+jparser = "3.27.1"
+
 keyring = "1.0.2"
 minecraftauth = "4.1.2"
 
@@ -54,6 +56,8 @@ commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+
+jparser = { module = "com.github.javaparser:javaparser-core", version.ref = "jparser"}
 
 java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "keyring" }
 minecraftauth = { module = "net.raphimc:MinecraftAuth", version.ref = "minecraftauth" }

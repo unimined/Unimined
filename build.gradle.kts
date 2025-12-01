@@ -131,7 +131,7 @@ dependencies {
     implementation(libs.java.keyring)
     implementation(libs.minecraftauth)
 
-    implementation("com.github.javaparser:javaparser-core:3.27.1")
+    implementation(libs.jparser)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
