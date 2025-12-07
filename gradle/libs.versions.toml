@@ -58,6 +58,7 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
 jparser = { module = "com.github.javaparser:javaparser-core", version.ref = "jparser"}
+jresolver = { module = "com.github.javaparser:javaparser-symbol-solver-core", version.ref = "jparser"}
 
 java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "keyring" }
 minecraftauth = { module = "net.raphimc:MinecraftAuth", version.ref = "minecraftauth" }

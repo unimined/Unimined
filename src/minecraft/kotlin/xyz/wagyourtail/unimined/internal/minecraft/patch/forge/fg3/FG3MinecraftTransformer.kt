@@ -14,6 +14,12 @@ import com.github.javaparser.printer.configuration.DefaultConfigurationOption
 import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration
 import com.github.javaparser.printer.configuration.Indentation
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter
+import com.github.javaparser.symbolsolver.JavaSymbolSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.TypeSolverBuilder
 import com.google.common.base.Splitter
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.Iterables
@@ -860,7 +866,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
         if (shouldAT) {
-            atProcessSourceJar(preATOutputPath, outputPath)
+            atProcessSourceJar(preATOutputPath, outputPath, patchedJar)
         }
     }
 
@@ -868,7 +874,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         return parent.accessTransformer != null && parent.accessTransformer!!.exists() && parent.accessTransformer!!.isFile
     }
 
-    private fun atProcessSourceJar(input: Path, output: Path) {
+    private fun atProcessSourceJar(input: Path, output: Path, patchedJar: Path) {
         val atmap = ArrayListMultimap.create<String, Modifier>()
         if (isATExists()) {
             parent.accessTransformer!!.readLines(StandardCharsets.UTF_8).forEach {
@@ -903,8 +909,10 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
         val inputJar = JarFile(input.toFile())
-        val parserConfiguration = ParserConfiguration().setLexicalPreservationEnabled(true).setLanguageLevel(
-            ParserConfiguration.LanguageLevel.BLEEDING_EDGE)
+        
+        val parserConfiguration = ParserConfiguration().setLexicalPreservationEnabled(true)
+            .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE)
+            .setSymbolResolver(JavaSymbolSolver(TypeSolverBuilder().withJAR(patchedJar).withCurrentJRE().build()))
         val parser = JavaParser(parserConfiguration)
         val outStram = JarOutputStream(FileOutputStream(output.toFile()))
         

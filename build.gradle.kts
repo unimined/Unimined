@@ -132,6 +132,7 @@ dependencies {
     implementation(libs.minecraftauth)
 
     implementation(libs.jparser)
+    implementation(libs.jresolver)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
