@@ -532,7 +532,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
             val additionalArgs = listOf("--data", "--unpatched")
-            val isModernNeo = (SemVerUtils.matches(provider.version, ">1.21.10") && parent.providerName.equals("NeoForged", true))
+            val isModernNeo = (provider.minecraftData.mcVersionCompare("1.21.11", provider.version) == -1 && parent.providerName.equals("NeoForged", true))
 
             val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
                 when (it.asString) {
