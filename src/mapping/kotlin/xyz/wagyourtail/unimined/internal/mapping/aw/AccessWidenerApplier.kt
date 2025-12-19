@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.internal.mapping.aw
 
 import kotlinx.coroutines.runBlocking
-import net.fabricmc.accesswidener.*
+import net.fabricmc.classtweaker.api.ClassTweaker
+import net.fabricmc.classtweaker.api.ClassTweakerReader
+import net.fabricmc.classtweaker.api.ClassTweakerWriter
+import net.fabricmc.classtweaker.api.visitor.ClassTweakerVisitor
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import okio.use
@@ -38,7 +41,9 @@ object AccessWidenerApplier {
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             // read the beginning of the file and see if it begins with "accessWidener"
             return relativePath.extension.equals("accesswidener", true) ||
-                    relativePath.extension.equals("aw", true)
+                    relativePath.extension.equals("aw", true) ||
+                    relativePath.extension.equals("classtweaker", true)||
+                    relativePath.extension.equals("ct", true)
         }
 
         override fun transform(
@@ -47,13 +52,14 @@ object AccessWidenerApplier {
             input: InputStream,
             remapper: TinyRemapper
         ) {
-            val awr = AccessWidenerWriter()
             val aw = input.readBytes()
+            val header = ClassTweakerReader.readHeader(aw)
+            val awr = ClassTweakerWriter.create(header.version)
             try {
-                AccessWidenerReader(AccessWidenerRemapper(awr, remapper.environment.remapper, source, target)).read(BufferedReader(InputStreamReader(ByteArrayInputStream(aw), StandardCharsets.UTF_8)))
+                ClassTweakerReader.create(ClassTweakerVisitor.remap(awr, remapper.environment.remapper, source, target)).read(BufferedReader(InputStreamReader(ByteArrayInputStream(aw), StandardCharsets.UTF_8)))
                 val output = destinationDirectory.resolve(relativePath)
                 output.parent.createDirectories()
-                Files.write(output, awr.write(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                Files.write(output, awr.output, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             } catch (t: IllegalArgumentException) {
                 if (t.message?.startsWith("Cannot remap access widener from namespace") != true) throw t
                 if (!catchNsError) {
@@ -74,21 +80,21 @@ object AccessWidenerApplier {
         }
 
     fun transform(
-        accessWidener: Path,
+        classTweaker: Path,
         namespace: String,
         baseMinecraft: Path,
         output: Path,
         throwIfNSWrong: Boolean,
         logger: Logger
     ): Boolean {
-        val aw = AccessWidener()
-        AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
-        if (aw.namespace == namespace) {
+        val ct = ClassTweaker.newInstance()
+        ClassTweakerReader.create(ct).read(BufferedReader(classTweaker.reader()))
+        if (ct.namespace == namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             try {
-                val targets = aw.targets.toMutableSet()
+                val targets = ct.targets.toMutableSet()
                 ZipArchiveOutputStream(output.outputStream()).use { zipOutput ->
-                    logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
+                    logger.debug("Transforming $output with class tweaker $classTweaker and namespace $namespace")
                     baseMinecraft.forEachInZip { path, stream ->
                         if (path.endsWith(".class")) {
                             val target = path.removeSuffix(".class").replace("/", ".")
@@ -97,14 +103,14 @@ object AccessWidenerApplier {
                                     logger.debug("Transforming $path")
                                     val reader = ClassReader(stream)
                                     val writer = ClassWriter(0)
-                                    val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
+                                    val visitor = ct.createClassVisitor(Opcodes.ASM9, writer, null)
                                     reader.accept(visitor, 0)
                                     zipOutput.putArchiveEntry(ZipArchiveEntry(path))
                                     zipOutput.write(writer.toByteArray())
                                     zipOutput.closeArchiveEntry()
                                 } catch (e: Exception) {
                                     logger.warn(
-                                        "An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output",
+                                        "An error occurred while transforming $target with class tweaker $classTweaker for namespace $namespace in $output",
                                         e
                                     )
                                 }
@@ -122,7 +128,7 @@ object AccessWidenerApplier {
                     }
                 }
                 if (targets.isNotEmpty()) {
-                    logger.warn("AccessWidener $accessWidener did not find the following classes: $targets")
+                    logger.warn("ClassTweaker $classTweaker did not find the following classes: $targets")
                 }
             } catch (e: Exception) {
                 output.deleteIfExists()
@@ -131,9 +137,9 @@ object AccessWidenerApplier {
             return true
         }
         if (throwIfNSWrong) {
-            throw IllegalStateException("AccessWidener namespace (${aw.namespace}) does not match minecraft namespace ($namespace)")
+            throw IllegalStateException("ClassTweaker namespace (${ct.namespace}) does not match minecraft namespace ($namespace)")
         } else {
-            logger.info("AccessWidener ($accessWidener) namespace (${aw.namespace}) does not match minecraft namespace ($namespace), it will not be applied!")
+            logger.info("ClassTweaker ($classTweaker) namespace (${ct.namespace}) does not match minecraft namespace ($namespace), it will not be applied!")
         }
         return false
     }
