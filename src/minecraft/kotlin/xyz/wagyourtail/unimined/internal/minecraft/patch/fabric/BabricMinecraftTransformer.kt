@@ -2,12 +2,13 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 
-open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
+open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): LegacyFabricMinecraftTransformer(project, provider) {
     override var canCombine: Boolean by FinalizeOnRead(LazyMutable { provider.version == "b1.7.3" })
 
     override val defaultProdNamespace: String = "babricIntermediary"
@@ -34,5 +35,8 @@ open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvi
 
     override val includeGlobs: List<String>
         get() = super.includeGlobs + "argo/**"
+
+    override fun additionalRemapJarConfiguration(task: AbstractRemapJarTask) {
+    }
 
 }
