@@ -25,9 +25,16 @@ class FoxLoaderMinecraftTransformer(
 
     val foxLoaderVersions: Map<String, String> by lazy {
         project.cachingDownload("https://cdn.fox2code.com/maven/foxloader-version-map.json").inputStream().use {
-            Gson().fromJson(InputStreamReader(it), JsonObject::class.java).asMap().map { entry ->
-                entry.key to entry.value.asString
-            }.toMap()
+            Gson().fromJson(InputStreamReader(it), JsonObject::class.java).asMap().mapValues { entry ->
+                val version = entry.value.asString
+                if ('_' !in version) {
+                    version
+                } else {
+                    var (v, p) = version.split('_')
+                    if (p.length == 1) p = "0$p"
+                    "${v}_${p}"
+                }
+            }
         }
     }
 
@@ -53,13 +60,9 @@ class FoxLoaderMinecraftTransformer(
         project.configurations.maybeCreate("foxLoaderInvoker")
     }
 
-    val foxLoaderCompatibleVersion by lazy {
-        provider.version.replaceFirst(Regex("_0*"), "_")
-    }
-
     override fun loader() {
         foxLoaderVersions.filter {
-            it.value == foxLoaderCompatibleVersion
+            it.value == provider.version
         }.keys.reduce { prev, curr ->
             if (curr.compareFlexVer(prev) > 0) curr else prev
         }.also { version ->
@@ -70,8 +73,8 @@ class FoxLoaderMinecraftTransformer(
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         foxLoaderInvoker.dependencies.add(project.dependencies.create("com.fox2code:FoxLoaderInvoker:1.1.0"))
 
-        if (!foxLoaderVersions.containsValue(foxLoaderCompatibleVersion)) {
-            project.logger.error("Incompatible FoxLoader $dep for ReIndev $foxLoaderCompatibleVersion")
+        if (!foxLoaderVersions.containsValue(provider.version)) {
+            project.logger.error("Incompatible FoxLoader $dep for ReIndev ${provider.version}")
             project.logger.error("FoxLoader valid version pairs: $foxLoaderVersions")
             throw RuntimeException(IllegalArgumentException("FoxLoader version is not compatible with ReIndev version"))
         }
