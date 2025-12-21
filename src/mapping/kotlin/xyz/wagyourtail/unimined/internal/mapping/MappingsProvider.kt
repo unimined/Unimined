@@ -321,12 +321,6 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
 
     override fun mojmap() {
-        // 26.1+ is unmapped, so we just use the "official" namespace
-        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
-            devNamespace("official")
-            return
-        }
-
         mojmapIvy()
         val mappings = when (envType) {
             EnvType.CLIENT, EnvType.JOINED -> "client"
