@@ -193,6 +193,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
     }
 
     override fun mojmap(key: String, action: MappingDepConfig.() -> Unit) {
+        // 26.1+ is unmapped, so we just use the "official" namespace
+        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
+            devNamespace("official")
+            devFallbackNamespace("official")
+            return
+        }
+
         val mapping = when (minecraft.side) {
             EnvType.CLIENT, EnvType.COMBINED -> "client"
             EnvType.SERVER, EnvType.DATAGEN -> "server"
