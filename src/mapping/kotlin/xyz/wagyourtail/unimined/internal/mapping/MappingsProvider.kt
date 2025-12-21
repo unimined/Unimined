@@ -35,10 +35,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
     private var freeze by FinalizeOnWrite(false)
 
     override var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
+            return@LazyMutable OFFICIAL
+        }
         getNamespaces().values.firstOrNull { it.named } ?: throw IllegalStateException("No named namespace found in ${getNamespaces().keys}")
     })
 
     override var devFallbackNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
+            return@LazyMutable OFFICIAL
+        }
         devNamespace.targets.firstOrNull { it != OFFICIAL } ?: if (devNamespace.targets.contains(OFFICIAL)) OFFICIAL else throw IllegalStateException("No fallback namespace found")
     })
 
@@ -193,13 +199,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
     }
 
     override fun mojmap(key: String, action: MappingDepConfig.() -> Unit) {
-        // 26.1+ is unmapped, so we just use the "official" namespace
-        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
-            devNamespace("official")
-            devFallbackNamespace("official")
-            return
-        }
-
         val mapping = when (minecraft.side) {
             EnvType.CLIENT, EnvType.COMBINED -> "client"
             EnvType.SERVER, EnvType.DATAGEN -> "server"
