@@ -15,7 +15,7 @@ interface RemapJarTask : JarInterface<AbstractRemapJarTask>, RemapOptions {
      */
     @get:Input
     @get:Optional
-    val remapATToLegacy: Property<Boolean?>
+    val remapATToLegacy: Property<Boolean>
 
     fun mixinRemap(action: MixinRemapOptions.() -> Unit)
 

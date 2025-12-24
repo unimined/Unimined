@@ -4,6 +4,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
@@ -37,6 +38,9 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import java.nio.file.Path
 
 class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider): AbstractMinecraftTransformer(project, provider, "merged"), MergedPatcher {
+
+    // Quick hack to make previously impossible val/var conflict in Kotlin 1.x compile
+    override var prodNamespace: MappingNamespaceTree.Namespace = super.prodNamespace
 
     val patchers = mutableListOf<AbstractMinecraftTransformer>()
 

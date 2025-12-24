@@ -7,6 +7,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
+import xyz.wagyourtail.unimined.util.execOps
 
 object SubprocessExecutor {
     fun shouldShowVerboseStdout(project: Project): Boolean {
@@ -27,7 +28,7 @@ object SubprocessExecutor {
      * @return the execution result
      */
     fun exec(project: Project, configurator: Action<in JavaExecSpec>): ExecResult {
-        return project.javaexec { spec: JavaExecSpec ->
+        return project.execOps.javaexec { spec: JavaExecSpec ->
             spec.workingDir(project.rootProject.projectDir)
             configurator.execute(spec)
             if (shouldShowVerboseStdout(project)) {

@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.execOps
 import xyz.wagyourtail.unimined.util.getShortSha1
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.suppressLogs
@@ -136,7 +137,7 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
             }
         }
         try {
-            project.javaexec { spec ->
+            project.execOps.javaexec { spec ->
                 val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
                 spec.executable = toolchain.launcherFor {
                     it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
