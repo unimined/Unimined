@@ -289,7 +289,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         }
         val output = Files.createTempFile("yarnv1+${build}+filled", ".tiny")
 
-        project.javaexec {
+        project.execOps.javaexec {
             it.classpath = project.configurations.detachedConfiguration(
                 project.dependencies.create(
                     "net.fabricmc:stitch:0.6.2"

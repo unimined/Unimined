@@ -62,7 +62,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         }
 
         outputPath.deleteIfExists()
-        project.javaexec { spec ->
+        project.execOps.javaexec { spec ->
 
             val javaVersion = javaVersion
             if (javaVersion != null) {

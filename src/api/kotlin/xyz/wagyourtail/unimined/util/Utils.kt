@@ -20,6 +20,7 @@ import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.gradle.process.ExecOperations
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.unimined
 import java.io.File
@@ -31,6 +32,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipOutputStream
+import javax.inject.Inject
 import kotlin.io.path.*
 import kotlin.math.pow
 import kotlin.reflect.KClass
@@ -530,6 +532,16 @@ fun Project.shouldShowVerboseStdout(): Boolean {
 fun Project.shouldShowVerboseStderr(): Boolean {
     return shouldShowVerboseStdout() || gradle.startParameter.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS
 }
+
+interface InjectedExecOps {
+    @get:Inject
+    val execOps: ExecOperations
+}
+
+val Project.execOps: ExecOperations
+    get() {
+        return project.objects.newInstance(InjectedExecOps::class.java).execOps
+    }
 
 fun Project.suppressLogs(spec: JavaExecSpec) {
     if (shouldShowVerboseStdout()) {

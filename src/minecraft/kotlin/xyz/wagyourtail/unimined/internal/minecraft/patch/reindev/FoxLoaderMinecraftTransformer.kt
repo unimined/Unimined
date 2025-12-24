@@ -136,7 +136,7 @@ class FoxLoaderMinecraftTransformer(
         project.logger.info(transformed.path.absolutePathString())
         project.logger.info(newPath.absolutePathString())
 
-        project.javaexec {
+        project.execOps.javaexec {
             it.classpath = foxLoaderInvoker
             it.mainClass.set("com/fox2code/foxloader/invoker/Main")
             it.args(
