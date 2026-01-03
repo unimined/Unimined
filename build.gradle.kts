@@ -128,7 +128,7 @@ dependencies {
     }
     implementation(libs.jbsdiff)
 
-    implementation(libs.access.widener)
+    implementation(libs.classtweaker)
 
     implementation(libs.commons.io)
     implementation(libs.commons.compress)

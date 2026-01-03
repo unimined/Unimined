@@ -19,7 +19,7 @@ jbsdiff = "1.0"
 commons-io = "2.20.0"
 commons-compress = "1.28.0"
 
-access-widener = "2.1.0"
+classtweaker = "0.2"
 
 # JGit 5.x is the last version that supports Java 8.
 jgit = "5.13.3.202401111512-r"
@@ -47,7 +47,7 @@ unimined-mapping-library-jvm = { module = "xyz.wagyourtail.unimined.mapping:unim
 binarypatcher = { module = "net.minecraftforge:binarypatcher", version.ref = "binarypatcher" }
 jbsdiff = { module = "io.sigpipe:jbsdiff", version.ref = "jbsdiff" }
 
-access-widener = { module = "net.fabricmc:access-widener", version.ref = "access-widener" }
+classtweaker = { module = "net.fabricmc:class-tweaker", version.ref = "classtweaker" }
 
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }

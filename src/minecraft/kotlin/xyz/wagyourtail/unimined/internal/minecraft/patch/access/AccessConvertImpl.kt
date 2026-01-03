@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.access
 
 import kotlinx.coroutines.runBlocking
-import net.fabricmc.accesswidener.AccessWidenerReader
 import okio.buffer
 import okio.sink
 import okio.source
@@ -14,7 +13,6 @@ import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATWriter
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
-import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 
