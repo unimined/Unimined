@@ -126,6 +126,10 @@ dependencies {
     implementation(libs.binarypatcher) {
         exclude(mapOf("group" to "commons-io"))
     }
+
+    implementation(libs.neo.binarypatcher) {
+        exclude(mapOf("group" to "commons-io"))
+    }
     implementation(libs.jbsdiff)
 
     implementation(libs.classtweaker)

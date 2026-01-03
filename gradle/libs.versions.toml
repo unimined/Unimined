@@ -14,6 +14,7 @@ tiny-remapper = "0.11.1"
 unimined-mapping-library = "1.2.1"
 
 binarypatcher = "1.1.1"
+neo_binarypatcher = "4.0.7"
 jbsdiff = "1.0"
 
 commons-io = "2.20.0"
@@ -45,6 +46,7 @@ tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-rem
 unimined-mapping-library-jvm = { module = "xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm", version.ref = "unimined-mapping-library" }
 
 binarypatcher = { module = "net.minecraftforge:binarypatcher", version.ref = "binarypatcher" }
+neo_binarypatcher = { module = "net.neoforged.installertools:binarypatcher", version.ref = "neo_binarypatcher" }
 jbsdiff = { module = "io.sigpipe:jbsdiff", version.ref = "jbsdiff" }
 
 classtweaker = { module = "net.fabricmc:class-tweaker", version.ref = "classtweaker" }
