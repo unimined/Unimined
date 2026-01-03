@@ -173,6 +173,10 @@ dependencies {
     implementation("net.minecraftforge:binarypatcher:1.1.1") {
         exclude(mapOf("group" to "commons-io"))
     }
+
+    implementation("net.neoforged.installertools:binarypatcher:4.0.7") {
+        exclude(mapOf("group" to "commons-io"))
+    }
     implementation("commons-io:commons-io:2.16.1")
 
     // pack200 provided by apache commons-compress
