@@ -97,7 +97,7 @@ object AccessWidenerApplier {
                     logger.debug("Transforming $output with class tweaker $classTweaker and namespace $namespace")
                     baseMinecraft.forEachInZip { path, stream ->
                         if (path.endsWith(".class")) {
-                            val target = path.removeSuffix(".class").replace("/", ".")
+                            val target = path.removeSuffix(".class")
                             if (target in targets) {
                                 try {
                                     logger.debug("Transforming $path")
