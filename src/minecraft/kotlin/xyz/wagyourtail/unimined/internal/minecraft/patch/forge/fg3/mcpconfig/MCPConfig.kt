@@ -16,7 +16,6 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
-import xyz.wagyourtail.unimined.mapping.formats.FormatReader
 import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
@@ -50,6 +49,12 @@ class MCPConfig(
         }
     }
 
+    private val specVersion by lazy {
+        configJson.getAsJsonPrimitive("spec").asInt
+    }
+
+    private val isSpec6 get() = specVersion >= 6
+
     private val data by lazy {
         buildMap<String, String> {
             for ((key, value) in configJson.getAsJsonObject("data").entrySet()) {
@@ -77,13 +82,32 @@ class MCPConfig(
 
     private val functions by lazy {
         buildMap<String, Function> {
-            for ((name, function) in configJson.getAsJsonObject("functions").entrySet()) {
-                put(name, Function(
-                    function.asJsonObject.getAsJsonPrimitive("version").asString,
-                    function.asJsonObject.getAsJsonPrimitive("java_version")?.asString,
-                    function.asJsonObject.getAsJsonArray("args")?.map { it.asString } ?: listOf(),
-                    function.asJsonObject.getAsJsonArray("jvmargs")?.map { it.asString } ?: listOf(),
-                ))
+            for ((name, fn) in configJson.getAsJsonObject("functions").entrySet()) {
+                val o = fn.asJsonObject
+
+                if (isSpec6) {
+                    put(
+                        name,
+                        Function(
+                            classpath = o.getAsJsonArray("classpath").map { it.asString },
+                            mainClass = o.getAsJsonPrimitive("main_class")?.asString,
+                            args = o.getAsJsonArray("args")?.map { it.asString } ?: emptyList(),
+                            jvmargs = o.getAsJsonArray("jvmargs")?.map { it.asString } ?: emptyList(),
+                            javaVersion = o.getAsJsonPrimitive("java_version")?.asInt
+                        )
+                    )
+                } else {
+                    put(
+                        name,
+                        Function(
+                            classpath = listOf(o.getAsJsonPrimitive("version").asString),
+                            mainClass = null,
+                            args = o.getAsJsonArray("args")?.map { it.asString } ?: emptyList(),
+                            jvmargs = o.getAsJsonArray("jvmargs")?.map { it.asString } ?: emptyList(),
+                            javaVersion = o.getAsJsonPrimitive("java_version")?.asInt
+                        )
+                    )
+                }
             }
         }.toMutableMap()
     }
@@ -147,6 +171,7 @@ class MCPConfig(
                         vars["prefix"] = { data.getValue("patches") }
                         PatchStep(name, prevStep, vars)
                     }
+                    "preProcessJar" -> FunctionStep(name, prevStep, vars, functions.getValue(type))
                     in functions.keys -> FunctionStep(name, prevStep, vars, functions.getValue(type))
                     else -> error("Unknown step type: $type")
                 }
@@ -230,91 +255,82 @@ class MCPConfig(
         val function: Function,
     ) : ConfigStep {
 
-        val dependency = project.dependencies.create(function.version)
-
-        val configuration by lazy {
-            val config = project.configurations.detachedConfiguration()
-            config.dependencies.add(dependency)
-            config
-        }
-
-        open fun resolveVariable(varName: String, output: Path): String {
-            if (varName == "output") {
-                return output.absolutePathString()
-            }
-            if (varName == "log") {
-                return output.resolveSibling("log.txt").absolutePathString()
-            }
-            if (variables.containsKey(varName)) {
-                return variables.getValue(varName).invoke()
-            }
-            return extractData(varName).absolutePathString()
-        }
-
-        fun List<String>.mapVariables(output: Path) = buildList<String> {
-            for (arg in this@mapVariables) {
-                add(arg.replace(Regex("\\{([^}]+)}")) {
-                    resolveVariable(it.groups[1]!!.value, output)
-                })
+        private val configuration by lazy {
+            project.configurations.detachedConfiguration().apply {
+                function.classpath.forEach {
+                    dependencies.add(project.dependencies.create(it))
+                }
             }
         }
+
+        open fun resolveVariable(varName: String, output: Path): String =
+            when (varName) {
+                "output" -> output.absolutePathString()
+                "log" -> output.resolveSibling("log.txt").absolutePathString()
+                else -> variables[varName]?.invoke()
+                    ?: extractData(varName).absolutePathString()
+            }
+
+        private fun List<String>.mapVariables(output: Path) =
+            map {
+                it.replace(Regex("\\{([^}]+)}")) { m ->
+                    resolveVariable(m.groupValues[1], output)
+                }
+            }
 
         override fun execute(dir: Path): StepResult {
             val output = dir.resolve("${name}Output.jar")
 
-            if (!output.exists() || project.unimined.forceReload) {
+            if (!output.exists() || project.unimined.forceReload)
                 output.deleteIfExists()
 
-                project
-                project.execOps.javaexec {
-                    if (useToolchains) {
-                        val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-                        if (function.java_version != null) {
-                            it.executable = try {
-                                toolchain.launcherFor {
-                                    it.languageVersion.set(JavaLanguageVersion.of(function.java_version.toInt()))
-                                }.get()
-                            } catch (e: GradleException) {
-                                throw IllegalStateException("Failed to find java version ${function.java_version}", e)
-                            }.executablePath.asFile.absolutePath
-                        } else {
-                            it.executable = try {
-                                toolchain.launcherFor {
-                                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion.toInt()))
-                                }.get()
-                            } catch (e: GradleException) {
-                                throw IllegalStateException("Failed to find java version ${function.java_version}", e)
-                            }.executablePath.asFile.absolutePath
-                        }
+            project.execOps.javaexec {
+                if (useToolchains) {
+                    val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                    if (function.javaVersion != null) {
+                        it.executable = try {
+                            toolchain.launcherFor {
+                                it.languageVersion.set(JavaLanguageVersion.of(function.javaVersion.toInt()))
+                            }.get()
+                        } catch (e: GradleException) {
+                            throw IllegalStateException("Failed to find java version ${function.javaVersion}", e)
+                        }.executablePath.asFile.absolutePath
                     } else {
-                        if (JavaVersion.current() < (JavaVersion.toVersion(function.java_version ?: 8))) {
-                            error("current java version ${JavaVersion.current()} is less than required java version ${function.java_version} to run ${function.version}")
-                        }
+                        it.executable = try {
+                            toolchain.launcherFor {
+                                it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion.toInt()))
+                            }.get()
+                        } catch (e: GradleException) {
+                            throw IllegalStateException("Failed to find java version ${function.javaVersion}", e)
+                        }.executablePath.asFile.absolutePath
                     }
-
-                    val mainClass: String
-                    try {
-                        JarFile(configuration.getFiles(dependency, "jar").single()).use { jarFile ->
-                            mainClass = jarFile.manifest.mainAttributes.getValue(Attributes.Name.MAIN_CLASS)
-                        }
-                    } catch (e: IOException) {
-                        throw IOException("Could not determine main class for $dependency", e)
+                } else {
+                    if (JavaVersion.current() < (JavaVersion.toVersion(function.javaVersion ?: 8))) {
+                        error("current java version ${JavaVersion.current()} is less than required java version ${function.javaVersion} to run ${function.classpath}")
                     }
+                }
 
-                    it.mainClass.set(mainClass)
-                    it.classpath(configuration)
-                    it.args(function.args.mapVariables(output))
-                    it.jvmArgs(function.jvmargs.mapVariables(output))
+                it.classpath(configuration)
 
-                    project.logger.info("[Unimined/MCPConfig] Executing: ${it.executable} ${it.jvmArgs} ${it.mainClass} ${it.args}")
-                    project.suppressLogs(it)
-                }.assertNormalExitValue().rethrowFailure()
+                if (function.mainClass != null) {
+                    // spec ≥6
+                    it.mainClass.set(function.mainClass)
+                } else {
+                    val jar = configuration.first()
+                    JarFile(jar).use { jf ->
+                        it.mainClass.set(
+                            jf.manifest.mainAttributes.getValue(Attributes.Name.MAIN_CLASS) ?: error("No Main-Class in manifest of $jar")
+                        )
+                    }
+                }
 
-            }
+                it.args(function.args.mapVariables(output))
+                it.jvmArgs(function.jvmargs.mapVariables(output))
+                project.suppressLogs(it)
+            }.assertNormalExitValue().rethrowFailure()
 
             return StepResult(name, output)
         }
-
     }
 
     inner class StripStep(
@@ -438,7 +454,7 @@ class MCPConfig(
         prev: String?,
         variables: MutableMap<String, () -> String>
     ) : FunctionStep(name, prev, variables, Function(
-        "net.minecraftforge:DiffPatch:2.0.12",
+        listOf("net.minecraftforge:DiffPatch:2.0.12"),
         null,
         listOf(
             "-p",
@@ -459,7 +475,8 @@ class MCPConfig(
             "{input}",
             "{patches}",
         ),
-        listOf()
+        listOf(),
+        javaVersion = null
     )) {
 
         override fun resolveVariable(varName: String, output: Path): String {
@@ -491,10 +508,11 @@ class MCPConfig(
     )
 
     data class Function(
-        val version: String,
-        val java_version: String?,
+        val classpath: List<String>,
+        val mainClass: String?,
         val args: List<String>,
-        val jvmargs: List<String>
+        val jvmargs: List<String>,
+        val javaVersion: Int?
     )
 
 }

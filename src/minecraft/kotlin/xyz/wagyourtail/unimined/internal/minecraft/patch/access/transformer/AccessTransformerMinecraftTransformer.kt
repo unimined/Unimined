@@ -31,7 +31,9 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
 
     companion object {
         fun getDefaultDependency(project: Project, provider: MinecraftProvider): Dependency {
-            return if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21)
+            return if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_25)
+                project.dependencies.create("net.neoforged.accesstransformers:at-cli:13.0.3")
+            else if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21)
                 project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.2")
             else
                 project.dependencies.create("net.neoforged:accesstransformers:9.0.3")

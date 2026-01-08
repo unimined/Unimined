@@ -321,6 +321,11 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
 
     override fun mojmap() {
+        // 26.1+ is unmapped. We return here otherwise Neo and Forge try to download mappings
+        if (!minecraft.obfuscated) {
+            return
+        }
+
         mojmapIvy()
         val mappings = when (envType) {
             EnvType.CLIENT, EnvType.JOINED -> "client"
