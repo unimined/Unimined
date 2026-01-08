@@ -155,7 +155,7 @@ abstract class FabricLikeMinecraftTransformer(
     var mainClass: JsonObject? = null
 
     override fun beforeMappingsResolve() {
-        if (!customIntermediaries) {
+        if (!customIntermediaries && provider.obfuscated) {
             addIntermediaryMappings()
         }
     }
