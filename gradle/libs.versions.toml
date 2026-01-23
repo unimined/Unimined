@@ -1,7 +1,7 @@
 [versions]
 # Kotlin 2.2.0 is only supported by Gradle 9+. Gradle 9 removes support for Java 8.
-kotlin = "2.1.20"
-dokka = "2.0.0"
+kotlin = "2.3.0"
+dokka = "2.1.0"
 
 jb-annotations = "26.0.2-1"
 
@@ -23,9 +23,9 @@ commons-compress = "1.28.0"
 classtweaker = "0.2"
 
 # JGit 5.x is the last version that supports Java 8.
-jgit = "5.13.3.202401111512-r"
+jgit = "7.5.0.202512021534-r"
 
-jparser = "3.27.1"
+jparser = "3.28.0"
 
 keyring = "1.0.2"
 minecraftauth = "4.1.2"

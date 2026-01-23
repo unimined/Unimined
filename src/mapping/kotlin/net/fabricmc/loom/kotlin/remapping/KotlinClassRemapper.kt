@@ -84,20 +84,22 @@ class KotlinClassRemapper(private val remapper: Remapper) {
         return type
     }
 
+    @OptIn(ExperimentalContextParameters::class)
     private fun remap(function: KmFunction): KmFunction {
         function.typeParameters.replaceAll(this::remap)
         function.receiverParameterType = function.receiverParameterType?.let { remap(it) }
-        function.contextReceiverTypes.replaceAll(this::remap)
+        function.contextParameters.replaceAll(this::remap)
         function.valueParameters.replaceAll(this::remap)
         function.returnType = remap(function.returnType)
         function.signature = function.signature?.let { remap(it) }
         return function
     }
 
+    @OptIn(ExperimentalContextParameters::class)
     private fun remap(property: KmProperty): KmProperty {
         property.typeParameters.replaceAll(this::remap)
         property.receiverParameterType = property.receiverParameterType?.let { remap(it) }
-        property.contextReceiverTypes.replaceAll(this::remap)
+        property.contextParameters.replaceAll(this::remap)
         property.setterParameter = property.setterParameter?.let { remap(it) }
         property.returnType = remap(property.returnType)
         property.fieldSignature = property.fieldSignature?.let { remap(it) }
