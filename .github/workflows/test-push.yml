@@ -5,27 +5,45 @@ concurrency:
   group: build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  JDK_VERSION: 17
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         gradle: [
-          8.10.2, # version used by buildscript
-          8 # latest
+          "8.7",
+          "8.10.2",
+          "wrapper",
         ]
-        java: [
-          17,
-          21
-        ]
+
     runs-on: ubuntu-latest
-    container:
-      image: gradle:${{ matrix.gradle }}-jdk${{ matrix.java }}
-      options: --user root
     steps:
-      - uses: actions/checkout@v4
-      - uses: gradle/actions/wrapper-validation@v3
-      - run: gradle build check -x test --stacktrace --warning-mode fail
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !testing/
+            !Writerside/
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JDK_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ matrix.gradle }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
+
+      - run: ./gradlew build check -x test --stacktrace --warning-mode fail
 
   # This job is used to feed the test matrix of next job to allow the tests to run in parallel
   prepare_test_matrix:
@@ -33,15 +51,22 @@ jobs:
     needs: build
 
     runs-on: ubuntu-latest
-    container:
-      image: gradle:8.10.2-jdk17
-      options: --user root
-
     steps:
-      - uses: actions/checkout@v4
-      - run: gradle writeActionsTestMatrix --stacktrace
-      -
-        id: set-matrix
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JDK_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
+
+      - run: ./gradlew writeActionsTestMatrix --stacktrace
+
+      - id: set-matrix
         run: echo "matrix=$(cat build/test_matrix.json)" >> $GITHUB_OUTPUT
 
     outputs:
@@ -53,62 +78,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [21]
+        os: [ ubuntu, windows, macos ]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
-    runs-on: ubuntu-latest
-    container:
-      image: gradle:8.10.2-jdk${{ matrix.java }}
-      options: --user root
-
+    runs-on: ${{ matrix.os }}-latest
+    continue-on-error: ${{ matrix.os == 'macos' }}
+    name: "${{ matrix.test.name }} (${{ matrix.os }})"
     steps:
-      - uses: actions/checkout@v4
-      - run: gradle printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JDK_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/lts') }}
+
+      - run: ./gradlew test --tests ${{ matrix.test.path }} --stacktrace
+        id: test
         env:
           TEST_WARNING_MODE: fail
-        id: test
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: ${{ steps.test.outputs.test }} Results
-          path: build/reports/
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ${{ steps.test.outputs.test }} Heap Dump
-          path: "*.hprof"
-
-  run_tests_windows:
-    needs: prepare_test_matrix
-
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [21]
-        test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
-
-    runs-on: windows-2022
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: setup jdk ${{ matrix.java }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: 'temurin'
-      - run: ./gradlew printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace
-        env:
-          TEST_WARNING_MODE: fail
-        id: test
+          name: "${{ matrix.test.name }} (${{ matrix.os }}) Results"
+          path: "**/build/reports/"
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: ${{ steps.test.outputs.test }} (${{ matrix.java }}) Results (Windows)
-          path: build/reports/
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ${{ steps.test.outputs.test }} Heap Dump (Windows)
+          name: "${{ matrix.test.name }} (${{ matrix.os }}) Heap Dump"
           path: "*.hprof"

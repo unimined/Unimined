@@ -26,7 +26,11 @@ pluginManagement {
     }
 }
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.16.5-spigot'
+rootProject.name = '1.16.5-spigot-paper'

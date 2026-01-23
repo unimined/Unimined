@@ -1,5 +1,4 @@
 [versions]
-java = "8"
 # Kotlin 2.2.0 is only supported by Gradle 9+. Gradle 9 removes support for Java 8.
 kotlin = "2.1.20"
 dokka = "2.0.0"
@@ -15,12 +14,13 @@ tiny-remapper = "0.11.1"
 unimined-mapping-library = "1.2.1"
 
 binarypatcher = "1.1.1"
+neo_binarypatcher = "4.0.7"
 jbsdiff = "1.0"
 
 commons-io = "2.20.0"
 commons-compress = "1.28.0"
 
-access-widener = "2.1.0"
+classtweaker = "0.2"
 
 # JGit 5.x is the last version that supports Java 8.
 jgit = "5.13.3.202401111512-r"
@@ -48,9 +48,10 @@ tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-rem
 unimined-mapping-library-jvm = { module = "xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm", version.ref = "unimined-mapping-library" }
 
 binarypatcher = { module = "net.minecraftforge:binarypatcher", version.ref = "binarypatcher" }
+neo_binarypatcher = { module = "net.neoforged.installertools:binarypatcher", version.ref = "neo_binarypatcher" }
 jbsdiff = { module = "io.sigpipe:jbsdiff", version.ref = "jbsdiff" }
 
-access-widener = { module = "net.fabricmc:access-widener", version.ref = "access-widener" }
+classtweaker = { module = "net.fabricmc:class-tweaker", version.ref = "classtweaker" }
 
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
@@ -71,3 +72,4 @@ asm-all = ["asm", "asm-commons", "asm-tree", "asm-analysis", "asm-util"]
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

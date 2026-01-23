@@ -561,6 +561,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
+            val additionalArgs = listOf("--data", "--unpatched")
+            val isModernNeo = (provider.minecraftData.mcVersionCompare("1.21.9", provider.version) == -1 && parent.providerName.equals("NeoForged", true))
+
             val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
                 when (it.asString) {
                     "{clean}" -> inputMC.path.toString()
@@ -568,7 +571,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                     "{output}" -> patchedMC.path.toString()
                     else -> it.asString
                 }
-            } + listOf("--data", "--unpatched")).toTypedArray()
+            } + if (isModernNeo) listOf() else additionalArgs).toTypedArray()
             val stoutLevel = project.gradle.startParameter.logLevel
             val stdout = System.out
             if (stoutLevel > LogLevel.INFO) {
@@ -576,7 +579,11 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
             project.logger.info("Running binpatcher with args: ${args.joinToString(" ")}")
             try {
-                ConsoleTool.main(args)
+                if (isModernNeo) {
+                    net.neoforged.binarypatcher.ConsoleTool.main(args)
+                } else {
+                    ConsoleTool.main(args)
+                }
             } catch (e: Throwable) {
                 e.printStackTrace()
                 patchedMC.path.deleteIfExists()

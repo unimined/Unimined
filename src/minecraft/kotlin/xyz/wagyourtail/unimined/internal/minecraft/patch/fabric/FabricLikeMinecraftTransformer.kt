@@ -371,7 +371,7 @@ abstract class FabricLikeMinecraftTransformer(
                     val source = dep.file.toPath()
                     val path = jars.resolve(location.fileName)
                     if (!source.zipContains(modJsonName)) {
-                        val cachePath = includeCache.resolve(location.fileName)
+                        val cachePath = includeCache.resolve("${source.nameWithoutExtension}-${source.getShortSha1()}.${source.extension}")
                         if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
                             try {
                                 ZipArchiveOutputStream(

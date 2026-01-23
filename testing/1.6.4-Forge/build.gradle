@@ -13,8 +13,16 @@ base {
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_7
-targetCompatibility = JavaVersion.VERSION_1_7
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_7
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 7
+}
 
 unimined.minecraft {
     version "1.6.4"

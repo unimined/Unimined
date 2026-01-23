@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
+import org.objectweb.asm.commons.Remapper
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
 import xyz.wagyourtail.unimined.api.mapping.dsl.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
@@ -34,6 +35,9 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
     }) {
 
     private var innerDevNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
+            return@LazyMutable Namespace("official")
+        }
         namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
     })
 
@@ -234,4 +238,9 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean = false
     ): (IMappingProvider.MappingAcceptor) -> Unit
+
+    @ApiStatus.Internal
+    abstract suspend fun getExtraRemapper(
+        remap: Pair<Namespace, Namespace>
+    ): Remapper
 }

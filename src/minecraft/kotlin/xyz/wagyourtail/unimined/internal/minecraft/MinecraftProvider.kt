@@ -85,7 +85,9 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override val minecraftData = MinecraftDownloader(project, this)
 
-    override val obfuscated = true
+    override val obfuscated: Boolean by FinalizeOnRead(LazyMutable {
+        minecraftData.mcVersionCompare("1.21.11", minecraftData.version) >= 0
+    })
 
     /**
      * Whether to apply fixes to inner classes
@@ -94,7 +96,9 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
      * They don't need fixes, there are no fixes available,
      * and Gradle will throw a cryptic error if you try!
      */
-    open val fixInners = obfuscated
+    open val fixInners: Boolean by LazyMutable {
+        obfuscated
+    }
 
     override val mappings = MappingsProvider(project, this)
 
@@ -507,7 +511,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 description = "Remaps $inputTask's output jar"
                 asJar.archiveClassifier.set(classifier)
             }
-            project.tasks.getByName("build").dependsOn("remap" + inputTask.name.capitalized())
+            project.tasks.getByName("assemble").dependsOn("remap" + inputTask.name.capitalized())
         } else {
             project.logger.warn(
                 "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default task '${inputTaskName.withSourceSet(sourceSet)} for $sourceSet."

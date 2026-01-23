@@ -13,8 +13,16 @@ base {
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
 
 repositories {
     mavenCentral()
@@ -30,6 +38,11 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarnv1(21)
+        stubs(["intermediary", "yarnv1"]) {
+            c(["net/minecraft/class_379"]) {
+                m("method_16798()F", "getBearingX")
+            }
+        }
     }
 
     fabric {

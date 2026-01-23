@@ -133,6 +133,10 @@ abstract class FabricMinecraftTransformer(
                 val interfaces = custom.getAsJsonObject("loom:injected_interfaces")
 
                 if (interfaces != null) {
+                    if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.18.0") } == true) {
+                        project.logger.warn("Fabric 0.18.0+ Interface Injections support has been added to ClassTweaker, please remove this from your fabric.mod.json")
+                    }
+
                     collectInterfaceInjections(baseMinecraft, injections, interfaces)
                 }
             }

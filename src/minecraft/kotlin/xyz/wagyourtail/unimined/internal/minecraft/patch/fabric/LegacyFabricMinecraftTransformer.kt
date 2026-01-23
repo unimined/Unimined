@@ -18,7 +18,7 @@ open class LegacyFabricMinecraftTransformer(
     provider: MinecraftProvider
 ): FabricMinecraftTransformer(project, provider), LegacyFabricPatcher {
 
-    override var replaceLwjglVersion: String? by FinalizeOnRead("2.9.4+legacyfabric.8")
+    override var replaceLwjglVersion: String? by FinalizeOnRead("2.9.4+legacyfabric.15")
 
     override val defaultProdNamespace: String = "legacyIntermediary"
 
