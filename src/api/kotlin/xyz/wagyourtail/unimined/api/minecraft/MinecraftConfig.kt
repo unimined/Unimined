@@ -91,6 +91,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         "*",
         "META-INF/**",
         "net/minecraft/**",
+        "com/mojang/math/**",
         "com/mojang/blaze3d/**",
         "com/mojang/realmsclient/**",
         "paulscode/sound/**",
