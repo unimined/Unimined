@@ -11,7 +11,7 @@ gson = "2.13.1"
 asm = "9.8"
 
 tiny-remapper = "0.11.1"
-unimined-mapping-library = "1.2.1"
+unimined-mapping-library = "1.2.2"
 
 binarypatcher = "1.1.1"
 neo_binarypatcher = "4.0.7"

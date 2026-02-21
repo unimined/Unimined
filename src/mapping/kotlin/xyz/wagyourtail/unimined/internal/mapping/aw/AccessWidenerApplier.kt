@@ -75,6 +75,8 @@ object AccessWidenerApplier {
     fun nsName(config: MappingsConfig<*>, namespace: Namespace) =
         if (config.devNamespace != namespace) {
             "intermediary" // -_-
+        } else if (config.minecraft.minecraftData.mcVersionCompare(config.minecraft.version, "1.21.11") > 0) {
+            "official"
         } else {
             "named"
         }

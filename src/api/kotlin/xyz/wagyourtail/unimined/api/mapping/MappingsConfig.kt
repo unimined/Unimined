@@ -35,7 +35,7 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
     }) {
 
     private var innerDevNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) <= 0) {
+        if (minecraft.minecraftData.mcVersionCompare("1.21.11", minecraft.version) < 0) {
             return@LazyMutable Namespace("official")
         }
         namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
