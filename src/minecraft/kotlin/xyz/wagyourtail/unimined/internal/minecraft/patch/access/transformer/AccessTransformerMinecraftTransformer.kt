@@ -131,7 +131,10 @@ interface AccessTransformerMinecraftTransformer : AccessTransformerPatcher, Acce
         if (!legacyATFormat) {
             val lines = temp.bufferedReader().readLines()
             temp.bufferedWriter().use {
-                    writer -> lines.filter { s -> !s.startsWith(" ") }.forEach { writer.write(it) }
+                    writer -> lines.filter { s -> !s.startsWith(" ") }.forEach {
+                        writer.write(it)
+                        writer.newLine()
+                    }
             }
         }
 
