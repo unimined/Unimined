@@ -43,7 +43,7 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             } else {
                 var version = provider.version.removePrefix("1.")
 
-                if (provider.minecraftData.mcVersionCompare(provider.version, "26.1") <= 0) {
+                if (provider.minecraftData.mcVersionCompare(provider.version, "26.1") >= 0) {
                     version = "${provider.version}.0"
                 } else if (!version.contains(".")) {
                     version = "$version.0"
