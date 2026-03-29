@@ -45,6 +45,14 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
     ) {
 
+    val isModernNeo by lazy {
+        parent is NeoForgedMinecraftTransformer && !provider.obfuscated
+    }
+
+    val isModernForge by lazy {
+        parent is MinecraftForgeMinecraftTransformer && !provider.obfuscated
+    }
+
     val cacheDir by lazy {
         val forgeUniversal = parent.forge.dependencies.last()
         provider.minecraftData.mcVersionFolder.resolve(providerName).resolve(forgeUniversal.version!!)
@@ -86,6 +94,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
     override fun defaultProdNamespace(): Namespace {
+        if (!provider.obfuscated) return provider.mappings.checkedNs("official")
         return if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(
                 provider.version,
                 "1.20.5"
@@ -129,7 +138,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     open val obfNamespace by lazy {
-        if (userdevCfg["notchObf"]?.asBoolean == true) "official"
+        if (userdevCfg["notchObf"]?.asBoolean == true || !provider.obfuscated) "official"
         else if (userdevCfg["mcp"].asString.contains("neoform")) "mojmap"
         else "searge"
     }
@@ -179,7 +188,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 config.insertBefore(
                     "forgeInject", config.FunctionStep(
                         "mcpCleanup", null, mutableMapOf(), MCPConfig.Function(
-                            "net.minecraftforge:mcpcleanup:2.3.6",
+                            listOf("net.minecraftforge:mcpcleanup:2.3.6"),
                             null,
                             listOf(
                                 "--input",
@@ -187,7 +196,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                                 "--output",
                                 "{output}"
                             ),
-                            listOf()
+                            listOf(),
+                            null
                         )
                     ),
                     mapOf("input" to {
@@ -313,6 +323,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
+        if (!provider.obfuscated) return
         provider.mappings {
             if (obfNamespace == "mojmap") {
                 mojmap()
@@ -362,7 +373,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             val mainClass = get("main").asString
             if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[Unimined/ForgeTransformer] Inserting mcp mappings")
-                if (obfNamespace != "mojmap") {
+                if (obfNamespace != "mojmap" && provider.obfuscated) {
                     provider.minecraftLibraries.dependencies.add(
                         project.dependencies.create(project.files(parent.srgToMCPAsMCP))
                     )
@@ -403,8 +414,10 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         if (output.path.exists() && !project.unimined.forceReload) {
             return output
         }
-        if (userdevCfg["notchObf"]?.asBoolean == true) {
+        if (userdevCfg["notchObf"]?.asBoolean == true || isModernForge) {
             executeMcp("merge", output.path)
+        } else if (isModernNeo) {
+            executeMcp("preProcessJar", output.path)
         } else {
             executeMcp("rename", output.path)
         }
@@ -786,9 +799,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.checkedNs(
-                "official"
-            )
+        if (!baseMinecraft.patches.contains("fixForge") &&
+            (!provider.obfuscated || baseMinecraft.mappingNamespace != provider.mappings.checkedNs("official"))
         ) {
             val target = MinecraftJar(
                 baseMinecraft,
@@ -803,6 +815,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             try {
                 target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
+                    out.getPath("binpatches-joined.lzma").deleteIfExists()
                 }
             } catch (e: Throwable) {
                 target.path.deleteIfExists()
