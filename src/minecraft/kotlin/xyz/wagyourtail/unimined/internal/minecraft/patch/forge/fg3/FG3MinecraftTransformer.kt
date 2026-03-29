@@ -46,11 +46,11 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     ) {
 
     val isModernNeo by lazy {
-        providerName.equals("NeoForged-FG3", true) && !provider.obfuscated
+        parent is NeoForgedMinecraftTransformer && !provider.obfuscated
     }
 
     val isModernForge by lazy {
-        providerName.equals("MinecraftForge-FG3", true) && !provider.obfuscated
+        parent is MinecraftForgeMinecraftTransformer && !provider.obfuscated
     }
 
     val cacheDir by lazy {
