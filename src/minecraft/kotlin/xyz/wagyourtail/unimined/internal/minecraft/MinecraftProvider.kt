@@ -511,7 +511,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 description = "Remaps $inputTask's output jar"
                 asJar.archiveClassifier.set(classifier)
             }
-            project.tasks.getByName("build").dependsOn("remap" + inputTask.name.capitalized())
+            project.tasks.getByName("assemble").dependsOn("remap" + inputTask.name.capitalized())
         } else {
             project.logger.warn(
                 "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default task '${inputTaskName.withSourceSet(sourceSet)} for $sourceSet."
