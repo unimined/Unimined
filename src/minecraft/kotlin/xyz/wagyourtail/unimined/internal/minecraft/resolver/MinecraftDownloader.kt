@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 open class MinecraftDownloader(val project: Project, open val provider: MinecraftProvider) : MinecraftData() {
@@ -110,12 +111,13 @@ open class MinecraftDownloader(val project: Project, open val provider: Minecraf
 
         project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata")
         project.logger.info("[Unimined/MinecraftDownloader]     metadata url $metadataURL")
-        if (!versionJson.exists() || project.unimined.forceReload) {
+        if ((metadataURL.scheme != "file" && !versionJson.exists() || project.unimined.forceReload)) {
             versionJson.parent.createDirectories()
 
             project.cachingDownload(
                 metadataURL,
-                cachePath = versionJson
+                cachePath = versionJson,
+                expireTime = 1.minutes
             )
 
         }
