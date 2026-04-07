@@ -6,8 +6,7 @@ plugins {
 unimined.useGlobalCache = false
 
 unimined.minecraft {
-	minecraftData.metadataURL = uri("https://meta.omniarchive.uk/versions/v1/in-20091223-1459.json")
-
+    omniArchiveManifest()
     version("in-20091223-1459")
     side("client")
 
