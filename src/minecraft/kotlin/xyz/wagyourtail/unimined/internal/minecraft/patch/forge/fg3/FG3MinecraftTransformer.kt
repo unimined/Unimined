@@ -585,7 +585,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         // Modern NeoForge's FML loader GameLocator rejects merged jars where Minecraft's common
         // resources and the NeoForge jar come from the same jar. Remove the Minecraft asset-root
         // marker files from the shaded jar so the loader resolves them from clientExtra instead.
-        if (parent is NeoForgedMinecraftTransformer) {
+        if (isModernNeo) {
             removeMinecraftResourceMarkers(shadedForge.path)
         }
 
