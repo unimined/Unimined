@@ -40,6 +40,7 @@ interface StepLogic {
         @Throws(IOException::class)
         fun download(url: String): Path
         fun javaexec(configurator: Action<in JavaExecSpec>)
+        fun resolveCoordinates(coords: List<String>): List<Path>
         val minecraftLibraries: Set<File>
 
         fun resolve(configValues: List<ConfigValue>): List<String> {
@@ -51,27 +52,42 @@ interface StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
             context.setOutput("output")
-            val jar: Path = context.download(function.getDownloadUrl())
-            var mainClass: String
-            try {
-                JarFile(jar.toFile()).use { jarFile ->
-                    mainClass = jarFile.manifest
-                        .mainAttributes
-                        .getValue(Attributes.Name.MAIN_CLASS)
+            if (function.classpath != null) {
+                // spec 6+: resolve via Gradle, use explicit mainClass if provided
+                val jars = context.resolveCoordinates(function.classpath)
+                val mainClass = function.mainClass ?: JarFile(jars.first().toFile()).use { jf ->
+                    jf.manifest.mainAttributes.getValue(Attributes.Name.MAIN_CLASS)
+                        ?: error("No Main-Class in manifest of ${jars.first()}")
                 }
-            } catch (e: IOException) {
-                throw IOException("Could not determine main class for " + jar.toAbsolutePath(), e)
+                context.javaexec(Action { spec: JavaExecSpec ->
+                    spec.classpath(jars.map { it.toFile() })
+                    spec.mainClass.set(mainClass)
+                    spec.args(context.resolve(function.args))
+                    spec.jvmArgs(context.resolve(function.jvmArgs))
+                })
+            } else {
+                val jar: Path = context.download(function.getDownloadUrl())
+                var mainClass: String
+                try {
+                    JarFile(jar.toFile()).use { jarFile ->
+                        mainClass = jarFile.manifest
+                            .mainAttributes
+                            .getValue(Attributes.Name.MAIN_CLASS)
+                    }
+                } catch (e: IOException) {
+                    throw IOException("Could not determine main class for " + jar.toAbsolutePath(), e)
+                }
+                context.javaexec(Action { spec: JavaExecSpec ->
+                    spec.classpath(jar)
+                    spec.mainClass.set(mainClass)
+                    spec.args(context.resolve(function.args))
+                    spec.jvmArgs(context.resolve(function.jvmArgs))
+                })
             }
-            context.javaexec(Action { spec: JavaExecSpec ->
-                spec.classpath(jar)
-                spec.mainClass.set(mainClass)
-                spec.args(context.resolve(function.args))
-                spec.jvmArgs(context.resolve(function.jvmArgs))
-            })
         }
 
         override fun getDisplayName(stepName: String): String {
-            return stepName + " with " + function.version
+            return stepName + " with " + (function.version ?: function.classpath?.firstOrNull() ?: "unknown")
         }
     }
 
