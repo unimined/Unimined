@@ -43,6 +43,10 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
 ) {
 
+    val isModernNeo by lazy {
+        parent is NeoForgedMinecraftTransformer && !provider.obfuscated
+    }
+
     val useUnionRelauncher by lazy {
         if (parent is MinecraftForgeMinecraftTransformer) {
             parent.useUnionRelaunch
@@ -78,7 +82,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
     override val prodNamespace by lazy {
-        if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
+        if (!provider.obfuscated) {
+            provider.mappings.getNamespace("official")
+        } else if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
             provider.mappings.getNamespace("mojmap")
         } else {
             provider.mappings.getNamespace("searge")
@@ -117,7 +123,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     open val obfNamespace by lazy {
-        if (userdevCfg["notchObf"]?.asBoolean == true) "official"
+        if (userdevCfg["notchObf"]?.asBoolean == true || !provider.obfuscated) "official"
         else if (userdevCfg["mcp"].asString.contains("neoform")) "mojmap"
         else "searge"
     }
@@ -162,6 +168,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
+        if (!provider.obfuscated) return
         provider.mappings {
             if (obfNamespace == "mojmap") {
                 mojmap()
@@ -214,7 +221,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             val mainClass = get("main").asString
             if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[Unimined/ForgeTransformer] Inserting mcp mappings")
-                if (obfNamespace != "mojmap") {
+                if (obfNamespace != "mojmap" && provider.obfuscated) {
                     provider.minecraftLibraries.dependencies.add(
                         project.dependencies.create(project.files(parent.srgToMCPAsMCP))
                     )
@@ -271,6 +278,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
         if (userdevCfg["notchObf"]?.asBoolean == true) {
             executeMcp("merge", output.path, EnvType.COMBINED)
+        } else if (isModernNeo) {
+            executeMcp("preProcessJar", output.path, EnvType.COMBINED)
         } else {
             executeMcp("rename", output.path, EnvType.COMBINED)
         }
@@ -424,6 +433,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
+        if (isModernNeo) {
+            removeMinecraftResourceMarkers(shadedForge.path)
+        }
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
             provider.minecraftRemapper.provide(shadedForge, provider.mappings.getNamespace("searge"), provider.mappings.OFFICIAL)
         } else {
@@ -643,7 +655,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (!baseMinecraft.patches.contains("fixForge") &&
+            (!provider.obfuscated || baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL)
+        ) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",
@@ -657,6 +671,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             try {
                 target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
+                    out.getPath("binpatches-joined.lzma").deleteIfExists()
                 }
             } catch (e: Throwable) {
                 target.path.deleteIfExists()
@@ -665,6 +680,20 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             return target
         }
         return baseMinecraft
+    }
+
+    private fun removeMinecraftResourceMarkers(jarPath: Path) {
+        val markers = listOf("data/.mcassetsroot", "assets/.mcassetsroot")
+        val hasAny = jarPath.openZipFileSystem().use { fs ->
+            markers.any { Files.exists(fs.getPath(it)) }
+        }
+        if (!hasAny) return
+        project.logger.info("[Unimined/ForgeTransformer] Removing Minecraft asset-root markers from ${jarPath.fileName} to fix NeoForge GameLocator conflict")
+        jarPath.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
+            for (marker in markers) {
+                Files.deleteIfExists(fs.getPath(marker))
+            }
+        }
     }
 
     override fun createSourcesJar(
