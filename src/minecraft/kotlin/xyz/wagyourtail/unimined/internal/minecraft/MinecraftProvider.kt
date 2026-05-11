@@ -111,10 +111,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         it.setTransitive(false)
     }
 
-    init {
-        replaceLibraryVersion("ca\\.weblite", "java-objc-bridge", "natives-osx") { null }
-    }
-
     override fun from(project: Project, sourceSet: SourceSet) {
         val delegate = MinecraftProvider::class.getField("mcPatcher")!!.getDelegate(this) as FinalizeOnRead<FinalizeOnWrite<MinecraftPatcher>>
         if (delegate.finalized || (delegate.value as FinalizeOnWrite<MinecraftPatcher>).finalized) {

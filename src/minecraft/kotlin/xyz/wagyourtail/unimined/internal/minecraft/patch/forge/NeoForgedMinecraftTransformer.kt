@@ -38,9 +38,12 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             if (provider.version == "1.20.1") {
                 project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
             } else {
-                var version = provider.version.removePrefix("1.")
-                if (!version.contains(".")) {
+                var version = provider.version
+                if (version.matches(Regex("\\d+\\.\\d+"))) {
                     version = "$version.0"
+                }
+                if (provider.minecraftData.mcVersionCompare(version, "26.1") < 0) {
+                    version = version.removePrefix("1.")
                 }
                 project.dependencies.create("net.neoforged:neoforge:$version.$dep:universal")
             }
@@ -103,19 +106,19 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             manifest.mainAttributes[Attributes.Name("Minecraft-Dists")] = provider.side.classifier ?: "client server"
 
             if (provider.side == EnvType.COMBINED && baseMinecraftServer != null) {
-                val mappings = parent.provider.mappings.resolveMappingTree()
-                val officialNamespace = mappings.getNamespaceId("official")
-                val namedNamespace = mappings.getNamespaceId(provider.mappings.devNamespace.name)
-
                 val clientEntries = baseMinecraftClient.path.readZipContents().toSet()
                 val serverEntries = baseMinecraftServer.path.readZipContents().toSet()
 
-                fun mapEntry(name: String): String {
-                    if (!name.endsWith(".class")) {
-                        return name
+                val mapEntry: (String) -> String = if (provider.obfuscated) {
+                    val mappings = parent.provider.mappings.resolveMappingTree()
+                    val officialNamespace = mappings.getNamespaceId("official")
+                    val namedNamespace = mappings.getNamespaceId(provider.mappings.devNamespace.name);
+                    { name ->
+                        if (!name.endsWith(".class")) name
+                        else mappings.getClass(name.substring(0, name.length - 6), officialNamespace).getName(namedNamespace) + ".class"
                     }
-
-                    return mappings.getClass(name.substring(0, name.length - 6), officialNamespace).getName(namedNamespace) + ".class"
+                } else {
+                    { it }
                 }
 
                 for (clientEntry in clientEntries) {

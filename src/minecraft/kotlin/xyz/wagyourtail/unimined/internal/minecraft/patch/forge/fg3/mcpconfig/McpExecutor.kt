@@ -215,6 +215,14 @@ data class McpExecutor(
             SubprocessExecutor.exec(project, configurator).rethrowFailure().assertNormalExitValue()
         }
 
+        override fun resolveCoordinates(coords: List<String>): List<Path> {
+            val config = project.configurations.detachedConfiguration()
+            for (coord in coords) {
+                config.dependencies.add(project.dependencies.create(coord))
+            }
+            return config.resolve().map { it.toPath() }
+        }
+
         override val minecraftLibraries: Set<File>
             get() = provider.minecraftLibraries.resolve()
     }

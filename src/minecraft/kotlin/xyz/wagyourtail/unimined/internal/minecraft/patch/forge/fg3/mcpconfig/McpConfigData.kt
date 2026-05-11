@@ -12,7 +12,19 @@ data class McpConfigData(
 ) {
     companion object {
         fun fromJson(json: JsonObject): McpConfigData {
-            val mappingsPath = json.getAsJsonObject("data")["mappings"].asString
+            val specVersion = if (json.has("spec")) json.getAsJsonPrimitive("spec").asInt else 0
+            val isSpec6 = specVersion >= 6
+
+            val dataObj = json.getAsJsonObject("data")
+            val mappingsValue = dataObj?.get("mappings")
+            val mappingsPath = when {
+                mappingsValue == null -> ""
+                mappingsValue.isJsonObject ->
+                    mappingsValue.asJsonObject["joined"]?.asString
+                        ?: mappingsValue.asJsonObject.entrySet().firstOrNull()?.value?.asString ?: ""
+                else -> mappingsValue.asString
+            }
+
             val official = json.has("official") && json.getAsJsonPrimitive("official").asBoolean
             val stepsJson = json.getAsJsonObject("steps")
             val stepsBuilder = ImmutableMap.builder<String, List<McpConfigStep>>()
@@ -26,7 +38,7 @@ data class McpConfigData(
             val functionsJson = json.getAsJsonObject("functions")
             val functionsBuilder = ImmutableMap.builder<String, McpConfigFunction>()
             for (key in functionsJson.keySet()) {
-                functionsBuilder.put(key, McpConfigFunction.fromJson(functionsJson.getAsJsonObject(key)))
+                functionsBuilder.put(key, McpConfigFunction.fromJson(functionsJson.getAsJsonObject(key), isSpec6))
             }
             return McpConfigData(mappingsPath, official, stepsBuilder.build(), functionsBuilder.build())
         }
