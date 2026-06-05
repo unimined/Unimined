@@ -98,9 +98,9 @@ object AccessTransformerApplier {
             val temp = noAccessMappings(mappings)
             val data = runBlocking {
                 if (isLegacy) {
-                    LegacyATReader.readData(CharReader(input.readBytes().decodeToString()))
+                    LegacyATReader.readData(CharReader(input.readBytes().decodeToString()), true)
                 } else {
-                    ATReader.readData(CharReader(input.readBytes().decodeToString()))
+                    ATReader.readData(CharReader(input.readBytes().decodeToString()), true)
                 }
             }
             val remapped = ATWriter.remapMappings(data, temp, fromNamespace, toNamespace)
