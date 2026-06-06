@@ -72,7 +72,15 @@ open class FabricLikeApiExtension(val project: Project) {
         }
     }
 
-    open class OSLAPILocation(project: Project): APILocations(project) {
+    open class OSLAPILocation(project: Project, private val gen: Int): APILocations(project) {
+        internal val moduleListArray = defaultedMapOf<String, JsonArray> { key ->
+            project.cachingDownload(
+                URI.create(getAPIUrl(key))
+            ).inputStream().use {
+                JsonParser.parseReader(InputStreamReader(it)).asJsonArray
+            }
+        }
+
         internal val jsonArray = defaultedMapOf<Triple<String, String, String>, JsonArray> { triple ->
             project.cachingDownload(
                 URI.create(getAPIUrl(triple.first, triple.second, triple.third))
@@ -96,30 +104,26 @@ open class FabricLikeApiExtension(val project: Project) {
         }
 
         fun getAPIUrl(moduleName: String, version: String, mcVersion: String): String {
-            return "https://meta.ornithemc.net/v3/versions/osl/$moduleName/$mcVersion/$version"
+            return "https://meta.ornithemc.net/v3/versions/gen${gen}/osl/$moduleName/$mcVersion/$version"
+        }
+
+        fun getAPIUrl(version: String): String {
+            return "https://meta.ornithemc.net/v3/versions/gen${gen}/osl/$version"
         }
 
         fun getModuleList(version: String): Map<String, String> {
-            val elements = xmlDoc[version].getElementsByTagName("dependency")
+            val elements = moduleListArray[version].asList()
 
             val list = mutableMapOf<String, String>()
 
-            for (i in 0 until elements.length) {
-                val element = elements.item(i)
-                var moduleName: String? = null
-                var vers: String? = null
+            for (i in 0 until elements.size) {
+                val element = elements[i].asJsonObject
+                val mavenPath = element.get("maven").asString
 
-                for (j in 0 until element.childNodes.length) {
-                    val child = element.childNodes.item(j)
-                    if (child.nodeName == "artifactId") {
-                        moduleName = child.textContent
-                    }
-                    if (child.nodeName == "version") {
-                        vers = child.textContent
-                    }
-                }
+                val moduleName = mavenPath.split(":")[1]
+                val vers = mavenPath.split(":")[2]
 
-                list[moduleName!!] = vers!!
+                list[moduleName] = vers
             }
 
             return list
@@ -188,7 +192,8 @@ open class FabricLikeApiExtension(val project: Project) {
         },
         "station_snapshots" to object : StAPILocation(project, "snapshots") {},
         "station_releases" to object : StAPILocation(project, "releases") {},
-        "osl" to object : OSLAPILocation(project) {}
+        "osl_gen1" to object : OSLAPILocation(project, 1) {},
+        "osl_gen2" to object : OSLAPILocation(project, 2) {}
     )
 
     @Deprecated(message = "use fabricModule or legacyFabricModule instead", replaceWith = ReplaceWith("fabricModule"))
@@ -270,18 +275,37 @@ open class FabricLikeApiExtension(val project: Project) {
     }
 
     /**
-     * @since 1.4.0
+     * @since 1.4.2
      */
     @JvmOverloads
-    fun oslModule(mcVersion: String, moduleName: String, version: String, environment: String? = null): String {
-        return locations["osl"]!!.module(moduleName, version, mcVersion, environment) ?: throw IllegalStateException("Could not find module $moduleName:$version for Minecraft version $mcVersion")
+    fun oslModule(gen: Int, mcVersion: String, moduleName: String, version: String, environment: String? = null): String {
+        return locations["osl_gen$gen"]!!.module(moduleName, version, mcVersion, environment) ?: throw IllegalStateException("Could not find module $moduleName:$version for Minecraft version $mcVersion Gen $gen")
     }
 
     /**
      * @since 1.4.0
      */
     @JvmOverloads
-    fun osl(mcVersion: String, version: String, environment: String? = null): Set<String> {
-        return locations["osl"]!!.full(version, mcVersion, environment)
+    @Deprecated(message = "Set ornithe generation", replaceWith = ReplaceWith("oslModule(1, mcVersion, moduleName, version, environment)"))
+    fun oslModule(mcVersion: String, moduleName: String, version: String, environment: String? = null): String {
+        return oslModule(1, mcVersion, moduleName, version, environment)
     }
+
+    /**
+     * @since 1.4.2
+     */
+    @JvmOverloads
+    fun osl(gen: Int, mcVersion: String, version: String, environment: String? = null): Set<String> {
+        return locations["osl_gen$gen"]!!.full(version, mcVersion, environment)
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    @Deprecated(message = "Set ornithe generation", replaceWith = ReplaceWith("osl(1, mcVersion, version, environment)"))
+    fun osl(mcVersion: String, version: String, environment: String? = null): Set<String> {
+        return osl(1, mcVersion, version, environment)
+    }
+
 }
