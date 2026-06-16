@@ -92,7 +92,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
 
     override fun getClasspathAs(namespace: Namespace, classpath: Set<File>): Set<File> {
         val remapCp = classpath.associateWith { file ->
-            remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file)?.let { conf to it } }
+            remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file, namespace)?.let { conf to it } }
         }
         val nonRemap = remapCp.mapNotNull { if (it.value == null) it.key else null }
         project.logger.info("[Unimined/ModRemapper] getting classpath as $namespace")

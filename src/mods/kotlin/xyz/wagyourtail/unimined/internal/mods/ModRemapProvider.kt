@@ -101,17 +101,26 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         resolved
     }
 
-    fun getConfigForFile(file: File): Configuration? = runBlocking {
-        val name = file.nameWithoutExtension.substringBefore("-mapped-${provider.mappings.combinedNames()}")
-        for ((c, artifacts) in originalDepsFiles) {
-            for (r in artifacts.values) {
-                if (r.nameWithoutExtension == name) {
-                    project.logger.debug("[Unimined/ModRemapper] $file is an output of $c")
-                    return@runBlocking c
-                }
+    private val configByOriginalArtifactName by lazy {
+        val configs = mutableMapOf<String, Configuration>()
+        for (c in configurations) {
+            for (file in originalDepsFiles[c].values) {
+                configs.putIfAbsent(file.nameWithoutExtension, c)
             }
         }
-        null
+        configs
+    }
+
+    fun getConfigForFile(file: File, targetNamespace: Namespace): Configuration? {
+        var name = file.nameWithoutExtension
+        if (name.endsWith("-mapped-$targetNamespace")) {
+            project.logger.debug("[Unimined/ModRemapper] $file is already mapped to $targetNamespace")
+            return null
+        }
+        name = name.substringBeforeLast("-mapped-", name)
+        return configByOriginalArtifactName[name]?.also {
+            project.logger.debug("[Unimined/ModRemapper] $file is an output of $it")
+        }
     }
 
     private fun constructRemapper(
@@ -178,7 +187,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             for (map in originalDepsFiles.values) {
                 mods.putAll(map)
             }
-            val mc = provider.getMinecraft(namespace)
             val forceReload = project.unimined.forceReload
             val targets = mods.mapValues { mod ->
                 mod.value to (provider.mods as ModsProvider).modTransformFolder()
@@ -194,6 +202,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 for (mod in targets) {
                     project.logger.info("[Unimined/ModRemapper]  ${if (mod.value.second.second) "skipping" else "        "} ${mod.value.first} -> ${mod.value.second.first}")
                 }
+                val mc = provider.getMinecraft(namespace)
                 val remapper = constructRemapper(namespace, devNamespace, mc)
                 val tags = preRemapInternal(remapper, targets)
                 mods.clear()
