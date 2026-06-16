@@ -218,6 +218,21 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     }
 
     /**
+     * Overrides the launcher manifest to the one provided by OmniArchive,
+     * for access to historical versions that are no longer available in the official Minecraft launcher.
+     */
+    fun omniArchiveManifest() {
+        minecraftData.launcherMetaUrl = project.uri("https://meta.omniarchive.uk/v1/manifest.json")
+    }
+
+    /**
+     * Overrides the launcher manifest to the one provided by Mojang (default).
+     */
+    fun mojangManifestV2() {
+        minecraftData.launcherMetaUrl = project.uri("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
+    }
+
+    /**
      * the minecraft version to use
      */
     fun version(version: String) {
