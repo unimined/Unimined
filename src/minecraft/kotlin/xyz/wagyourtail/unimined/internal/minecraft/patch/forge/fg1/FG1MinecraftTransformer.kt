@@ -192,6 +192,36 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 )
             )
         }
+
+        if (wanted.contains("deobfuscation_data_1.5.1.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.1.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.1.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.1.zip").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("deobfuscation_data_1.5.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.zip").toString())
+                )
+            )
+        }
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
