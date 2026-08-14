@@ -20,7 +20,7 @@ class FabricLikeApiExtensionTest {
         }
 
         @JvmStatic
-        fun generateOSLModules(): Array<Arguments> = arrayOf(
+        fun generateOSLGen1Modules(): Array<Arguments> = arrayOf(
             Arguments.of("0.16.0", "1.12.2", setOf(
                 "branding:0.3.2+mc16w05b-mc1.12.2",
                 "config:0.5.2+mc15w40a-mc1.12.2",
@@ -54,7 +54,7 @@ class FabricLikeApiExtensionTest {
         )
 
         @JvmStatic
-        fun generateOSLSidedModules(): Array<Arguments> = arrayOf(
+        fun generateOSLGen1SidedModules(): Array<Arguments> = arrayOf(
             Arguments.of("0.16.0", "1.2.5", "client", setOf(
                 "branding:0.3.2+client-mca1.2.2-1624-mc12w17a",
                 "core:0.6.0",
@@ -85,6 +85,68 @@ class FabricLikeApiExtensionTest {
                 "lifecycle-events:0.5.4+server-mcb1.4-1507-mc11w50a",
                 "networking:0.8.0+server-mcb1.5-mc11w48a"
             )),
+        )
+
+        @JvmStatic
+        fun generateOSLGen2Modules(): Array<Arguments> = arrayOf(
+            Arguments.of("0.17.1", "1.12.2", setOf(
+                "branding:0.4.1+mc16w05b-mc1.12.2",
+                "config:0.6.0+mc15w40a-mc1.12.2",
+                "core:0.7.0",
+                "entrypoints:0.5.0+mc13w16a-mc1.14.4",
+                "keybinds:0.2.0+mc17w16a-mc1.12.2",
+                "lifecycle-events:0.6.0+mc13w36a-mc1.13",
+                "networking:0.9.0+mc13w41a-mc18w30b",
+                "networking-impl:0.1.0+mc14w31a-mc1.13-pre2",
+                "resource-loader:0.6.0+mc16w32a-mc1.12.2"
+            )),
+            Arguments.of("0.17.1", "1.8.9", setOf(
+                "branding:0.4.1+mc14w30a-mc16w05a",
+                "config:0.6.0+mc14w27a-mc15w39c",
+                "core:0.7.0",
+                "entrypoints:0.5.0+mc13w16a-mc1.14.4",
+                "keybinds:0.2.0+mc13w36a-mc17w15a",
+                "lifecycle-events:0.6.0+mc13w36a-mc1.13",
+                "networking:0.9.0+mc13w41a-mc18w30b",
+                "networking-impl:0.1.0+mc14w31a-mc1.13-pre2",
+                "resource-loader:0.6.0+mc13w26a-mc1.10.2"
+            )),
+            Arguments.of("0.17.1", "1.3.2", setOf(
+                "branding:0.4.1+mca1.2.2-mc14w29b",
+                "config:0.6.0+mc1.3-mc1.6.4",
+                "core:0.7.0",
+                "entrypoints:0.5.0+mca1.0.1_01-mc1.5.2",
+                "keybinds:0.2.0+mcb1.8-pre1-mc1.6.4",
+                "lifecycle-events:0.6.0+mc12w21a-mc1.6.4",
+                "networking:0.9.0+mcb1.0-mc13w39b",
+                "networking-impl:0.1.0+mc12w21a-mc13w39b",
+                "resource-loader:0.6.0+mc12w15a-mc13w07a"
+            ))
+        )
+
+        @JvmStatic
+        fun generateOSLGen2SidedModules(): Array<Arguments> = arrayOf(
+            Arguments.of("0.17.1", "1.2.5", setOf(
+                "branding:0.4.1+mca1.2.2-mc14w29b",
+                "core:0.7.0",
+                "entrypoints:0.5.0+mca1.0.1_01-mc1.5.2",
+                "keybinds:0.2.0+mcb1.8-pre1-mc1.6.4",
+                "lifecycle-events:0.6.0+mc12w01a-mc12w17a",
+                "networking:0.9.0+mcb1.0-mc13w39b",
+                "networking-impl:0.1.0+mc11w49a-mc12w16a",
+                "resource-loader:0.6.0+mc11w49a-mc1.2.5"
+            )),
+            Arguments.of("0.17.1", "b1.7.3", setOf(
+                "branding:0.4.1+mca1.2.2-mc14w29b",
+                "config:0.6.0+mcb1.3-mcb1.7.3",
+                "core:0.7.0",
+                "entrypoints:0.5.0+mca1.0.1_01-mc1.5.2",
+                "keybinds:0.2.0+mca1.0.1_01-mcb1.7.3",
+                "lifecycle-events:0.6.0+mcb1.3-mcb1.7.3",
+                "networking:0.9.0+mcb1.0-mc13w39b",
+                "networking-impl:0.1.0+mcb1.5-mc11w48a",
+                "resource-loader:0.6.0+mca1.2.2-mc11w48a"
+            ))
         )
     }
 
@@ -204,37 +266,71 @@ class FabricLikeApiExtensionTest {
         assertEquals("net.modificationstation.StationAPI.$moduleParent:$module:$moduleVersion", result)
     }
 
-    @ParameterizedTest(name = "OSL {0} module {2} For MC {1}")
+    @ParameterizedTest(name = "OSL Gen1 {0} module {2} For MC {1}")
     @CsvSource(
         "0.16.0, 1.12.2, entrypoints, 0.4.3+mc13w16a-04192037-mc1.14.4",
         "0.16.0, 1.3.2, entrypoints, 0.4.3+mc1.3-pre-07261249-mc1.5.2"
     )
-    fun oslModule(apiVersion: String, mcVersion: String, module: String, moduleVersion: String) {
+    fun oslGen1Module(apiVersion: String, mcVersion: String, module: String, moduleVersion: String) {
         val result = extension.oslModule(mcVersion, module, apiVersion)
         assertEquals("net.ornithemc.osl:$module:$moduleVersion", result)
     }
 
-    @ParameterizedTest(name = "OSL {0} module {3} For MC {1}-{2}")
+    @ParameterizedTest(name = "OSL Gen1 {0} module {3} For MC {1}-{2}")
     @CsvSource(
         "0.16.0, 1.2.5, client, entrypoints, 0.4.3+client-mca1.0.6-mc12w30e",
         "0.16.0, 1.2.5, server, entrypoints, 0.4.3+server-mcserver-a0.1.0-mc12w30e"
     )
-    fun oslSidedModule(apiVersion: String, mcVersion: String, environment: String, module: String, moduleVersion: String) {
+    fun oslGen1SidedModule(apiVersion: String, mcVersion: String, environment: String, module: String, moduleVersion: String) {
         val result = extension.oslModule(mcVersion, module, apiVersion, environment)
         assertEquals("net.ornithemc.osl:$module:$moduleVersion", result)
     }
 
-    @ParameterizedTest(name = "OSL {0} for MC {1}")
-    @MethodSource("generateOSLModules")
-    fun osl(apiVersion: String, mcVersion: String, expectedModules: Set<String>) {
+    @ParameterizedTest(name = "OSL Gen1 {0} for MC {1}")
+    @MethodSource("generateOSLGen1Modules")
+    fun oslGen1(apiVersion: String, mcVersion: String, expectedModules: Set<String>) {
         val modules = extension.osl(mcVersion, apiVersion)
         assertEquals(expectedModules.map { "net.ornithemc.osl:$it" }.toSet(), modules)
     }
 
-    @ParameterizedTest(name = "OSL {0} for MC {1}-{2}")
-    @MethodSource("generateOSLSidedModules")
-    fun oslSided(apiVersion: String, mcVersion: String, environment: String, expectedModules: Set<String>) {
+    @ParameterizedTest(name = "OSL Gen1 {0} for MC {1}-{2}")
+    @MethodSource("generateOSLGen1SidedModules")
+    fun oslGen1Sided(apiVersion: String, mcVersion: String, environment: String, expectedModules: Set<String>) {
         val modules = extension.osl(mcVersion, apiVersion, environment)
         assertEquals(expectedModules.map { "net.ornithemc.osl:$it" }.toSet(), modules)
+    }
+
+    @ParameterizedTest(name = "OSL Gen2 {0} module {2} For MC {1}")
+    @CsvSource(
+        "0.17.1, 1.12.2, entrypoints, 0.5.0+mc13w16a-mc1.14.4",
+        "0.17.1, 1.3.2, entrypoints, 0.5.0+mca1.0.1_01-mc1.5.2"
+    )
+    fun oslGen2Module(apiVersion: String, mcVersion: String, module: String, moduleVersion: String) {
+        val result = extension.oslModule(2, mcVersion, module, apiVersion)
+        assertEquals("net.ornithemc.osl-gen2:$module:$moduleVersion", result)
+    }
+
+    @ParameterizedTest(name = "OSL Gen2 {0} module {2} For MC {1}")
+    @CsvSource(
+        "0.17.1, 1.2.5, entrypoints, 0.5.0+mca1.0.1_01-mc1.5.2",
+        "0.17.1, b1.7.3, entrypoints, 0.5.0+mca1.0.1_01-mc1.5.2"
+    )
+    fun oslGen2SidedModule(apiVersion: String, mcVersion: String, module: String, moduleVersion: String) {
+        val result = extension.oslModule(2, mcVersion, module, apiVersion)
+        assertEquals("net.ornithemc.osl-gen2:$module:$moduleVersion", result)
+    }
+
+    @ParameterizedTest(name = "OSL Gen2 {0} for MC {1}")
+    @MethodSource("generateOSLGen2Modules")
+    fun oslGen2(apiVersion: String, mcVersion: String, expectedModules: Set<String>) {
+        val modules = extension.osl(2, mcVersion, apiVersion)
+        assertEquals(expectedModules.map { "net.ornithemc.osl-gen2:$it" }.toSet(), modules)
+    }
+
+    @ParameterizedTest(name = "OSL Gen2 {0} for MC {1}")
+    @MethodSource("generateOSLGen2SidedModules")
+    fun oslGen2Sided(apiVersion: String, mcVersion: String, expectedModules: Set<String>) {
+        val modules = extension.osl(2, mcVersion, apiVersion)
+        assertEquals(expectedModules.map { "net.ornithemc.osl-gen2:$it" }.toSet(), modules)
     }
 }
