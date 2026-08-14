@@ -1,12 +1,14 @@
 package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
+import kotlinx.serialization.json.JsonBuilder
 import org.gradle.api.JavaVersion
 import org.gradle.api.Task
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import xyz.wagyourtail.unimined.util.JSONBuilder
 import xyz.wagyourtail.unimined.util.XMLBuilder
 import xyz.wagyourtail.unimined.util.removeALl
 import xyz.wagyourtail.unimined.util.withSourceSet
@@ -89,7 +91,13 @@ abstract class RunConfig @Inject constructor(
         applyAll()
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
-            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${name.withSourceSet(sourceSet)}.xml")
+            .resolve(
+                "${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${
+                    name.withSourceSet(
+                        sourceSet
+                    )
+                }.xml"
+            )
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", buildString {
@@ -145,7 +153,9 @@ abstract class RunConfig @Inject constructor(
                 }.toTypedArray()
             ),
             XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
-                .addStringOption("value", args?.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it } ?: ""),
+                .addStringOption(
+                    "value",
+                    args?.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it } ?: ""),
             XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
                 .addStringOption(
                     "value",
@@ -192,6 +202,94 @@ abstract class RunConfig @Inject constructor(
             StandardCharsets.UTF_8
         )
 
+    }
+
+    fun createVSCodeRunConfig() {
+        if (!this.enabled) return
+        applyAll()
+
+        val vscodeDir = project.rootDir.resolve(".vscode")
+        val file = vscodeDir.resolve("launch.json")
+
+        val configName = buildString {
+            if (project != project.rootProject) append(project.path)
+            append(" ")
+            if (description != null) {
+                append(description)
+                if (sourceSet.name != "main") append(" (${sourceSet.name})")
+            } else {
+                append(name)
+            }
+        }
+
+        val projectName = buildString {
+            if (project != project.rootProject) {
+                append(project.rootProject.name)
+                append(project.path.replace(":", "."))
+            } else {
+                append(project.name)
+            }
+            append(".${sourceSet.name}")
+        }.replace(" ", "_")
+
+        val relativeWd = workingDir.toPath().relativeTo(project.rootProject.projectDir.toPath()).toString()
+        val cwdValue = if (relativeWd.isEmpty()) "\${workspaceFolder}" else "\${workspaceFolder}/$relativeWd"
+
+        val configurationBuilder = JSONBuilder("")
+            .addStringOption("type", "java")
+            .addStringOption("name", configName)
+            .addStringOption("request", "launch")
+            .addStringOption("mainClass", mainClass.getOrElse(""))
+            .addStringOption("projectName", projectName)
+
+        val argsBuilder = JSONBuilder("")
+        args?.forEach { argsBuilder.addKeyOption(it) }
+        configurationBuilder.append(argsBuilder)
+
+        configurationBuilder.addStringOption("vmArgs", jvmArgs?.joinToString(" ") ?: "")
+
+        val envBuilder = JSONBuilder("")
+        val systemEnv = System.getenv()
+        environment
+            .filter { (k, v) -> systemEnv[k] != v?.toString() }
+            .forEach { (k, v) -> envBuilder.addStringOption(k, v?.toString() ?: "") }
+        configurationBuilder.append(envBuilder)
+
+        configurationBuilder.addStringOption("cwd", cwdValue.replace("\\", "/"))
+
+        javaLauncher.orNull?.let { launcher ->
+            configurationBuilder.addStringOption("javaHome", launcher.metadata.installationPath.asFile.absolutePath)
+        }
+
+        configurationBuilder.addStringOption("preLaunchTask", preRunTask.name)
+
+        vscodeDir.mkdirs()
+
+        val finalJsonString = if (file.exists()) {
+            val content = file.readText(java.nio.charset.StandardCharsets.UTF_8)
+
+            if (content.contains("\"name\": \"$configName\"")) {
+                content
+            } else {
+                val target = "\"configurations\": ["
+                if (content.contains(target)) {
+                    content.replace(target, "$target\n        ${configurationBuilder.toString()},")
+                } else {
+                    content
+                }
+            }
+        } else {
+            val rootBuilder = JSONBuilder("")
+            rootBuilder.addStringOption("version", "0.2.0")
+
+            val configsArray = JSONBuilder("")
+            configsArray.append(configurationBuilder)
+            rootBuilder.append(configsArray)
+
+            rootBuilder.toString()
+        }
+
+        file.writeText(finalJsonString, java.nio.charset.StandardCharsets.UTF_8)
     }
 
 }
