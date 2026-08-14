@@ -210,6 +210,21 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
     }
 
+    override fun applyServerRunTransform(config: RunConfig) {
+        super.applyServerRunTransform(config)
+
+        // resolve dyn libs
+        val dynLibFolder = config.workingDir.resolve("lib")
+        dynLibFolder.mkdirs()
+        for (file in forgeDeps.resolve()) {
+            if (file.exists() && file.extension != "pom") {
+                file.copyTo(dynLibFolder.resolve(depNameMap.getOrDefault(file.name, file.name)), overwrite = true)
+            }
+        }
+
+        if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
+    }
+
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         return fixForge(baseMinecraft)
     }
