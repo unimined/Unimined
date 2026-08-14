@@ -177,7 +177,7 @@ fun applyGameArgs(
 
 fun parseVersionData(json: JsonObject): VersionData {
     return VersionData(
-        json.get("id").asString,
+        requireNotNull(json.get("id")?.asString, { "version id not found" }),
         json.get("type")?.asString,
         json.get("time")?.asString?.let {
             DateTimeComponents.Formats.ISO_DATE_TIME_OFFSET.parse(it).toLocalDateTime().toJavaLocalDateTime()
