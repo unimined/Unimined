@@ -13,12 +13,15 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG1ResourceLoading
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG1ResourceLoading.fixResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.io.File
 import java.io.InputStream
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -57,6 +60,10 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             getDynLibs(it)
         }
     }
+
+    override val transform = (listOf<(FileSystem) -> Unit>(
+        FixFG1ResourceLoading::fixResourceLoading
+    ) + super.transform).toMutableList()
 
     override fun apply() {
         // get and add forge-src to mappings
@@ -192,10 +199,44 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 )
             )
         }
+
+        if (wanted.contains("deobfuscation_data_1.5.1.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.1.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.1.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.1.zip").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("deobfuscation_data_1.5.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.zip").toString())
+                )
+            )
+        }
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+
+        config.properties["source_roots"] = {
+            parent.groups
+        }
 
         // resolve dyn libs
         val dynLibFolder = config.workingDir.resolve("lib")
@@ -208,6 +249,27 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         config.jvmArgs("-Dminecraft.applet.TargetDirectory=${config.workingDir.absolutePath}")
         if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
+        config.environment["MOD_CLASSES"] = "\${source_roots}"
+    }
+
+    override fun applyServerRunTransform(config: RunConfig) {
+        super.applyServerRunTransform(config)
+
+        config.properties["source_roots"] = {
+            parent.groups
+        }
+
+        // resolve dyn libs
+        val dynLibFolder = config.workingDir.resolve("lib")
+        dynLibFolder.mkdirs()
+        for (file in forgeDeps.resolve()) {
+            if (file.exists() && file.extension != "pom") {
+                file.copyTo(dynLibFolder.resolve(depNameMap.getOrDefault(file.name, file.name)), overwrite = true)
+            }
+        }
+
+        if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
+        config.environment["MOD_CLASSES"] = "\${source_roots}"
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
