@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.StringClassNameRemapExtension
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG1ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2DeobfEnvironment
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
@@ -77,6 +78,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     override val transform = (listOf<(FileSystem) -> Unit>(
         FixFG2Coremods::fixCoremods,
         FixFG2ResourceLoading::fixResourceLoading,
+        FixFG1ResourceLoading::fixResourceLoading,
         FixFG2DeobfEnvironment::fixDeobfEnvironment
     ) + super.transform).toMutableList()
 
