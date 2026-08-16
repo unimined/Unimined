@@ -79,6 +79,7 @@ class BTAProvider(project: Project, sourceSet: SourceSet) : AbstractTotalConvers
 
 	@Deprecated("Ornithe is not required for BTA.", replaceWith = ReplaceWith("legacyFabric(action)"), level = DeprecationLevel.HIDDEN)
 	override fun ornitheFabric(action: OrnithePatcher.() -> Unit) {
-		this.legacyFabric {}
+		super.ornitheFabric(action)
+//		(this.mcPatcher as OrnithePatcher).customGameProvider = true
 	}
 }

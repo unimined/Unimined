@@ -53,8 +53,10 @@ open class OrnitheFabricMinecraftTransformer(
         }
     }
 
+    override var libraryPatching by FinalizeOnRead(false)
+
     override fun apply() {
-        if (applyLibraryPatching) {
+        if (libraryPatching) {
             val libraries = libraryPatchArray[Pair(provider.mappings.ornitheGenVersion, provider.version)]
                 .asList()
                 .map { parseLibraryPatch(it.asJsonObject) }
@@ -63,10 +65,6 @@ open class OrnitheFabricMinecraftTransformer(
         }
 
         super.apply()
-    }
-
-    override fun enableLibraryPatching() {
-        applyLibraryPatching = true
     }
 
     internal fun getLibraryPatchUrl(gen: Int, version: String): String {
