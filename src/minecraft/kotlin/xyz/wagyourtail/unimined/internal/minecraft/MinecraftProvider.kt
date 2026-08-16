@@ -25,6 +25,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.OrnithePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
@@ -258,10 +259,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
+    override fun ornitheFabric(action: OrnithePatcher.() -> Unit) {
         mcPatcher = OrnitheFabricMinecraftTransformer(project, this).also {
             patcherAction = {
-                action(it as LegacyFabricPatcher)
+                action(it as OrnithePatcher)
             }
         }
     }

@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.PaperPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.OrnithePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
@@ -134,7 +135,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(fabric)
     }
 
-    override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
+    override fun ornitheFabric(action: OrnithePatcher.() -> Unit) {
         val fabric = OrnitheFabricMinecraftTransformer(project, provider)
         fabric.action()
         patchers.add(fabric)

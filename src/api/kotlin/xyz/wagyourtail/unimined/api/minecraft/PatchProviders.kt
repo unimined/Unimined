@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.liteloader.LiteLoaderPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.conversion.reindev.FoxLoaderPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.OrnithePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import java.lang.UnsupportedOperationException
 
@@ -135,7 +136,7 @@ interface PatchProviders {
      * @param action the action to perform on the patcher.
      * @since 1.4.0
      */
-    fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit)
+    fun ornitheFabric(action: OrnithePatcher.() -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for Ornithe.
@@ -144,7 +145,7 @@ interface PatchProviders {
      */
     fun ornitheFabric(
         @DelegatesTo(
-            value = LegacyFabricPatcher::class,
+            value = OrnithePatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
