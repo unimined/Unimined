@@ -554,6 +554,50 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
         addDependency("feather", entry)
     }
 
+    override fun raven(build: Int) {
+        unimined.ornitheMaven()
+        val vers = if (splitUnmapped) {
+            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Raven is not supported in joined environment before 1.3 yet")
+            "${minecraft.version}-${envType.name.lowercase()}+build.$build"
+        } else {
+            "${minecraft.version}+build.$build"
+        }
+
+        val entry = MappingEntry(
+            contentOf(
+                MavenCoords(
+                    "net.ornithemc",
+                    "raven",
+                    vers
+                )), "raven-$build"
+        ).apply {
+            mapNamespace("source" to "official")
+        }
+        addDependency("raven", entry)
+    }
+
+    override fun sparrow(build: Int) {
+        unimined.ornitheMaven()
+        val vers = if (splitUnmapped) {
+            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Sparrow is not supported in joined environment before 1.3 yet")
+            "${minecraft.version}-${envType.name.lowercase()}+build.$build"
+        } else {
+            "${minecraft.version}+build.$build"
+        }
+
+        val entry = MappingEntry(
+            contentOf(
+                MavenCoords(
+                    "net.ornithemc",
+                    "sparrow",
+                    vers
+                )), "sparrow-$build"
+        ).apply {
+            mapNamespace("source" to "official")
+        }
+        addDependency("sparrow", entry)
+    }
+
 
     override fun legacyYarn(build: Int) {
         unimined.legacyFabricMaven()
