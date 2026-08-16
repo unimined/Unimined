@@ -70,6 +70,11 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
      */
     abstract var ornitheGenVersion: Int
 
+    /**
+     * @since 1.4.2
+     */
+    abstract var fixExceptions: Boolean
+
     abstract fun intermediary()
 
     abstract fun calamus()
