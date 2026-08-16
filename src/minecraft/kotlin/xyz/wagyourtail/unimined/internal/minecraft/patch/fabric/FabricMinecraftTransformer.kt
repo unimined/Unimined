@@ -121,7 +121,7 @@ abstract class FabricMinecraftTransformer(
         }
     }
 
-    override fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>) {
+    override fun collectInterfaceInjections(injections: HashMap<String, List<String>>) {
         val modJsonPath = this.getModJsonPath()
 
         if (modJsonPath != null && modJsonPath.exists()) {
@@ -137,7 +137,7 @@ abstract class FabricMinecraftTransformer(
                         project.logger.warn("Fabric 0.18.0+ Interface Injections support has been added to ClassTweaker, please remove this from your fabric.mod.json")
                     }
 
-                    collectInterfaceInjections(baseMinecraft, injections, interfaces)
+                    collectInterfaceInjections(injections, interfaces)
                 }
             }
         }

@@ -28,7 +28,10 @@ import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Writer
+import xyz.wagyourtail.unimined.mapping.jvms.four.seven.nine.one.reference.ClassTypeSignature
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.tree.LazyMappingTree
+import xyz.wagyourtail.unimined.mapping.visitor.InterfacesType
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
@@ -158,6 +161,26 @@ abstract class FabricLikeMinecraftTransformer(
         if (!customIntermediaries && provider.obfuscated) {
             addIntermediaryMappings()
         }
+
+        val injections = hashMapOf<String, List<String>>()
+
+        this.collectInterfaceInjections(injections)
+
+        if (injections.isNotEmpty()) {
+            if (provider.mappings.stubMappings == null) {
+                provider.mappings.stubMappings = LazyMappingTree()
+            }
+
+            for ((name, interfaces) in injections) {
+                val classNode = provider.mappings.stubMappings?.visitClass(mapOf(Namespace("intermediary") to InternalName.read(name)))
+
+                if (classNode != null) {
+                    for (interf in interfaces) {
+                        classNode.visitInterface(InterfacesType.ADD, ClassTypeSignature.read("L${interf};"), Namespace("intermediary"), setOf())
+                    }
+                }
+            }
+        }
     }
 
     val fabricDep by lazy {
@@ -254,17 +277,13 @@ abstract class FabricLikeMinecraftTransformer(
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = super<AbstractMinecraftTransformer>.afterRemap(applyInterfaceInjection(super<AccessWidenerMinecraftTransformer>.afterRemap(baseMinecraft)))
 
     private fun applyInterfaceInjection(baseMinecraft: MinecraftJar): MinecraftJar {
-        val injections = hashMapOf<String, List<String>>()
-
-        this.collectInterfaceInjections(baseMinecraft, injections)
+        val injections = InterfaceInjectionMinecraftTransformer.collectFromMappings(baseMinecraft.mappingNamespace, provider.mappings)
 
         return if (injections.isNotEmpty()) {
-            val oldSuffix = if (baseMinecraft.awOrAt != null) baseMinecraft.awOrAt + "+" else ""
-
             val output = MinecraftJar(
                 baseMinecraft,
                 parentPath = provider.localCache.resolve("fabric").createDirectories(),
-                awOrAt = "${oldSuffix}ii+${injections.getShortSha1()}"
+                patches = baseMinecraft.patches + listOf("ii")
             )
 
             if (!output.path.exists() || project.unimined.forceReload) {
@@ -281,8 +300,8 @@ abstract class FabricLikeMinecraftTransformer(
         } else baseMinecraft
     }
 
-    abstract fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>)
-    fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>, interfaces: JsonObject) = runBlocking {
+    abstract fun collectInterfaceInjections(injections: HashMap<String, List<String>>)
+    fun collectInterfaceInjections(injections: HashMap<String, List<String>>, interfaces: JsonObject) = runBlocking {
         injections.putAll(interfaces.entrySet()
             .filterNotNull()
             .filter { it.key != null && it.value != null && it.value.isJsonArray }
@@ -291,25 +310,7 @@ abstract class FabricLikeMinecraftTransformer(
 
                 Pair(it.key!!, if (element.isJsonArray) {
                     element.asJsonArray.mapNotNull { name -> name.asString }
-                } else arrayListOf())
-            }
-            .map {
-                var target = it.first
-
-                val clazz = provider.mappings.resolve().getClass(
-                    prodNamespace,
-                    InternalName.read(target),
-                )
-
-                if (clazz != null) {
-                    var newTarget = clazz.getName(baseMinecraft.mappingNamespace)
-
-                    if (newTarget != null) {
-                        target = newTarget.value
-                    }
-                }
-
-                Pair(target, it.second)
+                } else listOf())
             }
         )
     }
