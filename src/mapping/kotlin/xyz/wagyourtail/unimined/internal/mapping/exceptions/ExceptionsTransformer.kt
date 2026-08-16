@@ -9,6 +9,7 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.jvms.ext.FieldOrMethodDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.node._class.member.method.ExceptionNode
 import xyz.wagyourtail.unimined.mapping.visitor.ExceptionType
@@ -25,7 +26,7 @@ import kotlin.io.path.inputStream
 
 object ExceptionsTransformer {
     fun transform(
-        collected: Map<String, Map<String, Pair<FieldOrMethodDescriptor, List<ExceptionNode<MethodVisitor>>>>>,
+        collected: Map<String, Map<String, Pair<FieldOrMethodDescriptor, List<Pair<ExceptionType, InternalName>>>>>,
         fs: FileSystem
     ) {
         for ((className, targetMethods) in collected) {
@@ -44,11 +45,11 @@ object ExceptionsTransformer {
 
                     if (methodInfos != null && methodNode.desc == methodInfos.first.value) {
                         for (exceptionInfo in methodInfos.second) {
-                            if (exceptionInfo.type == ExceptionType.ADD) {
-                                if (!methodNode.exceptions.contains(exceptionInfo.exception.value))
-                                    methodNode.exceptions.add(exceptionInfo.exception.value)
+                            if (exceptionInfo.first == ExceptionType.ADD) {
+                                if (!methodNode.exceptions.contains(exceptionInfo.second.value))
+                                    methodNode.exceptions.add(exceptionInfo.second.value)
                             } else {
-                                methodNode.exceptions.remove(exceptionInfo.exception.value)
+                                methodNode.exceptions.remove(exceptionInfo.second.value)
                             }
                         }
                     }
@@ -65,9 +66,9 @@ object ExceptionsTransformer {
         }
     }
 
-    fun collectExceptions(ns: Namespace, mappingsProvider: MappingsProvider): Map<String, Map<String, Pair<FieldOrMethodDescriptor, List<ExceptionNode<MethodVisitor>>>>> =
+    fun collectExceptions(ns: Namespace, mappingsProvider: MappingsProvider): Map<String, Map<String, Pair<FieldOrMethodDescriptor, List<Pair<ExceptionType, InternalName>>>>> =
         runBlocking {
-            val collected = defaultedMapOf<String, MutableMap<String, Pair<FieldOrMethodDescriptor, List<ExceptionNode<MethodVisitor>>>>> {
+            val collected = defaultedMapOf<String, MutableMap<String, Pair<FieldOrMethodDescriptor, List<Pair<ExceptionType, InternalName>>>>> {
                 mutableMapOf()
             }
 
@@ -86,6 +87,7 @@ object ExceptionsTransformer {
                     }
 
                     val exceptions = methodNode.exceptions.filter { it.namespaces.contains(ns) || it.baseNs == ns }
+                        .map { it.type to if (it.baseNs == ns) it.exception else mappingsTree.map(it.baseNs, ns, it.exception) }
 
                     if (exceptions.isNotEmpty()) {
                         collected[className][methodName] = methodDesc to exceptions
