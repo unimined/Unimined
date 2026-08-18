@@ -56,7 +56,7 @@ abstract class UniminedExtension(project: Project) : FabricLikeApiExtension(proj
     }
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
-    var forceReload: Boolean by FinalizeOnRead(project.properties["unimined.forceReload"] == "true" || project.gradle.startParameter.isRefreshDependencies)
+    var forceReload: Boolean by FinalizeOnRead(project.providers.gradleProperty("unimined.forceReload") || project.gradle.startParameter.isRefreshDependencies)
 
     /**
      * VERY not recommended to disable
