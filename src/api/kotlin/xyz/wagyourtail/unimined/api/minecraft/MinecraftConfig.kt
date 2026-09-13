@@ -93,6 +93,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         "net/minecraft/**",
         "com/mojang/math/**",
         "com/mojang/blaze3d/**",
+        "com/mojang/renderpearl/**",
         "com/mojang/realmsclient/**",
         "paulscode/sound/**",
         "com/jcraft/**"
