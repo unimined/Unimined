@@ -13,7 +13,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.runs.auth.AuthProvider
 import xyz.wagyourtail.unimined.util.*
 
-class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsConfig() {
+class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsConfig() {
     private var freeze = false
     private var runTasks: Map<String, TaskProvider<RunConfig>> by FinalizeOnRead(MustSet())
 
@@ -91,7 +91,8 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
     val genIntellijRunsTask = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
         if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
             it.group = "unimined_runs"
-            it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }.map { "genIntellijRuns".withSourceSet(it) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+            it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }
+                .map { "genIntellijRuns".withSourceSet(it) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
         } else {
             it.group = "unimined_internal"
         }
@@ -104,6 +105,23 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
         }
     }
 
+    val genVSCodeRunsTask = project.tasks.register("genVSCodeRuns".withSourceSet(minecraft.sourceSet)) {
+        if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
+            it.group = "unimined_runs"
+            it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }
+                .map { "genVSCodeRuns".withSourceSet(it) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+        } else {
+            it.group = "unimined_internal"
+        }
+        it.doLast {
+            if (!off) {
+                for (value in runTasks.values) {
+                    value.get().createVSCodeRunConfig()
+                }
+            }
+        }
+    }
+
     fun apply() {
         freeze = true
         if (off) return
@@ -111,9 +129,15 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
             throw IllegalStateException("You have preLaunch for run configs that don't exist: ${preLaunch.keys - actions.keys}")
         }
         runTasks = actions.mapValues { action ->
-            val preRun: TaskProvider<Task> = project.tasks.register("preRun${action.key.capitalized()}".withSourceSet(minecraft.sourceSet))
+            val preRun: TaskProvider<Task> =
+                project.tasks.register("preRun${action.key.capitalized()}".withSourceSet(minecraft.sourceSet))
 
-            val task: TaskProvider<RunConfig> = project.tasks.register("run${action.key.capitalized()}".withSourceSet(minecraft.sourceSet), RunConfig::class.java, minecraft.sourceSet, preRun)
+            val task: TaskProvider<RunConfig> = project.tasks.register(
+                "run${action.key.capitalized()}".withSourceSet(minecraft.sourceSet),
+                RunConfig::class.java,
+                minecraft.sourceSet,
+                preRun
+            )
             task.configure {
                 it.apply(action.value.first)
                 it.apply(all)
@@ -131,12 +155,9 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
             task
         }
-        //TODO: vscode/eclipse support
-        scheduleTaskAfterIDEASync(genIntellijRunsTask.name)
-    }
-
-    private fun scheduleTaskAfterIDEASync(taskName: String) {
-        if (isIdeaSync()) modifyGradleStartParameters(taskName)
+        //TODO: eclipse support
+        if (isRunningInIntelliJ() && isIdeaSync()) modifyGradleStartParameters(genIntellijRunsTask.name) // Idea
+        if (!isRunningInIntelliJ() && !isIdeaSync()) modifyGradleStartParameters(genVSCodeRunsTask.name) // Vscode
     }
 
     private fun modifyGradleStartParameters(taskName: String) {
@@ -145,6 +166,16 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
         taskRequests.add(DefaultTaskExecutionRequest(listOf(taskName), project.path, project.rootDir))
         startParameter.setTaskRequests(taskRequests)
     }
+
+    private fun isRunningInIntelliJ(): Boolean {
+        try {
+            Class.forName("com.intellij.rt.execution.application.AppMainV2")
+            return true
+        } catch (e: ClassNotFoundException) {
+            return false
+        }
+    }
+
 
     private fun isIdeaSync(): Boolean {
         return System.getProperty("idea.sync.active", "false").toBoolean()
