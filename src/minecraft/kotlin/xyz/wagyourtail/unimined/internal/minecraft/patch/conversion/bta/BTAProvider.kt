@@ -5,6 +5,7 @@ import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.OrnithePatcher
 import xyz.wagyourtail.unimined.internal.minecraft.patch.conversion.AbstractTotalConversionMinecraftProvider
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
@@ -76,8 +77,9 @@ class BTAProvider(project: Project, sourceSet: SourceSet) : AbstractTotalConvers
 //		(this.mcPatcher as LegacyFabricPatcher).customGameProvider = true
 	}
 
-	@Deprecated("Ornithe is not required for BTA.", replaceWith = ReplaceWith("legacyFabric(action)"))
-	override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
-		this.legacyFabric(action)
+	@Deprecated("Ornithe is not required for BTA.", replaceWith = ReplaceWith("legacyFabric(action)"), level = DeprecationLevel.HIDDEN)
+	override fun ornitheFabric(action: OrnithePatcher.() -> Unit) {
+		super.ornitheFabric(action)
+//		(this.mcPatcher as OrnithePatcher).customGameProvider = true
 	}
 }

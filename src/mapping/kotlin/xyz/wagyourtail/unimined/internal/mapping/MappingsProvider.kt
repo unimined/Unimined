@@ -503,7 +503,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
     }
 
 
-    override fun feather(build: Int) {
+    override fun feather(build: Int, fixNest: Boolean) {
         unimined.ornitheMaven()
         val vers = if (splitUnmapped && ornitheGenVersion < 2) {
             if (envType == EnvType.JOINED) throw UnsupportedOperationException("Feather mappings are not supported in joined environments before 1.3")
@@ -523,32 +523,79 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
             requires("calamus")
             provides("feather" to true)
             mapNamespace("intermediary" to "calamus", "named" to "feather")
-            renest()
-            insertInto.add {
-                it.delegator(object: Delegator() {
-                    val calamus = Namespace("calamus")
-                    val feather = Namespace("feather")
 
-                    override fun visitClass(
-                        delegate: MappingVisitor,
-                        names: Map<Namespace, InternalName>
-                    ): ClassVisitor? {
-                        return if (feather in names) {
-                            super.visitClass(
-                                delegate,
-                                names + (feather to InternalName.unchecked(
-                                    names[feather]!!.toString().replace("__", "$")
-                                ))
-                            )
-                        } else {
-                            super.visitClass(delegate, names)
+            if (fixNest) {
+                renest()
+                insertInto.add {
+                    it.delegator(object : Delegator() {
+                        val calamus = Namespace("calamus")
+                        val feather = Namespace("feather")
+
+                        override fun visitClass(
+                            delegate: MappingVisitor,
+                            names: Map<Namespace, InternalName>
+                        ): ClassVisitor? {
+                            return if (feather in names) {
+                                super.visitClass(
+                                    delegate,
+                                    names + (feather to InternalName.unchecked(
+                                        names[feather]!!.toString().replace("__", "$")
+                                    ))
+                                )
+                            } else {
+                                super.visitClass(delegate, names)
+                            }
                         }
-                    }
 
-                })
+                    })
+                }
             }
         }
         addDependency("feather", entry)
+    }
+
+    override fun raven(build: Int) {
+        unimined.ornitheMaven()
+        val vers = if (splitUnmapped) {
+            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Raven is not supported in joined environment before 1.3 yet")
+            "${minecraft.version}-${envType.name.lowercase()}+build.$build"
+        } else {
+            "${minecraft.version}+build.$build"
+        }
+
+        val entry = MappingEntry(
+            contentOf(
+                MavenCoords(
+                    "net.ornithemc",
+                    "raven",
+                    vers
+                )), "raven-$build"
+        ).apply {
+            mapNamespace("source" to "official")
+        }
+        addDependency("raven", entry)
+    }
+
+    override fun sparrow(build: Int) {
+        unimined.ornitheMaven()
+        val vers = if (splitUnmapped) {
+            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Sparrow is not supported in joined environment before 1.3 yet")
+            "${minecraft.version}-${envType.name.lowercase()}+build.$build"
+        } else {
+            "${minecraft.version}+build.$build"
+        }
+
+        val entry = MappingEntry(
+            contentOf(
+                MavenCoords(
+                    "net.ornithemc",
+                    "sparrow",
+                    vers
+                )), "sparrow-$build"
+        ).apply {
+            mapNamespace("source" to "official")
+        }
+        addDependency("sparrow", entry)
     }
 
 

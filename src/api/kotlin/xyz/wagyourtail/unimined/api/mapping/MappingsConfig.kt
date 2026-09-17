@@ -103,11 +103,49 @@ abstract class MappingsConfig<T: MappingsConfig<T>>(val project: Project, val mi
         yarnv1(build.toInt())
     }
 
-    abstract fun feather(build: Int)
+    fun feather(build: Int) {
+        feather(build, true)
+    }
 
     fun feather(build: String) {
-        feather(build.toInt())
+        feather(build.toInt(), true)
     }
+
+    /**
+     * @since 1.4.2
+     */
+    fun feather(build: String, fixNest: Boolean) {
+        feather(build.toInt(), fixNest)
+    }
+
+    /**
+     * @since 1.4.2
+     */
+    abstract fun feather(build: Int, fixNest: Boolean)
+
+    /**
+     * @since 1.4.2
+     */
+    fun raven(build: String) {
+        raven(build.toInt())
+    }
+
+    /**
+     * @since 1.4.2
+     */
+    abstract fun raven(build: Int)
+
+    /**
+     * @since 1.4.2
+     */
+    fun sparrow(build: String) {
+        sparrow(build.toInt())
+    }
+
+    /**
+     * @since 1.4.2
+     */
+    abstract fun sparrow(build: Int)
 
     abstract fun legacyYarn(build: Int)
 
