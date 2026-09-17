@@ -41,7 +41,7 @@ Yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * [Minecraft: Better Than Adventure](https://betterthanadventure.net)
 
 ## Planned Games / Total Conversion Mods
-* [Not So Seecret Saturday](https://www.notsoseecretsaturday.net)
+* [Not So Seecret Saturday](http://www.notsoseecretsaturday.net)
 
 ## TODO
 * stop using artifactural
