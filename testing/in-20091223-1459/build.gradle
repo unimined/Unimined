@@ -1,0 +1,18 @@
+plugins {
+    id 'xyz.wagyourtail.unimined' // version '4.2.0'
+}
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+unimined.minecraft {
+    omniArchiveManifest()
+    version("in-20091223-1459")
+    side("client")
+
+    mappings {
+        ornitheGenVersion = 2
+        calamus()
+        feather(1)
+    }
+}
