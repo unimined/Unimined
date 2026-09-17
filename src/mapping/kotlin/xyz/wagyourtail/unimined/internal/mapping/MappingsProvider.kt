@@ -65,7 +65,7 @@ open class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey
 
     val mappings = project.configurations.detachedConfiguration()
 
-    private var stubMappings: LazyMappingTree? = null
+    var stubMappings: LazyMappingTree? = null
 
     override var legacyFabricGenVersion by FinalizeOnRead(1)
     override var ornitheGenVersion by FinalizeOnRead(1)
