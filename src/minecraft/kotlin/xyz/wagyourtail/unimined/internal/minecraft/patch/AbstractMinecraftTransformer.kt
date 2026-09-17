@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
+import xyz.wagyourtail.unimined.internal.mapping.exceptions.ExceptionsTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixInnerClasses
@@ -227,30 +228,53 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!provider.fixInners) return baseMinecraft
+        var fixedMinecraft = baseMinecraft
 
-        if (provider.minecraftData.mcVersionCompare(provider.version, "1.8.2") < 0) {
+        if (provider.mappings.fixExceptions) {
+            val exceptions = ExceptionsTransformer.collectExceptions(fixedMinecraft.mappingNamespace, provider.mappings)
+
+            if (exceptions.isNotEmpty()) {
+                val fixedExceptions = MinecraftJar(
+                    fixedMinecraft,
+                    patches = fixedMinecraft.patches + listOf("fixExc")
+                )
+
+                if (!fixedExceptions.path.exists() || project.unimined.forceReload) {
+                    val temp = fixedExceptions.path.resolveSibling(fixedExceptions.path.nameWithoutExtension + "-temp.jar")
+                    fixedMinecraft.path.copyTo(temp, StandardCopyOption.REPLACE_EXISTING)
+
+                    temp.openZipFileSystem().use { fs ->
+                        ExceptionsTransformer.transform(exceptions, fs)
+                    }
+
+                    temp.moveTo(fixedExceptions.path, StandardCopyOption.REPLACE_EXISTING)
+
+                    fixedMinecraft = fixedExceptions
+                }
+            }
+        }
+
+        if (provider.fixInners && provider.minecraftData.mcVersionCompare(provider.version, "1.8.2") < 0) {
             val fixedInners = MinecraftJar(
-                baseMinecraft,
-                patches = baseMinecraft.patches + listOf("fixInners")
+                fixedMinecraft,
+                patches = fixedMinecraft.patches + listOf("fixInners")
             )
 
-            if (fixedInners.path.exists() && !project.unimined.forceReload) {
-                return fixedInners
+            if (!fixedInners.path.exists() || project.unimined.forceReload) {
+                val temp = fixedInners.path.resolveSibling(fixedInners.path.nameWithoutExtension + "-temp.jar")
+                fixedMinecraft.path.copyTo(temp, StandardCopyOption.REPLACE_EXISTING)
+
+                temp.openZipFileSystem().use { fs ->
+                    FixInnerClasses.apply(fs)
+                }
+
+                temp.moveTo(fixedInners.path, StandardCopyOption.REPLACE_EXISTING)
+
+                fixedMinecraft = fixedInners
             }
-
-            val temp = fixedInners.path.resolveSibling(fixedInners.path.nameWithoutExtension + "-temp.jar")
-            baseMinecraft.path.copyTo(temp, StandardCopyOption.REPLACE_EXISTING)
-
-            temp.openZipFileSystem().use { fs ->
-                FixInnerClasses.apply(fs)
-            }
-
-            temp.moveTo(fixedInners.path, StandardCopyOption.REPLACE_EXISTING)
-
-            return fixedInners
         }
-        return baseMinecraft
+
+        return fixedMinecraft
     }
 
     override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
