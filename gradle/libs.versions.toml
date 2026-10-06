@@ -20,7 +20,7 @@ jbsdiff = "1.0"
 commons-io = "2.20.0"
 commons-compress = "1.28.0"
 
-classtweaker = "0.2"
+classtweaker = "0.3.0"
 
 # JGit 5.x is the last version that supports Java 8.
 jgit = "5.13.3.202401111512-r"
