@@ -2,9 +2,9 @@ package xyz.wagyourtail.unimined.mclauncher
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.Test
 import java.nio.file.Path
 
 /** Launch plan computation: rules, variables, legacy args, natives coords. */

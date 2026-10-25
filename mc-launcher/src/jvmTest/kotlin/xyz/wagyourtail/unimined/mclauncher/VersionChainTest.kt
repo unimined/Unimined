@@ -4,10 +4,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.Test
+import kotlin.test.assertFailsWith
 
 /** `inheritsFrom` chain merge semantics. */
 class VersionChainTest {
@@ -45,7 +45,7 @@ class VersionChainTest {
             "x" to obj("""{"id":"x","inheritsFrom":"y"}"""),
             "y" to obj("""{"id":"y","inheritsFrom":"x"}""")
         )
-        assertThrows<IllegalArgumentException> {
+        assertFailsWith<IllegalArgumentException> {
             VersionChain.resolve(cyclic.getValue("x"), cyclic::getValue)
         }
     }

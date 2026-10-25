@@ -26,7 +26,7 @@ kotlin {
             api(libs.kotlinx.serialization.json)
         }
         jvmTest.dependencies {
-            implementation(libs.junit.jupiter)
+            implementation(kotlin("test"))
             runtimeOnly(libs.junit.platform.launcher)
         }
     }
