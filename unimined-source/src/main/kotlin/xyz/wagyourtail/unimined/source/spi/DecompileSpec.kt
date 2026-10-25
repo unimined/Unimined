@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.source.spi
 
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 
@@ -14,7 +15,7 @@ interface DecompileSpec {
     val input: Provider<RegularFile>
 
     /** Classpath entries the decompiler resolves references against. */
-    val classpath: List<Provider<RegularFile>>
+    val classpath: FileCollection
 
     /** Engine-specific options (vineflower prefs, CFR flags, ...). */
     val options: Map<String, String>

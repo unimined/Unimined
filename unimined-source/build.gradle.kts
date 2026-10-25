@@ -4,6 +4,10 @@ plugins {
 
 dependencies {
     api(project(":unimined-transform"))
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(project(":unimined-source:decompiler-vineflower"))
 }
 
 gradlePlugin {

@@ -48,7 +48,8 @@ class GradlePlugin : Plugin<Project> {
             "xyz.wagyourtail.unimined.remapper.uml",
             "xyz.wagyourtail.unimined.remapper.access",
             "xyz.wagyourtail.unimined.transform.fabric",
-            "xyz.wagyourtail.unimined.runs"
+            "xyz.wagyourtail.unimined.runs",
+            "xyz.wagyourtail.unimined.decompiler.vineflower"
         )
     }
 
