@@ -4,6 +4,12 @@ Unified Minecraft modding environment with support for legacy environments.
 
 for details on usage, see [the docs](Writerside/topics/starter-topic.md)
 
+> **Note:** this branch is the in-progress **2.0 modular rewrite** — the
+> monolithic plugin is being split into small composable plugins
+> (`unimined-api`, `unimined-remap`, `unimined-minecraft`,
+> `unimined-transform`, `unimined-runs`, `unimined-source`, and the
+> `unimined` frontend). The 1.x codebase lives on the `lts/*` branches.
+
 ## LTS Branch
 
 In order to better support buildscripts. when I plan on making big/breaking changes, I will leave an LTS branch behind.

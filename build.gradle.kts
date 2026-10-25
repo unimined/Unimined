@@ -1,271 +1,74 @@
+import org.gradle.api.plugins.BasePluginExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import java.io.ByteArrayOutputStream
-import java.io.File
+import xyz.wagyourtail.commons.gradle.GradleProjectExtension
 
 plugins {
-    kotlin("jvm") version libs.versions.kotlin.get()
-    alias(libs.plugins.dokka)
-    `java-gradle-plugin`
-    `maven-publish`
+    id("xyz.wagyourtail.commons-gradle") version "1.0.5-SNAPSHOT"
+    id("org.jetbrains.kotlin.jvm") version "2.4.21" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21" apply false
 }
 
-version = if (project.hasProperty("version_snapshot")) project.properties["version"] as String + "-SNAPSHOT" else project.properties["version"] as String
-group = project.properties["maven_group"] as String
+subprojects {
+    // mc-launcher is a Gradle-free KMP library — exempt from the
+    // kotlin-jvm/java/commons conventions; it sets its own coords
+    if (name == "mc-launcher") return@subprojects
 
-base {
-    archivesName.set(project.properties["archives_base_name"] as String)
-}
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "maven-publish")
+    apply(plugin = "xyz.wagyourtail.commons-gradle")
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+    extensions.configure<GradleProjectExtension>("commons") {
+        autoGroup()
+        autoVersion()
     }
 
-    withSourcesJar()
-}
+    val publishedName = if (name.startsWith("${rootProject.name}-")) name else "${rootProject.name}-$name"
 
-kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven("https://maven.wagyourtail.xyz/releases")
-    maven("https://maven.wagyourtail.xyz/snapshots")
-    maven("https://maven.neoforged.net/releases")
-    maven("https://maven.minecraftforge.net/")
-    maven("https://maven.fabricmc.net/")
-    gradlePluginPortal()
-}
-
-fun SourceSet.inputOf(vararg sourceSets: SourceSet) {
-    for (sourceSet in sourceSets) {
-        compileClasspath += sourceSet.compileClasspath
-        runtimeClasspath += sourceSet.runtimeClasspath
-    }
-}
-
-fun SourceSet.outputOf(vararg sourceSets: SourceSet) {
-    for (sourceSet in sourceSets) {
-        compileClasspath += sourceSet.output
-        runtimeClasspath += sourceSet.output
-    }
-}
-
-val api by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-}
-
-val mapping by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api)
-}
-
-val source by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(mapping, api)
-}
-
-val mods by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, source)
-}
-
-val runs by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api)
-}
-
-val minecraft by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, mods, runs, source)
-}
-
-val main by sourceSets.getting {
-    outputOf(api, mapping, source, mods, runs, minecraft)
-}
-
-val test by sourceSets.getting {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, source, mods, runs, minecraft)
-}
-
-dependencies {
-    runtimeOnly(gradleApi())
-    implementation(kotlin("metadata-jvm"))
-    implementation(libs.jb.annotations)
-
-    implementation(libs.guava)
-    implementation(libs.gson)
-
-    implementation(libs.asm)
-    implementation(libs.asm.commons)
-    implementation(libs.asm.tree)
-    implementation(libs.asm.analysis)
-    implementation(libs.asm.util)
-
-    implementation(libs.unimined.mapping.library.jvm)
-    implementation(libs.tiny.remapper) {
-        exclude(group = "org.ow2.asm")
+    extensions.configure<BasePluginExtension>("base") {
+        archivesName.set(publishedName)
     }
 
-    implementation(libs.binarypatcher) {
-        exclude(mapOf("group" to "commons-io"))
+    val javaVersion = 17
+
+    extensions.configure<JavaPluginExtension>("java") {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaVersion))
+        }
+        withSourcesJar()
     }
-    implementation(libs.jbsdiff)
 
-    implementation(libs.access.widener)
+    extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>("kotlin") {
+        jvmToolchain(javaVersion)
+    }
 
-    implementation(libs.commons.io)
-    implementation(libs.commons.compress)
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        testLogging {
+            events.addAll(listOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED))
+        }
+    }
 
-    implementation(libs.jgit)
-
-    implementation(libs.java.keyring)
-    implementation(libs.minecraftauth)
-
-    testImplementation(kotlin("test"))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-tasks.jar {
-    from(
-        sourceSets["api"].output,
-        sourceSets["mapping"].output,
-        sourceSets["source"].output,
-        sourceSets["mods"].output,
-        sourceSets["runs"].output,
-        sourceSets["minecraft"].output,
-        sourceSets["main"].output
-    )
-
-    manifest {
-        attributes(
-            "Implementation-Version" to if (project.hasProperty("version_snapshot")) {
-                val stdout = ByteArrayOutputStream()
-                exec {
-                    commandLine("git", "rev-parse", "--short", "HEAD")
-                    standardOutput = stdout
-                }.assertNormalExitValue()
-                buildString {
-                    append(project.version.toString().removeSuffix("-SNAPSHOT"))
-                    append("-")
-                    append(stdout.toString().trim())
-                    append("-SNAPSHOT")
+    extensions.configure<PublishingExtension>("publishing") {
+        publications.withType<MavenPublication>().configureEach {
+            if (artifactId == project.name) {
+                artifactId = publishedName
+            }
+        }
+        repositories {
+            maven {
+                name = "WagYourMaven"
+                url = uri(
+                    "https://maven.wagyourtail.xyz/" +
+                        if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/"
+                )
+                credentials {
+                    username = (findProperty("mvn.user") as String?)
+                        ?: providers.environmentVariable("USERNAME").orNull
+                    password = (findProperty("mvn.key") as String?)
+                        ?: providers.environmentVariable("TOKEN").orNull
                 }
-            } else project.version
-        )
-    }
-}
-
-val sourcesJar by tasks.getting(Jar::class) {
-    from(
-        api.allSource,
-        minecraft.allSource,
-        mapping.allSource,
-        sourceSets["source"].allSource,
-        mods.allSource,
-        runs.allSource,
-        main.allSource
-    )
-}
-
-tasks.build {
-    dependsOn(sourcesJar)
-}
-
-tasks.test {
-    useJUnitPlatform()
-
-    testLogging {
-        events.add(TestLogEvent.PASSED)
-        events.add(TestLogEvent.SKIPPED)
-        events.add(TestLogEvent.FAILED)
-    }
-}
-
-tasks.dokkaHtml {
-    outputDirectory.set(projectDir.resolve("docs/api-docs/"))
-    dokkaSourceSets {
-        named("main") {
-            suppress = true
-        }
-        named("api") {
-            suppress = false
-        }
-    }
-    doFirst {
-        file("Writerside/v.list").writeText(
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
-                <vars>
-                    <var name="version" value="${project.version}"/>
-                </vars>
-            """.trimIndent()
-        )
-    }
-}
-
-gradlePlugin {
-    plugins {
-        create("simplePlugin") {
-            id = "xyz.wagyourtail.unimined"
-            implementationClass = "xyz.wagyourtail.unimined.UniminedPlugin"
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "WagYourMaven"
-            url = uri("https://maven.wagyourtail.xyz/" + if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/")
-            credentials {
-                username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
-                password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
             }
         }
     }
 }
-
-// A task to output a json file with a list of all the test to run
-val writeActionsTestMatrix by tasks.registering {
-    doLast {
-        val testMatrix = arrayListOf<String>()
-
-        file("src/test/kotlin/xyz/wagyourtail/unimined/test/integration").listFiles()?.forEach {
-            if (it.name.endsWith("Test.kt")) {
-
-                val className = it.name.replace(".kt", "")
-                testMatrix.add("xyz.wagyourtail.unimined.test.integration.${className}")
-            }
-        }
-
-        testMatrix.add("xyz.wagyourtail.unimined.util.*")
-
-        val json = groovy.json.JsonOutput.toJson(testMatrix)
-        val output = file("build/test_matrix.json")
-        output.parentFile.mkdir()
-        output.writeText(json)
-    }
-}
-
-/**
- * Replaces invalid characters in test names for GitHub Actions artifacts.
- */
-abstract class PrintActionsTestName : DefaultTask() {
-    @get:Input
-    @get:Option(option = "name", description = "The test name")
-    abstract val testName: Property<String>;
-
-    @TaskAction
-    fun run() {
-        val sanitised = testName.get().replace('*', '_')
-        File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
-    }
-}
-
-tasks.register<PrintActionsTestName>("printActionsTestName") {}
