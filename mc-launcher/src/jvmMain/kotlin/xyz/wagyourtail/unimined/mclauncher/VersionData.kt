@@ -1,127 +1,141 @@
 package xyz.wagyourtail.unimined.mclauncher
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Typed view over a (possibly merged) version JSON document. Every field
- * is tolerant of absence so loader-merged documents of any era — legacy
- * `minecraftArguments` through modern `arguments` — read uniformly.
+ * Typed model of a (possibly chain-merged) version JSON document. Every
+ * field is tolerant of absence so loader-merged documents of any era —
+ * legacy `minecraftArguments` through modern `arguments` — read
+ * uniformly.
  */
-class VersionData private constructor(private val document: JsonObject) {
-
-    val id: String? get() = document.string("id")
-    val type: String? get() = document.string("type")
-    val mainClass: String? get() = document.string("mainClass")
-    val assets: String? get() = document.string("assets")
-    val inheritsFrom: String? get() = document.string("inheritsFrom")
-    val minimumLauncherVersion: Int? get() = document.int("minimumLauncherVersion")
-    val complianceLevel: Int? get() = document.int("complianceLevel")
+@Serializable
+class VersionData(
+    val id: String? = null,
+    val type: String? = null,
+    val mainClass: String? = null,
+    val assets: String? = null,
+    val inheritsFrom: String? = null,
+    val minimumLauncherVersion: Int? = null,
+    val complianceLevel: Int? = null,
+    val javaVersion: JavaVersion? = null,
+    val assetIndex: AssetRef? = null,
+    val downloads: Map<String, AssetRef> = emptyMap(),
+    val arguments: Arguments? = null,
+    val minecraftArguments: String? = null,
+    val libraries: List<Library> = emptyList(),
+    /** The logging config block — opaque passthrough to launch args. */
+    val logging: JsonObject? = null
+) {
 
     /** `javaVersion.majorVersion`, or null when the document omits it. */
-    val javaMajorVersion: Int?
-        get() = document.obj("javaVersion")?.int("majorVersion")
+    val javaMajorVersion: Int? get() = javaVersion?.majorVersion
 
-    /** Asset index descriptor (`assetIndex` object), when present. */
-    val assetIndex: AssetRef?
-        get() = document.obj("assetIndex")?.let { ref ->
-            AssetRef(
-                id = ref.string("id"),
-                url = ref.string("url"),
-                sha1 = ref.string("sha1"),
-                totalSize = ref.long("totalSize")
-            )
-        }
+    /** Modern `arguments.game` entries, or null on legacy documents. */
+    val gameArguments: List<ArgumentEntry>? get() = arguments?.game
 
-    /** Jar downloads by name (`downloads.client`, `downloads.server`, ...). */
-    fun download(name: String): AssetRef? =
-        document.obj("downloads")?.obj(name)?.let { ref ->
-            AssetRef(
-                id = ref.string("id"),
-                url = ref.string("url"),
-                sha1 = ref.string("sha1"),
-                totalSize = ref.long("size")
-            )
-        }
+    /** Modern `arguments.jvm` entries, or null on legacy documents. */
+    val jvmArguments: List<ArgumentEntry>? get() = arguments?.jvm
 
-    /** Modern `arguments.game`/`arguments.jvm` entries, or null when
-     *  the document uses the legacy `minecraftArguments` string. */
-    val gameArguments: List<ArgumentEntry>?
-        get() = argumentsBlock("game")
+    /** Jar download for [name] (`client`, `server`, ...), when present. */
+    fun download(name: String): AssetRef? = downloads[name]
 
-    val jvmArguments: List<ArgumentEntry>?
-        get() = argumentsBlock("jvm")
+    /** `javaVersion` block. */
+    @Serializable
+    class JavaVersion(
+        val component: String? = null,
+        val majorVersion: Int? = null
+    )
 
-    private fun argumentsBlock(section: String): List<ArgumentEntry>? =
-        document.obj("arguments")?.array(section)?.map { ArgumentEntry.parse(it) }
+    /** A `path`/`url`/`sha1`/`size`/`totalSize` download descriptor. */
+    @Serializable
+    class AssetRef(
+        val id: String? = null,
+        val url: String? = null,
+        val sha1: String? = null,
+        val size: Long? = null,
+        val totalSize: Long? = null
+    )
 
-    /** Legacy single-string game arguments (pre-1.13 documents). */
-    val minecraftArguments: String? get() = document.string("minecraftArguments")
-
-    /** Declared libraries in document order. */
-    val libraries: List<Library>
-        get() = (document.array("libraries") ?: emptyList()).mapNotNull { element ->
-            val lib = element as? JsonObject ?: return@mapNotNull null
-            val name = lib.string("name") ?: return@mapNotNull null
-            Library(
-                name = name,
-                rules = lib.rules(),
-                natives = lib.obj("natives")?.entries
-                    ?.associate { (k, v) -> k to v.jsonPrimitive.content },
-                extractExclude = lib.obj("extract")?.stringList("exclude") ?: emptyList(),
-                downloads = lib.obj("downloads")?.entries
-                    ?.associate { (k, v) -> k to v.jsonObject }
-                    ?: emptyMap()
-            )
-        }
-
-    /** The logging config block, when the document declares one. */
-    val logging: JsonObject? get() = document.obj("logging")
-
-    /** A `path`/`url`/`sha1`-style object reference. */
-    class AssetRef(val id: String?, val url: String?, val sha1: String?, val totalSize: Long?)
+    /** The modern `arguments` block — `game` and `jvm` sections. A null
+     *  section means the document omits it entirely (legacy fallback
+     *  semantics), distinct from an explicitly empty list. */
+    @Serializable
+    class Arguments(
+        val game: List<ArgumentEntry>? = null,
+        val jvm: List<ArgumentEntry>? = null
+    )
 
     /** One `arguments` list entry — either a bare value or a rules-gated
      *  object of the form `{ "rules": [...], "value": "..." | [...] }`. */
+    @Serializable(with = ArgumentEntry.Serializer::class)
     class ArgumentEntry(val value: List<String>, val rules: List<Rule>) {
 
         /** Whether this entry applies for [os] and the enabled [features]. */
         fun appliesTo(os: OperatingSystem, features: Set<String>): Boolean =
             RuleSet.allowed(rules, os, features)
 
-        companion object {
-            fun parse(element: JsonElement): ArgumentEntry = when (element) {
-                is JsonPrimitive -> ArgumentEntry(listOf(element.content), emptyList())
-                is JsonObject -> ArgumentEntry(
-                    value = when (val value = element["value"]) {
-                        is JsonPrimitive -> listOf(value.content)
-                        is JsonArray -> value.map { it.jsonPrimitive.content }
-                        else -> emptyList()
-                    },
-                    rules = element.rules()
+        object Serializer : KSerializer<ArgumentEntry> {
+            override val descriptor: SerialDescriptor =
+                JsonElement.serializer().descriptor
+
+            override fun deserialize(decoder: Decoder): ArgumentEntry {
+                val element = decoder.decodeSerializableValue(JsonElement.serializer())
+                return when (element) {
+                    is JsonPrimitive -> ArgumentEntry(listOf(element.content), emptyList())
+                    is JsonObject -> ArgumentEntry(
+                        value = when (val value = element["value"]) {
+                            is JsonPrimitive -> listOf(value.content)
+                            is JsonArray -> value.map { it.jsonPrimitive.content }
+                            else -> emptyList()
+                        },
+                        rules = element["rules"]?.let {
+                            Json.decodeFromJsonElement<List<Rule>>(it)
+                        } ?: emptyList()
+                    )
+                    else -> throw SerializationException(
+                        "unexpected arguments entry: $element"
+                    )
+                }
+            }
+
+            override fun serialize(encoder: Encoder, value: ArgumentEntry) {
+                throw UnsupportedOperationException(
+                    "ArgumentEntry serialization is not supported"
                 )
-                else -> ArgumentEntry(emptyList(), emptyList())
             }
         }
 
     }
 
     /** A version-JSON `libraries` entry. */
+    @Serializable
     class Library(
         /** Maven coordinate `group:name:version`. */
         val name: String,
-        val rules: List<Rule>,
+        val rules: List<Rule> = emptyList(),
         /** OS-key → natives classifier (may contain `${arch}`). */
-        val natives: Map<String, String>?,
-        val extractExclude: List<String>,
+        val natives: Map<String, String>? = null,
+        val extract: Extract? = null,
         /** Raw `downloads` object (`artifact`, `classifiers`, ...). */
-        val downloads: Map<String, JsonObject>
+        val downloads: Map<String, JsonObject> = emptyMap()
     ) {
+
+        @Serializable
+        class Extract(val exclude: List<String> = emptyList())
+
+        val extractExclude: List<String> get() = extract?.exclude ?: emptyList()
 
         /** Whether this library applies on [os] with [features]. */
         fun appliesTo(os: OperatingSystem, features: Set<String>): Boolean =
@@ -134,25 +148,34 @@ class VersionData private constructor(private val document: JsonObject) {
     }
 
     /** A single `rules` entry: `action` + optional `os`/`features` gates. */
+    @Serializable
     class Rule(
-        val action: String,
-        val osName: String?,
-        val osArch: String?,
-        val osVersion: String?,
-        val features: Map<String, Boolean>
+        val action: String = "allow",
+        val os: OsRule? = null,
+        val features: Map<String, Boolean> = emptyMap()
     ) {
+
+        @Serializable
+        class OsRule(
+            val name: String? = null,
+            val arch: String? = null,
+            val version: String? = null
+        )
 
         val allow: Boolean get() = action == "allow"
 
         fun matches(os: OperatingSystem, enabledFeatures: Set<String>): Boolean {
-            if (osName != null && osName != os.key) return false
-            if (osArch != null) {
+            val ruleOs = this.os
+            if (ruleOs?.name != null && ruleOs.name != os.key) return false
+            val ruleArch = ruleOs?.arch
+            if (ruleArch != null) {
                 val arch = System.getProperty("os.arch").lowercase()
-                if (osArch == "x86" && (arch == "x86_64" || arch == "amd64")) return false
-                if (osArch != "x86" && !arch.startsWith(osArch.lowercase())) return false
+                if (ruleArch == "x86" && (arch == "x86_64" || arch == "amd64")) return false
+                if (ruleArch != "x86" && !arch.startsWith(ruleArch.lowercase())) return false
             }
-            if (osVersion != null &&
-                !System.getProperty("os.version", "").matches(Regex(osVersion))) return false
+            val ruleVersion = ruleOs?.version
+            if (ruleVersion != null &&
+                !System.getProperty("os.version", "").matches(Regex(ruleVersion))) return false
             for ((feature, required) in features) {
                 if (enabledFeatures.contains(feature) != required) return false
             }
@@ -163,40 +186,11 @@ class VersionData private constructor(private val document: JsonObject) {
 
     companion object {
 
-        /** Parse a document into the typed view. */
-        fun parse(document: JsonObject): VersionData = VersionData(document)
+        private val json = Json { ignoreUnknownKeys = true }
 
-        internal fun JsonObject.string(key: String): String? =
-            (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
-
-        internal fun JsonObject.int(key: String): Int? =
-            (this[key] as? JsonPrimitive)?.content?.toIntOrNull()
-
-        internal fun JsonObject.long(key: String): Long? =
-            (this[key] as? JsonPrimitive)?.content?.toLongOrNull()
-
-        internal fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
-
-        internal fun JsonObject.array(key: String): JsonArray? = this[key] as? JsonArray
-
-        internal fun JsonObject.stringList(key: String): List<String> =
-            array(key)?.mapNotNull { (it as? JsonPrimitive)?.content } ?: emptyList()
-
-        internal fun JsonObject.rules(): List<Rule> =
-            (this["rules"] as? JsonArray)?.mapNotNull { element ->
-                val rule = element as? JsonObject ?: return@mapNotNull null
-                val os = rule["os"] as? JsonObject
-                val features = (rule["features"] as? JsonObject)?.entries
-                    ?.associate { (k, v) -> k to v.jsonPrimitive.content.toBoolean() }
-                    ?: emptyMap()
-                Rule(
-                    action = rule.string("action") ?: "allow",
-                    osName = os?.string("name"),
-                    osArch = os?.string("arch"),
-                    osVersion = os?.string("version"),
-                    features = features
-                )
-            } ?: emptyList()
+        /** Decode a (merged) document into the typed view. */
+        fun parse(document: JsonObject): VersionData =
+            json.decodeFromJsonElement(serializer(), document)
 
     }
 
