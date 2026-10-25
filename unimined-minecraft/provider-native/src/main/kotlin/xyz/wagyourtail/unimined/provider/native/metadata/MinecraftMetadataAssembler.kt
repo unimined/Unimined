@@ -12,14 +12,13 @@ import xyz.wagyourtail.unimined.provider.native.manifest.VersionJson
 object MinecraftMetadataAssembler {
 
     /**
-     * Assemble metadata for [version]. [parentDocument] fetches inherited
-     * version JSON lazily when the launcher resolves `inheritsFrom`.
+     * Assemble metadata for [version]. Launch metadata is attached by the
+     * provider (see `NativeProvider`); the projection itself carries none.
      */
     fun assemble(
         version: VersionJson,
         root: JsonObject,
-        platform: PlatformInfo = PlatformInfo.current(),
-        parentDocument: (String) -> JsonObject
+        platform: PlatformInfo = PlatformInfo.current()
     ): ResolvedMinecraftMetadata {
         val downloads = buildMap {
             version.downloads?.get("client")?.let { put(ArtifactKey.CLIENT, it) }
@@ -32,8 +31,7 @@ object MinecraftMetadataAssembler {
             version = version,
             downloads = downloads,
             libraries = libraries,
-            assetIndex = version.assetIndex,
-            launch = NativeLaunchMetadata({ root }, parentDocument)
+            assetIndex = version.assetIndex
         )
     }
 

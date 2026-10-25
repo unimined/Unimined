@@ -102,9 +102,12 @@ class NativeProvider(
             })
         )
         val launch = NativeLaunchMetadata(
-            rootDocument = { resolver.versionJsonDocument(versionId) },
-            loadParent = resolver::versionJsonDocument
-        )
+            rootId = versionId,
+            cacheDir = cacheDir,
+            offline = ctx.offline,
+            refreshCache = ctx.refreshUniminedDownloads,
+            metadataTtlMillis = ctx.metadataCacheTtl?.toMillis()
+        ).withResolverFactory { resolver }
 
         val capabilities = ctx.providers.provider {
             EnvironmentCapabilities(

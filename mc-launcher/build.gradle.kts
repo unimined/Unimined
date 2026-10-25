@@ -17,5 +17,17 @@ kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    sourceSets {
+        jvmMain.dependencies {
+            api(libs.kotlinx.serialization.json)
+        }
+        jvmTest.dependencies {
+            implementation(libs.junit.jupiter)
+            runtimeOnly(libs.junit.platform.launcher)
+        }
     }
 }

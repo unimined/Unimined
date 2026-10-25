@@ -31,8 +31,7 @@ internal object NativeArtifactProduction {
         return MinecraftMetadataAssembler.assemble(
             version = version,
             root = root,
-            platform = PlatformInfo.current(),
-            parentDocument = resolver::versionJsonDocument
+            platform = PlatformInfo.current()
         )
     }
 

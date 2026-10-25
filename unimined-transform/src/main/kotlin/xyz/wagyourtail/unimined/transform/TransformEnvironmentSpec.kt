@@ -92,7 +92,7 @@ class TransformEnvironmentSpec internal constructor(
     }
 
     /** Run mutators compose like decorators: inherited before local. */
-    internal fun effectiveRunMutators(
+    fun effectiveRunMutators(
         visiting: MutableSet<String> = mutableSetOf()
     ): List<Action<RunConfigSpec>> {
         val key = "$projectPath:$environmentId"

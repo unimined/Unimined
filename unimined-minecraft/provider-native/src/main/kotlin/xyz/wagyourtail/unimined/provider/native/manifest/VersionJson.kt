@@ -10,13 +10,18 @@ import kotlinx.serialization.Serializable
 class VersionJson(
     val id: String,
     val type: String,
+    val inheritsFrom: String? = null,
     val downloads: Map<String, Download>? = null,
     val assetIndex: Download? = null,
+    val assets: String? = null,
     val libraries: List<Library> = emptyList(),
     val mainClass: String = "",
     val arguments: Arguments? = null,
     val minecraftArguments: String? = null,
-    val javaVersion: JavaVersion? = null
+    val javaVersion: JavaVersion? = null,
+    val logging: kotlinx.serialization.json.JsonObject? = null,
+    val complianceLevel: Int? = null,
+    val minimumLauncherVersion: Int? = null
 ) {
 
     @Serializable

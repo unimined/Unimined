@@ -4,6 +4,10 @@ plugins {
 
 dependencies {
     api(project(":unimined-transform"))
+    api(project(":mc-launcher"))
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 gradlePlugin {

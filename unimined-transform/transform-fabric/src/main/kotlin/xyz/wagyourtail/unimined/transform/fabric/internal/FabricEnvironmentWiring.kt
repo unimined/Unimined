@@ -4,6 +4,8 @@ import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
@@ -17,8 +19,9 @@ import java.nio.file.Path
 /**
  * Per-environment fabric wiring. Binding callbacks can run before the
  * build script assigns `loader(...)`, so every contribution checks the
- * loader spec lazily — inside dependency/dependency-materialization or
- * provider queries — rather than eagerly here.
+ * loader spec lazily — inside dependency materialization or provider
+ * queries — and providers capture only spec properties, file
+ * collections, and paths so they survive the configuration cache.
  */
 internal object FabricEnvironmentWiring {
 
@@ -29,6 +32,8 @@ internal object FabricEnvironmentWiring {
         contributeRunMutator(project, environment)
     }
 
+    private fun String.cap(): String = replaceFirstChar(Char::uppercase)
+
     /**
      * Prepend `official -> intermediary` to the environment's mapping
      * chain when a fabric loader is declared — user mappings (e.g. yarn)
@@ -36,12 +41,34 @@ internal object FabricEnvironmentWiring {
      * environment still lands on the `intermediary` dev namespace.
      */
     private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {
+        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
+        val version = environment.version
+        val dependencies = project.dependencies
+
+        val intermediary = project.configurations.create(
+            "fabricIntermediary${environment.environmentId.cap()}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.withDependencies { deps ->
+                if (loaderSpec.orNull?.name == "fabric") {
+                    deps.add(dependencies.create(
+                        "${IntermediaryMappings.INTERMEDIARY_MODULE}:${version.get()}:v2"
+                    ))
+                }
+            }
+        }
+        val intermediaryJar = project.files(intermediary)
+        val cacheDir = project.layout.projectDirectory
+            .dir(".gradle/unimined/fabric").asFile.toPath()
+
         val files = project.files(project.provider {
-            val loader = environment.loaderSpec.orNull
-            if (loader?.name != "fabric") {
+            if (loaderSpec.orNull?.name != "fabric") {
                 emptyList()
             } else {
-                listOf(IntermediaryMappings.materialize(project, environment.version.get()))
+                listOf(IntermediaryMappings.materialize(
+                    intermediaryJar.singleFile.toPath(), version.get(), cacheDir
+                ).toFile())
             }
         })
         environment.mappingsSpec.defaultSources += MappingsSpecImpl.Source.File(files)
@@ -50,15 +77,26 @@ internal object FabricEnvironmentWiring {
     /** The loader jar is an intermediary-named mod dependency — it rides
      *  the environment's remapped mod view onto the dev classpath. */
     private fun contributeLoaderDependency(project: Project, environment: MinecraftEnvironment) {
-        project.configurations.named(environment.modImplementationConfigurationName) { conf ->
+        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
+        val dependencies = project.dependencies
+
+        val loader = project.configurations.create(
+            "fabricLoader${environment.environmentId.cap()}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = false
             conf.withDependencies { deps ->
-                val loader = environment.loaderSpec.orNull
-                if (loader?.name == "fabric") {
-                    deps.add(project.dependencies.create(
-                        "${FabricModAnalysis.LOADER_MODULE}:${loader.version}"
+                val spec = loaderSpec.orNull
+                if (spec?.name == "fabric") {
+                    deps.add(dependencies.create(
+                        "${FabricModAnalysis.LOADER_MODULE}:${spec.version}"
                     ))
                 }
             }
+        }
+        project.configurations.named(environment.modImplementationConfigurationName) { conf ->
+            conf.extendsFrom(loader)
         }
     }
 
@@ -70,11 +108,12 @@ internal object FabricEnvironmentWiring {
      */
     private fun contributeAccessSteps(project: Project, environment: MinecraftEnvironment) {
         val objects: ObjectFactory = project.objects
+        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val environmentSpec = remap.sourceSet(environment.environmentId)
 
         val modJars = project.configurations.create(
-            "fabricModAnalysis${environment.environmentId.replaceFirstChar(Char::uppercase)}"
+            "fabricModAnalysis${environment.environmentId.cap()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
@@ -87,13 +126,14 @@ internal object FabricEnvironmentWiring {
                 ArtifactTypeDefinition.JAR_TYPE
             )
         }
+        val modJarFiles = project.files(modJars)
         val awCacheDir = project.layout.projectDirectory
             .dir(".gradle/unimined/fabric/aw").asFile.toPath()
         val extractedAws = project.provider {
-            if (environment.loaderSpec.orNull?.name != "fabric") {
+            if (loaderSpec.orNull?.name != "fabric") {
                 emptyList()
             } else {
-                modJars.files.mapNotNull {
+                modJarFiles.files.mapNotNull {
                     FabricModAnalysis.extractAccessWidener(it.toPath(), awCacheDir)
                 }
             }
@@ -111,22 +151,18 @@ internal object FabricEnvironmentWiring {
      * right `KnotClient`/`KnotServer` (or a loader-declared override).
      */
     private fun contributeRunMutator(project: Project, environment: MinecraftEnvironment) {
+        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
         val transform = project.extensions.getByType(TransformExtension::class.java)
-        val loaderJar = project.provider {
-            val loader = environment.loaderSpec.orNull
-            if (loader?.name != "fabric") {
-                null
-            } else {
-                project.configurations.detachedConfiguration(
-                    project.dependencies.create(
-                        "${FabricModAnalysis.LOADER_MODULE}:${loader.version}"
-                    )
-                ).apply { isTransitive = false }.singleFile.toPath()
-            }
-        }
+
+        val loader = project.configurations.getByName(
+            "fabricLoader${environment.environmentId.cap()}"
+        )
+        val loaderFiles = project.files(loader)
+
         transform.sourceSet(environment.environmentId).runMutators += Action<RunConfigSpec> { config ->
-            val jar = loaderJar.orNull ?: return@Action
-            val side = if (config.name.contains("server", true)) "server" else "client"
+            if (loaderSpec.orNull?.name != "fabric") return@Action
+            val jar = loaderFiles.singleFile.toPath()
+            val side = if (config.name.contains("server", ignoreCase = true)) "server" else "client"
             val fallback = if (side == "server") {
                 "net.fabricmc.loader.impl.launch.knot.KnotServer"
             } else {

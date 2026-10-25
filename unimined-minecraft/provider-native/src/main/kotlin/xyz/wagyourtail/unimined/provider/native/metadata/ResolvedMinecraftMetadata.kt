@@ -14,6 +14,7 @@ data class ResolvedMinecraftMetadata(
     val libraries: List<String>,
     /** Asset-index download reference, if the version has one. */
     val assetIndex: VersionJson.Download?,
-    /** Raw launch document and lazy parent lookup. */
-    val launch: LaunchMetadata
+    /** Launch metadata reconstruction data — assembled by the provider,
+     *  not required for artifact production. */
+    val launch: LaunchMetadata? = null
 )

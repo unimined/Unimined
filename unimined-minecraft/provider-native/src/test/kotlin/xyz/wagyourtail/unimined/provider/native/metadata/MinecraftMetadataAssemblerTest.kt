@@ -31,20 +31,12 @@ class MinecraftMetadataAssemblerTest {
                 )
             )
         )
-        val root = Json.parseToJsonElement(
-            """{"id":"1.20.1","inheritsFrom":"1.19.4","arguments":{"game":["--demo"]}}"""
-        ) as kotlinx.serialization.json.JsonObject
-        val parent = Json.parseToJsonElement("""{"id":"1.19.4","mainClass":"parent.Main"}""")
-            as kotlinx.serialization.json.JsonObject
+        val root = Json.parseToJsonElement("{}") as kotlinx.serialization.json.JsonObject
 
         val assembled = MinecraftMetadataAssembler.assemble(
             version = version,
             root = root,
-            platform = PlatformInfo("windows", "amd64", "10.0"),
-            parentDocument = { id ->
-                assertEquals("1.19.4", id)
-                parent
-            }
+            platform = PlatformInfo("windows", "amd64", "10.0")
         )
 
         assertSame(client, assembled.downloads[ArtifactKey.CLIENT])
@@ -55,9 +47,7 @@ class MinecraftMetadataAssemblerTest {
             listOf("org.example:common:1.0", "org.example:windows-only:1.0"),
             assembled.libraries
         )
-        assertSame(root, assembled.launch.root)
-        assertEquals("parent.Main", assembled.launch.parent("1.19.4")["mainClass"]?.toString()?.trim('"'))
-        assertTrue(assembled.launch.root.containsKey("arguments"))
+        assertNull(assembled.launch)
     }
 
     @Test
@@ -88,12 +78,12 @@ class MinecraftMetadataAssemblerTest {
 
         val mac = MinecraftMetadataAssembler.assemble(
             version, root, PlatformInfo("osx", "aarch64", "14.0")
-        ) { Json.parseToJsonElement("{}") as kotlinx.serialization.json.JsonObject }
+        )
         val windows = MinecraftMetadataAssembler.assemble(
             version,
             root,
             PlatformInfo("windows", "amd64", "10.0", mapOf("is_demo_user" to true))
-        ) { Json.parseToJsonElement("{}") as kotlinx.serialization.json.JsonObject }
+        )
 
         assertEquals(emptyList<String>(), mac.libraries)
         assertEquals(
