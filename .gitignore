@@ -20,6 +20,7 @@
 *.rar
 
 build
+bin
 .gradle
 !gradle/wrapper/gradle-wrapper.jar
 .idea
