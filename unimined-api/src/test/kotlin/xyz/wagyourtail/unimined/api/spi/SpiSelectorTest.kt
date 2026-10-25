@@ -11,7 +11,8 @@ class SpiSelectorTest {
 
     private class FakeImpl(
         override val name: String,
-        private val maxVersion: Int
+        private val maxVersion: Int,
+        override val priority: Int = 0
     ) : Supports<FakeSpec> {
         override fun supports(spec: FakeSpec) = spec.maxVersion <= maxVersion
     }
@@ -63,6 +64,16 @@ class SpiSelectorTest {
             "no test impl supports FakeSpec(maxVersion=99); registered: a, b",
             e.message
         )
+    }
+
+    @Test
+    fun `unique top priority wins ambiguous selection`() {
+        val selector = spiSelector<FakeImpl, FakeSpec>("test impl")
+        val a = FakeImpl("a", 20, priority = 5)
+        selector.register(a)
+        selector.register(FakeImpl("b", 20))
+
+        assertSame(a, selector.select(FakeSpec(maxVersion = 10)))
     }
 
     @Test

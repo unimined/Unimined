@@ -55,12 +55,15 @@ internal object EnvironmentClasspathWiring {
         minecraft.devViewConfigurations[environmentId] = devView
 
         val devNamespace = minecraft.devNamespace(environmentId)
-        val mcSnapshot = minecraft.mappingSnapshot(
-            environmentId, "mcToDev",
+        // Bundle JSON providers — evaluated at transform execution
+        // (dependency resolution), since artifact transforms cannot carry
+        // task dependencies on a bundle producer.
+        val mcBundleJson = minecraft.mappingBundleJson(
+            environmentId,
             minecraft.sourceNamespace(environmentId), devNamespace
         )
-        val modsSnapshot = minecraft.mappingSnapshot(
-            environmentId, "modsToDev",
+        val modsBundleJson = minecraft.mappingBundleJson(
+            environmentId,
             minecraft.modSourceNamespaces(environmentId).map { it.single() },
             devNamespace
         )
@@ -77,7 +80,7 @@ internal object EnvironmentClasspathWiring {
             t.parameters { p ->
                 p.sourceNamespace.set(minecraft.sourceNamespace(environmentId))
                 p.targetNamespace.set(devNamespace)
-                p.mappingFile.set(mcSnapshot)
+                p.mappingBundleJson.set(mcBundleJson)
                 p.classpath.from(libraries)
                 p.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.JAR))
             }
@@ -85,11 +88,11 @@ internal object EnvironmentClasspathWiring {
 
         val modImplementationView = remappedModView(
             project, minecraft, remap, environment,
-            environment.modImplementationConfigurationName, modsSnapshot
+            environment.modImplementationConfigurationName, modsBundleJson
         )
         val modRuntimeOnlyView = remappedModView(
             project, minecraft, remap, environment,
-            environment.modRuntimeOnlyConfigurationName, modsSnapshot
+            environment.modRuntimeOnlyConfigurationName, modsBundleJson
         )
 
         sourceSet.compileClasspath = sourceSet.compileClasspath +
@@ -104,7 +107,7 @@ internal object EnvironmentClasspathWiring {
         remap: RemapExtension,
         environment: MinecraftEnvironment,
         bucketName: String,
-        modsSnapshot: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>
+        modsBundleJson: org.gradle.api.provider.Provider<String>
     ): org.gradle.api.artifacts.Configuration {
         val environmentId = environment.environmentId
         return remap.remappedViewFor(environmentId, bucketName, Action { spec ->
@@ -121,7 +124,8 @@ internal object EnvironmentClasspathWiring {
                 }
             )
             spec.targetNamespace.set(minecraft.devNamespace(environmentId))
-            spec.mappingFile.set(modsSnapshot)
+            spec.mappingBundleJson.set(modsBundleJson)
+            spec.hasLazyMappings = true
             spec.classpath.from(
                 project.configurations.getByName(environment.minecraftLibrariesConfigurationName)
             )

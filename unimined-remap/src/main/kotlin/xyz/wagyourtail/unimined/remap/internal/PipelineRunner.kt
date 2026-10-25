@@ -42,7 +42,7 @@ object PipelineRunner {
             spec = spec,
             mappings = if (resolved.any { it.needsMappingTree }) {
                 mappings ?: throw GradleException(
-                    "$host: pipeline requires mapping data — provide a mapping snapshot"
+                    "$host: pipeline requires mapping data — provide a mapping bundle"
                 )
             } else null,
             classpath = if (resolved.any { it.needsClasspath }) classpath else emptyList(),

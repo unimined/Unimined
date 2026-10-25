@@ -62,7 +62,7 @@ abstract class RemappedViewsSpec @Inject constructor(
     fun namespace(sourceNamespace: String): RemappedNamespaceSpec =
         namespace(sourceNamespace, defaultSourceConfiguration(sourceNamespace), Action {})
 
-    /** Add a namespace and configure its per-namespace mapping snapshot. */
+    /** Add a namespace and configure its per-namespace mapping bundle. */
     fun namespace(
         sourceNamespace: String,
         action: Action<RemappedNamespaceSpec>

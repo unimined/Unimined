@@ -421,6 +421,7 @@ abstract class RemapExtension @Inject constructor(
                 existing.sourceNamespace.get() == spec.sourceNamespace.get() &&
                     existing.targetNamespace.get() == spec.targetNamespace.get() &&
                     existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile &&
+                    existing.hasLazyMappings == spec.hasLazyMappings &&
                     existing.classpath.files == spec.classpath.files &&
                     existing.stepSpecs.getOrElse(emptyList()) == spec.stepSpecs.getOrElse(emptyList())
             ) {
@@ -443,7 +444,11 @@ abstract class RemapExtension @Inject constructor(
             t.parameters { p ->
                 p.sourceNamespace.set(spec.sourceNamespace)
                 p.targetNamespace.set(spec.targetNamespace)
-                if (spec.mappingFile.isPresent) p.mappingFile.set(spec.mappingFile)
+                if (spec.hasLazyMappings) {
+                    p.mappingBundleJson.set(spec.mappingBundleJson)
+                } else if (spec.mappingFile.isPresent) {
+                    p.mappingFile.set(spec.mappingFile)
+                }
                 p.classpath.from(spec.classpath)
                 p.stepSpecs.set(spec.stepSpecs)
             }

@@ -23,7 +23,7 @@ abstract class RemappedNamespaceSpec @Inject constructor(
 ) {
 
     /**
-     * Serialized `MappingSnapshot` for `sourceNamespace -> targetNamespace`.
+     * Serialized `MappingBundle` for `sourceNamespace -> targetNamespace`.
      * Required when this namespace's pipeline step needs mapping data.
      */
     @get:Optional

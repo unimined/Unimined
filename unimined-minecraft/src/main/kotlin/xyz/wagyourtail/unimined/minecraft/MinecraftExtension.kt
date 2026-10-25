@@ -26,7 +26,7 @@ import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingExtension
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
-import xyz.wagyourtail.unimined.mapping.task.ProduceMappingSnapshotTask
+import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
 import xyz.wagyourtail.unimined.minecraft.internal.DefaultProviderContext
 import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
@@ -584,18 +584,18 @@ abstract class MinecraftExtension @Inject constructor(
             .files.single().toPath()
 
     /**
-     * Register a task producing the serialized `MappingSnapshot` for
+     * Register a task producing the serialized `MappingBundle` for
      * `from -> to` — feed `RemapJarTask.mappingFile` /
      * `RemappedViewSpec.mappingFile`.
      */
-    fun mappingSnapshot(from: String, to: String): Provider<org.gradle.api.file.RegularFile> {
-        return mappingSnapshot("main", from, to)
+    fun mappingBundle(from: String, to: String): Provider<org.gradle.api.file.RegularFile> {
+        return mappingBundle("main", from, to)
     }
 
     /**
-     * Register the mapping snapshot task for one source-set environment.
+     * Register the mapping bundle task for one source-set environment.
      */
-    fun mappingSnapshot(
+    fun mappingBundle(
         environmentId: String,
         from: String,
         to: String
@@ -603,8 +603,8 @@ abstract class MinecraftExtension @Inject constructor(
         val environment = sourceSet(environmentId)
         val safeEnvironment = environmentId.replace(Regex("[^A-Za-z0-9_]"), "_")
         val task = project.tasks.register(
-            "produceMappingSnapshot_${safeEnvironment}_${from}_${to}",
-            ProduceMappingSnapshotTask::class.java
+            "produceMappingBundle_${safeEnvironment}_${from}_${to}",
+            ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
             t.mappingFiles.from(providers.provider {
@@ -616,21 +616,21 @@ abstract class MinecraftExtension @Inject constructor(
             })
             t.sourceNamespace.set(from)
             t.targetNamespace.set(to)
-            t.snapshotFile.set(
+            t.bundleFile.set(
                 project.layout.buildDirectory.file(
                     "unimined/mappings/$safeEnvironment/$from-$to.json"
                 )
             )
         }
-        return task.flatMap { it.snapshotFile }
+        return task.flatMap { it.bundleFile }
     }
 
     /**
-     * Register the mapping snapshot task with lazily-evaluated
+     * Register the mapping bundle task with lazily-evaluated
      * namespaces — for host wiring that cannot know the namespaces at
-     * configuration time. [nameSuffix] must be stable per snapshot.
+     * configuration time. [nameSuffix] must be stable per bundle.
      */
-    fun mappingSnapshot(
+    fun mappingBundle(
         environmentId: String,
         nameSuffix: String,
         from: Provider<String>,
@@ -639,8 +639,8 @@ abstract class MinecraftExtension @Inject constructor(
         val environment = sourceSet(environmentId)
         val safeEnvironment = environmentId.replace(Regex("[^A-Za-z0-9_]"), "_")
         val task = project.tasks.register(
-            "produceMappingSnapshot_${safeEnvironment}_$nameSuffix",
-            ProduceMappingSnapshotTask::class.java
+            "produceMappingBundle_${safeEnvironment}_$nameSuffix",
+            ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
             t.mappingFiles.from(providers.provider {
@@ -652,13 +652,67 @@ abstract class MinecraftExtension @Inject constructor(
             })
             t.sourceNamespace.set(from)
             t.targetNamespace.set(to)
-            t.snapshotFile.set(
+            t.bundleFile.set(
                 project.layout.buildDirectory.file(
                     "unimined/mappings/$safeEnvironment/$nameSuffix.json"
                 )
             )
         }
-        return task.flatMap { it.snapshotFile }
+        return task.flatMap { it.bundleFile }
+    }
+
+    /**
+     * Lazily computes the serialized `MappingBundle` for `from -> to`
+     * as a string provider — the input consumed by
+     * `RemapDependencyTransform` parameters. Materialization and
+     * composition run when the provider is evaluated (at transform
+     * execution), because artifact transforms execute during dependency
+     * resolution outside the task graph and cannot depend on a bundle
+     * producer task.
+     *
+     * Declared `file(...)` sources land in a [FileCollection] alongside a
+     * dedicated non-transitive configuration resolving declared
+     * `maven(...)` sources — no project state is touched at evaluation.
+     */
+    fun mappingBundleJson(
+        environmentId: String,
+        from: Provider<String>,
+        to: Provider<String>
+    ): Provider<String> {
+        val environment = sourceSet(environmentId)
+        val spec = environment.mappingsSpec
+        val dependencies = project.dependencies
+        val confName =
+            "uniminedMappings${environmentId.replaceFirstChar(Char::uppercase)}"
+        val mavenFiles = project.configurations.findByName(confName)
+            ?: project.configurations.create(confName) { conf ->
+                conf.isCanBeConsumed = false
+                conf.isCanBeResolved = true
+                conf.isTransitive = false
+                conf.withDependencies { deps ->
+                    spec.effectiveSources()
+                        .filterIsInstance<MappingsSpecImpl.Source.Maven>()
+                        .forEach { deps.add(dependencies.create(it.notation)) }
+                }
+            }
+        val files = project.files(
+            mavenFiles,
+            providers.provider {
+                val sources = spec.effectiveSources()
+                sources.filterIsInstance<MappingsSpecImpl.Source.Builtin>()
+                    .firstOrNull()?.let {
+                        throw GradleException(
+                            "mappings { ${it.name}() }: builtin channels " +
+                                "resolve through provider-native's manifest " +
+                                "machinery — not yet implemented; use file() " +
+                                "or maven() meanwhile"
+                        )
+                    }
+                sources.filterIsInstance<MappingsSpecImpl.Source.File>()
+                    .flatMap { it.files.files }
+            }
+        )
+        return mappingExtension.bundleJson(environmentId, files, from, to)
     }
 
     /**

@@ -16,4 +16,12 @@ interface Supports<in S> : Named {
      */
     fun supports(spec: S): Boolean
 
+    /**
+     * Tie-break between multiple supporting implementations — the
+     * unique highest value wins when selection is otherwise ambiguous.
+     * Defaults to `0`; equal top priorities still error with a
+     * disambiguation hint.
+     */
+    val priority: Int get() = 0
+
 }

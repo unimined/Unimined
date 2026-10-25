@@ -20,6 +20,7 @@ class GradlePlugin : Plugin<Project> {
     private companion object {
         val DEFAULT_STACK = listOf(
             "xyz.wagyourtail.unimined.remap",
+            "xyz.wagyourtail.unimined.mapping",
             "xyz.wagyourtail.unimined.mapping.uml",
             "xyz.wagyourtail.unimined.minecraft",
             "xyz.wagyourtail.unimined.transform",
@@ -27,7 +28,8 @@ class GradlePlugin : Plugin<Project> {
             "xyz.wagyourtail.unimined.remapper.tiny",
             "xyz.wagyourtail.unimined.remapper.uml",
             "xyz.wagyourtail.unimined.remapper.access",
-            "xyz.wagyourtail.unimined.transform.fabric"
+            "xyz.wagyourtail.unimined.transform.fabric",
+            "xyz.wagyourtail.unimined.runs"
         )
     }
 

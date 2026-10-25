@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import xyz.wagyourtail.unimined.api.mapping.MappingSnapshot
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
@@ -112,7 +112,7 @@ class RemappedViewFunctionalTest {
         // an empty row set: tiny still runs the pipeline, the jar passes
         // through unrenamed — the transform firing is observable via the
         // artifact's per-namespace output name
-        MappingSnapshot(
+        MappingBundle(
             namespaces = listOf("official", "named"),
             source = "official",
             target = "named",

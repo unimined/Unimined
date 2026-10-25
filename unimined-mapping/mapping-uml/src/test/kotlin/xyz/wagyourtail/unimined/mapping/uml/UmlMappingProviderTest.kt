@@ -10,14 +10,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
-import xyz.wagyourtail.unimined.api.mapping.MappingSnapshot
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.mapping.MappingVisitor
 import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
 import xyz.wagyourtail.unimined.api.mapping.view
-import xyz.wagyourtail.unimined.mapping.task.ProduceMappingSnapshotTask
+import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -89,33 +89,33 @@ class UmlMappingProviderTest {
     }
 
     @Test
-    fun `snapshot task uses service-loaded mapping provider`() {
+    fun `bundle task uses service-loaded mapping provider`() {
         val project = ProjectBuilder.builder().withProjectDir(dir.toFile()).build()
         val task = project.tasks.register(
-            "snapshot",
-            ProduceMappingSnapshotTask::class.java
+            "bundle",
+            ProduceMappingBundleTask::class.java
         ).get()
-        val output = dir.resolve("snapshot.json")
+        val output = dir.resolve("bundle.json")
 
         task.environmentId.set("main")
         task.mappingFiles.from(tinyFile())
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
-        task.snapshotFile.set(output.toFile())
+        task.bundleFile.set(output.toFile())
         task.produce()
 
-        val snapshot = MappingSnapshot.read(output)
-        assertEquals(listOf("official", "named"), snapshot.namespaces)
+        val bundle = MappingBundle.read(output)
+        assertEquals(listOf("official", "named"), bundle.namespaces)
     }
 
     @Test
-    fun `snapshot task composes multiple materialized files`() {
+    fun `bundle task composes multiple materialized files`() {
         val project = ProjectBuilder.builder().withProjectDir(dir.toFile()).build()
         val task = project.tasks.register(
-            "snapshot",
-            ProduceMappingSnapshotTask::class.java
+            "bundle",
+            ProduceMappingBundleTask::class.java
         ).get()
-        val output = dir.resolve("snapshot.json")
+        val output = dir.resolve("bundle.json")
 
         task.environmentId.set("main")
         task.mappingFiles.from(
@@ -124,11 +124,11 @@ class UmlMappingProviderTest {
         )
         task.sourceNamespace.set("official")
         task.targetNamespace.set("extra")
-        task.snapshotFile.set(output.toFile())
+        task.bundleFile.set(output.toFile())
         task.produce()
 
-        val snapshot = MappingSnapshot.read(output)
-        assertEquals(listOf("official", "named", "extra"), snapshot.namespaces)
+        val bundle = MappingBundle.read(output)
+        assertEquals(listOf("official", "named", "extra"), bundle.namespaces)
     }
 
 }

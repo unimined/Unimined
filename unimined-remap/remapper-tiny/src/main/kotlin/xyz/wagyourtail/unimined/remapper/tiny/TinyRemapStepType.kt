@@ -38,6 +38,13 @@ class TinyRemapStepType : RemapStepType<RemapStepSpec> {
 
     override fun supports(spec: RemapSpec) = true
 
+    /**
+     * Tiny-remapper is the default binary remap engine — it wins
+     * selection ties against opt-in engines like `uml`, which remain
+     * reachable via an explicit `engine = "uml"` override.
+     */
+    override val priority: Int = 1
+
     override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep =
         ArtifactStep { input, c -> remap(input, c) }
 

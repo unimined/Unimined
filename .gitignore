@@ -37,3 +37,4 @@ testing/**/run
 
 Writerside/v.list
 docs/
+*.hprof

@@ -12,7 +12,7 @@ import java.nio.file.Path
 
 /**
  * Verifies the environment↔source-set classpath wiring: stub bucket + raw/
- * dev views, library bucket extension, remapped mod views, snapshot tasks,
+ * dev views, library bucket extension, remapped mod views, bundle tasks,
  * and late-binding replay when the transform plugin applies after `main`
  * is already bound.
  */
@@ -32,7 +32,7 @@ class EnvironmentClasspathWiringTest {
         }
 
     @Test
-    fun `main environment wiring creates stub bucket, views, and snapshot tasks`() {
+    fun `main environment wiring creates stub bucket, views, and bundle inputs`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
 
         val minecraft = project.configurations.getByName("minecraft")
@@ -69,8 +69,11 @@ class EnvironmentClasspathWiringTest {
             project.configurations.getByName("modImplementationRemapped").extendsFrom.toList()
         )
 
-        assertNotNull(project.tasks.findByName("produceMappingSnapshot_main_mcToDev"))
-        assertNotNull(project.tasks.findByName("produceMappingSnapshot_main_modsToDev"))
+        // Transform inputs resolve through the per-env mappings
+        // configuration — artifact transforms cannot depend on a
+        // bundle-producer task, so no produceMappingBundle_* task is
+        // registered by this wiring.
+        assertNotNull(project.configurations.findByName("uniminedMappingsMain"))
 
         assertTrue(
             project.configurations.getByName("compileClasspath")
@@ -120,7 +123,7 @@ class EnvironmentClasspathWiringTest {
         assertNotNull(project.configurations.findByName("fabricMinecraftRaw"))
         assertNotNull(project.configurations.findByName("fabricMinecraftDev"))
         assertNotNull(project.configurations.findByName("fabricModImplementationRemapped"))
-        assertNotNull(project.tasks.findByName("produceMappingSnapshot_fabric_mcToDev"))
+        assertNotNull(project.configurations.findByName("uniminedMappingsFabric"))
         assertEquals(
             "unimined-mc-dev-fabric",
             project.configurations.getByName("fabricMinecraftDev")

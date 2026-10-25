@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
-class MappingSnapshotTest {
+class MappingBundleTest {
 
     private val tree = object : MappingTree {
         override val namespaces = listOf("official", "named")
@@ -31,11 +31,11 @@ class MappingSnapshotTest {
 
     @Test
     fun `capture and replay round-trip`() {
-        val snapshot = MappingSnapshot.capture("official", "named", tree)
-        assertEquals(listOf("official", "named"), snapshot.namespaces)
-        assertEquals(6, snapshot.rows.size)
+        val bundle = MappingBundle.capture("official", "named", tree)
+        assertEquals(listOf("official", "named"), bundle.namespaces)
+        assertEquals(6, bundle.rows.size)
 
-        val replayed = collect { snapshot.accept("official", "named", this) }
+        val replayed = collect { bundle.accept("official", "named", this) }
         assertEquals(
             listOf("c:a/A->b/B", "f:a/A.f->g", "m:a/A.m()V->n", "arg:0->arg0", "var:2->var2", "p:a->b"),
             replayed
@@ -44,8 +44,8 @@ class MappingSnapshotTest {
 
     @Test
     fun `json round-trip preserves rows`() {
-        val restored = MappingSnapshot.fromJson(
-            MappingSnapshot.capture("official", "named", tree).toJson()
+        val restored = MappingBundle.fromJson(
+            MappingBundle.capture("official", "named", tree).toJson()
         )
         assertEquals("official", restored.source)
         assertEquals("named", restored.target)
@@ -56,17 +56,17 @@ class MappingSnapshotTest {
 
     @Test
     fun `accept rejects a different namespace pair`() {
-        val snapshot = MappingSnapshot.capture("official", "named", tree)
+        val bundle = MappingBundle.capture("official", "named", tree)
         assertThrows(IllegalArgumentException::class.java) {
-            snapshot.accept("named", "official", object : MappingVisitor {})
+            bundle.accept("named", "official", object : MappingVisitor {})
         }
     }
 
     @Test
-    fun `snapshot exposes the tree view through SnapshotMappingData`() {
-        val snapshot = MappingSnapshot.capture("official", "named", tree)
-        val data = SnapshotMappingData(snapshot)
-        assertEquals(snapshot, data.view(MappingTree::class.java))
+    fun `bundle exposes the tree view through BundleMappingData`() {
+        val bundle = MappingBundle.capture("official", "named", tree)
+        val data = BundleMappingData(bundle)
+        assertEquals(bundle, data.view(MappingTree::class.java))
     }
 
 }

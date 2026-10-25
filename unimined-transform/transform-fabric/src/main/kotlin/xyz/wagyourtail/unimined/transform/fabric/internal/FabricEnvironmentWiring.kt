@@ -26,6 +26,12 @@ import java.nio.file.Path
 internal object FabricEnvironmentWiring {
 
     fun wire(project: Project, environment: MinecraftEnvironment) {
+        // fabric's MC artifact is the vanilla jar — the transform layers
+        // loader behavior on top; convention lets users override, and the
+        // convention itself only applies when the loader is fabric
+        environment.provider.convention(
+            environment.loaderSpec.map { if (it.name == "fabric") "native" else null }
+        )
         contributeIntermediaryMappings(project, environment)
         contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)

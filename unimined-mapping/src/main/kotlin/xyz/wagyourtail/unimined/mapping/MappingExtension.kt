@@ -1,14 +1,23 @@
 package xyz.wagyourtail.unimined.mapping
 
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logging
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.api.mapping.MappingTree
+import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 import xyz.wagyourtail.unimined.mapping.internal.RuntimeMappingContext
 import java.nio.file.Path
 import java.util.function.Function
+import javax.inject.Inject
 
 /** Extension installed by the `unimined-mapping` host plugin. */
-abstract class MappingExtension {
+abstract class MappingExtension @Inject constructor(
+    private val providers: ProviderFactory
+) {
 
     /** Source materializers — builtin channels plus ServiceLoader'd customs. */
     val sourceProviders = MappingSourceProviderRegistry()
@@ -56,5 +65,25 @@ abstract class MappingExtension {
             files, MappingResolver.standaloneContext(environmentId, logger),
             registry, composers
         )
+
+    /**
+     * Lazily computes the serialized [MappingBundle] from [files] for
+     * `from -> to`. The mapping materialization and composition run inside
+     * the provider's evaluation — this exists because artifact-transform
+     * parameters cannot carry task dependencies, so a task-produced
+     * bundle file would never exist when the transform executes.
+     */
+    fun bundleJson(
+        environmentId: String,
+        files: FileCollection,
+        from: Provider<String>,
+        to: Provider<String>
+    ): Provider<String> = providers.provider {
+        val data = readFiles(files.files.map { it.toPath() }, environmentId)
+        val tree = data.view<MappingTree>() ?: error(
+            "mapping provider did not expose a portable MappingTree view"
+        )
+        MappingBundle.capture(from.get(), to.get(), tree).toJson()
+    }
 
 }

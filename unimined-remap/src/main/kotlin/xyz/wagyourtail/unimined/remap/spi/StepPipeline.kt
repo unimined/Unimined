@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remap.spi
 
+import xyz.wagyourtail.unimined.remap.internal.JarSignatureStripper
 import java.nio.file.Path
 
 /**
@@ -11,6 +12,12 @@ object StepPipeline {
 
     /** Apply [steps] in order; returns the final artifact path. */
     fun run(input: Path, steps: List<ArtifactStep>, ctx: StepContext): Path =
-        steps.fold(input) { acc, step -> step.apply(acc, ctx) }
+        steps.fold(input) { acc, step ->
+            step.apply(acc, ctx).also { out ->
+                // rewritten class bytes invalidate jar signing metadata —
+                // strip it so later steps and consumers can reopen the jar
+                JarSignatureStripper.sanitize(out)
+            }
+        }
 
 }

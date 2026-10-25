@@ -52,12 +52,12 @@ class MappingsResolveTest {
     }
 
     @Test
-    fun `mapping snapshot tasks and outputs are scoped by environment`() {
+    fun `mapping bundle tasks and outputs are scoped by environment`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
 
-        val fabric = ext.mappingSnapshot("fabric", "official", "named").get().asFile.toPath()
-        val forge = ext.mappingSnapshot("forge", "official", "named").get().asFile.toPath()
+        val fabric = ext.mappingBundle("fabric", "official", "named").get().asFile.toPath()
+        val forge = ext.mappingBundle("forge", "official", "named").get().asFile.toPath()
 
         assertEquals(
             dir.resolve("build/unimined/mappings/fabric/official-named.json"),
@@ -68,7 +68,7 @@ class MappingsResolveTest {
             forge
         )
         assertNotNull(
-            project.tasks.findByName("produceMappingSnapshot_fabric_official_named")
+            project.tasks.findByName("produceMappingBundle_fabric_official_named")
         )
     }
 

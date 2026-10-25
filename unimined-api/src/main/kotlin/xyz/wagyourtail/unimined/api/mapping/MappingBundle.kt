@@ -14,10 +14,10 @@ import kotlin.io.path.writeText
  * off — as a file or serialized input — to tasks and artifact transforms
  * that cannot hold live mapping objects (configuration cache, isolated
  * work). Consumers replay it through [accept] or wrap it in
- * [SnapshotMappingData]; no one re-resolves sources.
+ * [BundleMappingData]; no one re-resolves sources.
  */
 @Serializable
-class MappingSnapshot(
+class MappingBundle(
     override val namespaces: List<String>,
     val source: String,
     val target: String,
@@ -40,7 +40,7 @@ class MappingSnapshot(
 
     override fun accept(sourceNamespace: String, targetNamespace: String, visitor: MappingVisitor) {
         require(sourceNamespace == source && targetNamespace == target) {
-            "snapshot covers $source -> $target, not $sourceNamespace -> $targetNamespace"
+            "bundle covers $source -> $target, not $sourceNamespace -> $targetNamespace"
         }
         for (row in rows) {
             when (row.kind) {
@@ -62,8 +62,8 @@ class MappingSnapshot(
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        /** Capture a resolved tree's `source -> target` view into a snapshot. */
-        fun capture(source: String, target: String, tree: MappingTree): MappingSnapshot {
+        /** Capture a resolved tree's `source -> target` view into a bundle. */
+        fun capture(source: String, target: String, tree: MappingTree): MappingBundle {
             val rows = mutableListOf<Row>()
             tree.accept(source, target, object : MappingVisitor {
                 override fun visitClass(srcName: String, dstName: String) {
@@ -85,12 +85,12 @@ class MappingSnapshot(
                     rows += Row(Kind.PACKAGE, srcName = srcName, dstName = dstName)
                 }
             })
-            return MappingSnapshot(tree.namespaces, source, target, rows)
+            return MappingBundle(tree.namespaces, source, target, rows)
         }
 
-        fun fromJson(text: String): MappingSnapshot = json.decodeFromString(serializer(), text)
+        fun fromJson(text: String): MappingBundle = json.decodeFromString(serializer(), text)
 
-        fun read(path: Path): MappingSnapshot = fromJson(path.readText())
+        fun read(path: Path): MappingBundle = fromJson(path.readText())
 
     }
 

@@ -20,8 +20,8 @@ import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
-import xyz.wagyourtail.unimined.api.mapping.MappingSnapshot
-import xyz.wagyourtail.unimined.api.mapping.SnapshotMappingData
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
@@ -36,7 +36,7 @@ import java.nio.file.Files
  * Runs inside Gradle's transform execution — cacheable, parallel, and
  * fired by any artifact resolution including IDE sync. Step impls are
  * rediscovered via `ServiceLoader` on the transform's classloader; mapping
- * data arrives through the serialized [MappingSnapshot] interchange.
+ * data arrives through the serialized [MappingBundle] interchange.
  */
 @CacheableTransform
 abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransform.Params> {
@@ -53,6 +53,13 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:InputFile
         @get:PathSensitive(PathSensitivity.NONE)
         val mappingFile: RegularFileProperty
+
+        /** Serialized [MappingBundle] content — preferred over
+         *  [mappingFile] since a string input carries no task dependency
+         *  (transforms execute outside the task graph). */
+        @get:Optional
+        @get:Input
+        val mappingBundleJson: Property<String>
 
         @get:InputFiles
         @get:Classpath
@@ -74,8 +81,10 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             parameters.targetNamespace.get(),
             parameters.classpath.files.map(::RuntimeLocation)
         )
-        val mappings = parameters.mappingFile.orNull
-            ?.let { SnapshotMappingData(MappingSnapshot.read(it.asFile.toPath())) }
+        val mappings = parameters.mappingBundleJson.orNull
+            ?.let { BundleMappingData(MappingBundle.fromJson(it)) }
+            ?: parameters.mappingFile.orNull
+                ?.let { BundleMappingData(MappingBundle.read(it.asFile.toPath())) }
 
         val output = outputs.file(
             "${input.toFile().nameWithoutExtension}-${spec.targetNamespace}.jar"

@@ -10,20 +10,20 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.mapping.MappingSnapshot
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 
 /**
- * Emits resolved mapping data as a serialized [MappingSnapshot] file — the
+ * Emits resolved mapping data as a serialized [MappingBundle] file — the
  * configuration-cache-safe input consumed by remap tasks and artifact
  * transforms.
  */
 @CacheableTask
-abstract class ProduceMappingSnapshotTask : DefaultTask() {
+abstract class ProduceMappingBundleTask : DefaultTask() {
 
-    /** The environment this snapshot serves — drives provider context. */
+    /** The environment this bundle serves — drives provider context. */
     @get:Input
     abstract val environmentId: Property<String>
 
@@ -40,9 +40,9 @@ abstract class ProduceMappingSnapshotTask : DefaultTask() {
     @get:Input
     abstract val targetNamespace: Property<String>
 
-    /** Serialized snapshot output. */
+    /** Serialized bundle output. */
     @get:OutputFile
-    abstract val snapshotFile: RegularFileProperty
+    abstract val bundleFile: RegularFileProperty
 
     @TaskAction
     fun produce() {
@@ -53,10 +53,10 @@ abstract class ProduceMappingSnapshotTask : DefaultTask() {
         val tree = data.view<MappingTree>() ?: error(
             "mapping provider did not expose a portable MappingTree view"
         )
-        val snapshot = MappingSnapshot.capture(
+        val bundle = MappingBundle.capture(
             sourceNamespace.get(), targetNamespace.get(), tree
         )
-        snapshot.write(snapshotFile.get().asFile.toPath())
+        bundle.write(bundleFile.get().asFile.toPath())
     }
 
 }

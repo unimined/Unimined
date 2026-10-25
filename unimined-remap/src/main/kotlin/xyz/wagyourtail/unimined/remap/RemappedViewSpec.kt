@@ -39,7 +39,7 @@ abstract class RemappedViewSpec {
     abstract val discriminator: Property<String>
 
     /**
-     * Serialized [xyz.wagyourtail.unimined.api.mapping.MappingSnapshot] for
+     * Serialized [xyz.wagyourtail.unimined.api.mapping.MappingBundle] for
      * this view's remap. Required when any pipeline step declares
      * `needsMappingTree`.
      */
@@ -60,6 +60,20 @@ abstract class RemappedViewSpec {
      */
     @get:Nested
     abstract val stepSpecs: ListProperty<StepSpec>
+
+    /**
+     * Serialized bundle content, computed lazily by host wiring —
+     * preferred over [mappingFile] for environment-managed views since a
+     * transform parameter cannot carry a task dependency. Evaluating the
+     * provider materializes mappings, so presence must be checked via
+     * [hasLazyMappings] rather than `isPresent`.
+     */
+    @get:Internal
+    abstract val mappingBundleJson: Property<String>
+
+    /** Whether [mappingBundleJson] was set — checked without evaluating it. */
+    @get:Internal
+    var hasLazyMappings: Boolean = false
 
     /**
      * Explicit `artifactType` token for the view's transform request,
