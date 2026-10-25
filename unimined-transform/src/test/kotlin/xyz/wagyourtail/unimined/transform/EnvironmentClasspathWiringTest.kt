@@ -131,4 +131,59 @@ class EnvironmentClasspathWiringTest {
         )
     }
 
+    @Test
+    fun `default production wiring swaps jar classifier and registers remapJar`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { it.version.set("1.20.1") }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
+        assertEquals("dev", jar.archiveClassifier.get())
+
+        val remapJar = project.tasks.getByName("remapJar")
+            as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+        // prod artifact claims the jar's original unclassified name —
+        // i.e. the dev jar's name with the -dev suffix removed
+        assertEquals(
+            jar.archiveFileName.get().replace("-dev.", "."),
+            remapJar.outputArtifact.get().asFile.name
+        )
+        val buildDeps = project.tasks.getByName("build")
+            .taskDependencies.getDependencies(null)
+        assertTrue(buildDeps.any { it.name == "remapJar" })
+    }
+
+    @Test
+    fun `defaultRemapJar false skips production wiring`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.defaultRemapJar.set(false)
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
+        assertEquals("", jar.archiveClassifier.get())
+        assertTrue(project.tasks.findByName("remapJar") == null)
+    }
+
+    @Test
+    fun `user archive classifier gains a dev suffix for the dev jar`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { it.version.set("1.20.1") }
+        project.tasks.named("jar", org.gradle.jvm.tasks.Jar::class.java) {
+            it.archiveClassifier.set("shadow")
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
+        assertEquals("shadow-dev", jar.archiveClassifier.get())
+        val remapJar = project.tasks.getByName("remapJar")
+            as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+        assertTrue(remapJar.outputArtifact.get().asFile.name.endsWith("-shadow.jar"))
+    }
+
 }

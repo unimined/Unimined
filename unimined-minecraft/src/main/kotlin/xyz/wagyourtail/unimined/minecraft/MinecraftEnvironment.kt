@@ -69,6 +69,15 @@ class MinecraftEnvironment internal constructor(
     val modSourceNamespaces: ListProperty<String> = objects.listProperty(String::class.java)
 
     /**
+     * Whether unimined auto-wires `remap<JarTask>` production tasks for
+     * this environment's source-set jar tasks (the loom/1.x convention:
+     * the input jar gains a `-dev` classifier, the remap task produces
+     * the prod-namespace artifact under the original classifier).
+     */
+    val defaultRemapJar: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /**
      * Access-widener files applied to this environment's dev Minecraft
      * artifact — populated directly or by loader transforms (fabric-family
      * `*.accesswidener` files from dependent mods are merged in by the

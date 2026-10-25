@@ -6,7 +6,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import xyz.wagyourtail.unimined.remap.RemapSurfaceSpec
-import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
 
 /**
  * Spec for the `apply-access-widener` step: rewrites class access flags
@@ -15,8 +15,12 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * AW directives are interpreted in the namespace declared by each file's
  * `accessWidener` header and remapped to the pipeline's target namespace
  * through the resolved mapping tree before application.
+ *
+ * [DevArtifactOnlyStepSpec]: AWs widen *Minecraft* classes — running this
+ * over a production jar or mod dependency would target classes that
+ * aren't there.
  */
-abstract class ApplyAccessWidenerStepSpec : StepSpec {
+abstract class ApplyAccessWidenerStepSpec : DevArtifactOnlyStepSpec {
 
     /** Access Widener files to apply (`*.accesswidener`). */
     @get:InputFiles

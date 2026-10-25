@@ -99,6 +99,8 @@ internal object EnvironmentClasspathWiring {
             project.files(modImplementationView)
         sourceSet.runtimeClasspath = sourceSet.runtimeClasspath +
             project.files(modImplementationView, modRuntimeOnlyView)
+
+        ProductionJarWiring.wire(project, environment, sourceSet)
     }
 
     private fun remappedModView(

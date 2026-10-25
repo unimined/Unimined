@@ -99,4 +99,33 @@ class FabricModFunctionalTest {
         )
     }
 
+    /**
+     * `build` must produce both artifacts of the loom convention: the
+     * `jar` output gains a `-dev` classifier, and `remapJar` re-runs the
+     * JAR pipeline `dev -> prod` namespace and emits the publishable
+     * artifact under the original (unclassified) name.
+     */
+    @Test
+    fun `build produces dev-classified jar and prod remapJar output`() {
+        writeProject()
+        val result = GradleRunner.create()
+            .withProjectDir(dir.toFile())
+            .withPluginClasspath()
+            .withArguments("build", "-s")
+            .build()
+        assertTrue(result.output.contains("BUILD SUCCESSFUL"))
+        assertTrue(result.output.contains(":remapJar"))
+        // dev jar keeps the source-set output under a -dev classifier
+        assertTrue(Files.exists(dir.resolve("build/libs/testmod-dev.jar")))
+        // the prod artifact claims the unclassified name
+        val prodJar = dir.resolve("build/libs/testmod.jar")
+        assertTrue(Files.exists(prodJar))
+        // it can only be the remapJar output — `jar` was moved to the
+        // -dev classifier — so existence proves the pipeline ran
+        java.util.jar.JarFile(prodJar.toFile()).use { jar ->
+            assertTrue(jar.getEntry("com/example/TestMod.class") != null)
+            assertTrue(jar.getEntry("fabric.mod.json") != null)
+        }
+    }
+
 }
