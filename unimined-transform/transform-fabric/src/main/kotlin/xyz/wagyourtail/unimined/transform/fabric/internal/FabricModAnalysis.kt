@@ -1,10 +1,7 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -21,9 +18,25 @@ internal object FabricModAnalysis {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** The loader/mod `fabric.mod.json` fields unimined consumes. */
+    @Serializable
+    class FabricModJson(
+        val accessWidener: String? = null,
+        val mainClass: Map<String, String>? = null
+    )
+
+    /** The loader's embedded `fabric-installer.json` — its only runtime
+     *  dependency declaration (the published pom is intentionally empty). */
+    @Serializable
+    class FabricInstallerJson(
+        val libraries: Map<String, List<Library>> = emptyMap()
+    ) {
+        @Serializable
+        class Library(val name: String)
+    }
+
     /** Path of the declared `accessWidener` entry in the jar, if any. */
-    fun accessWidenerPath(jar: Path): String? = modJson(jar)
-        ?.get("accessWidener")?.jsonPrimitive?.content
+    fun accessWidenerPath(jar: Path): String? = modJson(jar)?.accessWidener
 
     /**
      * Copy the jar's declared access widener into [cacheDir] and return
@@ -48,8 +61,7 @@ internal object FabricModAnalysis {
 
     /** The loader's `mainClass` for [side] (`client`/`server`), if declared. */
     fun loaderMainClass(jar: Path, side: String): String? = modJson(jar)
-        ?.get("mainClass")?.jsonObject
-        ?.get(side)?.jsonPrimitive?.content
+        ?.mainClass?.get(side)
 
     /**
      * Maven coordinates of the loader's own runtime libraries, read from
@@ -58,26 +70,24 @@ internal object FabricModAnalysis {
      * and including server libs on a client run is harmless). The
      * loader's pom intentionally declares no dependencies.
      */
-    fun loaderLibraries(jar: Path): List<String> = runCatching {
-        JarFile(jar.toFile()).use { jarFile ->
-            val entry = jarFile.getJarEntry("fabric-installer.json") ?: return emptyList()
-            val doc = jarFile.getInputStream(entry).use { input ->
-                json.parseToJsonElement(input.readBytes().decodeToString()).jsonObject
-            }
-            val libraries = doc["libraries"]?.jsonObject ?: return emptyList()
+    fun loaderLibraries(jar: Path): List<String> = installerJson(jar)
+        ?.let { installer ->
             listOf("common", "server", "client").flatMap { section ->
-                libraries[section]?.jsonArray
-                    ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content }
-                    ?: emptyList()
+                installer.libraries[section].orEmpty().map { it.name }
             }
         }
-    }.getOrElse { emptyList() }
+        ?: emptyList()
 
-    private fun modJson(jar: Path): JsonObject? = runCatching {
+    private fun modJson(jar: Path): FabricModJson? = readJarEntry(jar, "fabric.mod.json")
+
+    private fun installerJson(jar: Path): FabricInstallerJson? =
+        readJarEntry(jar, "fabric-installer.json")
+
+    private inline fun <reified T> readJarEntry(jar: Path, name: String): T? = runCatching {
         JarFile(jar.toFile()).use { jarFile ->
-            val entry = jarFile.getJarEntry("fabric.mod.json") ?: return null
+            val entry = jarFile.getJarEntry(name) ?: return null
             jarFile.getInputStream(entry).use { input ->
-                json.parseToJsonElement(input.readBytes().decodeToString()).jsonObject
+                json.decodeFromString<T>(input.readBytes().decodeToString())
             }
         }
     }.getOrNull()

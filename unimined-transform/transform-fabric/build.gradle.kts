@@ -1,5 +1,6 @@
 plugins {
     `java-gradle-plugin`
+    alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {

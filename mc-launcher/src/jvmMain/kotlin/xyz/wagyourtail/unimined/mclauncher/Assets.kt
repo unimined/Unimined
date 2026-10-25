@@ -1,8 +1,7 @@
 package xyz.wagyourtail.unimined.mclauncher
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
@@ -23,15 +22,19 @@ object Assets {
     /** One index object entry: `objects/<name> -> { hash, size }`. */
     class ObjectEntry(val name: String, val hash: String, val size: Long)
 
+    /** The asset index document (`indexes/<id>.json`). */
+    @Serializable
+    class AssetIndex(
+        val objects: Map<String, AssetObject> = emptyMap()
+    ) {
+        @Serializable
+        class AssetObject(val hash: String, val size: Long = 0L)
+    }
+
     /** Parse an asset index document into object entries. */
     fun entries(indexJson: String): List<ObjectEntry> =
-        json.parseToJsonElement(indexJson).jsonObject["objects"]
-            ?.jsonObject?.entries?.mapNotNull { (name, value) ->
-                val obj = value.jsonObject
-                val hash = obj["hash"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                val size = obj["size"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
-                ObjectEntry(name, hash, size)
-            } ?: emptyList()
+        json.decodeFromString<AssetIndex>(indexJson).objects
+            .map { (name, obj) -> ObjectEntry(name, obj.hash, obj.size) }
 
     /** The `objects/<hh>/<hash>` layout path for [hash]. */
     fun objectPath(hash: String): Path = Path.of("objects", hash.substring(0, 2), hash)
