@@ -97,9 +97,11 @@ internal object RunsWiring {
                 (environment.version.orNull ?: "<unset>") +
                 " (${run.name}, env '$environmentId')"
             task.launchMetadata.set(launchMetadata)
-            task.runtimeClasspath.from(
-                project.configurations.named(sourceSet.runtimeClasspathConfigurationName)
-            )
+            // SourceSet.runtimeClasspath — includes the dev MC artifact,
+            // remapped mod views, and provider extras added as file
+            // collections, none of which exist on the bare
+            // `runtimeClasspath` configuration
+            task.runtimeClasspath.from(sourceSet.runtimeClasspath)
             task.nativesClasspath.from(natives)
             task.assetIndexFile.set(artifacts.flatMap { it.assets }.flatMap { it.file })
             task.assetIndexId.set(artifacts.flatMap { it.assets }.map { it.id })

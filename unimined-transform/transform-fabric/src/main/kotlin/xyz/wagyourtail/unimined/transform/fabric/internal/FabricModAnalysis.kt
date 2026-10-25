@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.fabric.internal
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
@@ -49,6 +50,28 @@ internal object FabricModAnalysis {
     fun loaderMainClass(jar: Path, side: String): String? = modJson(jar)
         ?.get("mainClass")?.jsonObject
         ?.get(side)?.jsonPrimitive?.content
+
+    /**
+     * Maven coordinates of the loader's own runtime libraries, read from
+     * the embedded `fabric-installer.json` (`libraries.common` +
+     * `libraries.server` — client-only libraries don't exist in practice
+     * and including server libs on a client run is harmless). The
+     * loader's pom intentionally declares no dependencies.
+     */
+    fun loaderLibraries(jar: Path): List<String> = runCatching {
+        JarFile(jar.toFile()).use { jarFile ->
+            val entry = jarFile.getJarEntry("fabric-installer.json") ?: return emptyList()
+            val doc = jarFile.getInputStream(entry).use { input ->
+                json.parseToJsonElement(input.readBytes().decodeToString()).jsonObject
+            }
+            val libraries = doc["libraries"]?.jsonObject ?: return emptyList()
+            listOf("common", "server", "client").flatMap { section ->
+                libraries[section]?.jsonArray
+                    ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content }
+                    ?: emptyList()
+            }
+        }
+    }.getOrElse { emptyList() }
 
     private fun modJson(jar: Path): JsonObject? = runCatching {
         JarFile(jar.toFile()).use { jarFile ->

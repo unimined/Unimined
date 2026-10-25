@@ -10,6 +10,21 @@ for details on usage, see [the docs](Writerside/topics/starter-topic.md)
 > `unimined-transform`, `unimined-runs`, `unimined-source`, and the
 > `unimined` frontend). The 1.x codebase lives on the `lts/*` branches.
 
+## Requirements
+
+- **Gradle daemon heap: 4 GB.** Remapping the full Minecraft jar (and
+  mod-dependency artifacts) currently runs inside the Gradle daemon via
+  artifact transforms — the default daemon heap will `OutOfMemoryError`.
+  Set it in the consuming project's `gradle.properties`:
+
+  ```properties
+  org.gradle.jvmargs=-Xmx4g
+  ```
+
+  This is a transitional constraint: the 2.0 plan moves heavy remap work
+  into `WorkerExecutor` process isolation with explicit worker heaps, at
+  which point the daemon requirement goes away.
+
 ## LTS Branch
 
 In order to better support buildscripts. when I plan on making big/breaking changes, I will leave an LTS branch behind.

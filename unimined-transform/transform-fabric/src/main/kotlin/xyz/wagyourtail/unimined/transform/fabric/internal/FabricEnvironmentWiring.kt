@@ -101,8 +101,26 @@ internal object FabricEnvironmentWiring {
                 }
             }
         }
+        // loader's own runtime libraries — the pom declares none; the jar
+        // embeds fabric-installer.json listing them (asm, sponge-mixin)
+        val loaderFiles = project.files(loader)
+        val loaderLibraries = project.configurations.create(
+            "fabricLoaderLibraries${environment.environmentId.cap()}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = false
+            conf.withDependencies { deps ->
+                val spec = loaderSpec.orNull
+                if (spec?.name != "fabric") return@withDependencies
+                val jar = loaderFiles.singleFile
+                FabricModAnalysis.loaderLibraries(jar.toPath()).forEach {
+                    deps.add(dependencies.create(it))
+                }
+            }
+        }
         project.configurations.named(environment.modImplementationConfigurationName) { conf ->
-            conf.extendsFrom(loader)
+            conf.extendsFrom(loader, loaderLibraries)
         }
     }
 

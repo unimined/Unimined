@@ -24,7 +24,7 @@ class FabricModFunctionalTest {
         Files.writeString(dir.resolve("settings.gradle"), "rootProject.name = 'testmod'\n")
         // remapping a full MC jar inside the daemon needs real heap —
         // the default 512m OOMs mid-transform
-        Files.writeString(dir.resolve("gradle.properties"), "org.gradle.jvmargs=-Xmx3g\n")
+        Files.writeString(dir.resolve("gradle.properties"), "org.gradle.jvmargs=-Xmx4g\n")
         Files.writeString(
             dir.resolve("build.gradle"),
             """

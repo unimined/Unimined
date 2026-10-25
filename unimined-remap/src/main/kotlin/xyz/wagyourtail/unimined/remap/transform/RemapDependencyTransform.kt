@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Per-dependency remap: converts a `jar` artifact into one carrying
@@ -82,7 +83,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             parameters.classpath.files.map(::RuntimeLocation)
         )
         val mappings = parameters.mappingBundleJson.orNull
-            ?.let { BundleMappingData(MappingBundle.fromJson(it)) }
+            ?.let { json -> BundleMappingData(bundleCache.computeIfAbsent(json, MappingBundle::fromJson)) }
             ?: parameters.mappingFile.orNull
                 ?.let { BundleMappingData(MappingBundle.read(it.asFile.toPath())) }
 
@@ -106,6 +107,18 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         } finally {
             workDir.toFile().deleteRecursively()
         }
+    }
+
+    private companion object {
+
+        /**
+         * Daemon-lifetime parse-once cache for [MappingBundle] content:
+         * a remap view fires this transform once per dependency artifact,
+         * and every invocation would otherwise re-parse the same
+         * serialized tree (hundreds of MB live) concurrently.
+         */
+        val bundleCache = ConcurrentHashMap<String, MappingBundle>()
+
     }
 
 }

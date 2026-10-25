@@ -14,10 +14,29 @@ class GradlePlugin : Plugin<Project> {
         for (id in DEFAULT_STACK) {
             target.pluginManager.apply(id)
         }
+        warnOnLowDaemonHeap(target)
         target.extensions.create("unimined", UniminedExtension::class.java, target)
     }
 
+    /**
+     * Remap/pipeline work currently executes inside the Gradle daemon
+     * (artifact transforms), and the full Minecraft jar needs more headroom
+     * than the default heap. Warn loudly below [MIN_DAEMON_HEAP] — this
+     * check goes away once heavy steps move into worker isolation.
+     */
+    private fun warnOnLowDaemonHeap(target: Project) {
+        if (Runtime.getRuntime().maxMemory() < MIN_DAEMON_HEAP) {
+            target.logger.warn("")
+            target.logger.warn("[Unimined] The Gradle daemon has less than ${MIN_DAEMON_HEAP shr 30}GB of heap.")
+            target.logger.warn("[Unimined] Remapping Minecraft and mod artifacts will likely fail with OutOfMemoryError.")
+            target.logger.warn("[Unimined] Add to your gradle.properties:")
+            target.logger.warn("[Unimined]   org.gradle.jvmargs=-Xmx${MIN_DAEMON_HEAP shr 30}g")
+            target.logger.warn("")
+        }
+    }
+
     private companion object {
+        const val MIN_DAEMON_HEAP = 4L shl 30
         val DEFAULT_STACK = listOf(
             "xyz.wagyourtail.unimined.remap",
             "xyz.wagyourtail.unimined.mapping",

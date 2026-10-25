@@ -87,13 +87,19 @@ class FabricEnvironmentWiringTest {
         jarDir.resolve("fabric-loader-0.16.0.jar").writeBytes(
             byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
         )
+        project.repositories.mavenCentral()
         project.repositories.maven {
             it.url = repo.toURI()
             it.metadataSources { sources -> sources.artifact() }
         }
         val resolved = project.configurations.getByName("fabricModAnalysisFabric")
             .resolve().map { it.name }
-        assertEquals(listOf("fabric-loader-0.16.0.jar"), resolved)
+        // the fabric repo is declared first and serves the real loader
+        // jar; its embedded fabric-installer.json adds asm + sponge-mixin
+        // which ride the same view onto the mod classpath
+        assertTrue("fabric-loader-0.16.0.jar" in resolved)
+        assertTrue(resolved.any { it.startsWith("sponge-mixin-") })
+        assertTrue(resolved.any { it.startsWith("asm-") })
     }
 
     @Test
