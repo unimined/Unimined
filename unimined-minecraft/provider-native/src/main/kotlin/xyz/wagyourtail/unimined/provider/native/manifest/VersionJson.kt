@@ -15,8 +15,15 @@ class VersionJson(
     val libraries: List<Library> = emptyList(),
     val mainClass: String = "",
     val arguments: Arguments? = null,
-    val minecraftArguments: String? = null
+    val minecraftArguments: String? = null,
+    val javaVersion: JavaVersion? = null
 ) {
+
+    @Serializable
+    class JavaVersion(
+        val component: String = "java-runtime-alpha",
+        val majorVersion: Int = 8
+    )
 
     @Serializable
     class Download(

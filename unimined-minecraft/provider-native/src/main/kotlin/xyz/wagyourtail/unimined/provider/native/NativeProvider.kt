@@ -9,9 +9,11 @@ import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
+import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
+import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
@@ -104,10 +106,23 @@ class NativeProvider(
             loadParent = resolver::versionJsonDocument
         )
 
+        val capabilities = ctx.providers.provider {
+            EnvironmentCapabilities(
+                minecraftVersion = versionId,
+                platform = "vanilla",
+                javaVersion = metadata().version.javaVersion?.majorVersion ?: 8
+            )
+        }
+
         return NativeMinecraftArtifacts(
             artifacts = artifacts,
+            auxiliaryArtifacts = emptyMap(),
             mappings = ctx.providers.provider { OfficialIdentityMappingTree },
+            namespaceMode = ctx.providers.provider { NamespaceMode.REMAPPABLE },
+            capabilities = capabilities,
             libraries = libraries,
+            extraDependencies = ctx.objects.fileCollection(),
+            extraCompileSources = ctx.objects.fileCollection(),
             assets = ctx.providers.provider { assetIndex },
             launch = launch
         )
@@ -117,8 +132,13 @@ class NativeProvider(
 
 private class NativeMinecraftArtifacts(
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>>,
+    override val auxiliaryArtifacts: Map<String, Provider<RegularFile>>,
     override val mappings: Provider<MappingTree>,
+    override val namespaceMode: Provider<NamespaceMode>,
+    override val capabilities: Provider<EnvironmentCapabilities>,
     override val libraries: Provider<List<org.gradle.api.artifacts.Dependency>>,
+    override val extraDependencies: org.gradle.api.file.FileCollection,
+    override val extraCompileSources: org.gradle.api.file.FileCollection,
     override val assets: Provider<AssetIndex>,
     override val launch: LaunchMetadata
 ) : MinecraftArtifacts

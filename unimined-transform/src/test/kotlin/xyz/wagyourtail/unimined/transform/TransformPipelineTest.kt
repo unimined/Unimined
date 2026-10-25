@@ -14,8 +14,10 @@ import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
+import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformContext
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
@@ -25,7 +27,14 @@ import java.nio.file.Path
 private class FakeArtifacts(private val project: Project) : MinecraftArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val mappings: Provider<MappingTree> = project.provider { null }
+    override val namespaceMode: Provider<NamespaceMode> =
+        project.provider { NamespaceMode.REMAPPABLE }
+    override val capabilities = project.provider {
+        EnvironmentCapabilities(minecraftVersion = "1.0")
+    }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
+    override val extraDependencies = project.objects.fileCollection()
+    override val extraCompileSources = project.objects.fileCollection()
     override val assets: Provider<AssetIndex> = project.provider { null }
     override val launch: LaunchMetadata? = null
 }

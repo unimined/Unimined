@@ -32,6 +32,7 @@ import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.minecraft.transform.MinecraftArtifactTransform
 import java.nio.file.Files
@@ -237,11 +238,31 @@ abstract class MinecraftExtension @Inject constructor(
         }
         rawViewConfigurations[environmentId] = rawView
 
+        // Picks the raw view when the provider reports an identity pipeline
+        // or the resolved dev namespace equals the source namespace, so
+        // identity environments never materialize a duplicate dev jar.
         val contribution = objects.fileCollection().from(providers.provider {
-            devViewConfigurations[environmentId] ?: rawView
+            val devView = devViewConfigurations[environmentId] ?: return@provider rawView
+            val providerArtifacts = artifacts(environmentId).get()
+            if (providerArtifacts.namespaceMode.get() == NamespaceMode.IDENTITY) {
+                return@provider rawView
+            }
+            val dev = devNamespace(environmentId).orNull
+            val source = sourceNamespace(environmentId).orNull
+            if (dev != null && dev == source) rawView else devView
         })
         sourceSet.compileClasspath = sourceSet.compileClasspath + contribution
         sourceSet.runtimeClasspath = sourceSet.runtimeClasspath + contribution
+
+        val extraDependencies = objects.fileCollection().from(providers.provider {
+            artifacts(environmentId).get().extraDependencies
+        })
+        sourceSet.compileClasspath = sourceSet.compileClasspath + extraDependencies
+        sourceSet.runtimeClasspath = sourceSet.runtimeClasspath + extraDependencies
+
+        sourceSet.java.srcDir(objects.fileCollection().from(providers.provider {
+            artifacts(environmentId).get().extraCompileSources
+        }))
     }
 
     /** `artifactType` for the raw (source-namespace) MC artifact view. */

@@ -17,8 +17,10 @@ import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
+import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
@@ -33,7 +35,14 @@ import java.nio.file.Path
 private class TestArtifacts(private val project: Project) : MinecraftArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val mappings: Provider<MappingTree> = project.provider { null }
+    override val namespaceMode: Provider<NamespaceMode> =
+        project.provider { NamespaceMode.REMAPPABLE }
+    override val capabilities = project.provider {
+        EnvironmentCapabilities(minecraftVersion = "1.0")
+    }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
+    override val extraDependencies = project.objects.fileCollection()
+    override val extraCompileSources = project.objects.fileCollection()
     override val assets: Provider<AssetIndex> = project.provider { null }
     override val launch: LaunchMetadata? = null
 }
