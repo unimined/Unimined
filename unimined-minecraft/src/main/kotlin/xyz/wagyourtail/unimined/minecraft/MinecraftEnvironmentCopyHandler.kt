@@ -26,22 +26,22 @@ internal class MinecraftEnvironmentCopyHandler(
 
         if (EnvironmentSection.VERSION in requested) {
             target.version.convention(extension.project.provider {
-                source(request).version.get()
+                source(request).version.orNull
             })
         }
         if (EnvironmentSection.SIDE in requested) {
             target.side.convention(extension.project.provider {
-                source(request).side.get()
+                source(request).side.orNull
             })
         }
         if (EnvironmentSection.PROVIDER in requested) {
             target.provider.convention(extension.project.provider {
-                source(request).provider.get()
+                source(request).provider.orNull
             })
         }
         if (EnvironmentSection.LOADER in requested) {
             target.loaderSpec.convention(extension.project.provider {
-                source(request).loaderSpec.get()
+                source(request).loaderSpec.orNull
             })
         }
         if (EnvironmentSection.MAPPINGS in requested) {

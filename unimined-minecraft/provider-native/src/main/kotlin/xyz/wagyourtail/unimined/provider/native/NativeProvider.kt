@@ -15,15 +15,9 @@ import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
-import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
-import xyz.wagyourtail.unimined.provider.native.metadata.MinecraftMetadataAssembler
 import xyz.wagyourtail.unimined.provider.native.metadata.NativeLaunchMetadata
-import xyz.wagyourtail.unimined.provider.native.metadata.PlatformInfo
 import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.Locale
 
@@ -67,19 +61,14 @@ class NativeProvider(
             metadataTtlOverride = ctx.metadataCacheTtl
         )
 
-        fun metadata(): ResolvedMinecraftMetadata {
-            val version = resolver.versionJson(versionId)
-            val root = resolver.versionJsonDocument(versionId)
-            return MinecraftMetadataAssembler.assemble(
-                version = version,
-                root = root,
-                platform = PlatformInfo.current(),
-                parentDocument = resolver::versionJsonDocument
-            )
-        }
+        fun metadata(): ResolvedMinecraftMetadata =
+            NativeArtifactProduction.metadata(versionId, resolver)
 
         fun downloadedJar(key: ArtifactKey): Path =
-            downloadReference(key, metadata(), versionId, downloader)
+            NativeArtifactProduction.produce(
+                versionId, key, downloader, resolver,
+                ctx.rebuildUniminedArtifacts
+            )
 
         fun artifactProvider(key: ArtifactKey): Provider<RegularFile> =
             ctx.layout.file(ctx.providers.provider { downloadedJar(key).toFile() })
@@ -88,27 +77,7 @@ class NativeProvider(
         when (spec.side) {
             Side.CLIENT -> artifacts[ArtifactKey.CLIENT] = artifactProvider(ArtifactKey.CLIENT)
             Side.SERVER -> artifacts[ArtifactKey.SERVER] = artifactProvider(ArtifactKey.SERVER)
-            Side.MERGED -> artifacts[ArtifactKey.MERGED] = ctx.layout.file(
-                ctx.providers.provider {
-                    val versionMetadata = metadata()
-                    val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
-                        ?: throw GradleException("Minecraft $versionId has no client jar download")
-                    val serverRef = versionMetadata.downloads[ArtifactKey.SERVER]
-                        ?: throw GradleException("Minecraft $versionId has no server jar download")
-                    val client = downloadReference(
-                        ArtifactKey.CLIENT, versionMetadata, versionId, downloader
-                    )
-                    val server = downloadReference(
-                        ArtifactKey.SERVER, versionMetadata, versionId, downloader
-                    )
-                    mergePath(
-                        cacheDir, versionId, client, server,
-                        clientRef.sha1, serverRef.sha1,
-                        ctx.rebuildUniminedArtifacts
-                    )
-                        .toFile()
-                }
-            )
+            Side.MERGED -> artifacts[ArtifactKey.MERGED] = artifactProvider(ArtifactKey.MERGED)
         }
 
         val libraries: Provider<List<org.gradle.api.artifacts.Dependency>> =
@@ -120,7 +89,7 @@ class NativeProvider(
             file = ctx.layout.file(ctx.providers.provider {
                 val ref = metadata().assetIndex
                 if (ref == null) {
-                    emptyAssetIndex(cacheDir).toFile()
+                    NativeArtifactProduction.emptyAssetIndex(cacheDir).toFile()
                 } else {
                     downloader.fetch(
                         ref.url,
@@ -142,62 +111,6 @@ class NativeProvider(
             assets = ctx.providers.provider { assetIndex },
             launch = launch
         )
-    }
-
-    private fun downloadReference(
-        key: ArtifactKey,
-        metadata: ResolvedMinecraftMetadata,
-        versionId: String,
-        downloader: Downloader
-    ): Path {
-        val ref = metadata.downloads[key]
-            ?: throw GradleException("Minecraft $versionId has no ${key.name.lowercase(Locale.ROOT)} jar download")
-        return downloader.fetch(
-            ref.url,
-            "versions/$versionId/${key.name.lowercase(Locale.ROOT)}.jar",
-            ref.sha1?.lowercase(Locale.ROOT)
-        )
-    }
-
-    private fun mergePath(
-        cacheDir: Path,
-        versionId: String,
-        client: Path,
-        server: Path,
-        clientSha1: String?,
-        serverSha1: String?,
-        rebuild: Boolean
-    ): Path {
-        val clientTag = safeHashTag(clientSha1)
-        val serverTag = safeHashTag(serverSha1)
-        val merged = cacheDir.resolve("versions/$versionId/merged-$clientTag-$serverTag.jar")
-        if (Files.exists(merged) && !rebuild) return merged
-
-        Files.createDirectories(merged.parent)
-        val temporary = Files.createTempFile(merged.parent, ".merged-", ".jar")
-        try {
-            JarMerger.merge(client, server, temporary)
-            try {
-                Files.move(temporary, merged, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            } catch (_: AtomicMoveNotSupportedException) {
-                Files.move(temporary, merged, StandardCopyOption.REPLACE_EXISTING)
-            }
-        } finally {
-            Files.deleteIfExists(temporary)
-        }
-        return merged
-    }
-
-    private fun safeHashTag(sha1: String?): String =
-        sha1?.takeIf { it.matches(Regex("[a-fA-F0-9]{40}")) } ?: "unverified"
-
-    private fun emptyAssetIndex(cacheDir: Path): Path {
-        val path = cacheDir.resolve("assets/index-empty.json")
-        if (!Files.exists(path)) {
-            Files.createDirectories(path.parent)
-            Files.writeString(path, "{}")
-        }
-        return path
     }
 
 }

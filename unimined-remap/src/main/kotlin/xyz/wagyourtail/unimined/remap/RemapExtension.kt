@@ -338,7 +338,7 @@ abstract class RemapExtension @Inject constructor(
         name: String,
         spec: RemappedViewSpec
     ): Configuration {
-        val artifactType = spec.targetNamespace.get().let {
+        val artifactType = spec.artifactTypeToken.orNull ?: spec.targetNamespace.get().let {
             "unimined-remapped-$environmentId-$it" + spec.discriminator.get()
         }
         val view = project.configurations.create(name) { conf ->

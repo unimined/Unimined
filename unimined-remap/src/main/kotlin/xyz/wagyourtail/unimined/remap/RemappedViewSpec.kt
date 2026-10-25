@@ -8,6 +8,7 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
@@ -59,5 +60,14 @@ abstract class RemappedViewSpec {
      */
     @get:Nested
     abstract val stepSpecs: ListProperty<StepSpec>
+
+    /**
+     * Explicit `artifactType` token for the view's transform request,
+     * bypassing the namespace-derived default. Internal host wiring sets
+     * this when the target namespace is only known lazily — the token is
+     * just a routing key and need not embed it.
+     */
+    @get:Internal
+    abstract val artifactTypeToken: Property<String>
 
 }

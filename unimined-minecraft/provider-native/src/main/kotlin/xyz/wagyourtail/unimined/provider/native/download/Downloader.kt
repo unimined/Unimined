@@ -20,7 +20,7 @@ import kotlin.io.path.inputStream
  * Pure JVM — the Gradle side supplies the cache root and offline setting.
  */
 class Downloader(
-    private val cacheDir: Path,
+    val cacheDir: Path,
     private val client: HttpClient = HttpClient.newHttpClient(),
     private val offline: Boolean = false,
     private val refreshCache: Boolean = false,

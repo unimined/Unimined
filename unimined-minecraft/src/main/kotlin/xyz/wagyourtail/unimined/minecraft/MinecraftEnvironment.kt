@@ -8,7 +8,9 @@ import org.gradle.api.Named
 import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
@@ -44,7 +46,59 @@ class MinecraftEnvironment internal constructor(
     /** Optional provider override for this source set. */
     val provider: Property<String> = objects.property(String::class.java)
 
-    internal val loaderSpec: Property<LoaderSpec> = objects.property(LoaderSpec::class.java)
+    /** Declared modloader for this environment — read by transform plugins
+     *  to contribute loader-specific wiring (dependency defaults, namespace
+     *  conventions, transformers). */
+    val loaderSpec: Property<LoaderSpec> = objects.property(LoaderSpec::class.java)
+
+    /**
+     * The namespace this environment compiles and runs against. When unset,
+     * the resolved mapping tree's last namespace is used — e.g. `named`
+     * for yarn-style chains, `official` for bare mojmap. Read lazily by
+     * downstream wiring via `MinecraftExtension.devNamespace`.
+     */
+    val devNamespace: Property<String> = objects.property(String::class.java)
+
+    /**
+     * Namespaces mod dependencies in this environment arrive in — mods are
+     * remapped to [devNamespace]. When unset, the loader plugin's default
+     * (`MinecraftExtension.loaderModSourceNamespaces`) applies; fabric-like
+     * loaders default to `intermediary`. Auto-wiring supports a single
+     * source namespace; for mixed inputs use `remap.remappedViews` directly.
+     */
+    val modSourceNamespaces: ListProperty<String> = objects.listProperty(String::class.java)
+
+    /** Dependency bucket for the generated Minecraft artifact stub. */
+    val minecraftConfigurationName: String
+        get() = if (environmentId == "main") {
+            "minecraft"
+        } else {
+            "${environmentId}Minecraft"
+        }
+
+    /** Dependency bucket for the environment's resolved MC library deps. */
+    val minecraftLibrariesConfigurationName: String
+        get() = if (environmentId == "main") {
+            "minecraftLibraries"
+        } else {
+            "${environmentId}MinecraftLibraries"
+        }
+
+    /** Resolvable view producing the raw (source-namespace) MC artifact. */
+    val minecraftRawViewName: String
+        get() = if (environmentId == "main") {
+            "minecraftRaw"
+        } else {
+            "${environmentId}MinecraftRaw"
+        }
+
+    /** Resolvable view producing the dev-namespace MC artifact. */
+    val minecraftDevViewName: String
+        get() = if (environmentId == "main") {
+            "minecraftDev"
+        } else {
+            "${environmentId}MinecraftDev"
+        }
 
     /** Dependency bucket for mods used to compile this environment. */
     val modImplementationConfigurationName: String
