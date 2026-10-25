@@ -24,6 +24,8 @@ unimined-mapping-library = { module = "xyz.wagyourtail.unimined.mapping:unimined
 
 tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-remapper" }
 
+asm = { module = "org.ow2.asm:asm", version = "9.9" }
+
 # note: consumer should resolve the `:all` (fat) classifier
 jst-cli = { module = "net.neoforged.jst:jst-cli", version.ref = "jst-cli" }
 

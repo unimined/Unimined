@@ -26,7 +26,8 @@ class GradlePlugin : Plugin<Project> {
             "xyz.wagyourtail.unimined.provider.native",
             "xyz.wagyourtail.unimined.remapper.tiny",
             "xyz.wagyourtail.unimined.remapper.uml",
-            "xyz.wagyourtail.unimined.remapper.access"
+            "xyz.wagyourtail.unimined.remapper.access",
+            "xyz.wagyourtail.unimined.transform.fabric"
         )
     }
 

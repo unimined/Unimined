@@ -175,6 +175,42 @@ abstract class RemapExtension @Inject constructor(
         }
 
     /**
+     * The executable pipeline for a surface: the declared (or inherited)
+     * steps, an implicit `remap` core when a JAR surface was left
+     * unconfigured, then transform-contributed steps appended last. Hosts
+     * feeding unimined-managed artifacts (dev jars, environment mod
+     * buckets) use this so empty pipelines still namespace-remap.
+     */
+    fun pipelineSteps(environmentId: String, surface: RemapSurface): Provider<List<StepSpec>> =
+        providers.provider {
+            val environment = sourceSet(environmentId)
+            environment.validate()
+            val declared = environment.effectiveSteps(surface)
+            val core = if (declared.isEmpty() && surface == RemapSurface.JAR) {
+                listOf<StepSpec>(RemapStepSpec())
+            } else {
+                declared
+            }
+            core + environment.contributedSteps(surface)
+        }
+
+    /** [pipelineSteps] for `main`. */
+    fun pipelineSteps(surface: RemapSurface): Provider<List<StepSpec>> =
+        pipelineSteps("main", surface)
+
+    /**
+     * The convention for user-declared remapped views: the declared (or
+     * inherited) steps plus transform contributions, with no implicit
+     * `remap` core — an unconfigured surface is a documented pass-through.
+     */
+    private fun viewSteps(environmentId: String, surface: RemapSurface): Provider<List<StepSpec>> =
+        providers.provider {
+            val environment = sourceSet(environmentId)
+            environment.validate()
+            environment.effectiveSteps(surface) + environment.contributedSteps(surface)
+        }
+
+    /**
      * Create a resolvable [Configuration] that resolves [source]'s
      * dependencies remapped through the JAR-surface pipeline.
      *
@@ -246,7 +282,7 @@ abstract class RemapExtension @Inject constructor(
     ): Configuration {
         val spec = objects.newInstance(RemappedViewSpec::class.java)
         spec.discriminator.convention("")
-        spec.stepSpecs.convention(stepSpecs(environmentId, RemapSurface.JAR))
+        spec.stepSpecs.convention(viewSteps(environmentId, RemapSurface.JAR))
         action.execute(spec)
         return createRemappedView(environmentId, source, name, spec)
     }
@@ -276,7 +312,7 @@ abstract class RemapExtension @Inject constructor(
         val spec = objects.newInstance(RemappedViewsSpec::class.java)
         spec.baseName = baseName
         spec.discriminator.convention("")
-        spec.stepSpecs.convention(stepSpecs(environmentId, RemapSurface.JAR))
+        spec.stepSpecs.convention(viewSteps(environmentId, RemapSurface.JAR))
         action.execute(spec)
 
         require(spec.targetNamespace.isPresent) {

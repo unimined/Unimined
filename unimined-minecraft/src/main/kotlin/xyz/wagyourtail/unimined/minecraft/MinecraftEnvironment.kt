@@ -68,6 +68,14 @@ class MinecraftEnvironment internal constructor(
      */
     val modSourceNamespaces: ListProperty<String> = objects.listProperty(String::class.java)
 
+    /**
+     * Access-widener files applied to this environment's dev Minecraft
+     * artifact — populated directly or by loader transforms (fabric-family
+     * `*.accesswidener` files from dependent mods are merged in by the
+     * loader's wiring).
+     */
+    val accessWideners: ConfigurableFileCollection = objects.fileCollection()
+
     /** Dependency bucket for the generated Minecraft artifact stub. */
     val minecraftConfigurationName: String
         get() = if (environmentId == "main") {
@@ -134,7 +142,12 @@ class MinecraftEnvironment internal constructor(
     private val wiredOutputReferences = mutableSetOf<EnvironmentReference>()
     private var boundSourceSet: SourceSet? = null
 
-    internal val mappingsSpec = MappingsSpecImpl(objects)
+    /**
+     * This environment's declared mapping sources — the object
+     * [mappings] configures. Exposed so transform plugins can contribute
+     * `defaultSources` (e.g. fabric's intermediary hop).
+     */
+    val mappingsSpec = MappingsSpecImpl(objects)
 
     /** Configure this environment's modloader and version. */
     fun loader(name: String, version: String) {

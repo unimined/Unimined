@@ -325,12 +325,18 @@ abstract class MinecraftExtension @Inject constructor(
         artifacts(environmentId).map { it.mappings.get().namespaces.first() }
 
     /** Effective mod-dependency source namespaces — the environment's
-     *  explicit list, else the loader's contributed default. */
+     *  explicit list, else the loader's contributed default. An empty
+     *  declaration counts as unset (list properties default to `[]`). */
     fun modSourceNamespaces(environmentId: String): Provider<List<String>> =
-        sourceSet(environmentId).modSourceNamespaces.orElse(providers.provider {
-            val loaderName = sourceSet(environmentId).loaderSpec.orNull?.name
-            loaderModSourceNamespaces[loaderName] ?: emptyList()
-        })
+        providers.provider {
+            val environment = sourceSet(environmentId)
+            val explicit = environment.modSourceNamespaces.getOrElse(emptyList())
+            if (explicit.isNotEmpty()) {
+                explicit
+            } else {
+                loaderModSourceNamespaces[environment.loaderSpec.orNull?.name] ?: emptyList()
+            }
+        }
 
     private fun stubDependencyNotation(environment: MinecraftEnvironment): String {
         val artifactId = "minecraft-${environment.environmentId}"

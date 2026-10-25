@@ -22,6 +22,14 @@ class MappingsSpecImpl(
     /** Mapping sources declared directly on this environment, in chain order. */
     val sources = mutableListOf<Source>()
 
+    /**
+     * Sources prepended to every effective chain — contributed by
+     * transform plugins rather than the user (e.g. fabric's
+     * `official -> intermediary` hop). They always compose ahead of
+     * declared and inherited sources.
+     */
+    val defaultSources = mutableListOf<Source>()
+
     private var inheritedSources: ((MutableSet<MappingsSpecImpl>) -> List<Source>)? = null
 
     /** Namespace chain — populated by the mapping host at resolve time. */
@@ -61,21 +69,25 @@ class MappingsSpecImpl(
         inheritedSources = provider
     }
 
-    /** Mapping declarations after applying environment inheritance. */
+    /** Mapping declarations after applying defaults and environment inheritance. */
     @JvmOverloads
     fun effectiveSources(
         visiting: MutableSet<MappingsSpecImpl> = mutableSetOf()
     ): List<Source> {
-        if (sources.isNotEmpty()) return sources
-        val inherited = inheritedSources ?: return emptyList()
-        if (!visiting.add(this)) {
-            throw GradleException("cyclic Unimined mapping inheritance detected")
+        val own = if (sources.isNotEmpty()) {
+            sources
+        } else {
+            val inherited = inheritedSources ?: return defaultSources.toList()
+            if (!visiting.add(this)) {
+                throw GradleException("cyclic Unimined mapping inheritance detected")
+            }
+            try {
+                inherited(visiting)
+            } finally {
+                visiting.remove(this)
+            }
         }
-        try {
-            return inherited(visiting)
-        } finally {
-            visiting.remove(this)
-        }
+        return defaultSources + own
     }
 
     /** A declared mapping source before materialization. */

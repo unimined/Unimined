@@ -160,7 +160,9 @@ abstract class TransformExtension @Inject constructor(
 
     /** Apply run transformations for [environmentId] in declaration order. */
     fun transformRun(environmentId: String, config: RunConfigSpec) {
-        sourceSet(environmentId).effectiveTransformers().forEach { it.transformRun(config) }
+        val environment = sourceSet(environmentId)
+        environment.effectiveTransformers().forEach { it.transformRun(config) }
+        environment.effectiveRunMutators().forEach { it.execute(config) }
     }
 
 }

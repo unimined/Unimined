@@ -1,7 +1,9 @@
 package xyz.wagyourtail.unimined.transform
 
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
+import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
 
@@ -20,6 +22,13 @@ class TransformEnvironmentSpec internal constructor(
 
     /** Cross-cutting decorators in application order. */
     val decorators: MutableList<TransformDecorator> = mutableListOf()
+
+    /**
+     * Run-config adjustments applied after all declared transformers —
+     * contributed by loader plugins that wire run behavior without a full
+     * transform task (e.g. fabric swapping the launch main class).
+     */
+    val runMutators: MutableList<Action<RunConfigSpec>> = mutableListOf()
 
     private val inheritedEnvironments =
         linkedMapOf<EnvironmentReference, () -> TransformEnvironmentSpec>()
@@ -77,6 +86,23 @@ class TransformEnvironmentSpec internal constructor(
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveDecorators(visiting)
             } + decorators
+        } finally {
+            visiting.remove(key)
+        }
+    }
+
+    /** Run mutators compose like decorators: inherited before local. */
+    internal fun effectiveRunMutators(
+        visiting: MutableSet<String> = mutableSetOf()
+    ): List<Action<RunConfigSpec>> {
+        val key = "$projectPath:$environmentId"
+        if (!visiting.add(key)) {
+            throw GradleException("cyclic Unimined transform inheritance involving $key")
+        }
+        try {
+            return inheritedEnvironments.values.flatMap { resolver ->
+                resolver().effectiveRunMutators(visiting)
+            } + runMutators
         } finally {
             visiting.remove(key)
         }

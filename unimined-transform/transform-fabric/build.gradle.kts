@@ -5,6 +5,11 @@ plugins {
 dependencies {
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    implementation(libs.asm)
+    implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 gradlePlugin {

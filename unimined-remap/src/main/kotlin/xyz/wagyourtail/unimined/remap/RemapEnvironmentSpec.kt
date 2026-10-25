@@ -57,6 +57,16 @@ class RemapEnvironmentSpec internal constructor(
     /** Surfaces configured directly on this environment, in declaration order. */
     fun configuredSurfaces(): Map<RemapSurface, RemapSurfaceSpec> = surfaces.toMap()
 
+    /** Steps contributed by transform plugins for [surface] — run after the
+     *  declared/inherited pipeline. */
+    fun contributedSteps(surface: RemapSurface): List<StepSpec> =
+        surfaces[surface]?.contributed.orEmpty()
+
+    /** Contribute a plugin step appended after this surface's declared pipeline. */
+    fun contributeStep(surface: RemapSurface, spec: StepSpec) {
+        surface(surface).contributed += spec
+    }
+
     /** Validate remap-step cardinality for this environment. */
     fun validate() {
         for (surface in effectiveSurfaceKeys()) {

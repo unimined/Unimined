@@ -23,6 +23,14 @@ class RemapSurfaceSpec(
     val steps: MutableList<StepSpec> = mutableListOf()
 
     /**
+     * Steps contributed by transform plugins — appended after the declared
+     * (or inherited) pipeline, never replacing it. Validation counts only
+     * [steps], so contributed `remap`-style steps must not change the
+     * surface's output namespace.
+     */
+    val contributed: MutableList<StepSpec> = mutableListOf()
+
+    /**
      * Declare the namespace-changing remap step. At most one per surface —
      * it defines the surface's output namespace.
      *

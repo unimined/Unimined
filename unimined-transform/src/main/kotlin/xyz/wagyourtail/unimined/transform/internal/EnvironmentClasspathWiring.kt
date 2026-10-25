@@ -79,7 +79,7 @@ internal object EnvironmentClasspathWiring {
                 p.targetNamespace.set(devNamespace)
                 p.mappingFile.set(mcSnapshot)
                 p.classpath.from(libraries)
-                p.stepSpecs.set(remap.stepSpecs(environmentId, RemapSurface.JAR))
+                p.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.JAR))
             }
         }
 
@@ -109,6 +109,7 @@ internal object EnvironmentClasspathWiring {
         val environmentId = environment.environmentId
         return remap.remappedViewFor(environmentId, bucketName, Action { spec ->
             spec.artifactTypeToken.set("unimined-remapped-$environmentId-$bucketName")
+            spec.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.JAR))
             spec.sourceNamespace.set(
                 minecraft.modSourceNamespaces(environmentId).map { namespaces ->
                     require(namespaces.size == 1) {
