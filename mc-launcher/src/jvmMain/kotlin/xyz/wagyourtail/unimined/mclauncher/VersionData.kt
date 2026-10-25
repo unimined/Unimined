@@ -11,7 +11,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -111,9 +113,25 @@ class VersionData(
             }
 
             override fun serialize(encoder: Encoder, value: ArgumentEntry) {
-                throw UnsupportedOperationException(
-                    "ArgumentEntry serialization is not supported"
-                )
+                val element: JsonElement =
+                    if (value.rules.isEmpty() && value.value.size == 1) {
+                        JsonPrimitive(value.value.single())
+                    } else {
+                        buildJsonObject {
+                            if (value.rules.isNotEmpty()) {
+                                put("rules", json.encodeToJsonElement(value.rules))
+                            }
+                            put(
+                                "value",
+                                if (value.value.size == 1) {
+                                    JsonPrimitive(value.value.single())
+                                } else {
+                                    JsonArray(value.value.map { JsonPrimitive(it) })
+                                }
+                            )
+                        }
+                    }
+                encoder.encodeSerializableValue(JsonElement.serializer(), element)
             }
         }
 
@@ -128,12 +146,20 @@ class VersionData(
         /** OS-key → natives classifier (may contain `${arch}`). */
         val natives: Map<String, String>? = null,
         val extract: Extract? = null,
-        /** Raw `downloads` object (`artifact`, `classifiers`, ...). */
-        val downloads: Map<String, JsonObject> = emptyMap()
+        /** The library's `downloads` block, when declared. */
+        val downloads: Downloads? = null
     ) {
 
         @Serializable
         class Extract(val exclude: List<String> = emptyList())
+
+        /** A library `downloads` block: the main `artifact` plus
+         *  classifier-keyed artifacts (`natives-*`, `sources`, ...). */
+        @Serializable
+        class Downloads(
+            val artifact: AssetRef? = null,
+            val classifiers: Map<String, AssetRef> = emptyMap()
+        )
 
         val extractExclude: List<String> get() = extract?.exclude ?: emptyList()
 
