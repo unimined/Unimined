@@ -49,10 +49,10 @@ class NativeProvider(
     override fun supports(spec: MinecraftSpec): Boolean = spec.loader == null
 
     override fun resolve(spec: MinecraftSpec, ctx: ProviderContext): MinecraftArtifacts {
-        spec.loader?.let {
-            throw GradleException("native provider only supports bare Minecraft; got loader '${it.name}'")
-        }
-
+        // `supports` gates *default* selection to bare Minecraft, but a
+        // loader transform may explicitly select this provider for the
+        // environment's vanilla-side artifact (e.g. fabric) — resolve
+        // honors the spec as given.
         val versionId = spec.version.version
         val cacheDir = ctx.layout.projectDirectory
             .dir(".gradle/unimined/native-cache")
