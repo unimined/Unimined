@@ -21,6 +21,7 @@ dependencies {
     api(project(":unimined-transform:transform-jarmod"))
     api(project(":unimined-transform:transform-bukkit"))
     api(project(":unimined-transform:transform-misc"))
+    api(project(":unimined-mod"))
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

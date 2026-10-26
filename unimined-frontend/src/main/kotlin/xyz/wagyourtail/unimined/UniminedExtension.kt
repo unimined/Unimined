@@ -6,6 +6,7 @@ import org.gradle.api.Action
 import org.gradle.api.Project
 import javax.inject.Inject
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.mod.ModExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
 
@@ -45,6 +46,22 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         action: Closure<*>
     ) {
         val extension = project.extensions.getByType(RemapExtension::class.java)
+        action.delegate = extension
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+    }
+
+    /** `unimined.mod { }` → the `unimined-mod` extension. */
+    fun mod(action: Action<ModExtension>) {
+        action.execute(project.extensions.getByType(ModExtension::class.java))
+    }
+
+    /** Groovy DSL overload; delegates the closure to the mod extension. */
+    fun mod(
+        @DelegatesTo(value = ModExtension::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        val extension = project.extensions.getByType(ModExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()

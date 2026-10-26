@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    api(project(":unimined-mod"))
     implementation(libs.asm)
     implementation(libs.kotlinx.serialization.json)
 
