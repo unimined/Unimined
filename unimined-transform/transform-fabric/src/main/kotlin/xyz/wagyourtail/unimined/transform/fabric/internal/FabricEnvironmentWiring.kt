@@ -193,6 +193,11 @@ internal object FabricEnvironmentWiring {
                 "net.fabricmc.loader.impl.launch.knot.KnotClient"
             }
             config.mainClass = FabricModAnalysis.loaderMainClass(jar, side) ?: fallback
+            // dev launches run the game jar in the dev (e.g. named) namespace;
+            // this flag makes the loader widen non-public MC access flags at
+            // class-load (PackageAccessFixer) — required since remap-induced
+            // cross-package access violations are inherent to dev jars
+            config.jvmArgs += "-Dfabric.development=true"
         }
     }
 

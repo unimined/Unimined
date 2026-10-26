@@ -3,6 +3,12 @@ plugins {
     id("xyz.wagyourtail.unimined")
 }
 
+java {
+    // 1.20.1 runs on Java 17 — keep the toolchain pinned so the mod's
+    // bytecode stays parseable by the loader's bundled ASM
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+}
+
 repositories {
     mavenCentral()
     maven("https://maven.fabricmc.net/")

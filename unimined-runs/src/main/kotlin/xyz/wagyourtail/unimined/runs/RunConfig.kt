@@ -61,12 +61,15 @@ abstract class RunConfig @Inject constructor(
 
     init {
         environment.convention(SourceSet.MAIN_SOURCE_SET_NAME)
-        side.convention(
+        val defaultSide =
             if (name.equals("server", ignoreCase = true)) RunSide.SERVER else RunSide.CLIENT
-        )
+        side.convention(defaultSide)
         // no mainClass convention — absent until metadata/mutators fill it
         jvmArgs.convention(emptyList())
-        programArgs.convention(emptyList())
+        // dedicated servers default headless; opt out via `programArgs.set(...)`
+        programArgs.convention(
+            if (defaultSide == RunSide.SERVER) listOf("nogui") else emptyList()
+        )
         environmentVariables.convention(emptyMap())
         username.convention("Dev")
         features.convention(emptySet())

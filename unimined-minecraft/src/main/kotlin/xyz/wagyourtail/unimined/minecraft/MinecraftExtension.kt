@@ -30,6 +30,8 @@ import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
 import xyz.wagyourtail.unimined.minecraft.internal.DefaultProviderContext
 import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
@@ -301,6 +303,18 @@ abstract class MinecraftExtension @Inject constructor(
                 p.offline.set(cacheSettings.offline)
                 p.refreshUniminedDownloads.set(cacheSettings.refreshUniminedDownloads)
                 p.rebuildUniminedArtifacts.set(cacheSettings.rebuildUniminedArtifacts)
+                p.artifactFormatVersion.set(providers.provider {
+                    val spec = RuntimeMinecraftSpec(
+                        environmentId = environmentId,
+                        sourceSetName = environmentId,
+                        version = RuntimeVersionSpec(environment.version.get()),
+                        side = environment.side.get(),
+                        loader = null
+                    )
+                    MinecraftArtifactProducerRegistry()
+                        .select(spec, environment.provider.orNull)
+                        .artifactFormatVersion
+                })
                 cacheSettings.metadataCacheTtl?.let { p.metadataCacheTtl.set(it.toString()) }
             }
         }

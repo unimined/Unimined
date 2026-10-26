@@ -190,7 +190,12 @@ abstract class MinecraftRunTask @Inject constructor(
                     jvmArgs.get() +
                     mutatedJvmArgs.get()
             )
-            exec.args(plan.programArgs + programArgs.get() + mutatedProgramArgs.get())
+            // the version document's `game` args are client-only
+            // (--username/--accessToken/...); servers take user args only
+            exec.args(
+                (if (side.get() == RunSide.SERVER) emptyList() else plan.programArgs) +
+                    programArgs.get() + mutatedProgramArgs.get()
+            )
             exec.environment(plan.environment + mutatedEnvironment.get() + environmentVariables.get())
         }
     }

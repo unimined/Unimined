@@ -60,8 +60,12 @@ internal object NativeArtifactProduction {
         rebuild: Boolean
     ): Path {
         return when (key) {
-            ArtifactKey.CLIENT, ArtifactKey.SERVER ->
+            ArtifactKey.CLIENT ->
                 downloadReference(key, metadata(versionId, resolver), versionId, downloader)
+            ArtifactKey.SERVER -> unbundleServer(
+                downloadReference(key, metadata(versionId, resolver), versionId, downloader),
+                versionId, downloader.cacheDir, rebuild
+            )
             ArtifactKey.MERGED -> {
                 val versionMetadata = metadata(versionId, resolver)
                 val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
@@ -71,8 +75,11 @@ internal object NativeArtifactProduction {
                 val client = downloadReference(
                     ArtifactKey.CLIENT, versionMetadata, versionId, downloader
                 )
-                val server = downloadReference(
-                    ArtifactKey.SERVER, versionMetadata, versionId, downloader
+                val server = unbundleServer(
+                    downloadReference(
+                        ArtifactKey.SERVER, versionMetadata, versionId, downloader
+                    ),
+                    versionId, downloader.cacheDir, rebuild
                 )
                 mergePath(
                     downloader.cacheDir, versionId, client, server,
@@ -81,6 +88,35 @@ internal object NativeArtifactProduction {
             }
             else -> throw GradleException("native provider cannot produce artifact key $key")
         }
+    }
+
+    /**
+     * Modern server downloads are Mojang *bundler* jars — a wrapper that
+     * extracts `META-INF/versions/<v>/server-<v>.jar` plus bundled
+     * libraries at runtime. For dev we want the real server jar, not the
+     * wrapper: leaving it intact poisons merges (bundler classes end up
+     * on the dev classpath and loaders like Fabric detect `MC_BUNDLER`
+     * by `net/minecraft/bundler/Main.class` presence, unpacking a second
+     * obfuscated server jar at launch). Returns the unbundled jar, or
+     * [serverJar] unchanged when it isn't a bundler.
+     */
+    fun unbundleServer(
+        serverJar: Path,
+        versionId: String,
+        cacheDir: Path,
+        rebuild: Boolean
+    ): Path {
+        val entryName = "META-INF/versions/$versionId/server-$versionId.jar"
+        val out = cacheDir.resolve("versions/$versionId/server-unbundled.jar")
+        java.util.zip.ZipFile(serverJar.toFile()).use { zip ->
+            val entry = zip.getEntry(entryName) ?: return serverJar
+            if (Files.exists(out) && !rebuild) return out
+            Files.createDirectories(out.parent)
+            zip.getInputStream(entry).use { input ->
+                Files.copy(input, out, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+        return out
     }
 
     fun mergePath(
@@ -94,7 +130,9 @@ internal object NativeArtifactProduction {
     ): Path {
         val clientTag = safeHashTag(clientSha1)
         val serverTag = safeHashTag(serverSha1)
-        val merged = cacheDir.resolve("versions/$versionId/merged-$clientTag-$serverTag.jar")
+        val merged = cacheDir.resolve(
+            "versions/$versionId/merged-${JarMerger.FORMAT_VERSION}-$clientTag-$serverTag.jar"
+        )
         if (Files.exists(merged) && !rebuild) return merged
 
         Files.createDirectories(merged.parent)

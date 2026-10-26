@@ -74,6 +74,11 @@ class TinyRemapStepType : RemapStepType<RemapStepSpec> {
             }
             .skipLocalVariableMapping(true)
             .ignoreConflicts(true)
+            // mappings may relocate a class across packages while leaving
+            // package-private members/inner classes unmapped — widen their
+            // access instead of emitting IllegalAccessError-prone output
+            .checkPackageAccess(true)
+            .fixPackageAccess(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .build()
 

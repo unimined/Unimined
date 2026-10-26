@@ -57,6 +57,12 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
         @get:Input
         val producerName: Property<String>
 
+        /** Selected producer's output-format version — bumps the cache
+         *  key whenever the production pipeline's output changes for
+         *  identical inputs. */
+        @get:Input
+        val artifactFormatVersion: Property<Int>
+
         /** Provider cache root — treated as a content-verified side cache,
          *  not a fingerprinted input. */
         @get:Internal

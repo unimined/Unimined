@@ -45,6 +45,14 @@ class ArtifactProductionRequest(
  */
 interface MinecraftArtifactProducer : Supports<MinecraftSpec> {
 
+    /**
+     * Output-format version of this producer's pipeline. Wired into the
+     * artifact transform's inputs, so a format change (unbundling, merge
+     * filtering, …) invalidates cached transform outputs — bump it
+     * whenever produced-artifact content changes for identical inputs.
+     */
+    val artifactFormatVersion: Int get() = 0
+
     /** Produce [request]'s artifact for [spec]; returns the jar path. */
     fun produce(spec: MinecraftSpec, request: ArtifactProductionRequest): Path
 

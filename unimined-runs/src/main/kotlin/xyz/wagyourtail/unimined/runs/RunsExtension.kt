@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.runs
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
@@ -25,6 +27,20 @@ abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
     /** Declare a custom run configuration. */
     fun create(name: String, action: Action<RunConfig>) {
         action.execute(runs.create(name))
+    }
+
+    /** `runs { named(...) { ... } }` — configure the run container. */
+    fun runs(action: Action<NamedDomainObjectContainer<RunConfig>>) =
+        action.execute(runs)
+
+    /** Groovy DSL overload — `runs { client { mainClass = 'x' } }`. */
+    fun runs(
+        @DelegatesTo(value = NamedDomainObjectContainer::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        action.delegate = runs
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
     }
 
 }

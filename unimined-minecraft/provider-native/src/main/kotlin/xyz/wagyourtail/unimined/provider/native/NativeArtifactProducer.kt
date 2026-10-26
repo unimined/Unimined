@@ -18,6 +18,9 @@ class NativeArtifactProducer : MinecraftArtifactProducer {
 
     override val name: String = "native"
 
+    /** 1 = unbundled server artifact + `META-INF`-stripped merge. */
+    override val artifactFormatVersion: Int = 1
+
     override fun supports(spec: MinecraftSpec): Boolean = true
 
     override fun produce(spec: MinecraftSpec, request: ArtifactProductionRequest): Path {
