@@ -69,11 +69,11 @@ class EnvironmentClasspathWiringTest {
             project.configurations.getByName("modImplementationRemapped").extendsFrom.toList()
         )
 
-        // Transform inputs resolve through the per-env mappings
-        // configuration — artifact transforms cannot depend on a
-        // bundle-producer task, so no produceMappingBundle_* task is
-        // registered by this wiring.
-        assertNotNull(project.configurations.findByName("uniminedMappingsMain"))
+        // Transform inputs resolve the env's declared mapping sources
+        // inside the bundle provider — artifact transforms cannot
+        // depend on a bundle-producer task, so no produceMappingBundle_*
+        // task is registered by this wiring and no eager mappings
+        // configuration exists.
 
         assertTrue(
             project.configurations.getByName("compileClasspath")
@@ -123,7 +123,6 @@ class EnvironmentClasspathWiringTest {
         assertNotNull(project.configurations.findByName("fabricMinecraftRaw"))
         assertNotNull(project.configurations.findByName("fabricMinecraftDev"))
         assertNotNull(project.configurations.findByName("fabricModImplementationRemapped"))
-        assertNotNull(project.configurations.findByName("uniminedMappingsFabric"))
         assertEquals(
             "unimined-mc-dev-fabric",
             project.configurations.getByName("fabricMinecraftDev")

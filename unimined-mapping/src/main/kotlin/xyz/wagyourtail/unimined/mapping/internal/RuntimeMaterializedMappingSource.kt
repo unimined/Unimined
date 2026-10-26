@@ -7,5 +7,6 @@ import java.nio.file.Path
 internal class RuntimeMaterializedMappingSource(
     override val declaration: MappingSource,
     override val files: List<Path>,
-    override val formatHint: String?
+    override val formatHint: String?,
+    override val nsMap: Map<String, String> = declaration.nsMap
 ) : MaterializedMappingSource

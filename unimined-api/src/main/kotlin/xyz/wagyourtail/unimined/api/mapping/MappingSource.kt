@@ -17,4 +17,12 @@ interface MappingSource {
     val formatHint: String?
         get() = null
 
+    /**
+     * Optional namespace relabeling applied while reading this source —
+     * maps the document's own namespace names onto chain-namespace names
+     * (`mapNamespace("mojmap", "named")`). Empty = read labels verbatim.
+     */
+    val nsMap: Map<String, String>
+        get() = emptyMap()
+
 }

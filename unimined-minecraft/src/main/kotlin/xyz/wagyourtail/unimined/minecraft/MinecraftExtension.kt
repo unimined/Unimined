@@ -20,6 +20,7 @@ import org.gradle.api.provider.ProviderFactory
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
@@ -670,9 +671,11 @@ abstract class MinecraftExtension @Inject constructor(
      * resolution outside the task graph and cannot depend on a bundle
      * producer task.
      *
-     * Declared `file(...)` sources land in a [FileCollection] alongside a
-     * dedicated non-transitive configuration resolving declared
-     * `maven(...)` sources — no project state is touched at evaluation.
+     * Each declared source materializes through the source-provider
+     * pipeline (maven resolution, archive unwrapping) and reads through
+     * the mapping-provider pipeline (format hints, `mapNamespace`
+     * relabeling) — maven coordinates resolve through detached
+     * non-transitive configurations created at evaluation.
      */
     fun mappingBundleJson(
         environmentId: String,
@@ -682,37 +685,28 @@ abstract class MinecraftExtension @Inject constructor(
         val environment = sourceSet(environmentId)
         val spec = environment.mappingsSpec
         val dependencies = project.dependencies
-        val confName =
-            "uniminedMappings${environmentId.replaceFirstChar(Char::uppercase)}"
-        val mavenFiles = project.configurations.findByName(confName)
-            ?: project.configurations.create(confName) { conf ->
-                conf.isCanBeConsumed = false
-                conf.isCanBeResolved = true
-                conf.isTransitive = false
-                conf.withDependencies { deps ->
-                    spec.effectiveSources()
-                        .filterIsInstance<MappingsSpecImpl.Source.Maven>()
-                        .forEach { deps.add(dependencies.create(it.notation)) }
+        val configurations = project.configurations
+        return providers.provider {
+            spec.effectiveSources()
+                .filterIsInstance<MappingsSpecImpl.Source.Builtin>()
+                .firstOrNull()?.let {
+                    throw GradleException(
+                        "mappings { ${it.name}() }: builtin channels " +
+                            "resolve through provider-native's manifest " +
+                            "machinery — not yet implemented; use file() " +
+                            "or maven() meanwhile"
+                    )
                 }
+            val data = mappingExtension.resolve(spec, environmentId) { notation ->
+                configurations.detachedConfiguration(dependencies.create(notation))
+                    .apply { isTransitive = false }
+                    .singleFile.toPath()
             }
-        val files = project.files(
-            mavenFiles,
-            providers.provider {
-                val sources = spec.effectiveSources()
-                sources.filterIsInstance<MappingsSpecImpl.Source.Builtin>()
-                    .firstOrNull()?.let {
-                        throw GradleException(
-                            "mappings { ${it.name}() }: builtin channels " +
-                                "resolve through provider-native's manifest " +
-                                "machinery — not yet implemented; use file() " +
-                                "or maven() meanwhile"
-                        )
-                    }
-                sources.filterIsInstance<MappingsSpecImpl.Source.File>()
-                    .flatMap { it.files.files }
-            }
-        )
-        return mappingExtension.bundleJson(environmentId, files, from, to)
+            val tree = data.view<MappingTree>() ?: error(
+                "mapping provider did not expose a portable MappingTree view"
+            )
+            MappingBundle.capture(from.get(), to.get(), tree).toJson()
+        }
     }
 
     /**

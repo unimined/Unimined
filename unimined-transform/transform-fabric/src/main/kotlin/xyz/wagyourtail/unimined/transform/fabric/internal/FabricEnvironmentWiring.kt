@@ -40,11 +40,15 @@ internal object FabricEnvironmentWiring {
 
     private fun String.cap(): String = replaceFirstChar(Char::uppercase)
 
+    private const val INTERMEDIARY_MODULE = "net.fabricmc:intermediary"
+
     /**
      * Prepend `official -> intermediary` to the environment's mapping
      * chain when a fabric loader is declared — user mappings (e.g. yarn)
      * then compose `intermediary -> named` on top, and a bare fabric
      * environment still lands on the `intermediary` dev namespace.
+     * The raw `intermediary` jar is contributed as the source; the
+     * mapping materializer unwraps its `mappings/mappings.tiny`.
      */
     private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {
         val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
@@ -59,22 +63,18 @@ internal object FabricEnvironmentWiring {
             conf.withDependencies { deps ->
                 if (loaderSpec.orNull?.name == "fabric") {
                     deps.add(dependencies.create(
-                        "${IntermediaryMappings.INTERMEDIARY_MODULE}:${version.get()}:v2"
+                        "$INTERMEDIARY_MODULE:${version.get()}:v2"
                     ))
                 }
             }
         }
         val intermediaryJar = project.files(intermediary)
-        val cacheDir = project.layout.projectDirectory
-            .dir(".gradle/unimined/fabric").asFile.toPath()
 
         val files = project.files(project.provider {
             if (loaderSpec.orNull?.name != "fabric") {
                 emptyList()
             } else {
-                listOf(IntermediaryMappings.materialize(
-                    intermediaryJar.singleFile.toPath(), version.get(), cacheDir
-                ).toFile())
+                listOf(intermediaryJar.singleFile)
             }
         })
         environment.mappingsSpec.defaultSources += MappingsSpecImpl.Source.File(files)

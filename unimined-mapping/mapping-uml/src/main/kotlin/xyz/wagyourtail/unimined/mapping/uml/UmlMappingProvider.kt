@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingProvider
 import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.FormatProvider
 import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
 import xyz.wagyourtail.unimined.mapping.sink.emit
@@ -38,9 +39,12 @@ class UmlMappingProvider : MappingProvider {
             FormatRegistry.byName[it]
                 ?: throw GradleException("unknown UML mapping format '$it'")
         }
+        val nsMap = source.nsMap
         val tree = MutableMappingTree()
         for (file in source.files) {
-            readTree(file, hint).emit(tree)
+            readTree(file, hint).emit(tree, nsRenamer = { ns ->
+                nsMap[ns.name]?.let { Namespace(it) } ?: ns
+            })
         }
         return UmlMappingData(tree)
     }

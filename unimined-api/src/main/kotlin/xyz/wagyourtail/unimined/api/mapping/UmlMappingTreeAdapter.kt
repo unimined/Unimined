@@ -1,5 +1,9 @@
 package xyz.wagyourtail.unimined.api.mapping
 
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.jvms.ext.FieldNameAndDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
+
 /**
  * Adapts a UML [xyz.wagyourtail.unimined.mapping.MappingTree] to the
  * portable api-level [MappingTree] visitor interchange — engines that
@@ -31,14 +35,38 @@ class UmlMappingTreeAdapter(
             for (f in cls.fields) {
                 val fs = f.names[src]?.value ?: continue
                 val fd = f.names[dst]?.value ?: continue
-                visitor.visitField(s, fs, f.entries[src]?.descriptor?.toString(), fd)
+                visitor.visitField(s, fs, srcFieldDesc(src, f.entries), fd)
             }
             for (m in cls.methods) {
                 val ms = m.names[src]?.value ?: continue
                 val md = m.names[dst]?.value ?: continue
-                visitor.visitMethod(s, ms, m.descs[src]?.value, md)
+                visitor.visitMethod(s, ms, srcMethodDesc(src, m.descs), md)
             }
         }
+    }
+
+    /** The member's descriptor in [src] terms — remapped through the tree
+     *  when the source namespace doesn't declare one (e.g. yarn only
+     *  carries intermediary descriptors). */
+    private fun srcMethodDesc(
+        src: Namespace,
+        descs: Map<Namespace, MethodDescriptor>
+    ): String? {
+        descs[src]?.let { return it.value }
+        val (ns, desc) = descs.entries.firstOrNull() ?: return null
+        return uml.map(ns, src, desc).value
+    }
+
+    private fun srcFieldDesc(
+        src: Namespace,
+        entries: Map<Namespace, FieldNameAndDescriptor>
+    ): String? {
+        entries[src]?.descriptor?.let { return it.toString() }
+        for ((ns, entry) in entries) {
+            val desc = entry.descriptor ?: continue
+            return uml.map(ns, src, desc).toString()
+        }
+        return null
     }
 
 }

@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.mapping
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.mapping.BuiltinMappingSource
 import xyz.wagyourtail.unimined.api.mapping.FileMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingSource
@@ -12,9 +13,14 @@ import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 /**
  * The `mappings { }` block state: the declared namespace chain plus the
  * ordered list of mapping sources feeding it.
+ *
+ * @param mcVersion the owning environment's Minecraft version — used by
+ *  channel sugar such as [yarn] to default the artifact version; may be
+ *  null on detached spec instances
  */
 class MappingsSpecImpl(
-    objects: ObjectFactory
+    objects: ObjectFactory,
+    private val mcVersion: Provider<String>? = null
 ) : MappingsSpec {
 
     private val fileCollectionFactory = objects
@@ -37,19 +43,40 @@ class MappingsSpecImpl(
         internal set
 
     /** Declare a local mapping file source. */
-    fun file(path: Any) {
+    @JvmOverloads
+    fun file(path: Any, action: Source.() -> Unit = {}) {
         sources += Source.File(fileCollectionFactory.fileCollection().from(path))
+            .apply(action)
     }
 
     /** Declare a maven-coordinate mapping source — resolved lazily. */
-    fun maven(notation: String) {
-        sources += Source.Maven(notation)
+    @JvmOverloads
+    fun maven(notation: String, action: Source.() -> Unit = {}) {
+        maven(fileCollectionFactory.property(String::class.java).apply { set(notation) }, action)
+    }
+
+    /** Declare a maven-coordinate mapping source from a provider — the
+     *  coordinate resolves at materialization time. */
+    @JvmOverloads
+    fun maven(notation: Provider<String>, action: Source.() -> Unit = {}) {
+        sources += Source.Maven(notation).apply(action)
     }
 
     /** Declare a provider builtin channel such as `official()`. */
-    fun builtin(name: String) {
-        sources += Source.Builtin(name)
+    @JvmOverloads
+    fun builtin(name: String, action: Source.() -> Unit = {}) {
+        sources += Source.Builtin(name).apply(action)
     }
+
+    /**
+     * Declare Yarn named mappings for the environment's Minecraft version —
+     * `yarn(10)` ⇢ `net.fabricmc:yarn:<mcVersion>+build.10:v2`.
+     */
+    fun yarn(build: Int) = maven(
+        requireNotNull(mcVersion) {
+            "yarn(build) requires the environment's Minecraft version to be set"
+        }.map { "net.fabricmc:yarn:$it+build.$build:v2" }
+    )
 
     /** Declare Mojang's official runtime mappings channel. */
     fun official() = builtin("official")
@@ -93,12 +120,32 @@ class MappingsSpecImpl(
     /** A declared mapping source before materialization. */
     sealed class Source : MappingSource {
         override var formatHint: String? = null
+        override val nsMap: MutableMap<String, String> = mutableMapOf()
+
+        /** Force the document's format — a name the consumer's format
+         *  registry understands (e.g. a UML `FormatProvider` name). */
+        fun formatHint(hint: String) {
+            formatHint = hint
+        }
+
+        /** Relabel document namespace [from] to chain namespace [to] —
+         *  for documents whose labels don't match the environment chain. */
+        fun mapNamespace(from: String, to: String) {
+            nsMap[from] = to
+        }
+
+        /** Relabel several document namespaces at once. */
+        fun mapNamespace(vararg pairs: Pair<String, String>) {
+            pairs.forEach { (from, to) -> mapNamespace(from, to) }
+        }
 
         /** A local mapping file collection resolved lazily. */
         class File(override val files: ConfigurableFileCollection) : Source(), FileMappingSource
 
         /** A Maven mapping coordinate resolved lazily. */
-        class Maven(override val notation: String) : Source(), MavenMappingSource
+        class Maven(val notationProvider: Provider<String>) : Source(), MavenMappingSource {
+            override val notation: String get() = notationProvider.get()
+        }
 
         /** A provider-named built-in mapping channel. */
         class Builtin(val name: String) : Source(), BuiltinMappingSource {

@@ -18,4 +18,9 @@ interface MaterializedMappingSource {
     /** Format hint honored before autodetect, propagated from the declaration. */
     val formatHint: String?
 
+    /** Namespace relabeling propagated from the declaration — applied
+     *  while reading the materialized files into the composed tree. */
+    val nsMap: Map<String, String>
+        get() = emptyMap()
+
 }

@@ -12,7 +12,9 @@ import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
 import xyz.wagyourtail.unimined.api.mapping.ViewMapMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.sink.emit
+import xyz.wagyourtail.unimined.mapping.tree.impl.fillMissingNames
 import kotlin.reflect.KClass
 
 /**
@@ -50,6 +52,21 @@ class DefaultMappingComposer : MappingComposer {
 
         val composed = MutableMappingTree()
         for (tree in trees) tree.emit(composed)
+
+        // fill missing namespace names from each part's base namespace —
+        // a member unmapped by a later source keeps its parent hop's name
+        // (yarn-unmapped members stay `field_*`, not `official`). Each
+        // target namespace is filled by the first part providing it.
+        val filled = mutableSetOf<Namespace>()
+        val toFill = mutableListOf<Pair<Namespace, Set<Namespace>>>()
+        for (tree in trees) {
+            val targets = tree.namespaces.drop(1).toSet() - filled
+            if (targets.isNotEmpty()) {
+                toFill += tree.namespaces.first() to targets
+                filled += targets
+            }
+        }
+        composed.fillMissingNames(*toFill.toTypedArray())
 
         val data = UmlMappingData(composed)
         val views = linkedMapOf<KClass<out MappingDataView>, MappingDataView>(

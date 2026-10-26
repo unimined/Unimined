@@ -34,13 +34,15 @@ class UmlMappingProviderTest {
 
     private fun materialized(
         files: List<Path>,
-        formatHint: String? = null
+        formatHint: String? = null,
+        nsMap: Map<String, String> = emptyMap()
     ): MaterializedMappingSource = object : MaterializedMappingSource {
         override val declaration = object : MappingSource {
             override fun toString() = "test-source"
         }
         override val files = files
         override val formatHint = formatHint
+        override val nsMap = nsMap
     }
 
     private val ctx = object : MappingContext {
@@ -86,6 +88,23 @@ class UmlMappingProviderTest {
             }
         })
         assertEquals(listOf("a/A->c/C"), mapped)
+    }
+
+    @Test
+    fun `nsMap relabels document namespaces while reading`() {
+        // the document calls its target 'named'; the chain calls it 'mojmap'
+        val data = UmlMappingProvider().resolve(
+            materialized(listOf(tinyFile()), nsMap = mapOf("named" to "mojmap")), ctx
+        )
+        val tree = data.view<MappingTree>()!!
+        assertEquals(listOf("official", "mojmap"), tree.namespaces)
+        val mapped = mutableListOf<String>()
+        tree.accept("official", "mojmap", object : MappingVisitor {
+            override fun visitClass(srcName: String, dstName: String) {
+                mapped += "$srcName->$dstName"
+            }
+        })
+        assertEquals(listOf("a/A->b/B"), mapped)
     }
 
     @Test

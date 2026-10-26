@@ -124,6 +124,40 @@ class MappingPipelineTest {
     }
 
     @Test
+    fun `composer fills missing target names from the parent hop`() {
+        // f2 is mapped official -> intermediary but absent from the named
+        // doc — it must keep its intermediary name in `named`, not fall
+        // back to the official source name
+        val first = umlData(
+            "tiny\t2\t0\tofficial\tintermediary\n" +
+                "c\ta/A\ti/A\n" +
+                "\tf\tI\tx\tfield_1\n" +
+                "\tf\tI\tz\tfield_2\n"
+        )
+        val second = umlData(
+            "tiny\t2\t0\tintermediary\tnamed\n" +
+                "c\ti/A\tn/A\n" +
+                "\tf\tI\tfield_1\ty\n"
+        )
+
+        val data = DefaultMappingComposer().compose(
+            xyz.wagyourtail.unimined.api.mapping.MappingComposeRequest(
+                listOf(first, second)
+            ), ctx
+        )
+
+        val fields = mutableMapOf<String, String>()
+        data.view<MappingTree>()!!.accept("official", "named", object : MappingVisitor {
+            override fun visitField(
+                srcClass: String, srcName: String, srcDesc: String?, dstName: String
+            ) {
+                fields[srcName] = dstName
+            }
+        })
+        assertEquals(mapOf("x" to "y", "z" to "field_2"), fields)
+    }
+
+    @Test
     fun `composer passes through single parts and empty requests`() {
         val part = umlData("tiny\t2\t0\tofficial\tnamed\nc\ta/A\tb/B\n")
         val composer = DefaultMappingComposer()
