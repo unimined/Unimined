@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.decompiler.vineflower.VineflowerDecompileTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 
 /**
  * Verifies `genSources` wiring: per-environment task naming, dev-jar
@@ -44,9 +45,14 @@ class GenSourcesWiringTest {
 
         val genSources = project.tasks.getByName("genSources")
         assertTrue(genSources is VineflowerDecompileTask)
+        // lands in the stub module's sources slot so IDEs attach it on
+        // sync without triggering a decompile
         assertEquals(
-            "minecraft-main-sources.jar",
-            (genSources as VineflowerDecompileTask).outputJar.get().asFile.name
+            LocalMavenPublisher.moduleDir(
+                ext.localRepoDir, "unimined.generated",
+                "minecraft-main", "1.20.1"
+            ).resolve("minecraft-main-1.20.1-sources.jar").toFile(),
+            (genSources as VineflowerDecompileTask).outputJar.get().asFile
         )
     }
 

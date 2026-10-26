@@ -18,6 +18,17 @@ import kotlin.io.path.writeText
  */
 object LocalMavenPublisher {
 
+    /** The maven-layout module dir — `<repo>/<group-path>/<artifactId>/<version>/`. */
+    fun moduleDir(
+        repoDir: Path,
+        group: String,
+        artifactId: String,
+        version: String
+    ): Path = repoDir
+        .resolve(group.replace('.', '/'))
+        .resolve(artifactId)
+        .resolve(version)
+
     /**
      * Write POM + artifacts into `<repo>/<group-path>/<artifactId>/<version>/`.
      *
@@ -32,10 +43,7 @@ object LocalMavenPublisher {
         version: String,
         files: Map<String, Path>
     ): Path {
-        val moduleDir = repoDir
-            .resolve(group.replace('.', '/'))
-            .resolve(artifactId)
-            .resolve(version)
+        val moduleDir = moduleDir(repoDir, group, artifactId, version)
             .createDirectories()
 
         moduleDir.resolve("$artifactId-$version.pom").writeText(

@@ -7,6 +7,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.task.RemapJarTask
@@ -69,10 +70,16 @@ internal object GenSourcesWiring {
         task.configure { t ->
             t.group = "unimined"
             t.description = "Decompiles the '$environmentId' Minecraft artifact into a sources jar"
+            // write straight into the generated module's sources slot —
+            // IDEA attaches the sources classifier on sync without the
+            // sync path ever triggering a decompile
+            val artifactId = "minecraft-$environmentId"
+            val version = environment.version.get()
             t.outputJar.set(
-                project.layout.buildDirectory.file(
-                    "unimined/sources/minecraft-$environmentId-sources.jar"
-                )
+                LocalMavenPublisher.moduleDir(
+                    minecraft.localRepoDir, "unimined.generated",
+                    artifactId, version
+                ).resolve("$artifactId-$version-sources.jar").toFile()
             )
         }
     }
