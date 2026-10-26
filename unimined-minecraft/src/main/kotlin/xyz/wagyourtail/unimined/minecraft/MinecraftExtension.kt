@@ -254,14 +254,14 @@ abstract class MinecraftExtension @Inject constructor(
             val source = sourceNamespace(environmentId).orNull
             if (dev != null && dev == source) rawView else devView
         })
-        sourceSet.compileClasspath = sourceSet.compileClasspath + contribution
-        sourceSet.runtimeClasspath = sourceSet.runtimeClasspath + contribution
+        sourceSet.compileClasspath += contribution
+        sourceSet.runtimeClasspath += contribution
 
         val extraDependencies = objects.fileCollection().from(providers.provider {
             artifacts(environmentId).get().extraDependencies
         })
-        sourceSet.compileClasspath = sourceSet.compileClasspath + extraDependencies
-        sourceSet.runtimeClasspath = sourceSet.runtimeClasspath + extraDependencies
+        sourceSet.compileClasspath += extraDependencies
+        sourceSet.runtimeClasspath += extraDependencies
 
         sourceSet.java.srcDir(objects.fileCollection().from(providers.provider {
             artifacts(environmentId).get().extraCompileSources
@@ -340,16 +340,17 @@ abstract class MinecraftExtension @Inject constructor(
         artifacts(environmentId).map { it.mappings.get().namespaces.first() }
 
     /** Effective mod-dependency source namespaces — the environment's
-     *  explicit list, else the loader's contributed default. An empty
+     *  explicit list, else the loader's contributed default, else the
+     *  base (production) namespace for no-loader environments. An empty
      *  declaration counts as unset (list properties default to `[]`). */
     fun modSourceNamespaces(environmentId: String): Provider<List<String>> =
         providers.provider {
             val environment = sourceSet(environmentId)
-            val explicit = environment.modSourceNamespaces.getOrElse(emptyList())
-            if (explicit.isNotEmpty()) {
-                explicit
-            } else {
-                loaderModSourceNamespaces[environment.loaderSpec.orNull?.name] ?: emptyList()
+            environment.modSourceNamespaces.getOrElse(emptyList()).ifEmpty {
+                loaderModSourceNamespaces[environment.loaderSpec.orNull?.name]
+                    ?: listOf(
+                        artifacts(environmentId).get().mappings.get().namespaces.first()
+                    )
             }
         }
 
@@ -538,6 +539,74 @@ abstract class MinecraftExtension @Inject constructor(
         resolveMavenNotation(notation)
     }
 
+    /**
+     * Resolves builtin mapping channels for [environment] to local files —
+     * `mojmap` from the provider's manifest downloads, `searge`/`parchment`
+     * from Maven (registering the channel's repository when absent).
+     */
+    private fun channelResolver(environment: MinecraftEnvironment) =
+        java.util.function.BiFunction<String, Map<String, String>, List<Path>> { channel, params ->
+            when (channel) {
+                "mojmap" -> {
+                    val key = if (environment.side.get() == Side.SERVER) {
+                        "server_mappings"
+                    } else {
+                        "client_mappings"
+                    }
+                    val file = resolved(environment).auxiliaryArtifacts[key]
+                        ?: throw GradleException(
+                            "mappings { mojmap() }: provider " +
+                                "'${environment.provider.orNull ?: "auto"}' supplies no " +
+                                "$key channel for ${environment.version.orNull}"
+                        )
+                    listOf(file.get().asFile.toPath())
+                }
+                "searge" -> {
+                    val version = params["version"]
+                        ?: throw GradleException("searge() requires a version")
+                    if (xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
+                            .compare(version.substringBefore('-'), "1.12.2") < 0
+                    ) {
+                        throw GradleException(
+                            "mappings { searge($version) }: FG1-era mcp/srg " +
+                                "channels are not yet supported; declare the " +
+                                "mapping archive via maven() or file() instead"
+                        )
+                    }
+                    ensureRepo("Minecraft Forge", "https://maven.minecraftforge.net/")
+                    listOf(
+                        resolveMavenNotation("de.oceanlabs.mcp:mcp_config:$version@zip")
+                    )
+                }
+                "parchment" -> {
+                    val mcVersion = params["mcVersion"]
+                        ?: throw GradleException("parchment() requires mcVersion")
+                    val version = params["version"]
+                        ?: throw GradleException("parchment() requires a version")
+                    val classifier =
+                        if (params["checked"].toBoolean()) ":checked" else ""
+                    ensureRepo("Parchment", "https://maven.parchmentmc.org/")
+                    listOf(
+                        resolveMavenNotation(
+                            "org.parchmentmc.data:parchment-$mcVersion:$version$classifier@zip"
+                        )
+                    )
+                }
+                else -> throw GradleException(
+                    "builtin mapping channel '$channel' is not supported by this host"
+                )
+            }
+        }
+
+    private fun ensureRepo(name: String, url: String) {
+        if (project.repositories.none { it.name == name }) {
+            project.repositories.maven { repo ->
+                repo.name = name
+                repo.setUrl(url)
+            }
+        }
+    }
+
     private val mappingDataProviders = mutableMapOf<String, Provider<xyz.wagyourtail.unimined.api.mapping.MappingData>>()
 
     /** Configure mappings for the default `main` environment. */
@@ -566,7 +635,8 @@ abstract class MinecraftExtension @Inject constructor(
                 providers.provider {
                     environment.validateCombinations()
                     mappingExtension.resolve(
-                        environment.mappingsSpec, environment.environmentId, mavenResolver
+                        environment.mappingsSpec, environment.environmentId,
+                        mavenResolver, channelResolver(environment)
                     )
                 }
             }
@@ -626,7 +696,7 @@ abstract class MinecraftExtension @Inject constructor(
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
-                    mavenResolver
+                    mavenResolver, channelResolver(environment)
                 )
             })
             t.sourceNamespace.set(from)
@@ -662,7 +732,7 @@ abstract class MinecraftExtension @Inject constructor(
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
-                    mavenResolver
+                    mavenResolver, channelResolver(environment)
                 )
             })
             t.sourceNamespace.set(from)
@@ -701,21 +771,11 @@ abstract class MinecraftExtension @Inject constructor(
         val dependencies = project.dependencies
         val configurations = project.configurations
         return providers.provider {
-            spec.effectiveSources()
-                .filterIsInstance<MappingsSpecImpl.Source.Builtin>()
-                .firstOrNull()?.let {
-                    throw GradleException(
-                        "mappings { ${it.name}() }: builtin channels " +
-                            "resolve through provider-native's manifest " +
-                            "machinery — not yet implemented; use file() " +
-                            "or maven() meanwhile"
-                    )
-                }
-            val data = mappingExtension.resolve(spec, environmentId) { notation ->
+            val data = mappingExtension.resolve(spec, environmentId, { notation ->
                 configurations.detachedConfiguration(dependencies.create(notation))
                     .apply { isTransitive = false }
                     .singleFile.toPath()
-            }
+            }, channelResolver(environment))
             val tree = data.view<MappingTree>() ?: error(
                 "mapping provider did not expose a portable MappingTree view"
             )

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mapping
 
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Provider
@@ -11,6 +12,7 @@ import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 import xyz.wagyourtail.unimined.mapping.internal.RuntimeMappingContext
 import java.nio.file.Path
+import java.util.function.BiFunction
 import java.util.function.Function
 import javax.inject.Inject
 
@@ -28,32 +30,54 @@ abstract class MappingExtension @Inject constructor(
     /** Composers merging per-source MappingData — DefaultMappingComposer fallback. */
     val composers = MappingComposerRegistry()
 
+    /**
+     * Root for materialized builtin-channel documents — the
+     * `unimined-mapping` plugin conventions this to
+     * `.gradle/unimined/mapping-cache` inside the project.
+     */
+    abstract val cacheDir: DirectoryProperty
+
     private val logger = Logging.getLogger(MappingExtension::class.java)
 
     private fun ctx(
         environmentId: String,
-        resolveMaven: Function<String, Path>
-    ) = RuntimeMappingContext(environmentId, logger, null, resolveMaven::apply)
+        resolveMaven: Function<String, Path>,
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
+    ) = RuntimeMappingContext(
+        environmentId, logger, cacheDir.orNull?.asFile?.toPath(), resolveMaven::apply,
+        resolveChannel?.let { ch -> { c: String, p: Map<String, String> -> ch.apply(c, p) } }
+            ?: { channel, _ ->
+                throw UnsupportedOperationException(
+                    "builtin channel '$channel' is not supported in this context"
+                )
+            }
+    )
 
     /**
      * Materialize all effective sources in [spec] to local mapping files.
-     * Maven and builtin sources are resolved through [resolveMaven].
+     * Maven sources resolve through [resolveMaven]; builtin/provider
+     * channels resolve through [resolveChannel].
      */
+    @JvmOverloads
     fun materializeSources(
         spec: MappingsSpecImpl,
         environmentId: String,
-        resolveMaven: Function<String, Path>
+        resolveMaven: Function<String, Path>,
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
     ): List<Path> = MappingResolver.materializeSources(
-        spec, ctx(environmentId, resolveMaven), sourceProviders
+        spec, ctx(environmentId, resolveMaven, resolveChannel), sourceProviders
     )
 
     /** Resolve [spec]'s declared sources into environment-level [MappingData]. */
+    @JvmOverloads
     fun resolve(
         spec: MappingsSpecImpl,
         environmentId: String,
-        resolveMaven: Function<String, Path>
+        resolveMaven: Function<String, Path>,
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
     ): MappingData = MappingResolver.resolve(
-        spec, ctx(environmentId, resolveMaven), sourceProviders, registry, composers
+        spec, ctx(environmentId, resolveMaven, resolveChannel),
+        sourceProviders, registry, composers
     )
 
     /**

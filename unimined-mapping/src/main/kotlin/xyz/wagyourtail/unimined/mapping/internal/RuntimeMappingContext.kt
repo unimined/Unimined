@@ -8,9 +8,17 @@ internal class RuntimeMappingContext(
     override val environmentId: String,
     override val logger: Logger,
     override val cacheDir: Path?,
-    private val mavenResolver: (String) -> Path
+    private val mavenResolver: (String) -> Path,
+    private val channelResolver: (String, Map<String, String>) -> List<Path> = { channel, _ ->
+        throw UnsupportedOperationException(
+            "builtin channel '$channel' is not supported in this context"
+        )
+    }
 ) : MappingContext {
 
     override fun resolveMaven(notation: String): Path = mavenResolver(notation)
+
+    override fun resolveChannel(channel: String, params: Map<String, String>): List<Path> =
+        channelResolver(channel, params)
 
 }

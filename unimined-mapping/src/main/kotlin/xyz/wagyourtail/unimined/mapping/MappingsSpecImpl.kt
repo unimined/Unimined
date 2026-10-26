@@ -64,9 +64,21 @@ class MappingsSpecImpl(
 
     /** Declare a provider builtin channel such as `official()`. */
     @JvmOverloads
-    fun builtin(name: String, action: Source.() -> Unit = {}) {
-        sources += Source.Builtin(name).apply(action)
+    fun builtin(
+        name: String,
+        params: Map<String, Provider<String>> = emptyMap(),
+        action: Source.() -> Unit = {}
+    ) {
+        sources += Source.Builtin(name, params).apply(action)
     }
+
+    private fun const(value: String): Provider<String> =
+        fileCollectionFactory.property(String::class.java).apply { set(value) }
+
+    private fun requireMcVersion(channel: String): Provider<String> =
+        requireNotNull(mcVersion) {
+            "$channel() requires the environment's Minecraft version to be set"
+        }
 
     /**
      * Declare Yarn named mappings for the environment's Minecraft version —
@@ -84,8 +96,46 @@ class MappingsSpecImpl(
     /** Declare the Mojmap built-in mappings channel. */
     fun mojmap() = builtin("mojmap")
 
-    /** Declare the Searge built-in mappings channel. */
-    fun searge() = builtin("searge")
+    /**
+     * Declare the Searge (MCPConfig) mappings channel — [version] is the
+     * MCPConfig artifact version; it defaults to the environment's
+     * Minecraft version.
+     */
+    fun searge(version: String) =
+        builtin("searge", mapOf("version" to const(version)))
+
+    /** Declare Searge mappings at the environment's Minecraft version. */
+    fun searge() =
+        builtin("searge", mapOf("version" to requireMcVersion("searge")))
+
+    /**
+     * Declare Parchment parameter/javadoc mappings layered on `mojmap`.
+     * [mcVersion] selects the `parchment-<mcVersion>` artifact family and
+     * defaults to the environment's Minecraft version; [checked] selects
+     * the `-checked` classifier build.
+     */
+    @JvmOverloads
+    fun parchment(mcVersion: String, version: String, checked: Boolean = false) =
+        builtin(
+            "parchment",
+            mapOf(
+                "mcVersion" to const(mcVersion),
+                "version" to const(version),
+                "checked" to const(checked.toString())
+            )
+        )
+
+    /** Declare Parchment mappings against the environment's Minecraft version. */
+    @JvmOverloads
+    fun parchment(version: String, checked: Boolean = false) =
+        builtin(
+            "parchment",
+            mapOf(
+                "mcVersion" to requireMcVersion("parchment"),
+                "version" to const(version),
+                "checked" to const(checked.toString())
+            )
+        )
 
     /**
      * Use another environment's mappings when this environment declares none.
@@ -101,9 +151,7 @@ class MappingsSpecImpl(
     fun effectiveSources(
         visiting: MutableSet<MappingsSpecImpl> = mutableSetOf()
     ): List<Source> {
-        val own = if (sources.isNotEmpty()) {
-            sources
-        } else {
+        val own = sources.ifEmpty {
             val inherited = inheritedSources ?: return defaultSources.toList()
             if (!visiting.add(this)) {
                 throw GradleException("cyclic Unimined mapping inheritance detected")
@@ -148,7 +196,10 @@ class MappingsSpecImpl(
         }
 
         /** A provider-named built-in mapping channel. */
-        class Builtin(val name: String) : Source(), BuiltinMappingSource {
+        class Builtin(
+            val name: String,
+            override val params: Map<String, Provider<String>> = emptyMap()
+        ) : Source(), BuiltinMappingSource {
             override val channel get() = name
         }
     }

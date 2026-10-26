@@ -54,15 +54,12 @@ class DefaultMappingComposer : MappingComposer {
         val composed = MutableMappingTree()
         for (tree in trees) tree.emit(composed)
 
-        // fill missing namespace names from each part's base namespace —
-        // a member unmapped by a later source keeps its parent hop's name
-        // (yarn-unmapped members stay `field_*`, not `official`). Each
-        // target namespace is filled by the first part providing it.
         // relocate inner classes their source namespace left unmapped under
         // the mapped parent (Outer$1 -> mapped/Outer$1) — verbatim name fill
         // would strand them in the source package and break javac nests
         for (tree in trees) {
-            composed.renest(tree.namespaces.first(), tree.namespaces.drop(1).toSet())
+            val srcNs = tree.namespaces.firstOrNull() ?: continue
+            composed.renest(srcNs, tree.namespaces.drop(1).toSet())
         }
 
         // fill missing namespace names from each part's base namespace —

@@ -11,7 +11,10 @@ import org.gradle.api.Project
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        target.extensions.create("mapping", MappingExtension::class.java)
+        val extension = target.extensions.create("mapping", MappingExtension::class.java)
+        extension.cacheDir.convention(
+            target.layout.projectDirectory.dir(".gradle/unimined/mapping-cache")
+        )
     }
 
 }

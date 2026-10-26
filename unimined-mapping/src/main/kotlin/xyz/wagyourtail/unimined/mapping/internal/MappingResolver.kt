@@ -30,8 +30,17 @@ internal object MappingResolver {
         providers: MappingProviderRegistry = MappingProviderRegistry(),
         composers: MappingComposerRegistry = MappingComposerRegistry()
     ): MappingData {
-        val parts = spec.effectiveSources().map { src ->
+        val parts = spec.effectiveSources().mapNotNull { src ->
             val materialized = sourceProviders.select(src).materialize(src, ctx)
+            if (materialized.files.isEmpty()) {
+                // lazily-empty declarations (e.g. a conditional loader hop)
+                // contribute no part — reading them would emit a tree with
+                // no namespaces
+                ctx.logger.debug(
+                    "[Unimined/Mappings] source $src materialized no files; skipping"
+                )
+                return@mapNotNull null
+            }
             providers.select(materialized).resolve(materialized, ctx)
         }
         val request = MappingComposeRequest(parts)
@@ -71,12 +80,12 @@ internal object MappingResolver {
 
     /** Build a standalone context for file-only consumers (tasks). */
     fun standaloneContext(environmentId: String, logger: Logger): MappingContext =
-        RuntimeMappingContext(environmentId, logger, null) { notation ->
+        RuntimeMappingContext(environmentId, logger, null, { notation ->
             throw UnsupportedOperationException(
                 "maven resolution is not available here; materialize '$notation' " +
                     "through the environment's mapping spec first"
             )
-        }
+        })
 
     /** Synthetic declaration for files materialized outside the DSL. */
     private class RawFileSource(private val file: Path) : MappingSource {

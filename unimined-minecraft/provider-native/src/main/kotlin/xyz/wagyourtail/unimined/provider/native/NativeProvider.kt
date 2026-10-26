@@ -117,9 +117,25 @@ class NativeProvider(
             )
         }
 
+        val auxiliary = mutableMapOf<String, Provider<RegularFile>>()
+        for (channel in listOf("client_mappings", "server_mappings")) {
+            auxiliary[channel] = ctx.layout.file(ctx.providers.provider {
+                val ref = metadata().version.downloads?.get(channel)
+                    ?: throw GradleException(
+                        "Minecraft $versionId has no $channel download " +
+                            "(mojmap channel requires a version with official mappings)"
+                    )
+                downloader.fetch(
+                    ref.url,
+                    "versions/$versionId/$channel.txt",
+                    ref.sha1?.lowercase(Locale.ROOT)
+                ).toFile()
+            })
+        }
+
         return NativeMinecraftArtifacts(
             artifacts = artifacts,
-            auxiliaryArtifacts = emptyMap(),
+            auxiliaryArtifacts = auxiliary,
             mappings = ctx.providers.provider { OfficialIdentityMappingTree },
             namespaceMode = ctx.providers.provider { NamespaceMode.REMAPPABLE },
             capabilities = capabilities,

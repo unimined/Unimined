@@ -45,10 +45,14 @@ class MappingsResolveTest {
     }
 
     @Test
-    fun `builtin channel fails clearly until manifest machinery lands`() {
+    fun `official builtin resolves to the identity document`() {
         val ext = project().extensions.getByType(MinecraftExtension::class.java)
         ext.mappings { it.official() }
-        assertThrows(Exception::class.java) { ext.mappingData().get() }
+        val data = ext.mappingData().get()
+        assertEquals(
+            listOf("official"),
+            data.view<xyz.wagyourtail.unimined.api.mapping.MappingTree>()!!.namespaces
+        )
     }
 
     @Test

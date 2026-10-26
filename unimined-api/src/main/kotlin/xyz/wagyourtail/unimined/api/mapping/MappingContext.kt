@@ -24,4 +24,16 @@ interface MappingContext {
      */
     fun resolveMaven(notation: String): Path
 
+    /**
+     * Resolve a builtin/provider mapping channel to local files — e.g.
+     * Mojang's `client_mappings` for `mojmap`, or a channel's Maven
+     * artifact when repository wiring is involved. Injected by the
+     * environment host; the default throws because detached/file-only
+     * contexts have no channel machinery.
+     */
+    fun resolveChannel(channel: String, params: Map<String, String>): List<Path> =
+        throw UnsupportedOperationException(
+            "builtin channel '$channel' is not supported in this context"
+        )
+
 }
