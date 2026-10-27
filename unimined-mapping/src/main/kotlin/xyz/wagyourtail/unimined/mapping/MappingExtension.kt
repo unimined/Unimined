@@ -27,8 +27,14 @@ abstract class MappingExtension @Inject constructor(
     /** Mapping providers discovered from the plugin classpath. */
     val registry = MappingProviderRegistry()
 
+    /** View adapters deriving missing MappingDataView kinds — portable→UML default. */
+    val viewAdapters = MappingViewAdapterRegistry()
+
     /** Composers merging per-source MappingData — DefaultMappingComposer fallback. */
-    val composers = MappingComposerRegistry()
+    val composers = MappingComposerRegistry(viewAdapters)
+
+    /** Ordered post-processors applied to composed data before consumers. */
+    val postProcessors = MappingPostProcessorRegistry()
 
     /**
      * Root for materialized builtin-channel documents — the
@@ -77,7 +83,7 @@ abstract class MappingExtension @Inject constructor(
         resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
     ): MappingData = MappingResolver.resolve(
         spec, ctx(environmentId, resolveMaven, resolveChannel),
-        sourceProviders, registry, composers
+        sourceProviders, registry, composers, postProcessors
     )
 
     /**
@@ -87,7 +93,7 @@ abstract class MappingExtension @Inject constructor(
     fun readFiles(files: List<Path>, environmentId: String): MappingData =
         MappingResolver.readFiles(
             files, MappingResolver.standaloneContext(environmentId, logger),
-            registry, composers
+            registry, composers, postProcessors
         )
 
     /**

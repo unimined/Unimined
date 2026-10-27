@@ -20,7 +20,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
-import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
+import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
@@ -69,9 +69,10 @@ abstract class AbstractRemapTask : DefaultTask() {
     abstract val remapClasspath: ConfigurableFileCollection
 
     /**
-     * Serialized [MappingBundle] input — the configuration-cache-safe way
-     * to feed resolved mappings to `needsMappingTree` steps. Mutually
-     * exclusive with [mappingData]; the file wins when both are set.
+     * Serialized mapping bundle input — the configuration-cache-safe way
+     * to feed resolved mappings to `needsMappingTree` steps. Accepts either
+     * a [SerializedMappingData] zip or a legacy row [MappingBundle].
+     * Mutually exclusive with [mappingData]; the file wins when both are set.
      */
     @get:Optional
     @get:InputFile
@@ -90,7 +91,7 @@ abstract class AbstractRemapTask : DefaultTask() {
     @TaskAction
     fun runPipeline() {
         val mappings = mappingFile.orNull
-            ?.let { BundleMappingData(MappingBundle.read(it.asFile.toPath())) }
+            ?.let { SerializedMappingData.readEither(it.asFile.toPath()) }
             ?: mappingData.orNull
 
         PipelineRunner.run(

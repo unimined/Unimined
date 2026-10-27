@@ -22,6 +22,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
+import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
@@ -85,7 +86,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         val mappings = parameters.mappingBundleJson.orNull
             ?.let { json -> BundleMappingData(bundleCache.computeIfAbsent(json, MappingBundle::fromJson)) }
             ?: parameters.mappingFile.orNull
-                ?.let { BundleMappingData(MappingBundle.read(it.asFile.toPath())) }
+                ?.let { SerializedMappingData.readEither(it.asFile.toPath()) }
 
         val output = outputs.file(
             "${input.toFile().nameWithoutExtension}-${spec.targetNamespace}.jar"

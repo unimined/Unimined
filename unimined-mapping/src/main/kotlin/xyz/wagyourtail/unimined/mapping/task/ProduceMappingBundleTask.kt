@@ -12,13 +12,16 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingTree
+import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 
 /**
- * Emits resolved mapping data as a serialized [MappingBundle] file — the
+ * Emits resolved mapping data as a serialized bundle file — the
  * configuration-cache-safe input consumed by remap tasks and artifact
- * transforms.
+ * transforms. Writes the rich view-payload format when a registered
+ * [xyz.wagyourtail.unimined.api.mapping.MappingViewSerializer] covers the
+ * resolved views, else the row-only [MappingBundle].
  */
 @CacheableTask
 abstract class ProduceMappingBundleTask : DefaultTask() {
@@ -50,13 +53,21 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
             mappingFiles.files.map { it.toPath() },
             MappingResolver.standaloneContext(environmentId.get(), logger)
         )
+        val path = bundleFile.get().asFile.toPath()
+        val written = SerializedMappingData.write(data, path)
+        if (written.isNotEmpty()) {
+            logger.lifecycle(
+                "[Unimined/MappingBundle] wrote serialized bundle {} (views: {})",
+                path.fileName, written.joinToString()
+            )
+            return
+        }
         val tree = data.view<MappingTree>() ?: error(
-            "mapping provider did not expose a portable MappingTree view"
+            "mapping provider exposed no serializable views and no portable MappingTree view"
         )
-        val bundle = MappingBundle.capture(
+        MappingBundle.capture(
             sourceNamespace.get(), targetNamespace.get(), tree
-        )
-        bundle.write(bundleFile.get().asFile.toPath())
+        ).write(path)
     }
 
 }

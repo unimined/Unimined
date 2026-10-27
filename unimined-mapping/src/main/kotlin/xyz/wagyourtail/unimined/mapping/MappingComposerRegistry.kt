@@ -12,7 +12,9 @@ import xyz.wagyourtail.unimined.api.spi.spiSelector
  * [register]. A fresh registry at task execution sees the same composers
  * as the configuration-time registry.
  */
-class MappingComposerRegistry {
+class MappingComposerRegistry(
+    viewAdapters: MappingViewAdapterRegistry = MappingViewAdapterRegistry()
+) {
 
     private val selector: SpiSelector<MappingComposer, MappingComposeRequest> =
         spiSelector("mapping composer")
@@ -27,7 +29,7 @@ class MappingComposerRegistry {
         ).toList()
         found.distinctBy { it.name }.forEach(selector::register)
 
-        selector.register(DefaultMappingComposer())
+        selector.register(DefaultMappingComposer(viewAdapters))
     }
 
     /** Register a composer implementation. */

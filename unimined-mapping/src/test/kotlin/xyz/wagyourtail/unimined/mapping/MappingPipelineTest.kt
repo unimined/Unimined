@@ -177,7 +177,7 @@ class MappingPipelineTest {
     }
 
     @Test
-    fun `composer selection rejects portable-only multi-source data`() {
+    fun `composer selection accepts portable-only multi-source data via adapters`() {
         val spec = MappingsSpecImpl(objects())
         spec.file(tinyFile("a.tiny", ""))
         spec.file(tinyFile("b.tiny", ""))
@@ -196,11 +196,14 @@ class MappingPipelineTest {
                 ): T? = null
             }
         )
-        assertThrows(SpiSelectionException::class.java) {
+        // portable MappingTree views are adaptable to UmlMappingTreeView,
+        // so the default composer now claims the request
+        assertEquals(
+            "default",
             MappingComposerRegistry().select(
                 xyz.wagyourtail.unimined.api.mapping.MappingComposeRequest(parts)
-            )
-        }
+            ).name
+        )
     }
 
     @Test

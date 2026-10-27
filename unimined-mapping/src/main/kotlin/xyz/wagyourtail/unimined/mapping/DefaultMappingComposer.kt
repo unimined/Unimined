@@ -29,25 +29,39 @@ import kotlin.reflect.KClass
  * parts resolve last-declaration-wins, preserving each supported view
  * rather than flattening into rename rows.
  */
-class DefaultMappingComposer : MappingComposer {
+class DefaultMappingComposer(
+    private val adapters: MappingViewAdapterRegistry = MappingViewAdapterRegistry()
+) : MappingComposer {
 
     override val name = "default"
 
     override fun supports(spec: MappingComposeRequest): Boolean =
         spec.parts.size <= 1 ||
-            spec.parts.all { it.viewTypes.contains(UmlMappingTreeView::class) }
+            spec.parts.all {
+                it.viewTypes.contains(UmlMappingTreeView::class) ||
+                    adapters.canProduce(UmlMappingTreeView::class, it)
+            }
 
     override fun compose(request: MappingComposeRequest, ctx: MappingContext): MappingData {
         if (request.parts.isEmpty()) return ViewMapMappingData(emptyMap())
         if (request.parts.size == 1) return request.parts.single()
 
         val trees = request.parts.mapIndexed { index, part ->
-            part.view<UmlMappingTreeView>()?.tree ?: throw GradleException(
+            val view = part.view<UmlMappingTreeView>()
+                ?: adapters.adapt(part, UmlMappingTreeView::class.java).also {
+                    if (it != null) ctx.logger.info(
+                        "[Unimined/Mappings] mapping source ${index + 1} in " +
+                            "'${ctx.environmentId}' lacks a UmlMappingTreeView; " +
+                            "adapted from portable rows"
+                    )
+                }
+            view?.tree ?: throw GradleException(
                 "cannot compose mapping source ${index + 1} of " +
                     "${request.parts.size} in '${ctx.environmentId}': it does " +
-                    "not expose a UmlMappingTreeView — composing portable-only " +
-                    "or mixed-view sources requires a view adapter (pending) " +
-                    "or a custom MappingComposer"
+                    "not expose a UmlMappingTreeView and no registered " +
+                    "MappingViewAdapter could derive one from " +
+                    part.viewTypes.joinToString { it.simpleName ?: "?" } +
+                    " — register an adapter or a custom MappingComposer"
             )
         }
 

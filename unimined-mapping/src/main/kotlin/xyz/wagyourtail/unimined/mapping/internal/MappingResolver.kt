@@ -8,6 +8,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.MappingComposerRegistry
+import xyz.wagyourtail.unimined.mapping.MappingPostProcessorRegistry
 import xyz.wagyourtail.unimined.mapping.MappingProviderRegistry
 import xyz.wagyourtail.unimined.mapping.MappingSourceProviderRegistry
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
@@ -18,7 +19,8 @@ import java.nio.file.Path
  * through a [MappingSourceProviderRegistry]-selected source provider,
  * read each materialized source through a selected [MappingProviderRegistry]
  * provider, then merge the ordered parts through a selected
- * [MappingComposerRegistry] composer.
+ * [MappingComposerRegistry] composer. Composed data then runs through
+ * the [MappingPostProcessorRegistry] stages before being returned.
  */
 internal object MappingResolver {
 
@@ -28,7 +30,8 @@ internal object MappingResolver {
         ctx: MappingContext,
         sourceProviders: MappingSourceProviderRegistry = MappingSourceProviderRegistry(),
         providers: MappingProviderRegistry = MappingProviderRegistry(),
-        composers: MappingComposerRegistry = MappingComposerRegistry()
+        composers: MappingComposerRegistry = MappingComposerRegistry(),
+        postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
         val parts = spec.effectiveSources().mapNotNull { src ->
             val materialized = sourceProviders.select(src).materialize(src, ctx)
@@ -44,7 +47,7 @@ internal object MappingResolver {
             providers.select(materialized).resolve(materialized, ctx)
         }
         val request = MappingComposeRequest(parts)
-        val data = composers.select(request).compose(request, ctx)
+        val data = postProcessors.process(composers.select(request).compose(request, ctx), ctx)
         spec.namespaces = data.view<MappingTree>()?.namespaces ?: emptyList()
         return data
     }
@@ -66,7 +69,8 @@ internal object MappingResolver {
         files: List<Path>,
         ctx: MappingContext,
         providers: MappingProviderRegistry = MappingProviderRegistry(),
-        composers: MappingComposerRegistry = MappingComposerRegistry()
+        composers: MappingComposerRegistry = MappingComposerRegistry(),
+        postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
         val parts = files.map { file ->
             val materialized = RuntimeMaterializedMappingSource(
@@ -75,7 +79,7 @@ internal object MappingResolver {
             providers.select(materialized).resolve(materialized, ctx)
         }
         val request = MappingComposeRequest(parts)
-        return composers.select(request).compose(request, ctx)
+        return postProcessors.process(composers.select(request).compose(request, ctx), ctx)
     }
 
     /** Build a standalone context for file-only consumers (tasks). */
