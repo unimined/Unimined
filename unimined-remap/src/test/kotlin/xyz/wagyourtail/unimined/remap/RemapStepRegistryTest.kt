@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.remap
 import org.gradle.api.file.FileSystemLocation
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.spi.SpiSelectionException
@@ -79,9 +80,12 @@ class RemapStepRegistryTest {
         val registry = RemapStepRegistry()
         registry.register(FakeStep("a")) // JAR only
 
-        assertThrows(IllegalArgumentException::class.java) {
+        // no impl registered for this spec *on this surface* — selection
+        // fails with the surface named in the message
+        val ex = assertThrows(SpiSelectionException::class.java) {
             registry.resolve(FakeSpec(), RemapSurface.SOURCES, remapSpec)
         }
+        assertTrue(ex.message!!.contains("SOURCES"))
     }
 
 }

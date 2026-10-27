@@ -28,8 +28,12 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  */
 class RemapStepRegistry {
 
+    // selectors are partitioned by (spec type, surface): one engine may
+    // ship several impls of the same DSL verb on different surfaces
+    // (e.g. uml `remap` on JAR vs SOURCES), so selection runs against
+    // only the impls that support the surface being resolved
     private val selectors =
-        mutableMapOf<KClass<out StepSpec>, SpiSelector<RemapStepType<*>, RemapSpec>>()
+        mutableMapOf<Pair<KClass<out StepSpec>, RemapSurface>, SpiSelector<RemapStepType<*>, RemapSpec>>()
 
     init {
         // ServiceLoader.load() with no explicit loader uses the *thread
@@ -43,7 +47,9 @@ class RemapStepRegistry {
             RemapStepType::class.java,
             Thread.currentThread().contextClassLoader
         ).toList()
-        found.distinctBy { it.name }.forEach {
+        // same impl can arrive via both loaders — dedupe by class, not
+        // engine name (one engine ships several steps with its own name)
+        found.distinctBy { it::class.qualifiedName }.forEach {
             @Suppress("UNCHECKED_CAST")
             register(it as RemapStepType<StepSpec>)
         }
@@ -51,13 +57,17 @@ class RemapStepRegistry {
 
     /** Register an engine's step implementation. */
     fun <S : StepSpec> register(type: RemapStepType<S>) {
-        selectorFor(type.specType).register(type)
+        for (surface in type.surfaces) {
+            selectorFor(type.specType to surface).register(type)
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun selectorFor(specType: KClass<out StepSpec>) =
-        selectors.getOrPut(specType) {
-            spiSelector<RemapStepType<*>, RemapSpec>("remap step '${specType.simpleName}'")
+    private fun selectorFor(key: Pair<KClass<out StepSpec>, RemapSurface>) =
+        selectors.getOrPut(key) {
+            spiSelector<RemapStepType<*>, RemapSpec>(
+                "remap step '${key.first.simpleName}' on ${key.second}"
+            )
         }
 
     /**
@@ -77,15 +87,12 @@ class RemapStepRegistry {
     ): RemapStepType<S> {
         val selector = selectors.entries
             // assignable match — DSL-created specs may be decorated subclasses
-            .firstOrNull { it.key.java.isInstance(spec) }?.value
+            .firstOrNull { it.key.first.java.isInstance(spec) && it.key.second == surface }
+            ?.value
             ?: throw SpiSelectionException(
-                "no remap step registered for spec '${spec::class.simpleName}'"
+                "no remap step registered for spec '${spec::class.simpleName}' on surface $surface"
             )
-        val type = selector.select(remapSpec, spec.engine) as RemapStepType<S>
-        require(surface in type.surfaces) {
-            "remap step '${type.stepName}' (${type.name}) does not support surface $surface"
-        }
-        return type
+        return selector.select(remapSpec, spec.engine) as RemapStepType<S>
     }
 
     /**

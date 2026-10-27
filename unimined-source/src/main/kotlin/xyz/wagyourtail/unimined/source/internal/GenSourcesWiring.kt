@@ -67,20 +67,56 @@ internal object GenSourcesWiring {
 
         val engine = DecompilerRegistry().select(spec, source.engine.orNull)
         val task = engine.createTask(project, taskName, spec)
+
+        // write straight into the generated module's sources slot —
+        // IDEA attaches the sources classifier on sync without the
+        // sync path ever triggering a decompile
+        val artifactId = "minecraft-$environmentId"
+        val version = environment.version.get()
+        val repoSlot = LocalMavenPublisher.moduleDir(
+            minecraft.localRepoDir, "unimined.generated",
+            artifactId, version
+        ).resolve("$artifactId-$version-sources.jar").toFile()
+
+        val sourceSteps = remap.pipelineSteps(environmentId, RemapSurface.SOURCES).get()
         task.configure { t ->
             t.group = "unimined"
             t.description = "Decompiles the '$environmentId' Minecraft artifact into a sources jar"
-            // write straight into the generated module's sources slot —
-            // IDEA attaches the sources classifier on sync without the
-            // sync path ever triggering a decompile
-            val artifactId = "minecraft-$environmentId"
-            val version = environment.version.get()
             t.outputJar.set(
-                LocalMavenPublisher.moduleDir(
-                    minecraft.localRepoDir, "unimined.generated",
-                    artifactId, version
-                ).resolve("$artifactId-$version-sources.jar").toFile()
+                if (sourceSteps.isEmpty()) repoSlot
+                else project.layout.buildDirectory.file(
+                    "unimined/sources/minecraft-$environmentId-decompiled.jar"
+                ).get().asFile
             )
+        }
+
+        // the generated sources feed the SOURCES-surface pipeline (source
+        // remap, unpick, javadoc) before landing in the repo slot
+        if (sourceSteps.isNotEmpty()) {
+            val devNamespace = minecraft.devNamespace(environmentId)
+            project.tasks.register(
+                "sourcesSurface${environmentId.cap()}",
+                RemapJarTask::class.java
+            ) { t ->
+                t.group = "unimined"
+                t.description =
+                    "Sources-surface pipeline for the '$environmentId' decompiled sources"
+                t.inputArtifact.set(task.flatMap { it.outputJar })
+                t.surface.set(RemapSurface.SOURCES)
+                t.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.SOURCES))
+                t.sourceNamespace.set(devNamespace)
+                t.targetNamespace.set(devNamespace)
+                t.mappingFile.set(
+                    minecraft.mappingBundle(
+                        environmentId, "sources-$environmentId", devNamespace, devNamespace
+                    )
+                )
+                // the source engine resolves members against the libraries
+                // plus the binary counterpart of the decompiled artifact
+                t.remapClasspath.from(libraries)
+                t.remapClasspath.from(input)
+                t.outputArtifact.fileValue(repoSlot)
+            }
         }
     }
 

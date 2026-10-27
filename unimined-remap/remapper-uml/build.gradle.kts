@@ -5,6 +5,7 @@ plugins {
 dependencies {
     api(project(":unimined-remap"))
     api(libs.unimined.mapping.library)
+    api(libs.unimined.mapping.remapper)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
