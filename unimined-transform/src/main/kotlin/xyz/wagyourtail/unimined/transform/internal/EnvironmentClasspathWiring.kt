@@ -94,6 +94,12 @@ internal object EnvironmentClasspathWiring {
             project, minecraft, remap, environment,
             environment.modRuntimeOnlyConfigurationName, modsBundleJson
         )
+        minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modImplementationConfigurationName}"
+        ] = modImplementationView
+        minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modRuntimeOnlyConfigurationName}"
+        ] = modRuntimeOnlyView
 
         sourceSet.compileClasspath = sourceSet.compileClasspath +
             project.files(modImplementationView)

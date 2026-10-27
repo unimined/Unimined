@@ -90,6 +90,15 @@ abstract class MinecraftExtension @Inject constructor(
      */
     val devViewConfigurations = mutableMapOf<String, Configuration>()
 
+    /**
+     * Resolvable dev-namespace views over the mod dependency buckets,
+     * keyed `"<environmentId>:<bucketConfigurationName>"` — populated
+     * by the transform host's classpath wiring. `genModSources` reads
+     * these for the remapped artifact-type token its decompile
+     * transform chains onto.
+     */
+    val modDevViewConfigurations = mutableMapOf<String, Configuration>()
+
     private val configuredSourceSets = mutableSetOf<String>()
     private val boundEnvironments = linkedMapOf<String, SourceSet>()
     private val boundHandlers = mutableListOf<EnvironmentBoundHandler>()
@@ -372,10 +381,15 @@ abstract class MinecraftExtension @Inject constructor(
     private fun ensureLocalRepo() {
         if (localRepoRegistered) return
         localRepoRegistered = true
+        // No group filter: the repo also serves `-sources.jar` classifier
+        // files under real module coordinates for `genModSources` —
+        // Gradle's artifact-level repository fallthrough fetches them for
+        // components whose metadata resolved elsewhere. Mod-coordinate
+        // entries are file-only (no POM), so they can never shadow a real
+        // module's descriptor.
         project.repositories.maven { repo ->
             repo.name = "uniminedGenerated"
             repo.url = localRepoDir.toUri()
-            repo.content { it.includeGroup(STUB_GROUP) }
         }
     }
 

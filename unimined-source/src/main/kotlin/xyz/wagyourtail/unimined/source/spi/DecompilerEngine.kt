@@ -26,4 +26,14 @@ interface DecompilerEngine : Supports<DecompileSpec> {
         spec: DecompileSpec
     ): TaskProvider<out DecompileTask>
 
+    /**
+     * Register the artifact transform backing `genModSources`: jars
+     * carrying [ModSourcesTransformSpec.fromArtifactType] become sources
+     * jars carrying [ModSourcesTransformSpec.toArtifactType]. The mod
+     * dependency set is unbounded and resolution-time, so decompilation
+     * runs as a per-artifact transform (cacheable, parallel) rather
+     * than a task per mod.
+     */
+    fun registerModSourcesTransform(project: Project, spec: ModSourcesTransformSpec)
+
 }

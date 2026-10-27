@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.source
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.source.internal.GenModSourcesWiring
 import xyz.wagyourtail.unimined.source.internal.GenSourcesWiring
 
 /**
@@ -23,6 +24,7 @@ class GradlePlugin : Plugin<Project> {
                     val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
                     minecraft.onEnvironmentBound { environment, sourceSet ->
                         GenSourcesWiring.wire(target, environment, sourceSet)
+                        GenModSourcesWiring.wire(target, environment, sourceSet)
                     }
                 }
             }
