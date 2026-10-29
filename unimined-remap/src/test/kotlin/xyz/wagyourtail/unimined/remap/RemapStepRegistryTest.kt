@@ -1,17 +1,11 @@
 package xyz.wagyourtail.unimined.remap
 
 import org.gradle.api.file.FileSystemLocation
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.spi.SpiSelectionException
-import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
-import xyz.wagyourtail.unimined.remap.spi.RemapStepType
-import xyz.wagyourtail.unimined.remap.spi.RemapSurface
-import xyz.wagyourtail.unimined.remap.spi.StepContext
-import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.spi.*
 import kotlin.reflect.KClass
 
 class RemapStepRegistryTest {

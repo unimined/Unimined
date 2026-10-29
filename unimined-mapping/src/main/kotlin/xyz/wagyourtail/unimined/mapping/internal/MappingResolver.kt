@@ -1,18 +1,16 @@
 package xyz.wagyourtail.unimined.mapping.internal
 
 import org.gradle.api.logging.Logger
-import xyz.wagyourtail.unimined.api.mapping.MappingComposeRequest
-import xyz.wagyourtail.unimined.api.mapping.MappingContext
-import xyz.wagyourtail.unimined.api.mapping.MappingData
-import xyz.wagyourtail.unimined.api.mapping.MappingSource
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
-import xyz.wagyourtail.unimined.api.mapping.view
-import xyz.wagyourtail.unimined.mapping.MappingComposerRegistry
-import xyz.wagyourtail.unimined.mapping.MappingPostProcessorRegistry
-import xyz.wagyourtail.unimined.mapping.MappingProviderRegistry
-import xyz.wagyourtail.unimined.mapping.MappingSourceProviderRegistry
-import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
+import xyz.wagyourtail.unimined.api.mapping.*
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
+import xyz.wagyourtail.unimined.mapping.*
 import java.nio.file.Path
+import xyz.wagyourtail.unimined.api.mapping.FileMappingSource
+import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
+import xyz.wagyourtail.unimined.api.mapping.MappingSource
+import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import java.security.MessageDigest
+import java.nio.file.Files
 
 /**
  * The mapping resolution pipeline: materialize each declared source
@@ -33,22 +31,74 @@ internal object MappingResolver {
         composers: MappingComposerRegistry = MappingComposerRegistry(),
         postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
-        val parts = spec.effectiveSources().mapNotNull { src ->
-            val materialized = sourceProviders.select(src).materialize(src, ctx)
-            if (materialized.files.isEmpty()) {
+        val sources = spec.effectiveSources()
+        val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
+        slog.lifecycle(
+            "resolving mappings (${sources.size} sources)"
+        )
+        // named namespaces, in declaration order — each source's flagged
+        // names plus the `"named"` document-column convention (1.x's
+        // `outputs(ns, named)` tracking). The environment's dev namespace
+        // defaults to the first entry present in the composed tree.
+        val named = LinkedHashSet<String>()
+        // materialize first — the materialized file set keys the
+        // merged-output cache, and cheap materialization is shared by
+        // hit and miss paths alike
+        val mats = sources.mapNotNull { src ->
+            val m = sourceProviders.select(src).materialize(src, ctx)
+            if (m.files.isEmpty()) {
                 // lazily-empty declarations (e.g. a conditional loader hop)
                 // contribute no part — reading them would emit a tree with
                 // no namespaces
-                ctx.logger.debug(
-                    "[Unimined/Mappings] source $src materialized no files; skipping"
+                slog.debug(
+                    "source $src materialized no files; skipping"
                 )
                 return@mapNotNull null
             }
-            providers.select(materialized).resolve(materialized, ctx)
+            named += m.namedNamespaces
+            src to m
         }
-        val request = MappingComposeRequest(parts)
-        val data = postProcessors.process(composers.select(request).compose(request, ctx), ctx)
-        spec.namespaces = data.view<MappingTree>()?.namespaces ?: emptyList()
+        val cacheFile = mergedCacheFile(ctx, sources, mats)
+        val cachedData = cacheFile?.takeIf { Files.exists(it) }?.let { f ->
+            runCatching {
+                SerializedMappingData.readEither(f).also {
+                    slog.lifecycle("merged mappings cache hit (${f.fileName})")
+                }
+            }.onFailure {
+                slog.info("merged mappings cache read failed: ${it.message}")
+            }.getOrNull()
+        }
+        var data = cachedData ?: run {
+            val parts = mats.map { (_, m) -> providers.select(m).resolve(m, ctx) }
+            val request = MappingComposeRequest(parts)
+            composers.select(request).compose(request, ctx).also { composed ->
+                cacheFile?.let { f ->
+                    runCatching {
+                        Files.createDirectories(f.parent)
+                        SerializedMappingData.write(composed, f)
+                    }.onFailure {
+                        slog.info("merged mappings cache write failed: ${it.message}")
+                    }
+                }
+            }
+        }
+        data.view<MappingTree>()?.namespaces
+            ?.filter { it.name == "named" }
+            ?.forEach { named += it.name }
+        data = postProcessors.process(data, ctx)
+        if (named.isNotEmpty()) {
+            data = object : MappingData by data {
+                override val properties = data.properties +
+                        (NAMED_NAMESPACES_KEY to named.joinToString(","))
+            }
+        }
+        // spec-scoped enrichments (transform wiring — e.g. jar-processor
+        // mapping mutations) run after the global registry
+        for (postProcessor in spec.postProcessors) {
+            data = postProcessor.process(data, ctx)
+        }
+        spec.namespaces = data.view<MappingTree>()?.namespaces?.map { it.name }
+            ?: emptyList()
         return data
     }
 
@@ -72,22 +122,115 @@ internal object MappingResolver {
         composers: MappingComposerRegistry = MappingComposerRegistry(),
         postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
-        val parts = files.map { file ->
-            val materialized = RuntimeMaterializedMappingSource(
-                RawFileSource(file), listOf(file), null
-            )
-            providers.select(materialized).resolve(materialized, ctx)
+        val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
+        val cacheFile = mergedCacheFile(ctx, files)
+        var data = cacheFile?.takeIf { Files.exists(it) }?.let { f ->
+            runCatching {
+                SerializedMappingData.readEither(f).also {
+                    slog.lifecycle("merged mappings cache hit (${f.fileName})")
+                }
+            }.onFailure {
+                slog.info("merged mappings cache read failed: ${it.message}")
+            }.getOrNull()
         }
-        val request = MappingComposeRequest(parts)
-        return postProcessors.process(composers.select(request).compose(request, ctx), ctx)
+        if (data == null) {
+            val parts = files.map { file ->
+                val t0 = System.nanoTime()
+                val materialized = RuntimeMaterializedMappingSource(
+                    RawFileSource(file), listOf(file), null
+                )
+                providers.select(materialized).resolve(materialized, ctx).also {
+                    slog.lifecycle(
+                        "resolved ${file.fileName} in ${(System.nanoTime() - t0) / 1_000_000}ms"
+                    )
+                }
+            }
+            val request = MappingComposeRequest(parts)
+            val t1 = System.nanoTime()
+            data = composers.select(request).compose(request, ctx).also { composed ->
+                cacheFile?.let { f ->
+                    runCatching {
+                        Files.createDirectories(f.parent)
+                        SerializedMappingData.write(composed, f)
+                    }.onFailure {
+                        slog.info("merged mappings cache write failed: ${it.message}")
+                    }
+                }
+                slog.lifecycle(
+                    "composed ${parts.size} parts in ${(System.nanoTime() - t1) / 1_000_000}ms"
+                )
+            }
+        }
+        return postProcessors.process(data, ctx)
     }
 
     /** Build a standalone context for file-only consumers (tasks). */
-    fun standaloneContext(environmentId: String, logger: Logger): MappingContext =
-        RuntimeMappingContext(environmentId, logger, null, { notation ->
+    /**
+     * Global merged-output cache file for this spec, or `null` when the
+     * spec is not globally cacheable. Key = sha1 over each materialized
+     * file's content plus per-source parse hints — project-file
+     * ("stub") inputs land in isolated keys by content, so they are
+     * safe to cache rather than needing 1.x's local-only carve-out.
+     */
+    private fun mergedCacheFile(
+        ctx: MappingContext,
+        sources: List<MappingSource>,
+        mats: List<Pair<MappingSource, MaterializedMappingSource>>
+    ): Path? {
+        val root = ctx.globalCacheDir ?: return null.also {
+            uniminedLogger(ctx.environmentId, ctx.logger)
+                .subLogger("mappings")
+                .info("merged-cache disabled: no globalCacheDir")
+        }
+        // Content-keying subsumes 1.x's "no stubs -> global" rule: a
+        // project file's hash differs across projects, so stubbed specs
+        // naturally get isolated keys while identical ones legitimately
+        // share. Unhashable (missing/lazy) files just disable the cache.
+        val md = MessageDigest.getInstance("SHA-1")
+        fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
+        put("unimined-merged-v1")
+        for ((_, m) in mats) {
+            put(m.formatHint ?: "")
+            put(m.nsMap.toString())
+            put(m.namedNamespaces.sorted().toString())
+            for (f in m.files) {
+                put(f.fileName.toString())
+                val bytes = runCatching { Files.readAllBytes(f) }
+                    .getOrNull() ?: return null
+                md.update(bytes)
+            }
+        }
+        return root.resolve("mappings-merged").resolve(
+            md.digest().joinToString("") { "%02x".format(it) } + ".json"
+        )
+    }
+
+    /** File-keyed variant — the spec-less `readFiles` path. */
+    private fun mergedCacheFile(
+        ctx: MappingContext, files: List<Path>
+    ): Path? {
+        val root = ctx.globalCacheDir ?: return null
+        val md = MessageDigest.getInstance("SHA-1")
+        fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
+        put("unimined-readfiles-v1")
+        for (f in files) {
+            put(f.fileName.toString())
+            val bytes = runCatching { Files.readAllBytes(f) }
+                .getOrNull() ?: return null
+            md.update(bytes)
+        }
+        return root.resolve("mappings-merged").resolve(
+            md.digest().joinToString("") { "%02x".format(it) } + ".json"
+        )
+    }
+
+    fun standaloneContext(
+        environmentId: String, logger: Logger, globalCacheDir: Path? = null
+    ): MappingContext =
+        RuntimeMappingContext(environmentId, logger, null, globalCacheDir, { notation ->
             throw UnsupportedOperationException(
                 "maven resolution is not available here; materialize '$notation' " +
-                    "through the environment's mapping spec first"
+                        "through the environment's mapping spec first"
             )
         })
 

@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.mclauncher
 
-import java.util.UUID
+import java.util.*
 
 /**
  * A materialized launch session — only ever produced at execution time,

@@ -1,9 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft
 
 import org.gradle.api.GradleException
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings

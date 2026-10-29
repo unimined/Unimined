@@ -3,8 +3,8 @@ package xyz.wagyourtail.unimined.decompiler.vineflower
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.TaskProvider
-import xyz.wagyourtail.unimined.source.spi.DecompilerEngine
 import xyz.wagyourtail.unimined.source.spi.DecompileSpec
+import xyz.wagyourtail.unimined.source.spi.DecompilerEngine
 import xyz.wagyourtail.unimined.source.spi.ModSourcesTransformSpec
 import xyz.wagyourtail.unimined.source.task.DecompileTask
 

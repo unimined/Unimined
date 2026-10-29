@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.ServiceLoader
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -16,13 +16,21 @@ import kotlin.io.path.outputStream
  * row-only [MappingBundle], payloads preserve rich view kinds (UML trees
  * with metadata, unpick groups, ...) so `needsMappingTree` steps keep the
  * views they actually consume through the configuration-cache-safe path.
+ *
+ * `unimined-access` payloads may appear in legacy bundles; unknown ids
+ * are skipped on read.
  */
 object SerializedMappingData {
 
     @Serializable
     private class Manifest(val version: Int = 1, val payloads: List<String>)
 
-    private val json = Json { prettyPrint = false }
+    private val json = Json {
+        prettyPrint = false
+        // metadata impls own a `type` property (e.g. InnerClassElementData) —
+        // the default "type" class discriminator collides with it
+        classDiscriminator = "#type"
+    }
 
     private fun serializers(): List<MappingViewSerializer> {
         val found = ServiceLoader.load(
@@ -45,6 +53,10 @@ object SerializedMappingData {
      *  handle any of [data]'s views (caller should fall back to a row
      *  [MappingBundle] or fail)
      */
+    /** DOS epoch — the minimum representable zip timestamp; used
+     *  so bundles are byte-reproducible across rebuilds. */
+    private const val DOS_EPOCH: Long = 315532800000
+
     fun write(data: MappingData, path: Path): List<String> {
         val payloads = serializers().mapNotNull { s ->
             if (!data.viewTypes.containsAll(s.views)) return@mapNotNull null
@@ -52,12 +64,14 @@ object SerializedMappingData {
         }
         if (payloads.isEmpty()) return emptyList()
         ZipOutputStream(path.outputStream()).use { zip ->
-            zip.putNextEntry(ZipEntry("views.json"))
-            zip.write(json.encodeToString(Manifest(payloads = payloads.map { it.first }))
-                .encodeToByteArray())
+            zip.putNextEntry(ZipEntry("views.json").apply { time = DOS_EPOCH })
+            zip.write(
+                json.encodeToString(Manifest(payloads = payloads.map { it.first }))
+                    .encodeToByteArray()
+            )
             zip.closeEntry()
             for ((id, bytes) in payloads) {
-                zip.putNextEntry(ZipEntry("views/$id"))
+                zip.putNextEntry(ZipEntry("views/$id").apply { time = DOS_EPOCH })
                 zip.write(bytes)
                 zip.closeEntry()
             }
@@ -67,7 +81,7 @@ object SerializedMappingData {
 
     /** Rehydrate a serialized bundle into [MappingData]. */
     fun read(path: Path): MappingData {
-        val views = linkedMapOf<kotlin.reflect.KClass<out MappingDataView>, MappingDataView>()
+        val views = linkedMapOf<kotlin.reflect.KClass<*>, Any>()
         ZipFile(path.toFile()).use { zip ->
             val manifest = zip.getEntry("views.json")?.let { e ->
                 json.decodeFromString<Manifest>(zip.getInputStream(e).readBytes().decodeToString())

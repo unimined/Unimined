@@ -1,10 +1,9 @@
 package xyz.wagyourtail.unimined.remap
 
 import org.gradle.testkit.runner.GradleRunner
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
@@ -183,8 +182,8 @@ class RemappedViewFunctionalTest {
     @Test
     @Disabled(
         "transform verified end-to-end manually (lib-1.0.jar -> lib-1.0-named.jar " +
-            "through the pipeline); under TestKit the engine jar is not visible to " +
-            "the transform's isolated classloader — needs composite/published-plugin setup"
+                "through the pipeline); under TestKit the engine jar is not visible to " +
+                "the transform's isolated classloader — needs composite/published-plugin setup"
     )
     fun `module dependency resolves through the remap transform`() {
         val repo = writeRepo()

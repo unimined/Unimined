@@ -1,10 +1,13 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
+import xyz.wagyourtail.commonskt.utils.capitalized
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
@@ -12,9 +15,12 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
+import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.transform.TransformExtension
-import xyz.wagyourtail.unimined.transform.fabric.ApplyAccessWidenerStepSpec
-import java.nio.file.Path
+import xyz.wagyourtail.unimined.transform.fabric.processor.ModJavadocJarProcessor
+import xyz.wagyourtail.unimined.transform.fabric.processor.fabricSpecContext
+import xyz.wagyourtail.unimined.api.util.UniminedCache
 
 /**
  * Per-environment fabric wiring. Binding callbacks can run before the
@@ -36,9 +42,9 @@ internal object FabricEnvironmentWiring {
         contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)
         contributeRunMutator(project, environment)
+        contributeJarProcessors(project, environment)
     }
 
-    private fun String.cap(): String = replaceFirstChar(Char::uppercase)
 
     private const val INTERMEDIARY_MODULE = "net.fabricmc:intermediary"
 
@@ -56,15 +62,17 @@ internal object FabricEnvironmentWiring {
         val dependencies = project.dependencies
 
         val intermediary = project.configurations.create(
-            "fabricIntermediary${environment.environmentId.cap()}"
+            "fabricIntermediary${environment.environmentId.capitalized()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
                 if (loaderSpec.orNull?.name == "fabric") {
-                    deps.add(dependencies.create(
-                        "$INTERMEDIARY_MODULE:${version.get()}:v2"
-                    ))
+                    deps.add(
+                        dependencies.create(
+                            "$INTERMEDIARY_MODULE:${version.get()}:v2"
+                        )
+                    )
                 }
             }
         }
@@ -87,7 +95,7 @@ internal object FabricEnvironmentWiring {
         val dependencies = project.dependencies
 
         val loader = project.configurations.create(
-            "fabricLoader${environment.environmentId.cap()}"
+            "fabricLoader${environment.environmentId.capitalized()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
@@ -95,9 +103,11 @@ internal object FabricEnvironmentWiring {
             conf.withDependencies { deps ->
                 val spec = loaderSpec.orNull
                 if (spec?.name == "fabric") {
-                    deps.add(dependencies.create(
-                        "${FabricModAnalysis.LOADER_MODULE}:${spec.version}"
-                    ))
+                    deps.add(
+                        dependencies.create(
+                            "${FabricModAnalysis.LOADER_MODULE}:${spec.version}"
+                        )
+                    )
                 }
             }
         }
@@ -105,7 +115,7 @@ internal object FabricEnvironmentWiring {
         // embeds fabric-installer.json listing them (asm, sponge-mixin)
         val loaderFiles = project.files(loader)
         val loaderLibraries = project.configurations.create(
-            "fabricLoaderLibraries${environment.environmentId.cap()}"
+            "fabricLoaderLibraries${environment.environmentId.capitalized()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
@@ -119,16 +129,28 @@ internal object FabricEnvironmentWiring {
                 }
             }
         }
-        project.configurations.named(environment.modImplementationConfigurationName) { conf ->
-            conf.extendsFrom(loader, loaderLibraries)
+        // loom parity: loader + its embedded libraries are
+        // namespace-agnostic — they ride the source-set classpaths
+        // raw so the remapped mod view never transforms them
+        val sourceSet = project.extensions
+            .getByType(JavaPluginExtension::class.java).sourceSets
+            .findByName(environment.environmentId) ?: return
+        listOf(
+            sourceSet.compileClasspathConfigurationName,
+            sourceSet.runtimeClasspathConfigurationName,
+        ).forEach { name ->
+            project.configurations.named(name) { conf ->
+                conf.extendsFrom(loader, loaderLibraries)
+            }
         }
     }
 
     /**
-     * Contribute the late JAR-surface steps: `apply-access-widener` merges
-     * declared AWs and the ones extracted from direct mod dependencies
-     * into the dev artifact, and `remap-access` rebases AW/AT/CT resources
-     * embedded in mod jars onto the dev namespace.
+     * Contribute the late JAR-surface steps: `apply-class-tweaker` merges
+     * declared AW/CTs into the dev artifact plus the `transitive-*` rules
+     * from classTweakers extracted out of compile-classpath mod
+     * dependencies, and `remap-access` rebases AW/AT/CT resources embedded
+     * in mod jars onto the dev namespace.
      */
     private fun contributeAccessSteps(project: Project, environment: MinecraftEnvironment) {
         val objects: ObjectFactory = project.objects
@@ -136,14 +158,16 @@ internal object FabricEnvironmentWiring {
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val environmentSpec = remap.sourceSet(environment.environmentId)
 
+        // compile-visible mod buckets only (Loom's MOD_COMPILE_ENTRIES
+        // where compileClasspath()): runtime-only mods' AWs are applied by
+        // the loader itself at runtime, not baked into the compile artifact
         val modJars = project.configurations.create(
-            "fabricModAnalysis${environment.environmentId.cap()}"
+            "fabricModAnalysis${environment.environmentId.capitalized()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.extendsFrom(
-                project.configurations.getByName(environment.modImplementationConfigurationName),
-                project.configurations.getByName(environment.modRuntimeOnlyConfigurationName)
+                project.configurations.getByName(environment.modImplementationConfigurationName)
             )
             conf.attributes.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
@@ -151,22 +175,83 @@ internal object FabricEnvironmentWiring {
             )
         }
         val modJarFiles = project.files(modJars)
-        val awCacheDir = project.layout.projectDirectory
-            .dir(".gradle/unimined/fabric/aw").asFile.toPath()
-        val extractedAws = project.provider {
-            if (loaderSpec.orNull?.name != "fabric") {
+        // per-mod-jar keyed extraction — global cache
+        val ctCacheDir = UniminedCache.global(project).resolve("fabric/ct")
+        // every dep-declared classTweaker file, unfiltered — the
+        // compile-artifact input filters to transitive rules below, but
+        // the analysis model needs the complete rule set
+        val extractedCts = project.provider {
+            if (loaderSpec.orNull?.name != "fabric" ||
+                !environment.transitiveAccessWideners.get()
+            ) {
                 emptyList()
             } else {
-                modJarFiles.files.mapNotNull {
-                    FabricModAnalysis.extractAccessWidener(it.toPath(), awCacheDir)
+                modJarFiles.files.flatMap {
+                    FabricModAnalysis.extractClassTweakers(
+                        it.toPath(),
+                        ctCacheDir.resolve(
+                            UniminedCache.artifactKey(it.toPath())
+                        )
+                    )
                 }
             }
         }
 
-        val applySpec = objects.newInstance(ApplyAccessWidenerStepSpec::class.java)
-        applySpec.accessWidenerFiles.from(environment.accessWideners, extractedAws)
+        val applySpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
+        applySpec.classTweakerFiles.from(environment.accessWideners)
+        applySpec.dependencyClassTweakerFiles.from(project.provider {
+            // a dependency tweaker without transitive-* rules
+            // contributes nothing to dependents — skip it
+            extractedCts.get().filter {
+                runCatching {
+                    ClassTweaker.parse(it.fileName.toString(), it.toFile().readText())
+                        .hasTransitiveRules
+                }.getOrDefault(false)
+            }
+        })
+
+        // the remap-analysis overlay (plan §3 role 1): the project's own
+        // tweakers in full plus every dep-declared file's complete rule
+        // set — analysis merges all rules from the remap batch, not just
+        // transitive ones; engines rebase sections to the source
+        // namespace through the mapping tree
+        environmentSpec.contributeAccessModel(project.provider {
+            AccessModel(
+                environment.accessWideners.files
+                    .filter { it.isFile }
+                    .map {
+                        ClassTweaker.parse(it.name, it.readText()).toAccessModelSection(it.name)
+                    } +
+                        extractedCts.get().map {
+                            ClassTweaker.parse(it.fileName.toString(), it.toFile().readText())
+                                .toAccessModelSection(it.fileName.toString())
+                        }
+            )
+        })
+
         environmentSpec.contributeStep(RemapSurface.JAR, applySpec)
         environmentSpec.contributeStep(RemapSurface.JAR, AccessRemapStepSpec())
+    }
+
+    /**
+     * Register fabric's jar processors and the fmj-aware spec context:
+     * `ModJavadocJarProcessor` merges mod-declared javadoc layers into
+     * the environment's composed mappings. The spec context gives
+     * processors `custom`-key access to `fabric.mod.json` metadata.
+     * Only contributes when the loader is fabric — the processor list
+     * is config-time, so the check rides the spec-context factory.
+     */
+    private fun contributeJarProcessors(project: Project, environment: MinecraftEnvironment) {
+        val transform = project.extensions.getByType(TransformExtension::class.java)
+        val envSpec = transform.sourceSet(environment.environmentId)
+        envSpec.jarProcessors += ModJavadocJarProcessor()
+        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
+        envSpec.jarProcessorSpecContext = { productionNamespace, modPaths ->
+            fabricSpecContext(
+                productionNamespace,
+                if (loaderSpec.orNull?.name == "fabric") modPaths else emptyList()
+            )
+        }
     }
 
     /**
@@ -179,7 +264,7 @@ internal object FabricEnvironmentWiring {
         val transform = project.extensions.getByType(TransformExtension::class.java)
 
         val loader = project.configurations.getByName(
-            "fabricLoader${environment.environmentId.cap()}"
+            "fabricLoader${environment.environmentId.capitalized()}"
         )
         val loaderFiles = project.files(loader)
 

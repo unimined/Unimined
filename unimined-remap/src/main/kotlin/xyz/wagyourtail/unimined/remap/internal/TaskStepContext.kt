@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.remap.internal
 
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.commons.core.logger.Logger as CommonsLogger
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.StepContext
@@ -15,5 +17,7 @@ internal class TaskStepContext(
     override val mappings: MappingData?,
     override val classpath: List<Path>,
     override val workDir: Path,
-    override val logger: Logger
+    override val logger: Logger,
+    override val accessModel: AccessModel?,
+    override val log: CommonsLogger
 ) : StepContext

@@ -4,7 +4,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyHandler
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
-import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 
 /** Copies transform registrations between environments. */
@@ -33,7 +32,7 @@ internal class TransformEnvironmentCopyHandler(
         return owner.extensions.findByType(TransformExtension::class.java)
             ?: throw GradleException(
                 "Project '${owner.path}' does not have a Unimined transform extension; " +
-                    "apply the transform or frontend plugin before sharing transforms"
+                        "apply the transform or frontend plugin before sharing transforms"
             )
     }
 

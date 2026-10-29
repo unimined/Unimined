@@ -6,8 +6,12 @@ dependencies {
     api(project(":unimined-api"))
     api(project(":unimined-mapping"))
 
+    // KotlinCompile wiring (jvmTarget) — user-applied KGP is runtime;
+    // compile against the stable api jar only
+    compileOnly(libs.kotlin.gradle.plugin.api)
+
     testImplementation(libs.junit.jupiter)
-    testImplementation(project(":unimined-mapping:mapping-uml"))
+    testImplementation(project(":unimined-mapping"))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

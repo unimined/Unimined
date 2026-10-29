@@ -30,4 +30,5 @@ dependencies {
 
 This is under `unimined` or `fabricApi` (for legacy reasons)
 
-for a complete list of standard libraries supported, see [FabricLikeApi](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch.fabric/-fabric-like-api-extension/index.html)
+for a complete list of standard libraries supported,
+see [FabricLikeApi](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch.fabric/-fabric-like-api-extension/index.html)

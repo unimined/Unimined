@@ -8,13 +8,9 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.process.ExecOperations
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.MinecraftVersionSpec
@@ -72,7 +68,7 @@ class NativeProviderTest {
             ExecOperations::class.java.classLoader,
             arrayOf(ExecOperations::class.java)
         ) { _, method, _ -> throw UnsupportedOperationException("ExecOperations.${method.name}") }
-            as ExecOperations
+                as ExecOperations
         return object : ProviderContext {
             override val layout: ProjectLayout = project.layout
             override val objects: ObjectFactory = project.objects
@@ -164,8 +160,12 @@ class NativeProviderTest {
 
         val clientFile = result.artifacts.getValue(ArtifactKey.CLIENT).get().asFile.toPath()
         assertTrue(Files.exists(clientFile))
-        assertEquals(listOf("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
-            "https://example/version.json", "https://example/client.jar"), calls)
+        assertEquals(
+            listOf(
+                "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+                "https://example/version.json", "https://example/client.jar"
+            ), calls
+        )
 
         val library = result.libraries.get().single()
         assertEquals("org.example", library.group)

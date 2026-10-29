@@ -44,6 +44,14 @@ abstract class RunConfig @Inject constructor(
     /** Extra environment variables for the launched process. */
     abstract val environmentVariables: MapProperty<String, String>
 
+    /**
+     * Data piped to the launched process's stdin. For dedicated
+     * servers, console commands read from stdin queue until the server
+     * ticks — so `stdin.set("stop\n")` boots the server and
+     * auto-stops it right after "Done" (test/smoke-launch automation).
+     */
+    abstract val stdin: Property<String>
+
     /** Offline-mode player name — `auth(offline(name))` for now. */
     abstract val username: Property<String>
 

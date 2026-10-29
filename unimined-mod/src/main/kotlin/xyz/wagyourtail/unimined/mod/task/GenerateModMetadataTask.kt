@@ -1,29 +1,16 @@
 package xyz.wagyourtail.unimined.mod.task
 
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.mod.LoaderSection
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.mod.MixinConfigData
 import xyz.wagyourtail.unimined.mod.ModMetadata
 import xyz.wagyourtail.unimined.mod.ModMetadataEmitterRegistry
@@ -88,15 +75,18 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         if (loader == null && meta.sections.isNotEmpty()) {
             throw GradleException(
                 "mod { loader(...) } declared on environment " +
-                    "'${environmentId.get()}' but the environment declares " +
-                    "no loader — the emitted metadata would never attach"
+                        "'${environmentId.get()}' but the environment declares " +
+                        "no loader — the emitted metadata would never attach"
             )
         }
         validate(meta)
 
         val emitted = linkedMapOf<String, ByteArray>()
         for (mixin in mixins) emitted[mixin.fileName] = mixinJson(mixin)
-        if (loader != null) {
+        // emitters require `id` — an unconfigured `mod {}` in a loader
+        // environment emits nothing so a manual metadata file stays
+        // authoritative
+        if (loader != null && meta.id != null) {
             val emitter = ModMetadataEmitterRegistry().select(loader)
             emitted += emitter.emit(
                 ModMetadataEmitter.EmitContext(
@@ -139,9 +129,9 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 if (Files.exists(existing)) {
                     throw GradleException(
                         "generated mod metadata '$path' collides with the " +
-                            "manual file $existing — keep one source of truth " +
-                            "(remove the manual file or drop the generated " +
-                            "declaration)"
+                                "manual file $existing — keep one source of truth " +
+                                "(remove the manual file or drop the generated " +
+                                "declaration)"
                     )
                 }
             }

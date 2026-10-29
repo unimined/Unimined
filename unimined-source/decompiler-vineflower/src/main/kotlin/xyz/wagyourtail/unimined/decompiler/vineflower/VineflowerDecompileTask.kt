@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.decompiler.vineflower
 
-import javax.inject.Inject
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
@@ -8,6 +7,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.unimined.source.task.DecompileTask
+import javax.inject.Inject
 
 /**
  * Decompiles [inputJar] via Vineflower's `ConsoleDecompiler` in a forked
@@ -37,7 +37,7 @@ abstract class VineflowerDecompileTask : DecompileTask() {
             )
             spec.maxHeapSize = "2g"
             spec.args = options.get().map { (key, value) -> "-$key=$value" } +
-                listOf(inputJar.get().asFile.absolutePath, output.absolutePath)
+                    listOf(inputJar.get().asFile.absolutePath, output.absolutePath)
         }
     }
 

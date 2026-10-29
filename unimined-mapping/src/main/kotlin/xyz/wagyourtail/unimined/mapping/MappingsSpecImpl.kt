@@ -4,10 +4,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.mapping.BuiltinMappingSource
-import xyz.wagyourtail.unimined.api.mapping.FileMappingSource
-import xyz.wagyourtail.unimined.api.mapping.MappingSource
-import xyz.wagyourtail.unimined.api.mapping.MavenMappingSource
+import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 
 /**
@@ -35,6 +32,14 @@ class MappingsSpecImpl(
      * declared and inherited sources.
      */
     val defaultSources = mutableListOf<Source>()
+
+    /**
+     * Spec-scoped post-processors appended by transform wiring — e.g. a
+     * jar processor's mapping mutation (mod-provided javadoc). They run
+     * after the registry's ServiceLoader'd/registered processors when
+     * this spec resolves; held as instances, never serialized.
+     */
+    val postProcessors = mutableListOf<MappingPostProcessor>()
 
     private var inheritedSources: ((MutableSet<MappingsSpecImpl>) -> List<Source>)? = null
 
@@ -69,7 +74,7 @@ class MappingsSpecImpl(
         params: Map<String, Provider<String>> = emptyMap(),
         action: Source.() -> Unit = {}
     ) {
-        sources += Source.Builtin(name, params).apply(action)
+        sources += Source.Builtin(const(name), params).apply(action)
     }
 
     private fun const(value: String): Provider<String> =
@@ -79,6 +84,19 @@ class MappingsSpecImpl(
         requireNotNull(mcVersion) {
             "$channel() requires the environment's Minecraft version to be set"
         }
+
+    /**
+     * Declare Fabric's `intermediary` channel for the environment's
+     * Minecraft version — `net.fabricmc:intermediary:<mcVersion>:v2`.
+     * Fabric loaders contribute this hop implicitly; declare it
+     * explicitly on chains where a source's `intermediary -> named`
+     * hop needs `intermediary` present to stitch onto (yarn on a
+     * forge/searge chain — 1.x `yarn()` `requires("intermediary")`).
+     */
+    fun intermediary() = maven(
+        requireMcVersion("intermediary")
+            .map { "net.fabricmc:intermediary:$it:v2" }
+    )
 
     /**
      * Declare Yarn named mappings for the environment's Minecraft version —
@@ -95,6 +113,64 @@ class MappingsSpecImpl(
 
     /** Declare the Mojmap built-in mappings channel. */
     fun mojmap() = builtin("mojmap")
+
+    /**
+     * Declare MCP mappings — `mcp("stable", "39-1.12")` ⇢
+     * `de.oceanlabs.mcp:mcp_stable:39-1.12@zip` on the Forge maven
+     * (`channel == "legacy"` resolves on wagyourtail's instead).
+     * The csvs emit `searge`→`mcp`, so pair with [searge] for the
+     * `official` hop; `mcp` is flagged as the named namespace.
+     */
+    fun mcp(channel: String, version: String) = maven(
+        "de.oceanlabs.mcp:mcp_$channel:$version@zip"
+    ) { named("mcp") }
+
+    /**
+     * Declare RetroMCP mappings for pre-1.3-era Minecraft —
+     * `retroMCP("v1.0")` ⇢ `io.github.mcphackers:mcp:<version>@zip`
+     * on the MCPHackers ivy; `retroMCP` is flagged as the named
+     * namespace (the document's own `named` label is relabeled).
+     */
+    fun retroMCP(version: String) = maven(
+        "io.github.mcphackers:mcp:$version@zip"
+    ) { named("retroMCP") }
+
+    /**
+     * Declare Ornithe Feather mappings for the environment's Minecraft
+     * version — `feather(4)` ⇢ `net.ornithemc:feather:<mc>+build.4:v2`
+     * on the Ornithe maven; rides the `intermediary` hop.
+     */
+    fun feather(build: Int) = maven(
+        requireMcVersion("feather").map { "net.ornithemc:feather:$it+build.$build:v2" }
+    )
+
+    /**
+     * Declare Legacy Fabric Yarn for the environment's Minecraft
+     * version — `legacyYarn(510)` ⇢
+     * `net.legacyfabric:yarn:<mc>+build.510:v2` on the Legacy Fabric
+     * maven; rides the `intermediary` hop.
+     */
+    fun legacyYarn(build: Int) = maven(
+        requireMcVersion("legacyYarn").map { "net.legacyfabric:yarn:$it+build.$build:v2" }
+    )
+
+    /**
+     * Declare Babric Barn mappings for the environment's Minecraft
+     * version — `barn(17)` ⇢ `babric:barn:<mc>+build.17:v2` on the
+     * Glass Launcher babric maven; rides the `babricIntermediary` hop.
+     */
+    fun barn(build: Int) = maven(
+        requireMcVersion("barn").map { "babric:barn:$it+build.$build:v2" }
+    )
+
+    /**
+     * Declare Quilt mappings for the environment's Minecraft version —
+     * `quilt(12)` ⇢ `org.quiltmc:quilt-mappings:<mc>+build.12:intermediary-v2`
+     * on the Quilt maven; rides the `intermediary` hop.
+     */
+    fun quilt(build: Int) = maven(
+        requireMcVersion("quilt").map { "org.quiltmc:quilt-mappings:$it+build.$build:intermediary-v2" }
+    )
 
     /**
      * Declare the Searge (MCPConfig) mappings channel — [version] is the
@@ -169,6 +245,7 @@ class MappingsSpecImpl(
     sealed class Source : MappingSource {
         override var formatHint: String? = null
         override val nsMap: MutableMap<String, String> = mutableMapOf()
+        override val namedNamespaces: MutableSet<String> = mutableSetOf()
 
         /** Force the document's format — a name the consumer's format
          *  registry understands (e.g. a UML `FormatProvider` name). */
@@ -187,6 +264,14 @@ class MappingsSpecImpl(
             pairs.forEach { (from, to) -> mapNamespace(from, to) }
         }
 
+        /** Flag emitted chain namespaces as *named* (developer-facing)
+         *  — feeds the environment's default dev namespace. Builtin
+         *  channels flag their own; declare this for custom sources
+         *  whose named column isn't labeled `"named"`. */
+        fun named(vararg namespaces: String) {
+            namedNamespaces += namespaces
+        }
+
         /** A local mapping file collection resolved lazily. */
         class File(override val files: ConfigurableFileCollection) : Source(), FileMappingSource
 
@@ -195,12 +280,14 @@ class MappingsSpecImpl(
             override val notation: String get() = notationProvider.get()
         }
 
-        /** A provider-named built-in mapping channel. */
+        /** A provider-named built-in mapping channel — [nameProvider]
+         *  is only realized at materialization, so transform wiring can
+         *  key the channel off a lazily-probed profile. */
         class Builtin(
-            val name: String,
+            val nameProvider: Provider<String>,
             override val params: Map<String, Provider<String>> = emptyMap()
         ) : Source(), BuiltinMappingSource {
-            override val channel get() = name
+            override val channel get() = nameProvider.get()
         }
     }
 

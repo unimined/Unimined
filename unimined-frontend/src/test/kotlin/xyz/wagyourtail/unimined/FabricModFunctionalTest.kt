@@ -100,13 +100,13 @@ class FabricModFunctionalTest {
     }
 
     /**
-     * `build` must produce both artifacts of the loom convention: the
-     * `jar` output gains a `-dev` classifier, and `remapJar` re-runs the
-     * JAR pipeline `dev -> prod` namespace and emits the publishable
-     * artifact under the original (unclassified) name.
+     * A bare fabric environment devs and produces in the same namespace
+     * (`intermediary`): the plan's identity/no-remap rule collapses the
+     * dev/prod split, so `build` emits a single jar under the original
+     * name — `remapJar` stays registered but skips itself.
      */
     @Test
-    fun `build produces dev-classified jar and prod remapJar output`() {
+    fun `bare fabric environment is identity - one jar serves dev and prod`() {
         writeProject()
         val result = GradleRunner.create()
             .withProjectDir(dir.toFile())
@@ -114,14 +114,11 @@ class FabricModFunctionalTest {
             .withArguments("build", "-s")
             .build()
         assertTrue(result.output.contains("BUILD SUCCESSFUL"))
-        assertTrue(result.output.contains(":remapJar"))
-        // dev jar keeps the source-set output under a -dev classifier
-        assertTrue(Files.exists(dir.resolve("build/libs/testmod-dev.jar")))
-        // the prod artifact claims the unclassified name
+        // one artifact usable for both development and production — the
+        // -dev classifier split would only duplicate identical bytes
+        assertTrue(Files.notExists(dir.resolve("build/libs/testmod-dev.jar")))
         val prodJar = dir.resolve("build/libs/testmod.jar")
         assertTrue(Files.exists(prodJar))
-        // it can only be the remapJar output — `jar` was moved to the
-        // -dev classifier — so existence proves the pipeline ran
         java.util.jar.JarFile(prodJar.toFile()).use { jar ->
             assertTrue(jar.getEntry("com/example/TestMod.class") != null)
             assertTrue(jar.getEntry("fabric.mod.json") != null)

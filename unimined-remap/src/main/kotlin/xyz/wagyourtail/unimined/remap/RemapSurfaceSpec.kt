@@ -1,10 +1,11 @@
 package xyz.wagyourtail.unimined.remap
 
-import org.gradle.api.Action
-import org.gradle.api.model.ObjectFactory
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.gradle.api.Action
+import org.gradle.api.model.ObjectFactory
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 /**
@@ -29,6 +30,19 @@ class RemapSurfaceSpec(
      * surface's output namespace.
      */
     val contributed: MutableList<StepSpec> = mutableListOf()
+
+    /**
+     * Steps contributed by transform plugins that must run *before* the
+     * declared pipeline — on the input jar still in its original
+     * namespace. Loader patch pipelines use this for binary patching:
+     * forge userdev/FG2 binpatches index official-named classes, so the
+     * patch must precede the namespace remap.
+     */
+    val contributedPre: MutableList<StepSpec> = mutableListOf()
+
+    /** Artifact scope per contributed step — absent means
+     *  [StepScope.ALL_ARTIFACTS]. */
+    val contributedScopes: MutableMap<StepSpec, StepScope> = mutableMapOf()
 
     /**
      * Declare the namespace-changing remap step. At most one per surface —

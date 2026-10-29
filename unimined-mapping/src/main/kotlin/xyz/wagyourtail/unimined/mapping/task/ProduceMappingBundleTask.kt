@@ -4,16 +4,12 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 
 /**
@@ -56,14 +52,13 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
         val path = bundleFile.get().asFile.toPath()
         val written = SerializedMappingData.write(data, path)
         if (written.isNotEmpty()) {
-            logger.lifecycle(
-                "[Unimined/MappingBundle] wrote serialized bundle {} (views: {})",
-                path.fileName, written.joinToString()
+            uniminedLogger(environmentId.get(), logger).subLogger("mappings").lifecycle(
+                "wrote serialized bundle ${path.fileName} (views: ${written.joinToString()})"
             )
             return
         }
         val tree = data.view<MappingTree>() ?: error(
-            "mapping provider exposed no serializable views and no portable MappingTree view"
+            "mapping provider exposed no serializable views and no UML MappingTree view"
         )
         MappingBundle.capture(
             sourceNamespace.get(), targetNamespace.get(), tree

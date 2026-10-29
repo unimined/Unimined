@@ -1,11 +1,6 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
-import xyz.wagyourtail.unimined.mod.ModMetadata
+import kotlinx.serialization.json.*
 import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
 
 /**

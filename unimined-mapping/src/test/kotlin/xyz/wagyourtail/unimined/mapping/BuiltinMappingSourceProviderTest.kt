@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.BuiltinMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
-import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Reader
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFReader
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.sources.BuiltinMappingSourceProvider
 import java.nio.file.Files
@@ -36,6 +36,7 @@ class BuiltinMappingSourceProviderTest {
         override val cacheDir: Path get() = dir
         override fun resolveMaven(notation: String): Path =
             throw UnsupportedOperationException("no maven resolution in tests")
+
         override fun resolveChannel(channel: String, params: Map<String, String>): List<Path> =
             channelFiles[channel] ?: emptyList()
     }
@@ -46,7 +47,7 @@ class BuiltinMappingSourceProviderTest {
         channel: String,
         vararg params: Pair<String, String>
     ): BuiltinMappingSource = MappingsSpecImpl.Source.Builtin(
-        channel,
+        objects().property(String::class.java).apply { set(channel) },
         params.associate { (k, v) ->
             k to objects().property(String::class.java).apply { set(v) }
         }
@@ -90,14 +91,14 @@ class BuiltinMappingSourceProviderTest {
     @Test
     fun `official materializes an identity document`() {
         val out = provider.materialize(source("official"), ctx)
-        assertEquals("tiny\t2\t0\tofficial", Files.readString(out.files.single()).trim())
+        assertEquals("umf\t1\t3\nofficial", Files.readString(out.files.single()).trim())
     }
 
     @Test
     fun `mojmap re-emits proguard official-first`() {
         channelFiles["mojmap"] = listOf(file("client_mappings.txt", mojmapTxt))
         val out = provider.materialize(source("mojmap"), ctx)
-        val tree = runBlocking { TinyV2Reader.read(Files.readString(out.files.single())) }
+        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
         assertEquals(listOf("official", "mojmap"), tree.namespaces.map { it.name })
         val cls = tree.getClass(Namespace("official"), InternalName.read("net/minecraft/a"))
         assertEquals("net/minecraft/Named", cls?.names?.get(Namespace("mojmap"))?.toString())
@@ -108,7 +109,7 @@ class BuiltinMappingSourceProviderTest {
         channelFiles["mojmap"] = listOf(file("client_mappings.txt", mojmapTxt))
         channelFiles["searge"] = listOf(mcpConfigZip())
         val out = provider.materialize(source("searge", "version" to "1.20.1"), ctx)
-        val tree = runBlocking { TinyV2Reader.read(Files.readString(out.files.single())) }
+        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
         assertEquals(
             listOf("official", "mojmap", "searge"),
             tree.namespaces.map { it.name }
@@ -118,15 +119,20 @@ class BuiltinMappingSourceProviderTest {
         assertEquals("net/minecraft/Named", cls.names[Namespace("searge")]?.toString())
         val method = cls.methods.single()
         assertEquals("m_123_", method.names[Namespace("searge")]?.toString())
-        val field = cls.fields.single()
-        assertEquals("f_456_", field.names[Namespace("searge")]?.toString())
+        // the proguard desc-bearing row and the tsrg desc-less row stay
+        // separate (desc-mismatch merge rule) but both carry the searge
+        // name — every row must resolve `f_456_`
+        assertEquals(
+            setOf("f_456_"),
+            cls.fields.map { it.names[Namespace("searge")]?.toString() }.toSet()
+        )
     }
 
     @Test
     fun `searge before 1-16-5 keeps srg class names`() {
         channelFiles["searge"] = listOf(mcpConfigZip())
         val out = provider.materialize(source("searge", "version" to "1.15.2"), ctx)
-        val tree = runBlocking { TinyV2Reader.read(Files.readString(out.files.single())) }
+        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
         assertEquals(listOf("official", "searge"), tree.namespaces.map { it.name })
         val cls = tree.getClass(Namespace("official"), InternalName.read("net/minecraft/a"))!!
         assertEquals("net/minecraft/src/C_1_", cls.names[Namespace("searge")]?.toString())

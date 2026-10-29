@@ -34,6 +34,7 @@ dependencies {
     modCompileOnly "mod.group:mod.artifact:mod.version"
 }
 ```
+
 </tab>
 <tab id="Kotlin-Remapping-Mods" title="Kotlin" group-key="kotlin">
 
@@ -65,12 +66,14 @@ dependencies {
     modCompileOnly("mod.group:mod.artifact:mod.version")
 }
 ```
+
 </tab>
 </tabs>
 
 ## Remapping Output
 
-unimined provides a default `remapJar` task for each configuration, it may be useful to create an extra or custom remap task
+unimined provides a default `remapJar` task for each configuration, it may be useful to create an extra or custom remap
+task
 
 <tabs group="lang">
 
@@ -110,5 +113,6 @@ unimined.minecraft {
 }
 
 ```
+
 </tab>
 </tabs>

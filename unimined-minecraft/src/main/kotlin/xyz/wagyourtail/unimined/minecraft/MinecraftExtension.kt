@@ -4,6 +4,7 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.dsl.DependencyFactory
@@ -11,21 +12,24 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.file.RegularFile
 import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.process.ExecOperations
+import xyz.wagyourtail.unimined.api.util.UniminedCache
+
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
+import xyz.wagyourtail.unimined.api.mapping.namedNamespaces
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingExtension
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
 import xyz.wagyourtail.unimined.minecraft.internal.DefaultProviderContext
@@ -76,6 +80,16 @@ abstract class MinecraftExtension @Inject constructor(
         }
 
     /**
+     * Whether tool execs, source-set compiles, and run launchers resolve
+     * Gradle java toolchains — the global default for
+     * [MinecraftEnvironment.useToolchains] (per-env override).
+     * 1.x `useToolchains` semantics — opt-out: when disabled the build
+     * JVM must satisfy each environment's java requirement.
+     */
+    val useToolchains: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /**
      * Loader-name → default mod-dependency source namespaces, contributed
      * by transform plugins at apply time (e.g. fabric → `intermediary`).
      * Consulted when an environment does not declare
@@ -103,6 +117,8 @@ abstract class MinecraftExtension @Inject constructor(
     private val boundEnvironments = linkedMapOf<String, SourceSet>()
     private val boundHandlers = mutableListOf<EnvironmentBoundHandler>()
     private val rawViewConfigurations = mutableMapOf<String, Configuration>()
+
+    private val modSourceViewConfigurations = mutableMapOf<String, Configuration>()
     private val registeredTransformEnvironments = mutableSetOf<String>()
     private var localRepoRegistered = false
 
@@ -140,6 +156,16 @@ abstract class MinecraftExtension @Inject constructor(
     /** Default source-set provider override. */
     val provider: Property<String>
         get() = main.provider
+
+    /**
+     * Default source-set java floor — raises the environment's
+     * effective java requirement above the version-json
+     * `javaVersion` (`minecraft { javaVersion = 21 }`). Loader
+     * transform descriptors convention it (cleanroom→21, ornithe→17);
+     * a user value always wins.
+     */
+    val javaVersion: Property<Int>
+        get() = main.javaVersion
 
     /** SAM listener for environment↔source-set binding. */
     fun interface EnvironmentBoundHandler {
@@ -230,6 +256,19 @@ abstract class MinecraftExtension @Inject constructor(
         librariesBucket.withDependencies { deps ->
             deps.addAll(artifacts(environmentId).get().libraries.get())
         }
+        // the provider-declared lib set only — no user/transform
+        // contributions (client-extra & co carry the raw-artifact
+        // back-edge that re-enters transform param isolation); feeds
+        // the merge strip's bundled-library membership
+        val declaredLibraries = project.configurations.create(
+            environment.minecraftDeclaredLibrariesConfigurationName
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+        }
+        declaredLibraries.withDependencies { deps ->
+            deps.addAll(artifacts(environmentId).get().libraries.get())
+        }
         project.configurations.named(sourceSet.compileClasspathConfigurationName) {
             it.extendsFrom(librariesBucket)
         }
@@ -249,6 +288,21 @@ abstract class MinecraftExtension @Inject constructor(
             )
         }
         rawViewConfigurations[environmentId] = rawView
+
+        // MC in the mod-source namespace — mod-view remap analysis
+        // consumes it so overrides of mapped MC members propagate;
+        // resolves to the raw artifact via a namespace-hop transform
+        // only when modSource differs from the source namespace
+        val modSourceView = project.configurations.create(environment.minecraftModSourceViewName) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.extendsFrom(minecraftBucket)
+            conf.attributes.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                modSourceArtifactType(environmentId)
+            )
+        }
+        modSourceViewConfigurations[environmentId] = modSourceView
 
         // Picks the raw view when the provider reports an identity pipeline
         // or the resolved dev namespace equals the source namespace, so
@@ -283,15 +337,25 @@ abstract class MinecraftExtension @Inject constructor(
     /** `artifactType` for the dev-namespace MC artifact view. */
     fun devArtifactType(environmentId: String): String = "unimined-mc-dev-$environmentId"
 
+    /** `artifactType` for the mod-source-namespace MC artifact view —
+     *  `rawArtifactType` when `modSourceNamespaces` equals the
+     *  environment source namespace (nothing to remap). */
+    fun modSourceArtifactType(environmentId: String): String = "unimined-mc-modsource-$environmentId"
+
     /** The resolvable raw-artifact view for [environmentId], if bound. */
     fun rawView(environmentId: String): Configuration? = rawViewConfigurations[environmentId]
+
+    /** The resolvable mod-source-artifact view for [environmentId], if bound. */
+    fun modSourceView(environmentId: String): Configuration? = modSourceViewConfigurations[environmentId]
 
     private fun registerMinecraftTransform(environment: MinecraftEnvironment) {
         val environmentId = environment.environmentId
         if (!registeredTransformEnvironments.add(environmentId)) return
         val cacheSettings = ProviderCacheSettings.from(project)
-        val cacheDir = project.layout.projectDirectory
-            .dir(".gradle/unimined/native-cache").asFile.toPath()
+        // downloads + version/side-keyed merge intermediates are
+        // content-identical across projects — global cache (1.x/loom
+        // model); project-stamped artifacts stay under .gradle
+        val cacheDir = UniminedCache.global(project).resolve("native-cache")
 
         project.dependencies.registerTransform(MinecraftArtifactTransform::class.java) { t ->
             t.from.attribute(
@@ -307,6 +371,7 @@ abstract class MinecraftExtension @Inject constructor(
                 p.version.set(environment.version)
                 p.side.set(environment.side.map { it.name })
                 p.artifactKey.set(environment.side.map { sideKey(it).name })
+                p.artifactBaseName.set(environment.artifactBaseName)
                 environment.provider.orNull?.let { p.producerName.set(it) }
                 p.cacheDir.set(cacheDir.toString())
                 p.offline.set(cacheSettings.offline)
@@ -325,6 +390,20 @@ abstract class MinecraftExtension @Inject constructor(
                         .artifactFormatVersion
                 })
                 cacheSettings.metadataCacheTtl?.let { p.metadataCacheTtl.set(it.toString()) }
+                // merge strip controls — the provider's *declared*
+                // library set (version-json libs), never the
+                // `minecraftLibraries` configuration: that config
+                // transitively contains providers resolving the raw
+                // artifact view (forge's client-extra), which would
+                // re-enter this very transform's param isolation
+                p.libraryJars.from(
+                    project.configurations.getByName(
+                        environment.minecraftDeclaredLibrariesConfigurationName
+                    )
+                )
+                p.mergeIncludeGlobs.set(environment.mergeIncludeGlobs)
+                p.mergeExcludeGlobs.set(environment.mergeExcludeGlobs)
+                p.stripBundledServerLibraries.set(environment.stripBundledServerLibraries)
             }
         }
     }
@@ -336,17 +415,31 @@ abstract class MinecraftExtension @Inject constructor(
     }
 
     /** The dev namespace for [environmentId] — explicit
-     *  `MinecraftEnvironment.devNamespace`, else the resolved mapping
-     *  tree's last namespace. Evaluated lazily. */
+     *  `MinecraftEnvironment.devNamespace`, else the first *named*
+     *  namespace the resolved sources flagged (1.x `outputs(ns, named)`
+     *  semantics), else the composed tree's last namespace. Evaluated
+     *  lazily. */
     fun devNamespace(environmentId: String): Provider<String> =
         sourceSet(environmentId).devNamespace.orElse(providers.provider {
-            artifacts(environmentId).get().mappings.get().namespaces.last()
+            val environment = sourceSet(environmentId)
+            if (environment.mappingsSpec.effectiveSources().isEmpty()) {
+                artifacts(environmentId).get().mappings.get().namespaces.last().name
+            } else {
+                val data = mappingDataProvider(environment).get()
+                val tree = data.view<MappingTree>()
+                    ?: throw IllegalStateException(
+                        "configured mappings do not expose a UML MappingTree view"
+                    )
+                val present = tree.namespaces.map { it.name }.toSet()
+                data.namedNamespaces().firstOrNull { it in present }
+                    ?: tree.namespaces.last().name
+            }
         })
 
     /** The raw artifact's namespace for [environmentId] — the resolved
      *  mapping tree's first namespace. Evaluated lazily. */
     fun sourceNamespace(environmentId: String): Provider<String> =
-        artifacts(environmentId).map { it.mappings.get().namespaces.first() }
+        artifacts(environmentId).map { it.mappings.get().namespaces.first().name }
 
     /** Effective mod-dependency source namespaces — the environment's
      *  explicit list, else the loader's contributed default, else the
@@ -358,9 +451,20 @@ abstract class MinecraftExtension @Inject constructor(
             environment.modSourceNamespaces.getOrElse(emptyList()).ifEmpty {
                 loaderModSourceNamespaces[environment.loaderSpec.orNull?.name]
                     ?: listOf(
-                        artifacts(environmentId).get().mappings.get().namespaces.first()
+                        artifacts(environmentId).get().mappings.get().namespaces.first().name
                     )
             }
+        }
+
+    /** Whether [environmentId]'s production namespace equals its dev
+     *  namespace — mod artifacts need no remap between dev and
+     *  production. Identity environments emit a single jar/coordinate
+     *  for both development and production; the dev/prod split
+     *  collapses. Evaluated lazily — may resolve the environment's
+     *  mappings when the namespaces are not declared explicitly. */
+    fun isIdentityRemap(environmentId: String): Provider<Boolean> =
+        modSourceNamespaces(environmentId).zip(devNamespace(environmentId)) { prod, dev ->
+            prod.size == 1 && prod.single() == dev
         }
 
     private fun stubDependencyNotation(environment: MinecraftEnvironment): String {
@@ -433,8 +537,8 @@ abstract class MinecraftExtension @Inject constructor(
         val extension = sourceProject.extensions.findByType(MinecraftExtension::class.java)
             ?: throw GradleException(
                 "Project '${sourceProject.path}' does not have a Unimined Minecraft " +
-                    "extension; apply the minecraft or frontend plugin before sharing " +
-                    "environment '${reference.environmentId}'"
+                        "extension; apply the minecraft or frontend plugin before sharing " +
+                        "environment '${reference.environmentId}'"
             )
         return extension.sourceSet(reference.environmentId)
     }
@@ -463,8 +567,8 @@ abstract class MinecraftExtension @Inject constructor(
                 if (sourceVersion != targetVersion) {
                     throw GradleException(
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
-                            "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
-                            "Minecraft versions differ ($targetVersion != $sourceVersion)"
+                                "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
+                                "Minecraft versions differ ($targetVersion != $sourceVersion)"
                     )
                 }
 
@@ -473,8 +577,8 @@ abstract class MinecraftExtension @Inject constructor(
                 if (targetLoader != null && sourceLoader != null && targetLoader != sourceLoader) {
                     throw GradleException(
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
-                            "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
-                            "loaders differ ($targetLoader != $sourceLoader)"
+                                "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
+                                "loaders differ ($targetLoader != $sourceLoader)"
                     )
                 }
 
@@ -488,8 +592,8 @@ abstract class MinecraftExtension @Inject constructor(
                 ) {
                     throw GradleException(
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
-                            "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
-                            "dev namespaces differ ($targetNamespace != $sourceNamespace)"
+                                "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
+                                "dev namespaces differ ($targetNamespace != $sourceNamespace)"
                     )
                 }
             }
@@ -507,7 +611,7 @@ abstract class MinecraftExtension @Inject constructor(
             if (!path.add(key)) {
                 throw GradleException(
                     "Cyclic Unimined source-set combination involving " +
-                        path.joinToString(" -> ") + " -> " + key
+                            path.joinToString(" -> ") + " -> " + key
                 )
             }
             rejectCombinationCycles(environment(sourceReference), path)
@@ -523,7 +627,7 @@ abstract class MinecraftExtension @Inject constructor(
         }
         val extension = sourceProject.extensions.getByType(MinecraftExtension::class.java)
         return extension.artifacts(environmentId).get().mappings.get()
-            .namespaces.lastOrNull()
+            .namespaces.lastOrNull()?.name
     }
 
     /** Build the provider-facing spec for the default `main` environment. */
@@ -570,11 +674,12 @@ abstract class MinecraftExtension @Inject constructor(
                     val file = resolved(environment).auxiliaryArtifacts[key]
                         ?: throw GradleException(
                             "mappings { mojmap() }: provider " +
-                                "'${environment.provider.orNull ?: "auto"}' supplies no " +
-                                "$key channel for ${environment.version.orNull}"
+                                    "'${environment.provider.orNull ?: "auto"}' supplies no " +
+                                    "$key channel for ${environment.version.orNull}"
                         )
                     listOf(file.get().asFile.toPath())
                 }
+
                 "searge" -> {
                     val version = params["version"]
                         ?: throw GradleException("searge() requires a version")
@@ -583,8 +688,8 @@ abstract class MinecraftExtension @Inject constructor(
                     ) {
                         throw GradleException(
                             "mappings { searge($version) }: FG1-era mcp/srg " +
-                                "channels are not yet supported; declare the " +
-                                "mapping archive via maven() or file() instead"
+                                    "channels are not yet supported; declare the " +
+                                    "mapping archive via maven() or file() instead"
                         )
                     }
                     ensureRepo("Minecraft Forge", "https://maven.minecraftforge.net/")
@@ -592,6 +697,7 @@ abstract class MinecraftExtension @Inject constructor(
                         resolveMavenNotation("de.oceanlabs.mcp:mcp_config:$version@zip")
                     )
                 }
+
                 "parchment" -> {
                     val mcVersion = params["mcVersion"]
                         ?: throw GradleException("parchment() requires mcVersion")
@@ -606,6 +712,7 @@ abstract class MinecraftExtension @Inject constructor(
                         )
                     )
                 }
+
                 else -> throw GradleException(
                     "builtin mapping channel '$channel' is not supported by this host"
                 )
@@ -620,8 +727,6 @@ abstract class MinecraftExtension @Inject constructor(
             }
         }
     }
-
-    private val mappingDataProviders = mutableMapOf<String, Provider<xyz.wagyourtail.unimined.api.mapping.MappingData>>()
 
     /** Configure mappings for the default `main` environment. */
     fun mappings(action: Action<MappingsSpecImpl>) = main.mappings(action)
@@ -643,18 +748,34 @@ abstract class MinecraftExtension @Inject constructor(
         action: Closure<*>
     ) = sourceSet(environmentId).mappings(action)
 
-    private fun mappingDataProvider(environment: MinecraftEnvironment): Provider<xyz.wagyourtail.unimined.api.mapping.MappingData> =
-        synchronized(mappingDataProviders) {
-            mappingDataProviders.getOrPut(environment.environmentId) {
-                providers.provider {
-                    environment.validateCombinations()
-                    mappingExtension.resolve(
-                        environment.mappingsSpec, environment.environmentId,
-                        mavenResolver, channelResolver(environment)
+    /**
+     * Resolved mapping data per environment — memoized on the computed
+     * value, not the provider: `Provider.get()` re-runs its lambda each
+     * call, and a full spec resolve (materialize + read + compose) is
+     * minutes-scale, so every consumer must share one computation.
+     */
+    private val resolvedMappingData =
+        java.util.concurrent.ConcurrentHashMap<String, xyz.wagyourtail.unimined.api.mapping.MappingData>()
+
+    private fun resolvedMappingData(
+        environment: MinecraftEnvironment
+    ): xyz.wagyourtail.unimined.api.mapping.MappingData =
+        resolvedMappingData.computeIfAbsent(environment.environmentId) {
+            val t0 = System.nanoTime()
+            environment.validateCombinations()
+            mappingExtension.resolve(
+                environment.mappingsSpec, environment.environmentId,
+                mavenResolver, channelResolver(environment)
+            ).also {
+                uniminedLogger(environment.environmentId, project.logger)
+                    .subLogger("mappings").lifecycle(
+                        "resolved in ${(System.nanoTime() - t0) / 1_000_000}ms"
                     )
-                }
             }
         }
+
+    private fun mappingDataProvider(environment: MinecraftEnvironment): Provider<xyz.wagyourtail.unimined.api.mapping.MappingData> =
+        providers.provider { resolvedMappingData(environment) }
 
     private val resolvedEnvironments = mutableMapOf<String, MinecraftArtifacts>()
 
@@ -662,7 +783,14 @@ abstract class MinecraftExtension @Inject constructor(
         synchronized(resolvedEnvironments) {
             resolvedEnvironments.getOrPut(environment.environmentId) {
                 val spec = environment.spec()
-                registry.select(spec, environment.provider.orNull).resolve(spec, ctx)
+                // negotiate on the loader-agnostic view — no loader-aware
+                // provider exists; loader transforms wrap the artifact
+                // downstream (1.x semantics)
+                registry.select(
+                    (spec as? RuntimeMinecraftSpec)?.copy(loader = null)
+                        ?: spec,
+                    environment.provider.orNull
+                ).resolve(spec, ctx)
             }
         }
 
@@ -781,21 +909,25 @@ abstract class MinecraftExtension @Inject constructor(
         to: Provider<String>
     ): Provider<String> {
         val environment = sourceSet(environmentId)
-        val spec = environment.mappingsSpec
-        val dependencies = project.dependencies
-        val configurations = project.configurations
         return providers.provider {
-            val data = mappingExtension.resolve(spec, environmentId, { notation ->
-                configurations.detachedConfiguration(dependencies.create(notation))
-                    .apply { isTransitive = false }
-                    .singleFile.toPath()
-            }, channelResolver(environment))
-            val tree = data.view<MappingTree>() ?: error(
-                "mapping provider did not expose a portable MappingTree view"
-            )
-            MappingBundle.capture(from.get(), to.get(), tree).toJson()
+            // resolve once per environment (see resolvedMappingData) —
+            // the transform param is evaluated per transform invocation,
+            // and capture+serialize is itself worth memoizing per
+            // (from, to) pair
+            val bundleJson = mappingBundleJsonCache.computeIfAbsent(
+                "$environmentId:${from.get()}:${to.get()}"
+            ) {
+                val tree = resolvedMappingData(environment).view<MappingTree>() ?: error(
+                    "mapping provider did not expose a UML MappingTree view"
+                )
+                MappingBundle.capture(from.get(), to.get(), tree).toJson()
+            }
+            bundleJson
         }
     }
+
+    private val mappingBundleJsonCache =
+        java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /**
      * The resolved environment artifacts — provider resolution is deferred
@@ -807,22 +939,22 @@ abstract class MinecraftExtension @Inject constructor(
     /** Resolve artifacts for a named source-set environment. */
     fun artifacts(environmentId: String): Provider<MinecraftArtifacts> =
         providers.provider {
-        val environment = sourceSet(environmentId)
-        val providerArtifacts = resolved(environment)
-        val environmentMappingData = mappingDataProvider(environment)
-        object : MinecraftArtifacts by providerArtifacts {
-            override val mappings: Provider<MappingTree> = providers.provider {
-                if (environment.mappingsSpec.effectiveSources().isEmpty()) {
-                    providerArtifacts.mappings.get()
-                } else {
-                    environmentMappingData.get().view<MappingTree>()
-                        ?: throw IllegalStateException(
-                            "configured mappings do not expose the portable MappingTree view"
-                        )
+            val environment = sourceSet(environmentId)
+            val providerArtifacts = resolved(environment)
+            val environmentMappingData = mappingDataProvider(environment)
+            object : MinecraftArtifacts by providerArtifacts {
+                override val mappings: Provider<MappingTree> = providers.provider {
+                    if (environment.mappingsSpec.effectiveSources().isEmpty()) {
+                        providerArtifacts.mappings.get()
+                    } else {
+                        environmentMappingData.get().view<MappingTree>()
+                            ?: throw IllegalStateException(
+                                "configured mappings do not expose a UML MappingTree view"
+                            )
+                    }
                 }
             }
         }
-    }
 
     private companion object {
         const val STUB_GROUP = "unimined.generated"

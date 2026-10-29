@@ -1,10 +1,10 @@
 package xyz.wagyourtail.unimined.mapping
 
-import java.util.ServiceLoader
 import xyz.wagyourtail.unimined.api.mapping.MappingComposeRequest
 import xyz.wagyourtail.unimined.api.mapping.MappingComposer
 import xyz.wagyourtail.unimined.api.spi.SpiSelector
 import xyz.wagyourtail.unimined.api.spi.spiSelector
+import java.util.*
 
 /**
  * Registry of [MappingComposer]s — the host's [DefaultMappingComposer] is
@@ -12,9 +12,7 @@ import xyz.wagyourtail.unimined.api.spi.spiSelector
  * [register]. A fresh registry at task execution sees the same composers
  * as the configuration-time registry.
  */
-class MappingComposerRegistry(
-    viewAdapters: MappingViewAdapterRegistry = MappingViewAdapterRegistry()
-) {
+class MappingComposerRegistry {
 
     private val selector: SpiSelector<MappingComposer, MappingComposeRequest> =
         spiSelector("mapping composer")
@@ -29,7 +27,7 @@ class MappingComposerRegistry(
         ).toList()
         found.distinctBy { it.name }.forEach(selector::register)
 
-        selector.register(DefaultMappingComposer(viewAdapters))
+        selector.register(DefaultMappingComposer())
     }
 
     /** Register a composer implementation. */

@@ -7,14 +7,15 @@ import kotlin.reflect.KClass
  * serializers produce when merging or rehydrating arbitrary view kinds.
  */
 class ViewMapMappingData(
-    private val views: Map<KClass<out MappingDataView>, MappingDataView>
+    private val views: Map<KClass<*>, Any>,
+    override val properties: Map<String, String> = emptyMap()
 ) : MappingData {
 
-    override val viewTypes: Set<KClass<out MappingDataView>>
+    override val viewTypes: Set<KClass<*>>
         get() = views.keys
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : MappingDataView> view(type: Class<T>): T? =
+    override fun <T : Any> view(type: Class<T>): T? =
         views[type.kotlin] as T?
 
 }

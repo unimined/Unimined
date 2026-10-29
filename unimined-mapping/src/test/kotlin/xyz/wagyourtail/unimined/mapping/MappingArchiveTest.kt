@@ -1,10 +1,7 @@
 package xyz.wagyourtail.unimined.mapping
 
 import org.gradle.api.GradleException
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.mapping.internal.MappingArchive

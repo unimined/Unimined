@@ -2,10 +2,7 @@ package xyz.wagyourtail.unimined.mod
 
 import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path

@@ -38,7 +38,8 @@ object MinecraftVersions {
         val match = RELEASE.matchEntire(version) ?: return null
         // `-pre`/`-rc`/`Pre-Release` order before the bare release
         val suffix = match.groupValues[4]
-        val preReleasePenalty = if (suffix.matches(Regex("-(?:pre|rc|Pre-Release).*", RegexOption.IGNORE_CASE))) -1 else 0
+        val preReleasePenalty =
+            if (suffix.matches(Regex("-(?:pre|rc|Pre-Release).*", RegexOption.IGNORE_CASE))) -1 else 0
         return Triple(
             match.groupValues[1].toInt(),
             match.groupValues[2].toInt(),

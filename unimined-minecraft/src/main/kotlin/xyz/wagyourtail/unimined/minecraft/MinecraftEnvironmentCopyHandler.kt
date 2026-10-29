@@ -61,9 +61,9 @@ internal class MinecraftEnvironmentCopyHandler(
         if (request.source.projectPath != request.target.projectPath) {
             throw GradleException(
                 "Cannot copy dependency buckets across projects for " +
-                    "'${request.target.projectPath}:${request.target.environmentId}' " +
-                    "from '${request.source.projectPath}:${request.source.environmentId}'; " +
-                    "combine source output or declare a project dependency instead"
+                        "'${request.target.projectPath}:${request.target.environmentId}' " +
+                        "from '${request.source.projectPath}:${request.source.environmentId}'; " +
+                        "combine source output or declare a project dependency instead"
             )
         }
         val source = extension.environment(request.source)

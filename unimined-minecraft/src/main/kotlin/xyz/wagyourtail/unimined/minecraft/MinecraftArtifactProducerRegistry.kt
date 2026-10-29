@@ -4,7 +4,7 @@ import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spi.SpiSelector
 import xyz.wagyourtail.unimined.api.spi.spiSelector
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifactProducer
-import java.util.ServiceLoader
+import java.util.*
 
 /**
  * Registry of [MinecraftArtifactProducer] impls supplied by provider

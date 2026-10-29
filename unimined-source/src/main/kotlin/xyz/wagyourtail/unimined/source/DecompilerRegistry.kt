@@ -1,10 +1,10 @@
 package xyz.wagyourtail.unimined.source
 
-import java.util.ServiceLoader
 import xyz.wagyourtail.unimined.api.spi.SpiSelector
 import xyz.wagyourtail.unimined.api.spi.spiSelector
-import xyz.wagyourtail.unimined.source.spi.DecompilerEngine
 import xyz.wagyourtail.unimined.source.spi.DecompileSpec
+import xyz.wagyourtail.unimined.source.spi.DecompilerEngine
+import java.util.*
 
 /**
  * Registry of [DecompilerEngine] implementations supplied by

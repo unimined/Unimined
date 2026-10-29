@@ -1,8 +1,10 @@
 # Modloaders
 
 ## Unimined supports many modloaders
+
 this list may not always be up-to-date.
-for the most up-to-date list, see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft/-patch-providers/index.html).
+for the most up-to-date list,
+see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft/-patch-providers/index.html).
 
 * minecraftForge
 * neoForged
@@ -18,6 +20,7 @@ for the most up-to-date list, see [the api code](https://unimined.wagyourtail.xy
 * paper
 
 ### it also supports several *pseudo* modloaders:
+
 * jarmod
 * accessTransformer
 * accessWidener
@@ -54,6 +57,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 </tabs>
 
@@ -91,10 +95,14 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 </tabs>
 
 ## Custom Modloaders
 
-you can create a custom modloader by implementing the [MinecraftPatcher](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch/-minecraft-patcher/index.html) interface.
-For example, this is done by [Prcraft](https://github.com/prcraft-minecraft/PrcraftExampleMod/blob/main/buildSrc/src/main/kotlin/xyz/wagyourtail/unimined/minecraft/patch/prcraft/PrcraftMinecraftTransformer.kt)
+you can create a custom modloader by implementing
+the [MinecraftPatcher](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch/-minecraft-patcher/index.html)
+interface.
+For example, this is done
+by [Prcraft](https://github.com/prcraft-minecraft/PrcraftExampleMod/blob/main/buildSrc/src/main/kotlin/xyz/wagyourtail/unimined/minecraft/patch/prcraft/PrcraftMinecraftTransformer.kt)

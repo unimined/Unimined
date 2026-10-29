@@ -5,8 +5,11 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 /**
@@ -58,13 +61,90 @@ class RemapEnvironmentSpec internal constructor(
     fun configuredSurfaces(): Map<RemapSurface, RemapSurfaceSpec> = surfaces.toMap()
 
     /** Steps contributed by transform plugins for [surface] — run after the
-     *  declared/inherited pipeline. */
-    fun contributedSteps(surface: RemapSurface): List<StepSpec> =
-        surfaces[surface]?.contributed.orEmpty()
+     *  declared/inherited pipeline. [scope] filters by artifact scope;
+     *  `null` returns all contributions. */
+    fun contributedSteps(surface: RemapSurface, scope: StepScope? = null): List<StepSpec> =
+        surfaces[surface]?.let { spec ->
+            spec.contributed.filter {
+                scope == null ||
+                        (spec.contributedScopes[it] ?: StepScope.ALL_ARTIFACTS) == scope
+            }
+        }.orEmpty()
+
+    /** Steps contributed by transform plugins for [surface] — run *before*
+     *  the declared pipeline, on the original-namespace input.
+     *  [scope] filters by artifact scope; `null` returns all. */
+    fun contributedPreSteps(surface: RemapSurface, scope: StepScope? = null): List<StepSpec> =
+        surfaces[surface]?.let { spec ->
+            spec.contributedPre.filter {
+                scope == null ||
+                        (spec.contributedScopes[it] ?: StepScope.ALL_ARTIFACTS) == scope
+            }
+        }.orEmpty()
 
     /** Contribute a plugin step appended after this surface's declared pipeline. */
-    fun contributeStep(surface: RemapSurface, spec: StepSpec) {
-        surface(surface).contributed += spec
+    @JvmOverloads
+    fun contributeStep(
+        surface: RemapSurface,
+        spec: StepSpec,
+        scope: StepScope = StepScope.ALL_ARTIFACTS
+    ) {
+        surface(surface).let {
+            it.contributed += spec
+            it.contributedScopes[spec] = scope
+        }
+    }
+
+    /** Contribute a plugin step that runs before this surface's declared
+     *  pipeline — the input is still in its original namespace. */
+    @JvmOverloads
+    fun contributePreStep(
+        surface: RemapSurface,
+        spec: StepSpec,
+        scope: StepScope = StepScope.ALL_ARTIFACTS
+    ) {
+        surface(surface).let {
+            it.contributedPre += spec
+            it.contributedScopes[spec] = scope
+        }
+    }
+
+    private val _accessModelProviders = mutableListOf<Provider<AccessModel>>()
+
+    /**
+     * [AccessModel] contributions registered by loader transforms —
+     * merged and fed to this environment's remapped views (and
+     * production remap tasks) as the remap-analysis overlay.
+     */
+    val accessModelProviders: List<Provider<AccessModel>>
+        get() = _accessModelProviders
+
+    /**
+     * Contribute a lazy access-model source — evaluated at pipeline
+     * execution so it may resolve mod dependency configurations.
+     */
+    fun contributeAccessModel(provider: Provider<AccessModel>) {
+        _accessModelProviders += provider
+    }
+
+    private val _modMarkerContributions = mutableListOf<String>()
+
+    /**
+     * Extra mod markers contributed by transform plugins — appended
+     * to `ModMarkerScan.DEFAULT_MARKERS` when deciding whether a
+     * mod jar needs remapping in marker-filtered views. Formats:
+     * `file:<path>`, `suffix:<suffix>`, `manifest:<attr>`,
+     * `refs:<string>`.
+     */
+    val modMarkerContributions: List<String>
+        get() = _modMarkerContributions
+
+    /**
+     * Contribute a mod-marker pattern — jars matching at least one
+     * marker get remapped in `onlyRemapMarkedJars` views.
+     */
+    fun contributeModMarker(marker: String) {
+        _modMarkerContributions += marker
     }
 
     /** Validate remap-step cardinality for this environment. */
@@ -74,7 +154,7 @@ class RemapEnvironmentSpec internal constructor(
             if (remaps > 1) {
                 throw GradleException(
                     "remap { sourceSet(\"$environmentId\") { $surface { ... } } }: " +
-                        "$remaps `remap` steps declared; at most one is allowed"
+                            "$remaps `remap` steps declared; at most one is allowed"
                 )
             }
         }

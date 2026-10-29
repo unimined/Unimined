@@ -4,10 +4,13 @@ Mappings provide the ability to remap minecraft into names you can actually use 
 As well as remapping to the production mappings that each modloader uses.
 
 ## Supported mappings
+
 this list may not always be up-to-date.
-see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.mapping/-mappings-config/index.html) for the most up to date list.
+see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.mapping/-mappings-config/index.html)
+for the most up to date list.
 
 ### intermediaries
+
 * intermediary (fabricmc)
 * calamus (ornithemc)
 * legacyIntermediary (legacyfabric)
@@ -15,6 +18,7 @@ see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/
 * searge (mcp)
 
 ### named
+
 * yarn (fabricmc) (1.14-present)
 * yarnv1 (fabricmc) (1.14-present) (recommended for 1.14-1.14.2 over yarn)
 * mojmap (mojang) (1.14.4-present)
@@ -31,7 +35,6 @@ see [the api code](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/
 * spigotDev (spigot) (1.8-present)
 * unknownThingy
 
-
 ## Usage
 
 Mappings are used in the `mappings` block of the `unimined.minecraft` block in your `build.gradle` file.
@@ -47,6 +50,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 <tab id="Kotlin-Mojmap" title="Kotlin" group-key="kotlin">
 
@@ -59,6 +63,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 </tabs>
 
@@ -76,6 +81,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 <tab id="Kotlin-Yarn" title="Kotlin" group-key="kotlin">
 
@@ -89,12 +95,14 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 </tabs>
 
 ## Overriding mappings
 
-it is sometimes useful to override specific mappings, such as when using forge with yarn mappings, or when a mod is using yarn
+it is sometimes useful to override specific mappings, such as when using forge with yarn mappings, or when a mod is
+using yarn
 at dev, but you're using mojmap and it causes an issue.
 
 unimined provides a DSL for inserting said mapping stubs, it's syntax is similar to umf's format.
@@ -115,6 +123,7 @@ unimined.minecraft {
 ...
 }
 ```
+
 </tab>
 <tab id="Kotlin-Stub" title="Kotlin" group-key="kotlin">
 
@@ -132,6 +141,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 </tabs>
 
@@ -150,6 +160,7 @@ stubs(["intermediary", "yarn"]) {
     }
 }
 ```
+
 </tab>
 <tab id="Kotlin-Stub-Real" title="Kotlin" group-key="kotlin">
 
@@ -163,9 +174,9 @@ stubs("intermediary", "yarn") {
     }
 }
 ```
+
 </tab>
 </tabs>
-
 
 ## Custom mapping sources
 
@@ -192,6 +203,7 @@ unimined.minecraft {
     ...
 }
 ```
+
 </tab>
 <tab id="Kotlin-Custom" title="Kotlin" group-key="kotlin">
 
@@ -211,6 +223,7 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 </tabs>
 
@@ -231,6 +244,7 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 <tab id="Kotlin-DevNamespace" title="Kotlin" group-key="kotlin">
 
@@ -243,5 +257,6 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 </tabs>

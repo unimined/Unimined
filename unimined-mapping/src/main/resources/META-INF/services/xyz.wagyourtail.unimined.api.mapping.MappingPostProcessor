@@ -1,1 +1,5 @@
+xyz.wagyourtail.unimined.mapping.processors.ParamPrefixStripPostProcessor
 xyz.wagyourtail.unimined.mapping.processors.InitCompletionPostProcessor
+xyz.wagyourtail.unimined.mapping.processors.UnobfCompletionPostProcessor
+xyz.wagyourtail.unimined.mapping.processors.SignatureFixesPostProcessor
+xyz.wagyourtail.unimined.mapping.processors.VersionCheckPostProcessor

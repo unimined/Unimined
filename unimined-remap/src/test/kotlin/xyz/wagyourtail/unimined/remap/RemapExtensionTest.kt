@@ -5,10 +5,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.provider.Property
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface

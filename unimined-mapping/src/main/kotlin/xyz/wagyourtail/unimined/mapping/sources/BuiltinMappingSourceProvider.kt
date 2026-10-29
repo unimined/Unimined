@@ -2,19 +2,17 @@ package xyz.wagyourtail.unimined.mapping.sources
 
 import kotlinx.coroutines.runBlocking
 import org.gradle.api.GradleException
-import xyz.wagyourtail.unimined.api.mapping.BuiltinMappingSource
-import xyz.wagyourtail.unimined.api.mapping.MappingContext
-import xyz.wagyourtail.unimined.api.mapping.MappingSource
-import xyz.wagyourtail.unimined.api.mapping.MappingSourceProvider
-import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
+import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.proguard.ProguardReader
-import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Writer
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
+import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Reader
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV2Reader
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.mapping.internal.RuntimeMaterializedMappingSource
 import xyz.wagyourtail.unimined.mapping.sink.emit
+import xyz.wagyourtail.unimined.mapping.sink.nsFiltered
 import xyz.wagyourtail.unimined.mapping.tree.impl.fillMissingNames
 import java.nio.file.Files
 import java.nio.file.Path
@@ -24,7 +22,7 @@ import java.util.zip.ZipFile
 /**
  * Materializes the provider/builtin mapping channels — `official`,
  * `mojmap`, `searge`, `parchment`. Channels that need layered or
- * reordered namespaces emit a derived tiny-v2 document into the
+ * reordered namespaces emit a derived UMF document into the
  * environment cache rather than exposing raw downloads: the derived doc
  * keeps the canonical `official`-first ordering the composer expects.
  *
@@ -51,7 +49,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             "parchment" -> parchmentSource(source, ctx, params)
             else -> throw GradleException(
                 "mappings { ${source.channel}() }: unknown builtin channel; " +
-                    "expected one of official, mojmap, searge, parchment"
+                        "expected one of official, mojmap, searge, parchment"
             )
         }
     }
@@ -97,9 +95,12 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         source: BuiltinMappingSource,
         ctx: MappingContext
     ): MaterializedMappingSource {
-        val out = writeDerived(channelCacheDir(ctx, "official"), "official.tiny") {
-            it.append("tiny\t2\t0\tofficial\n")
+        val out = writeDerived(channelCacheDir(ctx, "official"), "official.umf") {
+            it.append("umf\t1\t3\nofficial\n")
         }
+        // `official` is the raw (obf) side — not a named namespace;
+        // an official-only tree still resolves it via the last-ns
+        // fallback
         return RuntimeMaterializedMappingSource(source, listOf(out), null)
     }
 
@@ -115,12 +116,12 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val downloaded = ctx.resolveChannel("mojmap", emptyMap()).singleOrNull()
             ?: throw GradleException(
                 "mappings { mojmap() }: the environment's provider did not " +
-                    "supply an official-mappings download"
+                        "supply an official-mappings download"
             )
         val official = Namespace("official")
         val mojmap = Namespace("mojmap")
         val out = writeDerived(
-            channelCacheDir(ctx, "mojmap"), "mojmap-${contentTag(downloaded)}.tiny"
+            channelCacheDir(ctx, "mojmap"), "mojmap-${contentTag(downloaded)}.umf"
         ) { sb ->
             val tree = MutableMappingTree()
             runBlocking {
@@ -129,9 +130,12 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                     mapOf("source" to "mojmap", "target" to "official")
                 )
             }
-            tree.emit(TinyV2Writer.write(sb::append), nsFilter = listOf(official, mojmap))
+            tree.emit(UMFWriter.write(sb::append, false), nsFilter = listOf(official, mojmap))
         }
-        return RuntimeMaterializedMappingSource(source, listOf(out), null)
+        return RuntimeMaterializedMappingSource(
+            source, listOf(out), null,
+            namedNamespaces = setOf("mojmap")
+        )
     }
 
     /**
@@ -152,7 +156,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val zip = ctx.resolveChannel("searge", params).singleOrNull()
             ?: throw GradleException(
                 "mappings { searge($version) }: the environment's provider " +
-                    "did not resolve the MCPConfig artifact"
+                        "did not resolve the MCPConfig artifact"
             )
         val tsrg = readZipEntry(zip, "config/joined.tsrg")
             ?: throw GradleException("MCPConfig artifact $zip has no config/joined.tsrg")
@@ -161,10 +165,15 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val srg = Namespace("srg")
         val searge = Namespace("searge")
         val layered = MinecraftVersions.compare(version.substringBefore('-'), "1.16.5") > 0
+        // cache files are written pre-propagation — no inheritance tree to
+        // recover descs from — so they must round-trip desc-less member
+        // rows; tiny v2 silently drops them (its `f` line requires a desc),
+        // UMF does not
+        val tsrgV1 = !layered && !tsrg.trimStart().startsWith("tsrg2")
 
         val out = writeDerived(
             channelCacheDir(ctx, "searge"),
-            "searge-$version-${contentTag(zip)}.tiny"
+            "searge-$version-${contentTag(zip)}.umf"
         ) { sb ->
             val tree = MutableMappingTree()
             runBlocking {
@@ -172,15 +181,22 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                     val mojmap = ctx.resolveChannel("mojmap", params).singleOrNull()
                         ?: throw GradleException(
                             "mappings { searge($version) }: layering srg names " +
-                                "for $version requires the mojmap channel, which " +
-                                "this environment's provider did not supply"
+                                    "for $version requires the mojmap channel, which " +
+                                    "this environment's provider did not supply"
                         )
                     val mojmapNs = Namespace("mojmap")
                     ProguardReader.read(
                         Files.readString(mojmap), tree,
                         mapOf("source" to "mojmap", "target" to "official")
                     )
-                    TsrgV2Reader.read(tsrg, tree, mapOf("obf" to "official"))
+                    // tsrg's `id` column carries numeric srg ids, not
+                    // names — filter it so it never enters the tree (it
+                    // trips init/clinit name invariants on fill/merge)
+                    TsrgV2Reader.read(
+                        tsrg, tree,
+                        tree.nsFiltered(setOf(Namespace("id")), inverted = true),
+                        mapOf("obf" to "official")
+                    )
                     // classes take the mojmap name so srg class names can't
                     // scatter the tree across MCP-style packages; members
                     // keep srg names via the fill below
@@ -193,22 +209,43 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                     }
                     tree.fillMissingNames(srg to setOf(searge))
                     tree.emit(
-                        TinyV2Writer.write(sb::append),
+                        UMFWriter.write(sb::append, false),
                         nsFilter = listOf(official, mojmapNs, searge)
+                    )
+                } else if (tsrgV1) {
+                    // mcpconfig ≤1.12.x ships headerless tsrg v1
+                    // (`a FIELD` entries — no `id` column to filter);
+                    // UMF carries desc-less field rows that tiny v2 drops
+                    TsrgV1Reader.read(
+                        tsrg, tree,
+                        mapOf("source" to "official", "target" to "searge")
+                    )
+                    tree.emit(
+                        UMFWriter.write(sb::append, false),
+                        nsFilter = listOf(official, searge)
                     )
                 } else {
                     TsrgV2Reader.read(
                         tsrg, tree,
+                        tree.nsFiltered(setOf(Namespace("id")), inverted = true),
                         mapOf("obf" to "official", "srg" to "searge")
                     )
                     tree.emit(
-                        TinyV2Writer.write(sb::append),
+                        UMFWriter.write(sb::append, false),
                         nsFilter = listOf(official, searge)
                     )
                 }
             }
         }
-        return RuntimeMaterializedMappingSource(source, listOf(out), null)
+        // `searge` is not a user-facing named namespace (1.x flags it
+        // `provides(..., false)`): flagging it would make it win the
+        // default `devNamespace` pick ahead of yarn/mcp — a
+        // searge-only tree still resolves it via the last-namespace
+        // fallback
+        return RuntimeMaterializedMappingSource(
+            source, listOf(out), null,
+            namedNamespaces = emptySet()
+        )
     }
 
     /**
@@ -224,7 +261,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val zip = ctx.resolveChannel("parchment", params).singleOrNull()
             ?: throw GradleException(
                 "mappings { parchment() }: the environment's provider did " +
-                    "not resolve the parchment artifact"
+                        "not resolve the parchment artifact"
             )
         val json = extractEntry(
             zip, "parchment.json",

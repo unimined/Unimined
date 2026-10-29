@@ -1,8 +1,6 @@
 package xyz.wagyourtail.unimined.provider.native.download
 
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -73,15 +71,19 @@ class DownloaderTest {
 
         val path = d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
         assertEquals("v1", java.nio.file.Files.readString(path))
-        assertEquals("v1", java.nio.file.Files.readString(
-            d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
-        ))
+        assertEquals(
+            "v1", java.nio.file.Files.readString(
+                d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
+            )
+        )
         assertEquals(1, calls)
 
         now += 101
-        assertEquals("v2", java.nio.file.Files.readString(
-            d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
-        ))
+        assertEquals(
+            "v2", java.nio.file.Files.readString(
+                d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
+            )
+        )
         assertEquals(2, calls)
     }
 

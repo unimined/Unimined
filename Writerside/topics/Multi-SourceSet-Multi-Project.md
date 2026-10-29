@@ -43,6 +43,7 @@ unimined.minecraft(sourceSets.a) {
     combineWith(sourceSets.main)
 }
 ```
+
 </tab>
 <tab id="Kotlin-Multi-SourceSet-Same" title="Kotlin" group-key="kotlin">
 
@@ -58,6 +59,7 @@ unimined.minecraft(a) {
     combineWith(sourceSets.main.get())
 }
 ```
+
 </tab>
 </tabs>
 
@@ -177,6 +179,7 @@ unimined.minecraft(fabric) {
 }
 
 ```
+
 </tab>
 </tabs>
 
@@ -202,6 +205,7 @@ subprojects {
 }
 
 ```
+
 </tab>
 <tab id="Kotlin-Multi-Project" title="Kotlin" group-key="kotlin">
 
@@ -217,6 +221,7 @@ subprojects {
 }
 
 ```
+
 </tab>
 </tabs>
 
@@ -248,6 +253,7 @@ tasks.named("remapJar") {
     prodNamespace("intermediary")
 }
 ```
+
 </tab>
 <tab id="Kotlin-Common" title="Kotlin" group-key="kotlin">
 
@@ -274,6 +280,7 @@ tasks.named("remapJar") {
     prodNamespace("intermediary")
 }
 ```
+
 </tab>
 </tabs>
 
@@ -291,6 +298,7 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 <tab id="Kotlin-Fabric" title="Kotlin" group-key="kotlin">
 
@@ -305,6 +313,7 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 </tabs>
 
@@ -322,6 +331,7 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 <tab id="Kotlin-Forge" title="Kotlin" group-key="kotlin">
 
@@ -336,5 +346,6 @@ unimined.minecraft {
     }
 }
 ```
+
 </tab>
 </tabs>

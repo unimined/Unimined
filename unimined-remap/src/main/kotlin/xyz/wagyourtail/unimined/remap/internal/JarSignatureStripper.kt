@@ -5,11 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.Attributes
 import java.util.jar.Manifest
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
-import kotlin.io.path.outputStream
+import kotlin.io.path.*
 
 /**
  * Removes JAR signing metadata from a rewritten archive.

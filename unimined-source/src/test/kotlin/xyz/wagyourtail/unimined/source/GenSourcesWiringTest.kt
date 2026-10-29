@@ -1,16 +1,14 @@
 package xyz.wagyourtail.unimined.source
 
-import java.nio.file.Path
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.decompiler.vineflower.VineflowerDecompileTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
+import java.nio.file.Path
 
 /**
  * Verifies `genSources` wiring: per-environment task naming, dev-jar

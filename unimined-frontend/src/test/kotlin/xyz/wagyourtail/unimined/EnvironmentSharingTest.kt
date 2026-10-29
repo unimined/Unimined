@@ -10,27 +10,22 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
-import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
-import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
-import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
-import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
-import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
+import xyz.wagyourtail.unimined.minecraft.spi.*
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
-import xyz.wagyourtail.unimined.transform.GradlePlugin as TransformPlugin
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformContext
 import xyz.wagyourtail.unimined.transform.task.TransformMinecraftTask
 import java.nio.file.Path
+import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
+import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
+import xyz.wagyourtail.unimined.transform.GradlePlugin as TransformPlugin
 
 private class TestArtifacts(private val project: Project) : MinecraftArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()

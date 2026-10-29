@@ -5,12 +5,12 @@ plugins {
 dependencies {
     api(project(":unimined-minecraft"))
     api(project(":unimined-mapping"))
-    api(project(":unimined-mapping:mapping-uml"))
     api(project(":unimined-remap"))
     api(project(":unimined-transform"))
     api(project(":unimined-runs"))
     api(project(":unimined-runs-ide"))
     api(project(":unimined-source"))
+    api(project(":unimined-migrate"))
     api(project(":unimined-minecraft:provider-native"))
     api(project(":unimined-remap:remapper-tiny"))
     api(project(":unimined-remap:remapper-uml"))

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.transform.fabric.internal.FabricModAnalysis
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
@@ -69,6 +70,96 @@ class FabricModAnalysisTest {
         assertEquals(
             emptyList<String>(),
             FabricModAnalysis.loaderLibraries(jarWithInstaller("not json"))
+        )
+    }
+
+    private fun modJar(fmj: String, entries: Map<String, String> = emptyMap()): Path {
+        val jar = dir.resolve("mod-${System.nanoTime()}.jar")
+        JarOutputStream(jar.outputStream()).use { out ->
+            out.putNextEntry(JarEntry("fabric.mod.json"))
+            out.write(fmj.toByteArray())
+            out.closeEntry()
+            for ((path, content) in entries) {
+                out.putNextEntry(JarEntry(path))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+        }
+        return jar
+    }
+
+    @Test
+    fun `extractClassTweakers copies the declared accessWidener out of the mod jar`() {
+        val jar = modJar(
+            """{"accessWidener": "testmod.accesswidener"}""",
+            mapOf("testmod.accesswidener" to "accessWidener\tv2\tnamed\ttransitive-accessible\tclass\ta/b/C")
+        )
+        val extracted = FabricModAnalysis.extractClassTweakers(jar, dir.resolve("ct-cache"))
+        assertEquals(
+            "accessWidener\tv2\tnamed\ttransitive-accessible\tclass\ta/b/C",
+            Files.readString(extracted.single())
+        )
+    }
+
+    @Test
+    fun `extractClassTweakers returns empty without declared tweakers`() {
+        assertEquals(
+            emptyList<Path>(),
+            FabricModAnalysis.extractClassTweakers(modJar("{}"), dir.resolve("ct-cache"))
+        )
+    }
+
+    @Test
+    fun `extractClassTweakers skips missing declared entries`() {
+        assertEquals(
+            emptyList<Path>(),
+            FabricModAnalysis.extractClassTweakers(
+                modJar("""{"accessWidener": "missing.accesswidener"}"""),
+                dir.resolve("ct-cache")
+            )
+        )
+    }
+
+    @Test
+    fun `classTweakers reads the fmj v2 string form`() {
+        val jar = modJar("""{"classTweakers": "mod.classTweaker"}""")
+        assertEquals(
+            mapOf("mod.classTweaker" to "*"),
+            FabricModAnalysis.classTweakers(jar)
+        )
+    }
+
+    @Test
+    fun `classTweakers reads the fmj v2 array form with environments`() {
+        val jar = modJar(
+            """
+            {
+              "classTweakers": [
+                "a.classTweaker",
+                {"config": "b.classTweaker"},
+                {"config": "c.classTweaker", "environment": "client"}
+              ]
+            }
+            """.trimIndent()
+        )
+        assertEquals(
+            mapOf(
+                "a.classTweaker" to "*",
+                "b.classTweaker" to "*",
+                "c.classTweaker" to "client"
+            ),
+            FabricModAnalysis.classTweakers(jar)
+        )
+    }
+
+    @Test
+    fun `classTweakers merges v1 accessWidener and v2 classTweakers`() {
+        val jar = modJar(
+            """{"accessWidener": "mod.accesswidener", "classTweakers": "mod.classTweaker"}"""
+        )
+        assertEquals(
+            mapOf("mod.accesswidener" to "*", "mod.classTweaker" to "*"),
+            FabricModAnalysis.classTweakers(jar)
         )
     }
 

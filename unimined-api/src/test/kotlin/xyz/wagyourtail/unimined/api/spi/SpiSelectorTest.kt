@@ -87,7 +87,7 @@ class SpiSelectorTest {
         }
         assertEquals(
             "ambiguous test impl for FakeSpec(maxVersion=10): a, b; " +
-                "disambiguate via DSL override",
+                    "disambiguate via DSL override",
             e.message
         )
     }

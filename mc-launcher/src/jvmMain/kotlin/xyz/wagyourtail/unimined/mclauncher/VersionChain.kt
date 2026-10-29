@@ -1,11 +1,6 @@
 package xyz.wagyourtail.unimined.mclauncher
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 
 /**
  * `inheritsFrom` resolution: merge a version JSON with its parent chain
@@ -64,11 +59,13 @@ object VersionChain {
                     parent["libraries"] as? JsonArray,
                     value as? JsonArray
                 )
+
                 "downloads" -> merged["downloads"] = JsonObject(
                     LinkedHashMap<String, JsonElement>(
                         (parent["downloads"] as? JsonObject) ?: JsonObject(emptyMap())
                     ).apply { (value as? JsonObject)?.forEach { (k, v) -> put(k, v) } }
                 )
+
                 "arguments" -> merged["arguments"] = mergeArguments(
                     parent["arguments"] as? JsonObject, value as? JsonObject
                 )
@@ -93,7 +90,7 @@ object VersionChain {
                 merged[key] = JsonArray(
                     dedupeOptions(
                         (parent?.get(key) as? JsonArray ?: JsonArray(emptyList())).toList() +
-                            (value as? JsonArray ?: JsonArray(emptyList())).toList()
+                                (value as? JsonArray ?: JsonArray(emptyList())).toList()
                     )
                 )
             } else {

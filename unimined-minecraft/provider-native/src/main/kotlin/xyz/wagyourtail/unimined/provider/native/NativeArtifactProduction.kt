@@ -12,8 +12,8 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.time.Duration
-import java.util.Locale
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.*
 
 /**
  * Gradle-free artifact production shared by [NativeProvider] (which wraps
@@ -57,15 +57,18 @@ internal object NativeArtifactProduction {
         key: ArtifactKey,
         downloader: Downloader,
         resolver: ManifestResolver,
-        rebuild: Boolean
+        rebuild: Boolean,
+        mergeOptions: JarMerger.Options = JarMerger.Options()
     ): Path {
         return when (key) {
             ArtifactKey.CLIENT ->
                 downloadReference(key, metadata(versionId, resolver), versionId, downloader)
+
             ArtifactKey.SERVER -> unbundleServer(
                 downloadReference(key, metadata(versionId, resolver), versionId, downloader),
                 versionId, downloader.cacheDir, rebuild
             )
+
             ArtifactKey.MERGED -> {
                 val versionMetadata = metadata(versionId, resolver)
                 val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
@@ -83,9 +86,10 @@ internal object NativeArtifactProduction {
                 )
                 mergePath(
                     downloader.cacheDir, versionId, client, server,
-                    clientRef.sha1, serverRef.sha1, rebuild
+                    clientRef.sha1, serverRef.sha1, rebuild, mergeOptions
                 )
             }
+
             else -> throw GradleException("native provider cannot produce artifact key $key")
         }
     }
@@ -126,19 +130,34 @@ internal object NativeArtifactProduction {
         server: Path,
         clientSha1: String?,
         serverSha1: String?,
-        rebuild: Boolean
+        rebuild: Boolean,
+        options: JarMerger.Options = JarMerger.Options()
     ): Path {
         val clientTag = safeHashTag(clientSha1)
         val serverTag = safeHashTag(serverSha1)
+        // the merge options affect the output, so the side-cache key
+        // folds them in — library-set content (path+size+mtime per
+        // jar), globs, and the strip flag
+        val optionsTag = safeHashTag(
+            listOf(
+                options.stripBundledServerLibraries,
+                options.includeGlobs, options.excludeGlobs,
+                options.libraryJars.map {
+                    val attrs = Files.readAttributes(
+                        it, BasicFileAttributes::class.java)
+                    "${it.fileName}:${attrs.size()}:${attrs.lastModifiedTime()}"
+                }
+            ).hashCode().toString()
+        )
         val merged = cacheDir.resolve(
-            "versions/$versionId/merged-${JarMerger.FORMAT_VERSION}-$clientTag-$serverTag.jar"
+            "versions/$versionId/merged-${JarMerger.FORMAT_VERSION}-$clientTag-$serverTag-$optionsTag.jar"
         )
         if (Files.exists(merged) && !rebuild) return merged
 
         Files.createDirectories(merged.parent)
         val temporary = Files.createTempFile(merged.parent, ".merged-", ".jar")
         try {
-            JarMerger.merge(client, server, temporary)
+            JarMerger.merge(client, server, temporary, options)
             try {
                 Files.move(temporary, merged, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } catch (_: AtomicMoveNotSupportedException) {

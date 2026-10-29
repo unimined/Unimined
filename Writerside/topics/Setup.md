@@ -43,6 +43,7 @@ pluginManagement {
     }
 }
 ```
+
 </tab>
 </tabs>
 
@@ -65,6 +66,7 @@ plugins {
     id("xyz.wagyourtail.unimined") version "%version%"
 }
 ```
+
 </tab>
 </tabs>
 
@@ -115,7 +117,9 @@ unimined.minecraft {
 }
 
 ```
+
 </tab>
 </tabs>
 
-for more details about what's available within the `unimined.minecraft` block, see [The Api Source](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft/-minecraft-config/index.html)
+for more details about what's available within the `unimined.minecraft` block,
+see [The Api Source](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft/-minecraft-config/index.html)

@@ -5,6 +5,7 @@ plugins {
 dependencies {
     api(project(":unimined-minecraft"))
     api(project(":unimined-remap"))
+    api(libs.classtransform)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

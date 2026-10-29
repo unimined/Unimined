@@ -1,21 +1,15 @@
 package xyz.wagyourtail.unimined.source.task
 
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import kotlin.io.path.createDirectories
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFiles
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import kotlin.io.path.createDirectories
 
 /**
  * `genModSources`/`gen<Env>ModSources`: publishes decompiled mod
@@ -64,7 +58,7 @@ abstract class GenModSourcesTask : DefaultTask() {
                 specs.map { mod ->
                     repo.file(
                         "${mod.group.replace('.', '/')}/${mod.artifact}/${mod.version}/" +
-                            "${mod.artifact}-${mod.version}-sources.jar"
+                                "${mod.artifact}-${mod.version}-sources.jar"
                     )
                 }
             }
@@ -81,11 +75,11 @@ abstract class GenModSourcesTask : DefaultTask() {
             val candidates = jarsByName[mod.fileName]
                 ?: error(
                     "genModSources: no sources jar named '${mod.fileName}' for $gav " +
-                        "in the resolved mod-sources view"
+                            "in the resolved mod-sources view"
                 )
             val jar = candidates.singleOrNull() ?: error(
                 "genModSources: ${candidates.size} artifacts named '${mod.fileName}' " +
-                    "in the mod-sources view — cannot pick the sources jar for $gav"
+                        "in the mod-sources view — cannot pick the sources jar for $gav"
             )
             val moduleDir = LocalMavenPublisher.moduleDir(
                 localRepoDir.get().asFile.toPath(), mod.group, mod.artifact, mod.version

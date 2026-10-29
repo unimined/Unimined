@@ -19,4 +19,15 @@ interface RunConfigSpec {
 
     val environment: MutableMap<String, String>
 
+    /**
+     * `${key}` substitution suppliers applied to `jvmArgs`,
+     * `programArgs`, and `environment` at launch — the 1.x
+     * `RunConfig.properties` seam. Transforms register
+     * loader-specific keys (`modules`, `minecraft_classpath_file`,
+     * `source_roots`...); the task supplies the environment-level
+     * ones (`assets_root`, `game_dir`, `natives_root`,
+     * `version_type`...).
+     */
+    val properties: MutableMap<String, () -> String>
+
 }

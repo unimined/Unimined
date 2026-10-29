@@ -123,7 +123,7 @@ class Downloader(
 
     private fun missingCache(url: String, dest: Path) = IOException(
         "offline mode: no valid cached artifact for $url (expected at $dest); " +
-            "resolve this Minecraft version once while online"
+                "resolve this Minecraft version once while online"
     )
 
     private fun writeAtomically(dest: Path, bytes: ByteArray) {

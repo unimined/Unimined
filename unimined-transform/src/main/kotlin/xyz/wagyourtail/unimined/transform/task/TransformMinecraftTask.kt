@@ -4,11 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
 
 /**

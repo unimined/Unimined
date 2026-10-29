@@ -1,9 +1,9 @@
 package xyz.wagyourtail.unimined.source
 
-import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import javax.inject.Inject
 
 /**
  * `source { }` — decompiler engine selection and options for

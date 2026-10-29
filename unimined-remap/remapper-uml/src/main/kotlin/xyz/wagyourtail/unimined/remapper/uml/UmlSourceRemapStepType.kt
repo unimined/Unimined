@@ -1,10 +1,9 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
-import kotlin.reflect.KClass
 import org.gradle.api.GradleException
-import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.remapper.source.SourceOptions
 import xyz.wagyourtail.unimined.mapping.remapper.source.SourceRemapper
@@ -17,6 +16,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
+import kotlin.reflect.KClass
 
 /**
  * The `remap` step for [RemapSurface.SOURCES] — UML's PSI-driven
@@ -44,23 +44,22 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
         ArtifactStep { input, c -> remap(input, c) }
 
     private fun remap(input: Path, ctx: StepContext): Path {
-        val view = ctx.mappings?.view<UmlMappingTreeView>()
+        val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
-                "remap step 'uml' (sources) requires mapping data exposing a UmlMappingTreeView"
+                "remap step 'uml' (sources) requires mapping data exposing a UML MappingTree view"
             )
         val spec = ctx.spec
         val target = Files.createTempDirectory(ctx.workDir, "uml-src")
             .resolve(input.fileName.toString())
 
-        ctx.logger.info(
-            "[remap/uml:sources] remapping sources {} {} -> {}",
-            input.fileName, spec.sourceNamespace, spec.targetNamespace
+        ctx.log.subLogger("uml:sources").info(
+            "remapping sources ${input.fileName} ${spec.sourceNamespace} -> ${spec.targetNamespace}"
         )
 
         SourceRemapper.remap(
             input,
             target,
-            view.tree,
+            view,
             Namespace(spec.sourceNamespace),
             Namespace(spec.targetNamespace),
             classpath = ctx.classpath.filter { it.exists() },

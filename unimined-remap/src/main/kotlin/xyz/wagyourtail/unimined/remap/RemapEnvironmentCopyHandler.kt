@@ -36,7 +36,7 @@ internal class RemapEnvironmentCopyHandler(
         return owner.extensions.findByType(RemapExtension::class.java)
             ?: throw GradleException(
                 "Project '${owner.path}' does not have a Unimined remap extension; " +
-                    "apply the remap or frontend plugin before sharing remap configuration"
+                        "apply the remap or frontend plugin before sharing remap configuration"
             )
     }
 

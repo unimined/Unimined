@@ -2,23 +2,21 @@ package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
-import xyz.wagyourtail.unimined.api.mapping.MappingVisitor
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.Side
-import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.api.spi.SpiSelectionException
+import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.minecraft.fakes.FakeProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import java.nio.file.Path
 import java.nio.file.Files
+import java.nio.file.Path
 
 class MinecraftExtensionTest {
 
@@ -84,14 +82,17 @@ class MinecraftExtensionTest {
         ext.mappings { it.file(mappingFile) }
 
         val tree = ext.artifacts().get().mappings.get()
-        assertEquals(listOf("official", "named"), tree.namespaces)
-        val mapped = mutableListOf<String>()
-        tree.accept("official", "named", object : MappingVisitor {
-            override fun visitClass(srcName: String, dstName: String) {
-                mapped += "$srcName->$dstName"
-            }
-        })
-        assertEquals(listOf("a/A->b/B"), mapped)
+        assertEquals(
+            listOf("official", "named"),
+            tree.namespaces.map { it.name }
+        )
+        val off = tree.namespaces.first { it.name == "official" }
+        val named = tree.namespaces.first { it.name == "named" }
+        assertEquals(
+            "b/B",
+            tree.getClass(off, InternalName.unchecked("a/A"))
+                ?.names?.get(named)?.value
+        )
     }
 
     @Test
@@ -109,7 +110,7 @@ class MinecraftExtensionTest {
 
         assertEquals(
             listOf("official", "named"),
-            ext.mappingData().get().view<xyz.wagyourtail.unimined.api.mapping.MappingTree>()!!.namespaces
+            ext.mappingData().get().view<xyz.wagyourtail.unimined.mapping.MappingTree>()!!.namespaces.map { it.name }
         )
     }
 
@@ -140,17 +141,11 @@ class MinecraftExtensionTest {
         assertEquals("forge", ext.spec("forge").loader!!.name)
 
         fun remappedClass(environmentId: String): String {
-            var mapped = ""
-            ext.artifacts(environmentId).get().mappings.get().accept(
-                "official",
-                "named",
-                object : MappingVisitor {
-                    override fun visitClass(srcName: String, dstName: String) {
-                        mapped = dstName
-                    }
-                }
-            )
-            return mapped
+            val tree = ext.artifacts(environmentId).get().mappings.get()
+            val off = tree.namespaces.first { it.name == "official" }
+            val named = tree.namespaces.first { it.name == "named" }
+            return tree.getClass(off, InternalName.unchecked("a/A"))
+                ?.names?.get(named)?.value ?: ""
         }
         assertEquals("fabric/A", remappedClass("fabric"))
         assertEquals("forge/A", remappedClass("forge"))
@@ -219,7 +214,8 @@ class MinecraftExtensionTest {
 
         assertEquals(
             listOf("official", "named"),
-            ext.mappingData("fabric").get().view<xyz.wagyourtail.unimined.api.mapping.MappingTree>()!!.namespaces
+            ext.mappingData("fabric").get()
+                .view<xyz.wagyourtail.unimined.mapping.MappingTree>()!!.namespaces.map { it.name }
         )
     }
 

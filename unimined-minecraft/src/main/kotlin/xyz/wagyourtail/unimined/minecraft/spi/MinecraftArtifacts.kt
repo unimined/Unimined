@@ -4,7 +4,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
+import xyz.wagyourtail.unimined.mapping.MappingTree
 
 /**
  * The provider output contract — deliberately the *only* seam between

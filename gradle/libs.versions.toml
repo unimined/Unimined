@@ -3,9 +3,11 @@ java = "17"
 kotlin = "2.4.21"
 commons = "1.0.5-SNAPSHOT"
 kotlinx-serialization = "1.12.0"
-unimined-mapping-library = "2.2.0"
+unimined-mapping-library = "2.4.0"
 tiny-remapper = "0.15.0"
 jst-cli = "2.0.11"
+classtransform = "1.15.1"
+binarypatcher = "1.1.1"
 junit = "6.1.3"
 
 [plugins]
@@ -26,9 +28,26 @@ unimined-mapping-remapper = { module = "xyz.wagyourtail.unimined.mapping:unimine
 tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-remapper" }
 
 asm = { module = "org.ow2.asm:asm", version = "9.9" }
+asm-tree = { module = "org.ow2.asm:asm-tree", version = "9.9" }
 
 # note: consumer should resolve the `:all` (fat) classifier
 jst-cli = { module = "net.neoforged.jst:jst-cli", version.ref = "jst-cli" }
+# GDiffPatcher — the only class binpatch application needs (the
+# binarypatcher fat-jar dep only re-bundled this + lzma-java)
+javaxdelta = { module = "com.nothome:javaxdelta", version = "2.0.1" }
+# declarative class transforms for FG2-era dev fixes (applied jar-side, @CInline — no runtime dep)
+classtransform = { module = "net.lenni0451.classtransform:core", version.ref = "classtransform" }
+classtransform-acp = { module = "net.lenni0451.classtransform:additionalclassprovider", version.ref = "classtransform" }
+commons-compress = { module = "org.apache.commons:commons-compress", version = "1.28.0" }
+# runtime dep of commons-compress's LZMACompressorInputStream (.lzma format)
+xz = { module = "org.tukaani:xz", version = "1.10" }
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+# compileOnly against user-applied Kotlin Gradle plugin — provides
+# KotlinCompilationTask/KotlinJvmCompilerOptions/JvmTarget (KGP >= 1.8)
+kotlin-gradle-plugin-api = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin-api", version.ref = "kotlin" }
+
+# UML logs through kotlin-logging -> slf4j; tests need a binding
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "1.7.36" }

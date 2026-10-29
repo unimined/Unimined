@@ -1,72 +1,91 @@
 package xyz.wagyourtail.unimined.api.mapping
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import xyz.wagyourtail.unimined.mapping.MutableMappingTree
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.two.UnqualifiedName
+import xyz.wagyourtail.unimined.mapping.mappingTree
 
 class MappingBundleTest {
 
-    private val tree = object : MappingTree {
-        override val namespaces = listOf("official", "named")
-        override fun accept(sourceNamespace: String, targetNamespace: String, visitor: MappingVisitor) {
-            visitor.visitClass("a/A", "b/B")
-            visitor.visitField("a/A", "f", "I", "g")
-            visitor.visitMethod("a/A", "m", "()V", "n")
-            visitor.visitMethodArg("a/A", "m", "()V", 0, "arg0")
-            visitor.visitMethodVar("a/A", "m", "()V", 2, "var2")
-            visitor.visitPackage("a", "b")
+    private fun tree(): MutableMappingTree = mappingTree("official", "named") {
+        pkg("a/", "b/")
+        clazz("a/A", "b/B") {
+            field("f;I", "g")
+            method("m;()V", "n") {
+                parameter(0, null, null, "arg0")
+                localVariable(2, null, null, "var2")
+            }
         }
     }
 
-    private fun collect(visitor: MappingVisitor.() -> Unit) = mutableListOf<String>().also { out ->
-        object : MappingVisitor {
-            override fun visitClass(srcName: String, dstName: String) { out += "c:$srcName->$dstName" }
-            override fun visitField(srcClass: String, srcName: String, srcDesc: String?, dstName: String) { out += "f:$srcClass.$srcName->$dstName" }
-            override fun visitMethod(srcClass: String, srcName: String, srcDesc: String?, dstName: String) { out += "m:$srcClass.$srcName$srcDesc->$dstName" }
-            override fun visitMethodArg(srcClass: String, srcMethod: String, srcDesc: String?, index: Int, dstName: String) { out += "arg:$index->$dstName" }
-            override fun visitMethodVar(srcClass: String, srcMethod: String, srcDesc: String?, lvIndex: Int, dstName: String) { out += "var:$lvIndex->$dstName" }
-            override fun visitPackage(srcName: String, dstName: String) { out += "p:$srcName->$dstName" }
-        }.visitor()
+    @Test
+    fun `capture emits one row per mapped element`() {
+        val bundle = MappingBundle.capture("official", "named", tree())
+        assertEquals(listOf("official", "named"), bundle.namespaces)
+        assertEquals(6, bundle.rows.size)
+        assertEquals(
+            setOf(
+                "p:a/->b/", "c:a/A->b/B", "f:a/A.f->g",
+                "m:a/A.m->n", "arg:0->arg0", "var:2->var2"
+            ),
+            bundle.rows.map { row ->
+                when (row.kind) {
+                    MappingBundle.Kind.PACKAGE -> "p:${row.srcName}->${row.dstName}"
+                    MappingBundle.Kind.CLASS -> "c:${row.srcName}->${row.dstName}"
+                    MappingBundle.Kind.FIELD -> "f:${row.srcClass}.${row.srcName}->${row.dstName}"
+                    MappingBundle.Kind.METHOD -> "m:${row.srcClass}.${row.srcName}->${row.dstName}"
+                    MappingBundle.Kind.METHOD_ARG -> "arg:${row.index}->${row.dstName}"
+                    MappingBundle.Kind.METHOD_VAR -> "var:${row.index}->${row.dstName}"
+                }
+            }.toSet()
+        )
     }
 
     @Test
-    fun `capture and replay round-trip`() {
-        val bundle = MappingBundle.capture("official", "named", tree)
-        assertEquals(listOf("official", "named"), bundle.namespaces)
-        assertEquals(6, bundle.rows.size)
-
-        val replayed = collect { bundle.accept("official", "named", this) }
-        assertEquals(
-            listOf("c:a/A->b/B", "f:a/A.f->g", "m:a/A.m()V->n", "arg:0->arg0", "var:2->var2", "p:a->b"),
-            replayed
-        )
+    fun `capture toUmlTree round-trips into a mapping tree`() {
+        val bundle = MappingBundle.capture("official", "named", tree())
+        val restored = bundle.toUmlTree()
+        val src = restored.namespaces.first { it.name == "official" }
+        val dst = restored.namespaces.first { it.name == "named" }
+        val cls = restored.getClass(src, InternalName.unchecked("a/A"))
+        assertNotNull(cls)
+        assertEquals("b/B", cls!!.names[dst]?.value)
+        val method = with(restored) {
+            cls.getMethod(
+                src, UnqualifiedName.unchecked("m"),
+                xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor.unchecked("()V")
+            )
+        }
+        assertEquals("n", method?.names?.get(dst)?.value)
     }
 
     @Test
     fun `json round-trip preserves rows`() {
         val restored = MappingBundle.fromJson(
-            MappingBundle.capture("official", "named", tree).toJson()
+            MappingBundle.capture("official", "named", tree()).toJson()
         )
         assertEquals("official", restored.source)
         assertEquals("named", restored.target)
-        val replayed = collect { restored.accept("official", "named", this) }
-        assertEquals(6, replayed.size)
-        assertEquals("c:a/A->b/B", replayed.first())
+        assertEquals(6, restored.rows.size)
+        assertEquals(MappingBundle.Kind.CLASS, restored.rows[1].kind)
     }
 
     @Test
-    fun `accept rejects a different namespace pair`() {
-        val bundle = MappingBundle.capture("official", "named", tree)
-        assertThrows(IllegalArgumentException::class.java) {
-            bundle.accept("named", "official", object : MappingVisitor {})
+    fun `capture rejects a namespace the tree lacks`() {
+        assertThrows(IllegalStateException::class.java) {
+            MappingBundle.capture("named", "other", tree())
         }
     }
 
     @Test
     fun `bundle exposes the tree view through BundleMappingData`() {
-        val bundle = MappingBundle.capture("official", "named", tree)
-        val data = BundleMappingData(bundle)
-        assertEquals(bundle, data.view(MappingTree::class.java))
+        val data = BundleMappingData(MappingBundle.capture("official", "named", tree()))
+        val tree = data.view(xyz.wagyourtail.unimined.mapping.MappingTree::class.java)
+        assertNotNull(tree)
+        val src = tree!!.namespaces.first { it.name == "official" }
+        assertNotNull(tree.getClass(src, InternalName.unchecked("a/A")))
     }
 
 }

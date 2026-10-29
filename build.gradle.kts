@@ -1,5 +1,3 @@
-import org.gradle.api.plugins.BasePluginExtension
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import xyz.wagyourtail.commons.gradle.GradleProjectExtension
 
@@ -60,7 +58,7 @@ subprojects {
                 name = "WagYourMaven"
                 url = uri(
                     "https://maven.wagyourtail.xyz/" +
-                        if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/"
+                            if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/"
                 )
                 credentials {
                     username = (findProperty("mvn.user") as String?)

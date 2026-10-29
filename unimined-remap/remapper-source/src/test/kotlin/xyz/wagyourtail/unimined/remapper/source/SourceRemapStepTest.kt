@@ -1,11 +1,10 @@
 package xyz.wagyourtail.unimined.remapper.source
 
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.gradle.api.file.FileSystemLocation
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -31,7 +30,7 @@ class SourceRemapStepTest {
     @Test
     fun `only the sources surface is supported`() {
         val stepSpec = objects.newInstance(SourceRemapStepSpec::class.java)
-        assertThrows<IllegalArgumentException> {
+        assertThrows<xyz.wagyourtail.unimined.api.spi.SpiSelectionException> {
             RemapStepRegistry().resolve(stepSpec, RemapSurface.JAR, spec)
         }
     }

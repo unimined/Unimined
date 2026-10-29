@@ -5,9 +5,8 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
-import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
+import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 import xyz.wagyourtail.unimined.mapping.internal.RuntimeMappingContext
@@ -27,11 +26,8 @@ abstract class MappingExtension @Inject constructor(
     /** Mapping providers discovered from the plugin classpath. */
     val registry = MappingProviderRegistry()
 
-    /** View adapters deriving missing MappingDataView kinds — portable→UML default. */
-    val viewAdapters = MappingViewAdapterRegistry()
-
     /** Composers merging per-source MappingData — DefaultMappingComposer fallback. */
-    val composers = MappingComposerRegistry(viewAdapters)
+    val composers = MappingComposerRegistry()
 
     /** Ordered post-processors applied to composed data before consumers. */
     val postProcessors = MappingPostProcessorRegistry()
@@ -43,6 +39,9 @@ abstract class MappingExtension @Inject constructor(
      */
     abstract val cacheDir: DirectoryProperty
 
+    /** Global merged-mapping cache root (content-keyed; empty disables). */
+    abstract val globalCacheDir: DirectoryProperty
+
     private val logger = Logging.getLogger(MappingExtension::class.java)
 
     private fun ctx(
@@ -50,7 +49,8 @@ abstract class MappingExtension @Inject constructor(
         resolveMaven: Function<String, Path>,
         resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
     ) = RuntimeMappingContext(
-        environmentId, logger, cacheDir.orNull?.asFile?.toPath(), resolveMaven::apply,
+        environmentId, logger, cacheDir.orNull?.asFile?.toPath(),
+        globalCacheDir.orNull?.asFile?.toPath(), resolveMaven::apply,
         resolveChannel?.let { ch -> { c: String, p: Map<String, String> -> ch.apply(c, p) } }
             ?: { channel, _ ->
                 throw UnsupportedOperationException(
@@ -92,7 +92,10 @@ abstract class MappingExtension @Inject constructor(
      */
     fun readFiles(files: List<Path>, environmentId: String): MappingData =
         MappingResolver.readFiles(
-            files, MappingResolver.standaloneContext(environmentId, logger),
+            files, MappingResolver.standaloneContext(
+                environmentId, logger,
+                globalCacheDir.orNull?.asFile?.toPath()
+            ),
             registry, composers, postProcessors
         )
 
@@ -111,7 +114,7 @@ abstract class MappingExtension @Inject constructor(
     ): Provider<String> = providers.provider {
         val data = readFiles(files.files.map { it.toPath() }, environmentId)
         val tree = data.view<MappingTree>() ?: error(
-            "mapping provider did not expose a portable MappingTree view"
+            "mapping provider did not expose a UML MappingTree view"
         )
         MappingBundle.capture(from.get(), to.get(), tree).toJson()
     }

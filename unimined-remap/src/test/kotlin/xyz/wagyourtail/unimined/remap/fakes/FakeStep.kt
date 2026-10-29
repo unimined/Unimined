@@ -1,17 +1,13 @@
 package xyz.wagyourtail.unimined.remap.fakes
 
-import kotlin.reflect.KClass
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
-import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
-import xyz.wagyourtail.unimined.remap.spi.RemapStepType
-import xyz.wagyourtail.unimined.remap.spi.RemapSurface
-import xyz.wagyourtail.unimined.remap.spi.StepContext
-import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.spi.*
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import kotlin.reflect.KClass
 
 /**
  * Spec for the test-only fake step — declared via
@@ -50,11 +46,13 @@ class FakeStep : RemapStepType<FakeStepSpec> {
     override val stepName = "fakestep"
     override val specType: KClass<FakeStepSpec> = FakeStepSpec::class
     override val surfaces: Set<RemapSurface> = RemapSurface.entries.toSet()
+    override val needsAccessModel = true
 
     override fun supports(spec: RemapSpec) = true
 
     override fun create(spec: FakeStepSpec, ctx: StepContext) = ArtifactStep { input, c ->
         calls.add(input)
+        accessModels.add(c.accessModel)
         out(c, calls.size).also { writeMarkedCopy(input, it) }
     }
 
@@ -66,7 +64,12 @@ class FakeStep : RemapStepType<FakeStepSpec> {
 
         val calls = mutableListOf<Path>()
 
-        fun reset() = calls.clear()
+        val accessModels = mutableListOf<xyz.wagyourtail.unimined.api.access.AccessModel?>()
+
+        fun reset() {
+            calls.clear()
+            accessModels.clear()
+        }
 
     }
 

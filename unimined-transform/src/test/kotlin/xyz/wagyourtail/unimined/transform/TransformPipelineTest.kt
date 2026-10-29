@@ -9,15 +9,10 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
-import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
-import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
-import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
+import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.minecraft.spi.*
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformContext
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
@@ -56,7 +51,9 @@ private class FakeTransformer(
     val seenInputs = mutableListOf<List<String>>()
     val seenEnvironments = mutableListOf<String>()
 
-    init { order.add("declare:$tag") }
+    init {
+        order.add("declare:$tag")
+    }
 
     override fun configure(ctx: TransformContext) {
         seenEnvironments += ctx.environmentId
@@ -120,10 +117,14 @@ class TransformPipelineTest {
         // main artifact = decorated output of last transformer
         assertEquals("decorated-aw.jar", pipeline.output.get().asFile.name)
         // t1's input wired to the provider artifact; t2's to decorated t1
-        assertEquals("input.jar",
-            t1.transformTaskProvider.get().inputArtifact.get().asFile.name)
-        assertEquals("decorated-aw.jar",
-            t2.transformTaskProvider.get().inputArtifact.get().asFile.name)
+        assertEquals(
+            "input.jar",
+            t1.transformTaskProvider.get().inputArtifact.get().asFile.name
+        )
+        assertEquals(
+            "decorated-aw.jar",
+            t2.transformTaskProvider.get().inputArtifact.get().asFile.name
+        )
     }
 
     @Test

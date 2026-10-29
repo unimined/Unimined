@@ -38,7 +38,7 @@ class MappingsSpecImplTest {
         )
         assertEquals(
             "official",
-            (sources[2] as MappingsSpecImpl.Source.Builtin).name
+            (sources[2] as MappingsSpecImpl.Source.Builtin).nameProvider.get()
         )
     }
 

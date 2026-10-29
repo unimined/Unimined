@@ -8,6 +8,7 @@ internal class RuntimeMappingContext(
     override val environmentId: String,
     override val logger: Logger,
     override val cacheDir: Path?,
+    override val globalCacheDir: Path? = null,
     private val mavenResolver: (String) -> Path,
     private val channelResolver: (String, Map<String, String>) -> List<Path> = { channel, _ ->
         throw UnsupportedOperationException(

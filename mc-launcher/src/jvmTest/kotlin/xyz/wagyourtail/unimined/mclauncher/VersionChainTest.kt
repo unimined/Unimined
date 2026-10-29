@@ -4,10 +4,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 /** `inheritsFrom` chain merge semantics. */
 class VersionChainTest {

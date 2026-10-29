@@ -1,10 +1,14 @@
 package xyz.wagyourtail.unimined.runs.internal
 
+import xyz.wagyourtail.unimined.api.util.UniminedCache
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
+import java.io.File
 import xyz.wagyourtail.unimined.mclauncher.Natives
 import xyz.wagyourtail.unimined.mclauncher.OperatingSystem
 import xyz.wagyourtail.unimined.mclauncher.VersionChain
@@ -77,6 +81,7 @@ internal object RunsWiring {
         val environmentId = environment.environmentId
         val taskName = "run${run.name.replaceFirstChar(Char::uppercase)}"
         val artifacts = minecraft.artifacts(environmentId)
+        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
         val launchMetadata = artifacts.map { resolved ->
             resolved.launch
                 ?: error("provider for environment '$environmentId' exposes no launch metadata")
@@ -94,8 +99,8 @@ internal object RunsWiring {
         project.tasks.register(taskName, MinecraftRunTask::class.java) { task ->
             task.group = "unimined"
             task.description = "Launch Minecraft " +
-                (environment.version.orNull ?: "<unset>") +
-                " (${run.name}, env '$environmentId')"
+                    (environment.version.orNull ?: "<unset>") +
+                    " (${run.name}, env '$environmentId')"
             task.launchMetadata.set(launchMetadata)
             // SourceSet.runtimeClasspath — includes the dev MC artifact,
             // remapped mod views, and provider extras added as file
@@ -113,8 +118,13 @@ internal object RunsWiring {
             task.nativesDirectory.set(
                 project.layout.buildDirectory.dir("unimined/natives/$environmentId")
             )
+            // asset objects are sha1-addressed and identical across
+            // projects/versions — global cache (mojang launcher model),
+            // not build/ which clean wipes and projects duplicate
             task.assetsDirectory.set(
-                project.layout.buildDirectory.dir("unimined/assets")
+                project.layout.dir(project.provider {
+                    UniminedCache.global(project).resolve("assets").toFile()
+                })
             )
             task.side.set(run.side)
             task.mainClass.set(mutated.map { it.mainClass }.orElse(run.mainClass))
@@ -124,12 +134,74 @@ internal object RunsWiring {
             task.mutatedProgramArgs.set(mutated.map { it.programArgs })
             task.mutatedEnvironment.set(mutated.map { it.environment })
             task.environmentVariables.set(run.environmentVariables)
+            task.stdin.set(run.stdin)
+            task.launcherVersion.set(
+                project.provider {
+                    project.version.toString().ifBlank { "2.0.0" }
+                })
+            // `${key}` substitution values — environment-level defaults;
+            // transform mutators add loader-specific keys through the
+            // spec's `properties` (e.g. forge's `modules`,
+            // `minecraft_classpath_file`, `source_roots`)
+            task.launchProperties.put(
+                "version_name",
+                environment.version.orElse("unspecified")
+            )
+            task.launchProperties.put(
+                "version_type",
+                project.providers.provider { "release" })
+            task.launchProperties.put(
+                "assets_root",
+                task.assetsDirectory.map { it.asFile.absolutePath })
+            task.launchProperties.put("assets_index", task.assetIndexId)
+            task.launchProperties.put("assets_index_name", task.assetIndexId)
+            task.launchProperties.put("asset_index", task.assetIndexId)
+            task.launchProperties.put(
+                "game_dir",
+                task.runDirectory.map { it.asFile.absolutePath })
+            task.launchProperties.put(
+                "game_directory",
+                task.runDirectory.map { it.asFile.absolutePath })
+            task.launchProperties.put(
+                "natives_root",
+                task.nativesDirectory.map { it.asFile.absolutePath })
+            task.launchProperties.put(
+                "natives_directory",
+                task.nativesDirectory.map { it.asFile.absolutePath })
+            task.launchProperties.put(
+                "library_directory",
+                task.runDirectory.map {
+                    it.dir("libraries").asFile.absolutePath
+                })
+            task.mutatedLaunchProperties.set(mutated.map {
+                it.properties.mapValues { (_, v) -> v() }
+            })
             task.features.set(run.features)
             task.username.set(run.username)
             task.width.set(run.width)
             task.height.set(run.height)
             task.downloadAssets.set(run.downloadAssets)
             task.offline.set(project.gradle.startParameter.isOffline)
+            // `-Punimined.run.dryRun` prints the assembled launch
+            // instead of exec'ing — the runs-verification surface
+            task.dryRun.set(
+                project.providers
+                    .gradleProperty("unimined.run.dryRun")
+                    .map { it.toBoolean() }
+                    .orElse(false))
+            task.requiredJavaVersion.set(environment.requiredJavaVersion)
+            task.useToolchains.set(environment.useToolchains)
+            // resolved at execution — toolchain resolution (and any
+            // auto-provisioning) stays out of configuration time
+            task.javaExecutable.set(environment.useToolchains.flatMap { use ->
+                if (use) toolchains.launcherFor {
+                    it.languageVersion.set(
+                        environment.requiredJavaVersion.map(JavaLanguageVersion::of))
+                }.map { it.executablePath.asFile.absolutePath }
+                else project.providers.provider {
+                    File(System.getProperty("java.home"), "bin/java").absolutePath
+                }
+            })
         }
     }
 

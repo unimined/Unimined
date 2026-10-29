@@ -8,10 +8,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import javax.inject.Inject
 
@@ -54,9 +51,30 @@ abstract class RemappedViewsSpec @Inject constructor(
     @get:Classpath
     abstract val classpath: ConfigurableFileCollection
 
+    /**
+     * Serialized
+     * [xyz.wagyourtail.unimined.api.access.AccessModel] shared by every
+     * generated view — sections are keyed by the namespace their names
+     * are written in, so one model can serve mixed-namespace batches.
+     */
+    @get:Internal
+    abstract val accessModel: Property<String>
+
     /** Pipeline shared by every generated view; defaults to this environment's JAR pipeline. */
     @get:Nested
     abstract val stepSpecs: ListProperty<StepSpec>
+
+    /**
+     * Mod indicators shared by every generated view — see
+     * [RemappedViewSpec.modMarkers]. Convention carries
+     * `ModMarkerScan.DEFAULT_MARKERS` plus environment contributions.
+     */
+    @get:Input
+    abstract val modMarkers: ListProperty<String>
+
+    /** See [RemappedViewSpec.onlyRemapMarkedJars]. */
+    @get:Input
+    abstract val onlyRemapMarkedJars: Property<Boolean>
 
     /** Add a namespace using the default `<baseName><Namespace>` dependency bucket. */
     fun namespace(sourceNamespace: String): RemappedNamespaceSpec =

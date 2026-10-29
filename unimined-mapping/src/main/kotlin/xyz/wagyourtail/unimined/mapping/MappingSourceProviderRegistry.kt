@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.mapping
 
-import java.util.ServiceLoader
 import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingSourceProvider
 import xyz.wagyourtail.unimined.api.spi.SpiSelector
@@ -8,6 +7,7 @@ import xyz.wagyourtail.unimined.api.spi.spiSelector
 import xyz.wagyourtail.unimined.mapping.sources.BuiltinMappingSourceProvider
 import xyz.wagyourtail.unimined.mapping.sources.FileMappingSourceProvider
 import xyz.wagyourtail.unimined.mapping.sources.MavenMappingSourceProvider
+import java.util.*
 
 /**
  * Registry of [MappingSourceProvider] materializers — `file`, `maven`, and

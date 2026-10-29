@@ -6,15 +6,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 
 /**
  * Typed model of a (possibly chain-merged) version JSON document. Every
@@ -106,6 +98,7 @@ class VersionData(
                             Json.decodeFromJsonElement<List<Rule>>(it)
                         } ?: emptyList()
                     )
+
                     else -> throw SerializationException(
                         "unexpected arguments entry: $element"
                     )
@@ -201,7 +194,8 @@ class VersionData(
             }
             val ruleVersion = ruleOs?.version
             if (ruleVersion != null &&
-                !System.getProperty("os.version", "").matches(Regex(ruleVersion))) return false
+                !System.getProperty("os.version", "").matches(Regex(ruleVersion))
+            ) return false
             for ((feature, required) in features) {
                 if (enabledFeatures.contains(feature) != required) return false
             }

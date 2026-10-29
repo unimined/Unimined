@@ -3,8 +3,8 @@ package xyz.wagyourtail.unimined.mapping.processors
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingPostProcessor
-import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.impl.fillInitNames
 
@@ -20,7 +20,7 @@ class InitCompletionPostProcessor : MappingPostProcessor {
     override val name = "init-completion"
 
     override fun process(data: MappingData, ctx: MappingContext): MappingData {
-        val tree = data.view<UmlMappingTreeView>()?.tree
+        val tree = data.view<MappingTree>()
         (tree as? MutableMappingTree)?.fillInitNames()
         return data
     }

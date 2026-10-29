@@ -33,8 +33,8 @@ object EnvironmentCopyRegistry {
             if (unsupported.isNotEmpty()) {
                 throw GradleException(
                     "No Unimined component handles environment sections " +
-                        unsupported.joinToString { it.name } +
-                        " in project '${targetProject.path}'"
+                            unsupported.joinToString { it.name } +
+                            " in project '${targetProject.path}'"
                 )
             }
         }

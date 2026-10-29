@@ -1,8 +1,11 @@
 package xyz.wagyourtail.unimined.remap.spi
 
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.commons.core.logger.Logger as CommonsLogger
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import java.nio.file.Path
 
 /**
@@ -27,9 +30,26 @@ interface StepContext {
      *  [RemapStepType.needsClasspath]. */
     val classpath: List<Path>
 
+    /**
+     * The merged AW/AT/CT access rules for the remap batch — the
+     * remap-analysis overlay `remap` engines feed to their analysis pass
+     * so widened members participate in member propagation. `null` when
+     * the host contributed no model or no step declared
+     * [RemapStepType.needsAccessModel]. The overlay is strictly additive:
+     * its absence must never fail a step.
+     */
+    val accessModel: AccessModel?
+        get() = null
+
     /** Scratch directory for step intermediates. */
     val workDir: Path
 
     val logger: Logger
+
+    /** Env-scoped structured logger (`[Unimined/<env>/…]`) — steps should
+     *  prefer `log.subLogger("<type>:<step>")` over raw [logger] so output
+     *  carries the environment it belongs to. */
+    val log: CommonsLogger
+        get() = uniminedLogger(logger)
 
 }

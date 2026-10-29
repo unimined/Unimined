@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.minecraft.spi.ArtifactProductionRequest
 import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifactProducer
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
+import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
 import java.nio.file.Path
 import java.time.Duration
 
@@ -18,8 +19,8 @@ class NativeArtifactProducer : MinecraftArtifactProducer {
 
     override val name: String = "native"
 
-    /** 1 = unbundled server artifact + `META-INF`-stripped merge. */
-    override val artifactFormatVersion: Int = 1
+    /** 2 = merge strips server-bundled `minecraftLibraries` entries. */
+    override val artifactFormatVersion: Int = 2
 
     override fun supports(spec: MinecraftSpec): Boolean = true
 
@@ -43,7 +44,13 @@ class NativeArtifactProducer : MinecraftArtifactProducer {
             key = request.artifactKey,
             downloader = downloader,
             resolver = resolver,
-            rebuild = request.rebuildUniminedArtifacts
+            rebuild = request.rebuildUniminedArtifacts,
+            mergeOptions = JarMerger.Options(
+                libraryJars = request.libraryJars,
+                includeGlobs = request.mergeIncludeGlobs,
+                excludeGlobs = request.mergeExcludeGlobs,
+                stripBundledServerLibraries = request.stripBundledServerLibraries
+            )
         )
     }
 

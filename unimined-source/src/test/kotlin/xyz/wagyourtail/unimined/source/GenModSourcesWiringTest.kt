@@ -1,22 +1,19 @@
 package xyz.wagyourtail.unimined.source
 
-import java.nio.file.Files
-import java.nio.file.Path
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.source.task.GenModSourcesTask
 import xyz.wagyourtail.unimined.source.task.ModSourceSpec
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Verifies `genModSources` wiring: per-environment task naming, the

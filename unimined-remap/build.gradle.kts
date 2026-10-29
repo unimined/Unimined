@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     api(project(":unimined-api"))
+    implementation(libs.commons.gradle)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

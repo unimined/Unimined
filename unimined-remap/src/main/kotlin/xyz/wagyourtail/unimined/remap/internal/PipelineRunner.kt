@@ -2,9 +2,12 @@ package xyz.wagyourtail.unimined.remap.internal
 
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
+import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepPipeline
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -33,10 +36,19 @@ object PipelineRunner {
         classpath: List<Path>,
         workDir: Path,
         logger: Logger,
-        host: String
+        host: String,
+        accessModel: AccessModel? = null
     ) {
         val registry = RemapStepRegistry()
         val resolved = stepSpecs.map { registry.resolve(it, surface, spec) }
+        // host is "<envLabel>:<verb> <artifact>" (artifact transforms) or a
+        // Gradle task path (tasks) — envLabel scopes the logger
+        // (`[Unimined/<env>`), the rest stays in the message so concurrent
+        // transforms on different artifacts stay identifiable
+        val envLabel = host.removePrefix(":").substringBefore(':')
+        val detail = host.substringAfter(':', "").trim()
+        val prefix = if (detail.isEmpty()) "" else "$detail — "
+        val log = uniminedLogger(envLabel, logger)
 
         val ctx = TaskStepContext(
             spec = spec,
@@ -47,13 +59,38 @@ object PipelineRunner {
             } else null,
             classpath = if (resolved.any { it.needsClasspath }) classpath else emptyList(),
             workDir = workDir,
-            logger = logger
+            logger = logger,
+            // the analysis overlay is additive — absent is a valid state
+            // (no access rules declared anywhere in the batch)
+            accessModel = if (resolved.any { it.needsAccessModel }) accessModel else null,
+            log = log
         )
 
         val steps = stepSpecs.zip(resolved)
-            .map { (stepSpec, type) -> type.create(stepSpec, ctx) }
+            .map { (stepSpec, type) ->
+                val delegate = type.create(stepSpec, ctx)
+                // timed wrapper — start/finish lines identify which
+                // env/artifact each step is running on
+                ArtifactStep { input, c ->
+                    log.lifecycle("${prefix}running step ${type.name}:${type.stepName} on ${input.fileName}")
+                    val t0 = System.nanoTime()
+                    val out = delegate.apply(input, c)
+                    log.lifecycle(
+                        "${prefix}step ${type.name}:${type.stepName} " +
+                                "${input.fileName} -> ${out.fileName} in " +
+                                "${(System.nanoTime() - t0) / 1_000_000}ms"
+                    )
+                    out
+                }
+            }
 
+        log.info("${prefix}pipeline on ${input.fileName} (${steps.size} steps)")
+        val t0 = System.nanoTime()
         val out = StepPipeline.run(input, steps, ctx)
+        log.lifecycle(
+            "${prefix}pipeline ${input.fileName} -> ${out.fileName} done in " +
+                    "${(System.nanoTime() - t0) / 1_000_000}ms"
+        )
         if (out != output) {
             output.parent?.createDirectories()
             Files.copy(out, output, StandardCopyOption.REPLACE_EXISTING)

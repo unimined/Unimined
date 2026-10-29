@@ -1,9 +1,7 @@
 package xyz.wagyourtail.unimined.remap
 
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -45,41 +43,83 @@ class RemapTaskTest {
         ext.jar { it.step(FakeStepSpec()) }
 
         val input = dir.resolve("in.jar").also { writeJar(it, "original.bin") }
-        val output = dir.resolve("out.jar")
 
-        val task = project.tasks.create("remapJar", RemapJarTask::class.java)
-        task.inputArtifact.set(input.toFile())
-        task.outputArtifact.set(output.toFile())
+        val task = project.tasks.register("remapJar", RemapJarTask::class.java).get()
+        // the task mirrors a jar spec — feed it the input's contents
+        task.from(project.zipTree(input))
+        task.destinationDirectory.set(dir.toFile())
+        task.archiveFileName.set("out.jar")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
         task.stepSpecs.set(ext.stepSpecs(RemapSurface.JAR))
 
-        task.runPipeline()
+        task.copy()
 
-        assertEquals(listOf(input), FakeStep.calls)
-        JarFile(output.toFile()).use { jar ->
+        assertEquals(1, FakeStep.calls.size)
+        JarFile(dir.resolve("out.jar").toFile()).use { jar ->
             assertNotNull(jar.getEntry("original.bin"))
             assertNotNull(jar.getEntry(FakeStep.MARKER))
         }
     }
 
     @Test
+    fun `task feeds the serialized access model to needing steps`() {
+        val project = project()
+        val ext = project.extensions.getByType(RemapExtension::class.java)
+        ext.jar { it.step(FakeStepSpec()) }
+
+        val input = dir.resolve("in.jar").also { writeJar(it, "original.bin") }
+        val model = xyz.wagyourtail.unimined.api.access.AccessModel(
+            listOf(
+                xyz.wagyourtail.unimined.api.access.AccessModel.Section(
+                    "official",
+                    listOf(
+                        xyz.wagyourtail.unimined.api.access.AccessModel.Entry(
+                            xyz.wagyourtail.unimined.api.access.AccessModel.Kind.METHOD,
+                            "a/A", "m", "()V",
+                            xyz.wagyourtail.unimined.api.access.AccessModel.Change(0x0001, 7)
+                        )
+                    )
+                )
+            )
+        )
+
+        val task = project.tasks.register("remapJar", RemapJarTask::class.java).get()
+        task.from(project.zipTree(input))
+        task.destinationDirectory.set(dir.toFile())
+        task.archiveFileName.set("out.jar")
+        task.sourceNamespace.set("official")
+        task.targetNamespace.set("named")
+        task.stepSpecs.set(ext.stepSpecs(RemapSurface.JAR))
+        task.accessModel.set(model.serialize())
+
+        task.copy()
+
+        val seen = FakeStep.accessModels.single()
+        assertNotNull(seen)
+        assertEquals(0x0001, seen!!.rules("official").methodChange("a/A", "m", "()V")?.set)
+    }
+
+    @Test
     fun `empty pipeline copies input to output`() {
         val project = project()
         val input = dir.resolve("in.bin").also { Files.write(it, byteArrayOf(9)) }
-        val output = dir.resolve("out.bin")
+        val output = dir.resolve("out.jar")
 
-        val task = project.tasks.create("remapJar", RemapJarTask::class.java)
-        task.inputArtifact.set(input.toFile())
-        task.outputArtifact.set(output.toFile())
+        val task = project.tasks.register("remapJar", RemapJarTask::class.java).get()
+        task.from(input)
+        task.destinationDirectory.set(dir.toFile())
+        task.archiveFileName.set("out.jar")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
         task.stepSpecs.set(emptyList())
 
-        task.runPipeline()
+        task.copy()
 
         assertTrue(Files.exists(output))
-        assertEquals(9, Files.readAllBytes(output).single())
+        JarFile(output.toFile()).use { jar ->
+            assertEquals(9, jar.getInputStream(jar.getEntry("in.bin")).readBytes().single())
+        }
     }
 
     @Test

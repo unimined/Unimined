@@ -9,8 +9,10 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
-import xyz.wagyourtail.unimined.remap.task.RemapJarTask
+import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.task.RemapArtifactTask
 import xyz.wagyourtail.unimined.source.DecompilerRegistry
 import xyz.wagyourtail.unimined.source.SourceExtension
 import xyz.wagyourtail.unimined.source.spi.DecompileSpec
@@ -50,13 +52,73 @@ internal object GenSourcesWiring {
             environment.minecraftLibrariesConfigurationName
         )
 
-        val input = decompileInput(project, minecraft, remap, environmentId, devView)
+        // write straight into the generated module's sources slot —
+        // IDEA attaches the sources classifier on sync without the
+        // sync path ever triggering a decompile
+        val artifactId = "minecraft-$environmentId"
+        val version = environment.version.get()
+        val repoSlot = LocalMavenPublisher.moduleDir(
+            minecraft.localRepoDir, "unimined.generated",
+            artifactId, version
+        ).resolve("$artifactId-$version-sources.jar").toFile()
+
+        val devSources = environment.devSources
 
         val taskName = if (environmentId == "main") {
             "genSources"
         } else {
             "gen${environmentId.cap()}Sources"
         }
+
+        // the generated sources feed the SOURCES-surface pipeline (source
+        // remap, unpick, javadoc) before landing in the repo slot
+        fun wireSourcesSurface(
+            input: Provider<RegularFile>,
+            inputNamespace: Provider<String>
+        ) {
+            val devNamespace = minecraft.devNamespace(environmentId)
+            project.tasks.register(
+                "sourcesSurface${environmentId.cap()}",
+                RemapArtifactTask::class.java
+            ) { t ->
+                t.group = "unimined"
+                t.description =
+                    "Sources-surface pipeline for the '$environmentId' decompiled sources"
+                t.inputArtifact.set(input)
+                t.surface.set(RemapSurface.SOURCES)
+                // a transform-provided sources jar still needs its
+                // prodNs→devNs remap — prepend an implicit remap core
+                // like pipelineSteps does for empty JAR surfaces
+                t.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.SOURCES).map {
+                    if (inputNamespace.get() != devNamespace.get() &&
+                        it.none { s -> s is RemapStepSpec }
+                    ) {
+                        listOf<StepSpec>(RemapStepSpec()) + it
+                    } else it
+                })
+                t.sourceNamespace.set(inputNamespace)
+                t.targetNamespace.set(devNamespace)
+                t.mappingFile.set(
+                    minecraft.mappingBundle(
+                        environmentId, "sources-$environmentId", inputNamespace, devNamespace
+                    )
+                )
+                // the source engine resolves members against the libraries
+                // plus the binary counterpart of the decompiled artifact
+                t.remapClasspath.from(libraries)
+                t.remapClasspath.from(devView)
+                t.outputArtifact.fileValue(repoSlot)
+            }
+        }
+
+        if (devSources.isPresent) {
+            // transform-provided sources (e.g. forge userdev mcpconfig
+            // chain) — remap to the dev namespace, no decompile
+            wireSourcesSurface(devSources, environment.devSourcesNamespace)
+            return
+        }
+
+        val input = decompileInput(project, minecraft, remap, environmentId, devView)
 
         val spec = object : DecompileSpec {
             override val input: Provider<RegularFile> = input
@@ -67,16 +129,6 @@ internal object GenSourcesWiring {
 
         val engine = DecompilerRegistry().select(spec, source.engine.orNull)
         val task = engine.createTask(project, taskName, spec)
-
-        // write straight into the generated module's sources slot —
-        // IDEA attaches the sources classifier on sync without the
-        // sync path ever triggering a decompile
-        val artifactId = "minecraft-$environmentId"
-        val version = environment.version.get()
-        val repoSlot = LocalMavenPublisher.moduleDir(
-            minecraft.localRepoDir, "unimined.generated",
-            artifactId, version
-        ).resolve("$artifactId-$version-sources.jar").toFile()
 
         val sourceSteps = remap.pipelineSteps(environmentId, RemapSurface.SOURCES).get()
         task.configure { t ->
@@ -90,13 +142,11 @@ internal object GenSourcesWiring {
             )
         }
 
-        // the generated sources feed the SOURCES-surface pipeline (source
-        // remap, unpick, javadoc) before landing in the repo slot
         if (sourceSteps.isNotEmpty()) {
             val devNamespace = minecraft.devNamespace(environmentId)
             project.tasks.register(
                 "sourcesSurface${environmentId.cap()}",
-                RemapJarTask::class.java
+                RemapArtifactTask::class.java
             ) { t ->
                 t.group = "unimined"
                 t.description =
@@ -142,7 +192,7 @@ internal object GenSourcesWiring {
         val devNamespace = minecraft.devNamespace(environmentId)
         val fork = project.tasks.register(
             "decompileSurface${environmentId.cap()}",
-            RemapJarTask::class.java
+            RemapArtifactTask::class.java
         ) { t ->
             t.group = "unimined"
             t.description =

@@ -25,4 +25,16 @@ interface MappingSource {
     val nsMap: Map<String, String>
         get() = emptyMap()
 
+    /**
+     * Emitted tree namespaces (post-[nsMap] chain names) carrying
+     * *named* — developer-facing — identifiers. The resolver unions
+     * these across sources in declaration order; an environment's dev
+     * namespace defaults to the first named namespace (1.x
+     * `outputs(ns, named)` role flag). A document column literally
+     * named `"named"` is flagged automatically — declare here for
+     * differently-labeled named columns (`"mojmap"`, `"mcp"`).
+     */
+    val namedNamespaces: Set<String>
+        get() = emptySet()
+
 }

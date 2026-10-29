@@ -5,18 +5,15 @@ import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingData
-import xyz.wagyourtail.unimined.api.mapping.MappingDataView
-import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
+import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
-import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Reader
+import xyz.wagyourtail.unimined.mapping.mappingTree
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -51,16 +48,7 @@ class UmlSourceStepTypeTest {
     private fun ctx(spec: RemapSpec, tree: MutableMappingTree, classpath: List<Path>) =
         object : StepContext {
             override val spec = spec
-            override val mappings: MappingData = object : MappingData {
-                private val view = object : UmlMappingTreeView {
-                    override val tree get() = tree
-                }
-                override val viewTypes = setOf(UmlMappingTreeView::class)
-
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : MappingDataView> view(type: Class<T>): T? =
-                    if (type == UmlMappingTreeView::class.java) view as T else null
-            }
+            override val mappings: MappingData = UmlMappingData(tree)
             override val classpath = classpath
             override val workDir = dir
             override val logger: Logger = Logging.getLogger(UmlSourceStepTypeTest::class.java)
@@ -132,12 +120,16 @@ class UmlSourceStepTypeTest {
                 """.trimIndent()
             )
         }
-        val srcJar = sourceJar("src-in.jar", mapOf(
-            "a/A.java" to "package a; public class A { public int f; public void m() {} public void use() { this.f = 1; this.m(); } }"
-        ))
-        val bin = binJar("bin-a.jar", mapOf(
-            "a/A.java" to "package a; public class A { public int f; public void m() {} }"
-        ))
+        val srcJar = sourceJar(
+            "src-in.jar", mapOf(
+                "a/A.java" to "package a; public class A { public int f; public void m() {} public void use() { this.f = 1; this.m(); } }"
+            )
+        )
+        val bin = binJar(
+            "bin-a.jar", mapOf(
+                "a/A.java" to "package a; public class A { public int f; public void m() {} }"
+            )
+        )
 
         val c = ctx(spec("official", "named"), tree, listOf(bin))
         val out = UmlSourceRemapStepType().create(RemapStepSpec("uml"), c).apply(srcJar, c)
@@ -157,8 +149,7 @@ class UmlSourceStepTypeTest {
 
     @Test
     fun `unpick replaces literals via defs and classpath constants`() {
-        val named = Namespace("named")
-        val tree = MutableMappingTree().apply { addNamespaces(listOf(named)) }
+        val tree = mappingTree("named")
 
         val sources = mapOf(
             "d/Dir.java" to "package d; public class Dir { public static final int NORTH = 0; public static final int SOUTH = 1; }",
@@ -168,13 +159,15 @@ class UmlSourceStepTypeTest {
         val bin = binJar("bin-unpick.jar", sources)
 
         val defs = dir.resolve("defs.unpick")
-        Files.writeString(defs, """
+        Files.writeString(
+            defs, """
             v2
             constant dir d/Dir NORTH
             constant dir d/Dir SOUTH
             target_method a/Use setDir (I)V
                 param 0 dir
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         val stepSpec = objects.newInstance(UnpickSourceStepSpec::class.java)
         stepSpec.defs.from(defs)

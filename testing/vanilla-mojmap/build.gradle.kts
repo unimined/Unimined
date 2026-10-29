@@ -21,3 +21,13 @@ unimined {
         }
     }
 }
+
+runs {
+    named("server") {
+        // `-PautoStop` — queued on stdin, executes on the first tick
+        // after "Done"; boot-validation runs exit on their own
+        if (providers.gradleProperty("autoStop").isPresent) {
+            stdin.set("stop\n")
+        }
+    }
+}

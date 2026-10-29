@@ -3,10 +3,9 @@ package xyz.wagyourtail.unimined.api.mapping
 import kotlin.reflect.KClass
 
 /**
- * Persists one related family of [MappingDataView] kinds into a
+ * Persists one related family of view kinds into a
  * [SerializedMappingData] bundle payload — e.g. the UML tree serializer,
- * whose single payload rehydrates both [UmlMappingTreeView] and the
- * portable [MappingTree] view.
+ * whose single payload rehydrates the canonical UML `MappingTree` view.
  *
  * Implementations are discovered via
  * `META-INF/services/xyz.wagyourtail.unimined.api.mapping.MappingViewSerializer`
@@ -23,10 +22,9 @@ interface MappingViewSerializer {
     /**
      * View kinds this serializer requires on the source [MappingData] —
      * [write] runs only when every kind is present. The rehydrated
-     * [MappingData] may expose more kinds than listed here (a UML payload
-     * can serve the portable view too).
+     * [MappingData] may expose more kinds than listed here.
      */
-    val views: Set<KClass<out MappingDataView>>
+    val views: Set<KClass<*>>
 
     /**
      * Serialize this impl's views from [data].

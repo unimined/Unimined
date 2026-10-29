@@ -1,10 +1,7 @@
 package xyz.wagyourtail.unimined.provider.native.metadata
 
 import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.provider.native.manifest.VersionJson

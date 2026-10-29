@@ -2,9 +2,7 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -134,23 +132,86 @@ class EnvironmentClasspathWiringTest {
     fun `default production wiring swaps jar classifier and registers remapJar`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
-        ext.sourceSet("main") { it.version.set("1.20.1") }
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("intermediary"))
+        }
         (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
 
         val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
         assertEquals("dev", jar.archiveClassifier.get())
 
         val remapJar = project.tasks.getByName("remapJar")
-            as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+                as xyz.wagyourtail.unimined.remap.task.RemapJarTask
         // prod artifact claims the jar's original unclassified name —
         // i.e. the dev jar's name with the -dev suffix removed
         assertEquals(
             jar.archiveFileName.get().replace("-dev.", "."),
             remapJar.outputArtifact.get().asFile.name
         )
+        assertTrue(
+            (remapJar as org.gradle.api.internal.TaskInternal)
+                .onlyIf.isSatisfiedBy(remapJar)
+        )
         val buildDeps = project.tasks.getByName("build")
             .taskDependencies.getDependencies(null)
         assertTrue(buildDeps.any { it.name == "remapJar" })
+    }
+
+    @Test
+    fun `identity environment keeps the original jar and skips remapJar`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("named"))
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        // one artifact serves dev and production — no -dev split
+        val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
+        assertEquals("", jar.archiveClassifier.get())
+
+        // remapJar stays registered (stable task name) but skips itself
+        val remapJar = project.tasks.getByName("remapJar")
+        org.junit.jupiter.api.Assertions.assertFalse(
+            (remapJar as org.gradle.api.internal.TaskInternal)
+                .onlyIf.isSatisfiedBy(remapJar)
+        )
+    }
+
+    @Test
+    fun `isIdentityRemap is true only when the single prod namespace equals dev`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("named"))
+        }
+        ext.sourceSet("client") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("intermediary"))
+        }
+        ext.sourceSet("server") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("named", "intermediary"))
+        }
+
+        assertTrue(ext.isIdentityRemap("main").get())
+        org.junit.jupiter.api.Assertions.assertFalse(
+            ext.isIdentityRemap("client").get()
+        )
+        // mixed prod namespaces are not identity — they error elsewhere
+        // on the single-namespace requirement
+        org.junit.jupiter.api.Assertions.assertFalse(
+            ext.isIdentityRemap("server").get()
+        )
     }
 
     @Test
@@ -172,7 +233,11 @@ class EnvironmentClasspathWiringTest {
     fun `user archive classifier gains a dev suffix for the dev jar`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
-        ext.sourceSet("main") { it.version.set("1.20.1") }
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+            it.modSourceNamespaces.set(listOf("intermediary"))
+        }
         project.tasks.named("jar", org.gradle.jvm.tasks.Jar::class.java) {
             it.archiveClassifier.set("shadow")
         }
@@ -181,7 +246,7 @@ class EnvironmentClasspathWiringTest {
         val jar = project.tasks.getByName("jar") as org.gradle.jvm.tasks.Jar
         assertEquals("shadow-dev", jar.archiveClassifier.get())
         val remapJar = project.tasks.getByName("remapJar")
-            as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+                as xyz.wagyourtail.unimined.remap.task.RemapJarTask
         assertTrue(remapJar.outputArtifact.get().asFile.name.endsWith("-shadow.jar"))
     }
 

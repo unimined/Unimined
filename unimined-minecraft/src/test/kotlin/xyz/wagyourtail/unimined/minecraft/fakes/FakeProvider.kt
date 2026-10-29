@@ -3,17 +3,10 @@ package xyz.wagyourtail.unimined.minecraft.fakes
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
-import xyz.wagyourtail.unimined.api.mapping.MappingVisitor
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
-import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
-import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
-import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
-import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
-import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
+import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.mapping.mappingTree
+import xyz.wagyourtail.unimined.minecraft.spi.*
 
 /** Test-only MinecraftArtifacts over fixed providers. */
 class FakeArtifacts(private val ctx: ProviderContext) : MinecraftArtifacts {
@@ -21,12 +14,7 @@ class FakeArtifacts(private val ctx: ProviderContext) : MinecraftArtifacts {
         ArtifactKey.MERGED to ctx.layout.buildDirectory.file("fake/merged.jar")
     )
     override val mappings: Provider<MappingTree> = ctx.providers.provider {
-        object : MappingTree {
-            override val namespaces = listOf("official")
-            override fun accept(sourceNamespace: String, targetNamespace: String, visitor: MappingVisitor) {
-                require(sourceNamespace == "official" && targetNamespace == "official")
-            }
-        }
+        mappingTree("official")
     }
     override val namespaceMode: Provider<NamespaceMode> =
         ctx.providers.provider { NamespaceMode.REMAPPABLE }

@@ -88,8 +88,10 @@ object LaunchResolver {
         put("version_name", document.id ?: "unimined")
         put("game_directory", env.gameDir.toAbsolutePath().toString())
         put("assets_root", (env.assetsDir ?: env.gameDir.resolve("assets")).toString())
-        put("assets_index_name", env.assetIndexId ?: document.assetIndex?.id
-            ?: document.assets ?: document.id ?: "legacy")
+        put(
+            "assets_index_name", env.assetIndexId ?: document.assetIndex?.id
+            ?: document.assets ?: document.id ?: "legacy"
+        )
         put("auth_player_name", env.session.username)
         put("auth_uuid", env.session.uuid)
         put("auth_access_token", env.session.accessToken)

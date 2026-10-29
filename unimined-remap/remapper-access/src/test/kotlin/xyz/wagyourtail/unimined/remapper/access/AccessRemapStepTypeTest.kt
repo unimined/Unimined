@@ -4,25 +4,24 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingData
-import xyz.wagyourtail.unimined.api.mapping.MappingDataView
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
-import xyz.wagyourtail.unimined.api.mapping.MappingVisitor
+import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.mapping.mappingTree
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.jar.Attributes
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 
 class AccessRemapStepTypeTest {
 
@@ -35,23 +34,15 @@ class AccessRemapStepTypeTest {
         override val classpath: List<FileSystemLocation> = emptyList()
     }
 
-    private val tree = object : MappingTree {
-        override val namespaces = listOf("intermediary", "named")
-        override fun accept(sourceNamespace: String, targetNamespace: String, visitor: MappingVisitor) {
-            visitor.visitClass("example/Target", "mapped/Target")
-            visitor.visitClass("example/Marker", "mapped/Marker")
-            visitor.visitMethod("example/Target", "run", "()V", "execute")
-            visitor.visitField("example/Target", "value", "I", "count")
+    private val tree = mappingTree("intermediary", "named") {
+        clazz("example/Target", "mapped/Target") {
+            method("run;()V", "execute")
+            field("value;I", "count")
         }
+        clazz("example/Marker", "mapped/Marker")
     }
 
-    private val mappings = object : MappingData {
-        override val viewTypes = setOf(MappingTree::class)
-
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : MappingDataView> view(type: Class<T>): T? =
-            if (type == MappingTree::class.java) tree as T else null
-    }
+    private val mappings: MappingData = UmlMappingData(tree)
 
     private fun ctx(): StepContext = object : StepContext {
         override val spec = this@AccessRemapStepTypeTest.spec
@@ -69,22 +60,28 @@ class AccessRemapStepTypeTest {
                 out.write(text.toByteArray())
                 out.closeEntry()
             }
-            put("test.accesswidener", """
+            put(
+                "test.accesswidener", """
                 accessWidener v1 intermediary
                 accessible class example/Target
                 accessible method example/Target run ()V
                 accessible field example/Target value I
-            """.trimIndent())
-            put("META-INF/accesstransformer.cfg", """
+            """.trimIndent()
+            )
+            put(
+                "META-INF/accesstransformer.cfg", """
                 public example.Target
                 protected example.Target run()V
-            """.trimIndent())
-            put("custom.ct", """
+            """.trimIndent()
+            )
+            put(
+                "custom.ct", """
                 classTweaker v2 intermediary
                 accessible class example/Target
                 mutable field example/Target value I
                 inject-interface example/Target example/Marker<TT;>
-            """.trimIndent())
+            """.trimIndent()
+            )
             put("resource.txt", "unchanged")
         }
         return jar
@@ -135,10 +132,12 @@ class AccessRemapStepTypeTest {
                 out.closeEntry()
             }
             put("loader-declared.txt", "public example.Target\n")
-            put("test.accesswidener", """
+            put(
+                "test.accesswidener", """
                 accessWidener v1 intermediary
                 accessible class example/Target
-            """.trimIndent())
+            """.trimIndent()
+            )
         }
 
         val stepSpec = AccessRemapStepSpec().apply {
@@ -151,6 +150,30 @@ class AccessRemapStepTypeTest {
         JarFile(out.toFile()).use { result ->
             assertEquals("public mapped/Target\n", result.entryText("loader-declared.txt"))
             assertTrue(result.entryText("test.accesswidener").contains("example/Target"))
+        }
+    }
+
+    @Test
+    fun `FMLAT manifest paths are treated as AT resources`() {
+        val jar = dir.resolve("fmlat.jar")
+        val manifest = Manifest().apply {
+            mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            mainAttributes.putValue("FMLAT", "META-INF/custom-at.txt")
+        }
+        JarOutputStream(Files.newOutputStream(jar), manifest).use { out ->
+            fun put(name: String, text: String) {
+                out.putNextEntry(JarEntry(name))
+                out.write(text.toByteArray())
+                out.closeEntry()
+            }
+            put("META-INF/custom-at.txt", "public example.Target\n")
+        }
+
+        val ctx = ctx()
+        val out = AccessRemapStepType().create(AccessRemapStepSpec(), ctx).apply(jar, ctx)
+
+        JarFile(out.toFile()).use { result ->
+            assertEquals("public mapped/Target\n", result.entryText("META-INF/custom-at.txt"))
         }
     }
 

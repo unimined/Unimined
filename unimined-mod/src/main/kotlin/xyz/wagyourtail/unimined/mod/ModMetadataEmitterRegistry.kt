@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.mod
 
 import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
-import java.util.ServiceLoader
+import java.util.*
 
 /**
  * Loader metadata emitters discovered via `META-INF/services`. A fresh
@@ -33,8 +33,8 @@ class ModMetadataEmitterRegistry {
     fun select(loader: String): ModMetadataEmitter = emitters[loader]
         ?: throw GradleException(
             "mod { loader(\"$loader\") }: no metadata emitter registered for " +
-                "loader '$loader' — apply its transform plugin " +
-                "(registered: ${emitters.keys.sorted().ifEmpty { listOf("none") }})"
+                    "loader '$loader' — apply its transform plugin " +
+                    "(registered: ${emitters.keys.sorted().ifEmpty { listOf("none") }})"
         )
 
     /** Whether an emitter serves [loader]. */

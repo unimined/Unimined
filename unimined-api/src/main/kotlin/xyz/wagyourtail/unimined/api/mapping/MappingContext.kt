@@ -17,6 +17,10 @@ interface MappingContext {
     /** Shared cache dir a participant may materialize into, when provided. */
     val cacheDir: Path?
 
+    /** Global merged-mapping cache root — `null` disables the cache. */
+    val globalCacheDir: Path?
+        get() = null
+
     /**
      * Resolve a Maven coordinate (`group:artifact:version[:classifier]`)
      * to a local file — injected by the host; participants that never see

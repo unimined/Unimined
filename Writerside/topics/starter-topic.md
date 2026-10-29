@@ -6,10 +6,13 @@ exploring older builds, Unimined provides a comprehensive set of tools to help y
 build mods with ease.
 
 ## Features
-* **Unified Modding Environment:** Supports various Minecraft mod loaders and offers tools for a seamless experience across different modding platforms.
+
+* **Unified Modding Environment:** Supports various Minecraft mod loaders and offers tools for a seamless experience
+  across different modding platforms.
 * **Custom Loader Support:** Create and integrate your own loaders with the flexibility of Unimined.
 
 ## Supported Loaders
+
 * [Fabric](https://fabricmc.net/)
 * [Quilt](https://quiltmc.org/)
 * [Forge](https://minecraftforge.net/)
@@ -24,17 +27,19 @@ build mods with ease.
 * [Liteloader](https://liteloader.com)
 
 ### Planned
+
 * Better Bukkit-derivitive support
     * Spigot currently just kinda runs buildtools in the backround.
 * Sponge
 * NilLoader
 
 ### Custom Loaders
+
 you can create a custom patching/transforming process for minecraft,
 for example [PrcraftExampleMod](https://github.com/prcraft-minecraft/PrcraftExampleMod)'s buildsrc dir.
 
-
 ## Planned Features
+
 * Eclipse / VSCode Support
 * Datagen
 * Fixing neoforge on yarn (again)
@@ -50,7 +55,10 @@ you can either re-create a unimined build from a standard gradle project or,
 ## Other Setups
 
 ### Arch-Loom Style
+
 * direct porting of arch-loom projects without changing the directory structure is possible.
 * instructions pending...
-### third party template(s)
+
+### third party template (s)
+
 * arch style: https://github.com/firstdarkdev/fdd-xplat or https://github.com/LegacyModdingMC/examplemod

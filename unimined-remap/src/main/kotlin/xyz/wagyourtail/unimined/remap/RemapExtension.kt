@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.remap
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
@@ -11,7 +10,9 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
+import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 import javax.inject.Inject
@@ -175,13 +176,34 @@ abstract class RemapExtension @Inject constructor(
         }
 
     /**
-     * The executable pipeline for a surface: the declared (or inherited)
-     * steps, an implicit `remap` core when a JAR surface was left
-     * unconfigured, then transform-contributed steps appended last. Hosts
+     * The executable pipeline for a surface: transform-contributed `pre`
+     * steps (original-namespace input — loader binary patching), the
+     * declared (or inherited) steps or an implicit `remap` core when a
+     * JAR surface was left unconfigured, then post steps. Hosts
      * feeding unimined-managed artifacts (dev jars, environment mod
      * buckets) use this so empty pipelines still namespace-remap.
      */
     fun pipelineSteps(environmentId: String, surface: RemapSurface): Provider<List<StepSpec>> =
+        pipelineSteps(environmentId, surface, includeEnvironmentArtifactSteps = true)
+
+    /**
+     * [pipelineSteps] for remapped dependency views: contributions scoped
+     * [StepScope.ENVIRONMENT_ARTIFACT] (loader binary patching, class
+     * injection — they only apply to the environment's own jar) are
+     * excluded; shared contributions (access transforms, access fixes)
+     * still apply.
+     */
+    fun dependencyPipelineSteps(
+        environmentId: String,
+        surface: RemapSurface
+    ): Provider<List<StepSpec>> =
+        pipelineSteps(environmentId, surface, includeEnvironmentArtifactSteps = false)
+
+    private fun pipelineSteps(
+        environmentId: String,
+        surface: RemapSurface,
+        includeEnvironmentArtifactSteps: Boolean
+    ): Provider<List<StepSpec>> =
         providers.provider {
             val environment = sourceSet(environmentId)
             environment.validate()
@@ -191,7 +213,10 @@ abstract class RemapExtension @Inject constructor(
             } else {
                 declared
             }
-            core + environment.contributedSteps(surface)
+            val scope = if (includeEnvironmentArtifactSteps) null
+            else StepScope.ALL_ARTIFACTS
+            environment.contributedPreSteps(surface, scope) + core +
+                    environment.contributedSteps(surface, scope)
         }
 
     /** [pipelineSteps] for `main`. */
@@ -200,14 +225,17 @@ abstract class RemapExtension @Inject constructor(
 
     /**
      * The convention for user-declared remapped views: the declared (or
-     * inherited) steps plus transform contributions, with no implicit
-     * `remap` core — an unconfigured surface is a documented pass-through.
+     * inherited) steps plus shared transform contributions, with no
+     * implicit `remap` core — an unconfigured surface is a documented
+     * pass-through. Environment-artifact-scoped contributions (loader
+     * patch steps) are excluded — views resolve dependency jars.
      */
     private fun viewSteps(environmentId: String, surface: RemapSurface): Provider<List<StepSpec>> =
         providers.provider {
             val environment = sourceSet(environmentId)
             environment.validate()
-            environment.effectiveSteps(surface) + environment.contributedSteps(surface)
+            environment.effectiveSteps(surface) +
+                    environment.contributedSteps(surface, StepScope.ALL_ARTIFACTS)
         }
 
     /**
@@ -283,6 +311,13 @@ abstract class RemapExtension @Inject constructor(
         val spec = objects.newInstance(RemappedViewSpec::class.java)
         spec.discriminator.convention("")
         spec.stepSpecs.convention(viewSteps(environmentId, RemapSurface.JAR))
+        // defaults + transform-plugin contributions — evaluated lazily
+        // so plugins may register markers after view creation
+        spec.modMarkers.convention(project.provider {
+            ModMarkerScan.DEFAULT_MARKERS +
+                    sourceSet(environmentId).modMarkerContributions
+        })
+        spec.onlyRemapMarkedJars.convention(true)
         action.execute(spec)
         return createRemappedView(environmentId, source, name, spec)
     }
@@ -313,6 +348,11 @@ abstract class RemapExtension @Inject constructor(
         spec.baseName = baseName
         spec.discriminator.convention("")
         spec.stepSpecs.convention(viewSteps(environmentId, RemapSurface.JAR))
+        spec.modMarkers.convention(project.provider {
+            ModMarkerScan.DEFAULT_MARKERS +
+                    sourceSet(environmentId).modMarkerContributions
+        })
+        spec.onlyRemapMarkedJars.convention(true)
         action.execute(spec)
 
         require(spec.targetNamespace.isPresent) {
@@ -340,7 +380,10 @@ abstract class RemapExtension @Inject constructor(
                 viewSpec.mappingFile.set(namespace.mappingFile)
             }
             viewSpec.classpath.from(spec.classpath)
+            viewSpec.accessModel.set(spec.accessModel)
             viewSpec.stepSpecs.set(spec.stepSpecs)
+            viewSpec.modMarkers.set(spec.modMarkers)
+            viewSpec.onlyRemapMarkedJars.set(spec.onlyRemapMarkedJars)
 
             views[namespace.sourceNamespace] = createRemappedView(
                 environmentId,
@@ -385,7 +428,7 @@ abstract class RemapExtension @Inject constructor(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, artifactType
             )
         }
-        registerRemapTransform(spec, artifactType)
+        registerRemapTransform(spec, artifactType, "$environmentId/$source")
         return view
     }
 
@@ -414,19 +457,24 @@ abstract class RemapExtension @Inject constructor(
 
     private val transformRegistrations = mutableMapOf<String, RemappedViewSpec>()
 
-    private fun registerRemapTransform(spec: RemappedViewSpec, artifactType: String) {
+    private fun registerRemapTransform(
+        spec: RemappedViewSpec,
+        artifactType: String,
+        label: String
+    ) {
         val existing = transformRegistrations[artifactType]
         if (existing != null) {
             require(
                 existing.sourceNamespace.get() == spec.sourceNamespace.get() &&
-                    existing.targetNamespace.get() == spec.targetNamespace.get() &&
-                    existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile &&
-                    existing.hasLazyMappings == spec.hasLazyMappings &&
-                    existing.classpath.files == spec.classpath.files &&
-                    existing.stepSpecs.getOrElse(emptyList()) == spec.stepSpecs.getOrElse(emptyList())
+                        existing.targetNamespace.get() == spec.targetNamespace.get() &&
+                        existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile &&
+                        existing.hasLazyMappings == spec.hasLazyMappings &&
+                        existing.accessModel.isPresent == spec.accessModel.isPresent &&
+                        existing.classpath.files == spec.classpath.files &&
+                        existing.stepSpecs.getOrElse(emptyList()) == spec.stepSpecs.getOrElse(emptyList())
             ) {
                 "remap target '${spec.targetNamespace.get()}' already registered with a different spec — " +
-                    "set a discriminator on one of the views"
+                        "set a discriminator on one of the views"
             }
             return
         }
@@ -442,12 +490,20 @@ abstract class RemapExtension @Inject constructor(
                 artifactType
             )
             t.parameters { p ->
+                p.label.set(label)
+                p.modMarkers.set(project.provider {
+                    if (spec.onlyRemapMarkedJars.get()) spec.modMarkers.get()
+                    else emptyList()
+                })
                 p.sourceNamespace.set(spec.sourceNamespace)
                 p.targetNamespace.set(spec.targetNamespace)
                 if (spec.hasLazyMappings) {
                     p.mappingBundleJson.set(spec.mappingBundleJson)
                 } else if (spec.mappingFile.isPresent) {
                     p.mappingFile.set(spec.mappingFile)
+                }
+                if (spec.accessModel.isPresent) {
+                    p.accessModel.set(spec.accessModel)
                 }
                 p.classpath.from(spec.classpath)
                 p.stepSpecs.set(spec.stepSpecs)

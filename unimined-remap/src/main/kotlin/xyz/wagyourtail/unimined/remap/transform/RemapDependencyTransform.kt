@@ -1,10 +1,6 @@
 package xyz.wagyourtail.unimined.remap.transform
 
-import org.gradle.api.artifacts.transform.CacheableTransform
-import org.gradle.api.artifacts.transform.InputArtifact
-import org.gradle.api.artifacts.transform.TransformAction
-import org.gradle.api.artifacts.transform.TransformOutputs
-import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.artifacts.transform.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.RegularFileProperty
@@ -12,17 +8,13 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import org.gradle.api.tasks.*
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
@@ -51,6 +43,28 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:Input
         val targetNamespace: Property<String>
 
+        /**
+         * Identity tag for logs — env + view context
+         * (`envId`/`dev`, `envId`/`modImplementation`, …) so
+         * parallel transforms from multi-sourceset projects are
+         * distinguishable. Optional: absent labels fall back to the
+         * input artifact name.
+         */
+        @get:Optional
+        @get:Input
+        val label: Property<String>
+
+        /**
+         * Mod indicators — when non-empty, artifacts without a marker
+         * ([xyz.wagyourtail.unimined.remap.internal.ModMarkerScan])
+         * pass through unmapped. Set only on mod views; environment
+         * dev-artifact transforms leave it empty so the Minecraft jar
+         * (unmarked by definition) is never skipped.
+         */
+        @get:Optional
+        @get:Input
+        val modMarkers: ListProperty<String>
+
         @get:Optional
         @get:InputFile
         @get:PathSensitive(PathSensitivity.NONE)
@@ -66,6 +80,16 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:InputFiles
         @get:Classpath
         val classpath: ConfigurableFileCollection
+
+        /**
+         * Serialized [AccessModel] — the merged AW/AT/CT rules of the
+         * whole remap batch, identical across invocations, fed to
+         * `needsAccessModel` steps as the analysis overlay. A string
+         * input carries no task dependency, like [mappingBundleJson].
+         */
+        @get:Optional
+        @get:Input
+        val accessModel: Property<String>
 
         @get:Nested
         val stepSpecs: ListProperty<StepSpec>
@@ -91,6 +115,18 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         val output = outputs.file(
             "${input.toFile().nameWithoutExtension}-${spec.targetNamespace}.jar"
         ).toPath()
+        // marked-jar filtering (mod views only): jars without a mod
+        // indicator pass through unchanged — the pipeline would remap
+        // nothing while paying full analysis cost per artifact
+        val markers = parameters.modMarkers.getOrElse(emptyList())
+        if (markers.isNotEmpty() && !ModMarkerScan.isModJar(input, markers)) {
+            uniminedLogger(
+                parameters.label.orNull ?: "",
+                Logging.getLogger(RemapDependencyTransform::class.java)
+            ).info("remap — no mod markers in ${input.fileName}; passing through unmapped")
+            Files.copy(input, output)
+            return
+        }
         val workDir = Files.createTempDirectory("unimined-remap-")
         try {
             PipelineRunner.run(
@@ -103,7 +139,8 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
                 classpath = parameters.classpath.files.map { it.toPath() },
                 workDir = workDir,
                 logger = Logging.getLogger(RemapDependencyTransform::class.java),
-                host = "remap transform ${input.fileName}"
+                host = "${parameters.label.orNull?.let { "$it:" } ?: ""}remap ${input.fileName}",
+                accessModel = parameters.accessModel.orNull?.let(AccessModel::parse)
             )
         } finally {
             workDir.toFile().deleteRecursively()

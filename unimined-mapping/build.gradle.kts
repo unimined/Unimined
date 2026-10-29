@@ -17,5 +17,11 @@ gradlePlugin {
             id = "xyz.wagyourtail.unimined.mapping"
             implementationClass = "xyz.wagyourtail.unimined.mapping.GradlePlugin"
         }
+        // was the mapping-uml subproject — folded in now that UML is an
+        // always-present api dep; the plugin id stays for compat
+        create("mapping-uml") {
+            id = "xyz.wagyourtail.unimined.mapping.uml"
+            implementationClass = "xyz.wagyourtail.unimined.mapping.uml.GradlePlugin"
+        }
     }
 }

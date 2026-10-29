@@ -1,11 +1,6 @@
 package xyz.wagyourtail.unimined.decompiler.vineflower
 
-import javax.inject.Inject
-import org.gradle.api.artifacts.transform.CacheableTransform
-import org.gradle.api.artifacts.transform.InputArtifact
-import org.gradle.api.artifacts.transform.TransformAction
-import org.gradle.api.artifacts.transform.TransformOutputs
-import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.artifacts.transform.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.provider.MapProperty
@@ -14,6 +9,7 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 /**
  * Per-artifact decompile for `genModSources`: converts a dev-namespace
@@ -63,8 +59,8 @@ abstract class VineflowerDecompileTransform @Inject constructor(
             )
             spec.maxHeapSize = "2g"
             spec.args = parameters.options.get().map { (key, value) -> "-$key=$value" } +
-                parameters.referenceClasspath.files.map { "-e=${it.absolutePath}" } +
-                listOf(input.absolutePath, output.absolutePath)
+                    parameters.referenceClasspath.files.map { "-e=${it.absolutePath}" } +
+                    listOf(input.absolutePath, output.absolutePath)
         }
     }
 

@@ -2,10 +2,10 @@ package xyz.wagyourtail.unimined.mclauncher
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.test.Test
-import java.nio.file.Path
 
 /** Launch plan computation: rules, variables, legacy args, natives coords. */
 class LaunchResolverTest {
@@ -29,7 +29,8 @@ class LaunchResolverTest {
 
     @Test
     fun `modern arguments evaluate rules and substitute variables`() {
-        val document = data("""
+        val document = data(
+            """
             {"id":"1.20.1","mainClass":"mc.Main",
              "arguments":{
                "game":[
@@ -42,14 +43,15 @@ class LaunchResolverTest {
                ],
                "jvm":["-Djava.library.path=${'$'}{natives_directory}","-cp","${'$'}{classpath}"]
              }}
-        """)
+        """
+        )
         val plan = LaunchResolver.resolve(document, env())
         assertEquals("mc.Main", plan.mainClass)
         assertEquals(
             listOf("--username", "Dev") +
-                if (OperatingSystem.current() != OperatingSystem.WINDOWS) {
-                    listOf("--posix-only", "yes")
-                } else emptyList(),
+                    if (OperatingSystem.current() != OperatingSystem.WINDOWS) {
+                        listOf("--posix-only", "yes")
+                    } else emptyList(),
             plan.programArgs.filter { it != "--demo" }
         )
         assertTrue(plan.jvmArgs.any { it.startsWith("-Djava.library.path=") })
@@ -58,10 +60,12 @@ class LaunchResolverTest {
 
     @Test
     fun `legacy minecraftArguments split and substitute`() {
-        val document = data("""
+        val document = data(
+            """
             {"id":"1.12.2","mainClass":"mc.legacy.Main",
              "minecraftArguments":"--username ${'$'}{auth_player_name} --uuid ${'$'}{auth_uuid}"}
-        """)
+        """
+        )
         val session = OfflineAuth("Steve").session()
         val plan = LaunchResolver.resolve(document, env(session = session))
         assertEquals(
@@ -72,13 +76,15 @@ class LaunchResolverTest {
 
     @Test
     fun `demo feature gates demo argument`() {
-        val document = data("""
+        val document = data(
+            """
             {"id":"1.20.1","mainClass":"mc.Main",
              "arguments":{"game":[
                {"rules":[{"action":"allow","features":{"is_demo_user":true}}],
                 "value":"--demo"}
              ]}}
-        """)
+        """
+        )
         assertTrue(
             LaunchResolver.resolve(document, env()).programArgs.none { it == "--demo" }
         )
@@ -90,7 +96,8 @@ class LaunchResolverTest {
 
     @Test
     fun `native coordinates select os classifier`() {
-        val document = data("""
+        val document = data(
+            """
             {"id":"1.20.1",
              "libraries":[
                {"name":"org.lwjgl:lwjgl:3.3.1",
@@ -100,7 +107,8 @@ class LaunchResolverTest {
                 "natives":{"osx":"natives-macos"},
                 "rules":[{"action":"allow","os":{"name":"osx"}}]}
              ]}
-        """)
+        """
+        )
         assertEquals(
             listOf("org.lwjgl:lwjgl:3.3.1:natives-linux"),
             Natives.coordinates(document, OperatingSystem.LINUX)

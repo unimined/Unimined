@@ -7,6 +7,7 @@ dependencies {
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
     api(project(":unimined-mod"))
+    implementation(project(":unimined-remap:remapper-access"))
     implementation(libs.asm)
     implementation(libs.kotlinx.serialization.json)
 

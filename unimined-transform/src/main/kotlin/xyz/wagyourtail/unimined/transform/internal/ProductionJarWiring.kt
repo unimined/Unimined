@@ -1,13 +1,17 @@
 package xyz.wagyourtail.unimined.transform.internal
 
 import org.gradle.api.Project
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.SourceSet
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.unimined.remap.task.RemapJarTask
 
 /**
@@ -21,6 +25,14 @@ import xyz.wagyourtail.unimined.remap.task.RemapJarTask
  *   namespace, e.g. `named -> intermediary` for fabric — and emits the
  *   artifact under the jar's *original* classifier,
  * - `build` depends on the remap task so `build/libs` carries both.
+ *
+ * Environments whose production namespace equals the dev namespace
+ * ([MinecraftExtension.isIdentityRemap]) collapse instead: the jar
+ * keeps its classifier and `remap<JarTask>` skips itself, so a single
+ * artifact serves development and production (plan: no duplicate
+ * artifacts for a nonexistent namespace remap). Both decisions are
+ * lazy providers — namespace resolution never runs at configuration
+ * time.
  *
  * The swap happens in [Project.afterEvaluate]: the user's
  * `archiveClassifier`/`defaultRemapJar` settings must be final before
@@ -50,8 +62,8 @@ internal object ProductionJarWiring {
         val jar = project.tasks.findByName(jarTaskName) as? Jar ?: run {
             project.logger.info(
                 "[Unimined] source set '${sourceSet.name}' has no jar task " +
-                    "'$jarTaskName' — skipping default production remap; " +
-                    "register one or disable `defaultRemapJar`"
+                        "'$jarTaskName' — skipping default production remap; " +
+                        "register one or disable `defaultRemapJar`"
             )
             return
         }
@@ -64,8 +76,8 @@ internal object ProductionJarWiring {
         val prodNamespace = minecraft.modSourceNamespaces(environmentId).map { namespaces ->
             require(namespaces.size == 1) {
                 "environment '$environmentId' declares ${namespaces.size} mod " +
-                    "source namespaces — default production remap needs exactly " +
-                    "one; use remap.remappedViews(...) for mixed inputs"
+                        "source namespaces — default production remap needs exactly " +
+                        "one; use remap.remappedViews(...) for mixed inputs"
             }
             namespaces.single()
         }
@@ -82,49 +94,137 @@ internal object ProductionJarWiring {
             steps.filter { it !is DevArtifactOnlyStepSpec }
         }
 
+        // identity environments (prod == dev namespace) emit one jar
+        // usable for both development and production — the classifier
+        // swap and the remap itself are skipped so no duplicate
+        // artifacts represent a nonexistent namespace hop. The decision
+        // stays lazy so unimined never resolves mappings at
+        // configuration time.
+        val identity = minecraft.isIdentityRemap(environmentId)
+
         val originalClassifier = jar.archiveClassifier.getOrElse("")
         val remapJar = project.tasks.register(
             "remap${jarTaskName.cap()}",
             RemapJarTask::class.java
         ) { t ->
             t.group = "unimined"
-            t.description = "Remaps the '$jarTaskName' output jar to the production namespace"
-            t.inputArtifact.set(jar.archiveFile)
+            t.description = "Assembles and remaps the '$jarTaskName' contents to the production namespace"
+            t.onlyIf("the production namespace differs from the dev namespace") {
+                !identity.get()
+            }
+            // mirror the jar's copy spec + manifest — resolves its `from`s
+            // at copy time, so remapJar depends on the jar's *inputs*
+            // (classes/resources), never on the jar task's output
+            t.rootSpec.with(jar.rootSpec)
+            // the mirrored spec carries the jar's MANIFEST.MF and this
+            // task's own Jar machinery emits one too — `with()`-wrapped
+            // specs bypass parent excludes, so first-writer-wins is the
+            // only lever; both candidates carry the user's attrs anyway
+            t.manifest.from(jar.manifest)
+            t.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            // emit the artifact the jar *would* have produced before the
+            // `-dev` classifier swap — name parts flow as providers
+            t.archiveBaseName.set(jar.archiveBaseName)
+            t.archiveAppendix.set(jar.archiveAppendix)
+            t.archiveVersion.set(jar.archiveVersion)
+            t.archiveExtension.set(jar.archiveExtension)
+            t.archiveClassifier.set(originalClassifier)
+            t.destinationDirectory.set(jar.destinationDirectory)
             t.sourceNamespace.set(devNamespace)
             t.targetNamespace.set(prodNamespace)
+            t.surface.set(RemapSurface.JAR)
             t.mappingFile.set(prodBundle)
             t.stepSpecs.set(prodSteps)
+            // environment-declared access-model contributions — the
+            // analysis overlay for the production remap (a mod's own
+            // widened members must propagate)
+            t.accessModel.set(project.provider {
+                AccessModel.merge(
+                    remap.sourceSet(environmentId)
+                        .accessModelProviders.map { it.get() }
+                ).serialize()
+            })
             // the dev classpath: remapped mod views + dev MC + libraries —
             // feeds inheritance/propagation for engines that need it
             t.remapClasspath.from(sourceSet.compileClasspath)
-            t.outputArtifact.set(
-                project.layout.buildDirectory.file(
-                    "libs/${archiveFileName(jar, originalClassifier)}"
-                )
-            )
         }
-        jar.archiveClassifier.set(
-            if (originalClassifier.isEmpty()) "dev" else "$originalClassifier-dev"
+        // prod-mapped sources — 1.x's `remapSourcesJar`: a conventional
+        // `sourcesJar` carries dev-namespace sources under a `-dev`
+        // classifier; the remap task mirrors its spec through the
+        // SOURCES pipeline and emits the prod-named `-sources` artifact.
+        // `prodBundle` is reused — the dev->prod tree is identical to
+        // the binary remap's; only the pipeline surface differs
+        val sourcesJar = (project.tasks.findByName("sourcesJar") as? Jar)
+            ?: project.tasks.register("sourcesJar", Jar::class.java) { t ->
+                t.description = "Assembles the '${sourceSet.name}' sources jar"
+                t.group = "build"
+                t.from(sourceSet.allSource)
+                t.archiveClassifier.set("sources")
+                t.destinationDirectory.set(jar.destinationDirectory)
+            }.get()
+
+        // environments contribute no SOURCES-surface steps by default,
+        // so prepend the implicit remap core — on SOURCES it binds the
+        // source remapper (decl dev->prod names in .java files)
+        val prodSourcesSteps = remap.pipelineSteps(
+            environmentId, RemapSurface.SOURCES
+        ).map { steps ->
+            val filtered = steps.filter { it !is DevArtifactOnlyStepSpec }
+            if (filtered.none { it is RemapStepSpec }) {
+                listOf<StepSpec>(RemapStepSpec()) + filtered
+            } else filtered
+        }
+
+        val originalSourcesClassifier = sourcesJar.archiveClassifier.getOrElse("sources")
+        val remapSourcesJar = project.tasks.register(
+            "remapSourcesJar",
+            RemapJarTask::class.java
+        ) { t ->
+            t.group = "unimined"
+            t.description = "Assembles and remaps the 'sourcesJar' contents " +
+                    "to the production namespace"
+            t.onlyIf("the production namespace differs from the dev namespace") {
+                !identity.get()
+            }
+            t.rootSpec.with(sourcesJar.rootSpec)
+            t.manifest.from(sourcesJar.manifest)
+            t.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            t.archiveBaseName.set(sourcesJar.archiveBaseName)
+            t.archiveAppendix.set(sourcesJar.archiveAppendix)
+            t.archiveVersion.set(sourcesJar.archiveVersion)
+            t.archiveExtension.set(sourcesJar.archiveExtension)
+            t.archiveClassifier.set(originalSourcesClassifier)
+            t.destinationDirectory.set(sourcesJar.destinationDirectory)
+            t.surface.set(RemapSurface.SOURCES)
+            t.sourceNamespace.set(devNamespace)
+            t.targetNamespace.set(prodNamespace)
+            t.mappingFile.set(prodBundle)
+            t.stepSpecs.set(prodSourcesSteps)
+            t.accessModel.set(project.provider {
+                AccessModel.merge(
+                    remap.sourceSet(environmentId)
+                        .accessModelProviders.map { it.get() }
+                ).serialize()
+            })
+            t.remapClasspath.from(sourceSet.compileClasspath)
+        }
+        sourcesJar.archiveClassifier.set(
+            identity.map { isIdentity ->
+                if (isIdentity) originalSourcesClassifier
+                else "$originalSourcesClassifier-dev"
+            }
         )
-        project.tasks.findByName("build")?.dependsOn(remapJar)
+
+        jar.archiveClassifier.set(
+            identity.map { isIdentity ->
+                if (isIdentity) originalClassifier
+                else if (originalClassifier.isEmpty()) "dev"
+                else "$originalClassifier-dev"
+            }
+        )
+        project.tasks.findByName("build")?.dependsOn(remapJar, remapSourcesJar)
     }
 
     private fun String.cap(): String = replaceFirstChar(Char::uppercase)
-
-    /**
-     * Reproduce [Jar]'s archive file naming
-     * (`base[-appendix][-version][-classifier].extension`) with a
-     * substituted classifier — the remap task emits the artifact the jar
-     * *would* have produced before the `-dev` suffix.
-     */
-    private fun archiveFileName(jar: Jar, classifier: String): String {
-        val parts = listOf(
-            jar.archiveBaseName.getOrElse(""),
-            jar.archiveAppendix.getOrElse(""),
-            jar.archiveVersion.getOrElse(""),
-            classifier
-        ).filter { it.isNotEmpty() }
-        return parts.joinToString("-") + "." + jar.archiveExtension.getOrElse("jar")
-    }
 
 }

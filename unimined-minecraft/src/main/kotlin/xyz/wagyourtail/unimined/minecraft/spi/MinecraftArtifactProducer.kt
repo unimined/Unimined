@@ -26,6 +26,20 @@ class ArtifactProductionRequest(
 
     val metadataCacheTtl: Duration? = null,
 
+    /** Resolved `minecraftLibraries` jars — the merge strips server-side
+     *  copies of bundled entries (pre-1.13 server jars embed their
+     *  runtime libraries inline). */
+    val libraryJars: List<Path> = emptyList(),
+
+    /** Merge keep-overrides — entry globs never stripped. */
+    val mergeIncludeGlobs: List<String> = emptyList(),
+
+    /** Extra entry globs stripped from the *server* jar during merge. */
+    val mergeExcludeGlobs: List<String> = emptyList(),
+
+    /** Master switch for the server-bundled-library strip. */
+    val stripBundledServerLibraries: Boolean = true,
+
     val logger: Logger
 )
 

@@ -1,10 +1,10 @@
 package xyz.wagyourtail.unimined.mapping
 
-import java.util.ServiceLoader
 import xyz.wagyourtail.unimined.api.mapping.MappingProvider
 import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.spi.SpiSelector
 import xyz.wagyourtail.unimined.api.spi.spiSelector
+import java.util.*
 
 /**
  * Registry of mapping providers discovered from

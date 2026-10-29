@@ -23,14 +23,15 @@ internal class SpiSelectorImpl<T : Supports<S>, S>(private val kind: String) : S
             0 -> throw SpiSelectionException(
                 "no $kind supports $spec; registered: ${names()}"
             )
+
             1 -> candidates.single()
             else -> {
                 val top = candidates.maxOf { it.priority }
                 candidates.singleOrNull { it.priority == top }
                     ?: throw SpiSelectionException(
                         "ambiguous $kind for $spec: " +
-                            "${candidates.joinToString { it.name }}; " +
-                            "disambiguate via DSL override"
+                                "${candidates.joinToString { it.name }}; " +
+                                "disambiguate via DSL override"
                     )
             }
         }

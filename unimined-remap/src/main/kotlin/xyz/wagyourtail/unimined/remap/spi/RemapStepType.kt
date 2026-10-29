@@ -1,8 +1,8 @@
 package xyz.wagyourtail.unimined.remap.spi
 
-import kotlin.reflect.KClass
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.spi.Supports
+import kotlin.reflect.KClass
 
 /**
  * An engine's implementation of a named pipeline operation.
@@ -40,6 +40,10 @@ interface RemapStepType<S : StepSpec> : Supports<RemapSpec> {
 
     /** Whether [StepContext.classpath] must be materialized for this step. */
     val needsClasspath: Boolean
+        get() = false
+
+    /** Whether [StepContext.accessModel] must be materialized for this step. */
+    val needsAccessModel: Boolean
         get() = false
 
     /** Instantiate the executable step for one pipeline run. */

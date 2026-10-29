@@ -1,10 +1,10 @@
 package xyz.wagyourtail.unimined.mapping.internal
 
+import org.gradle.api.GradleException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
 import java.util.zip.ZipException
-import org.gradle.api.GradleException
 
 /**
  * Unwraps a mapping document embedded in a jar/zip artifact — the
@@ -16,14 +16,31 @@ import org.gradle.api.GradleException
 object MappingArchive {
 
     private val MAPPING_ENTRY =
-        Regex(""".*\.(tiny|tsrg|srg|csrg|xsrg|pro|mappings?|map)(\.gz)?$""")
+        Regex(""".*\.(tiny|tsrg|srg|csrg|xsrg|pro|mappings?|map|csv)(\.gz)?$""")
+
+    /**
+     * Extracted [archive] contents — the mapping documents plus
+     * companion entries (the `extras` directory's attachments, such as
+     * `record_signatures.json`), keyed by entry path.
+     */
+    class Contents(
+        val documents: List<Path>,
+        val attachments: Map<String, Path>
+    )
 
     /**
      * The mapping files inside [archive], or null when it isn't a zip or
      * holds no mapping entries. [cacheDir] receives the extracted file,
      * named deterministically so re-materialization reuses it.
      */
-    fun extract(archive: Path, cacheDir: Path): List<Path>? {
+    fun extract(archive: Path, cacheDir: Path): List<Path>? =
+        extractAll(archive, cacheDir)?.documents
+
+    /**
+     * As [extract], plus any `extras`-directory companion entries as
+     * [Contents.attachments].
+     */
+    fun extractAll(archive: Path, cacheDir: Path): Contents? {
         if (!archive.fileName.toString().let { it.endsWith(".jar") || it.endsWith(".zip") }) {
             return null
         }
@@ -34,15 +51,18 @@ object MappingArchive {
                     ?: jar.entries().asSequence()
                         .filter { !it.isDirectory && MAPPING_ENTRY.matches(it.name) }
                         .toList()
-                when {
-                    candidates.isEmpty() -> null
-                    candidates.size > 1 -> throw GradleException(
-                        "mapping archive $archive contains multiple candidate " +
-                            "documents (${candidates.joinToString { it.name }}); " +
-                            "declare the inner file via `file()` instead"
-                    )
-                    else -> listOf(extractEntry(jar, archive, candidates.single(), cacheDir))
-                }
+                if (candidates.isEmpty()) return null
+                // multi-document archives (e.g. `mcp_stable`'s fields/
+                // methods/params csvs) merge into one tree downstream —
+                // extract all, sorted for determinism
+                val attachments = jar.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.startsWith("extras/") }
+                    .associate { it.name to extractEntry(jar, archive, it, cacheDir) }
+                Contents(
+                    candidates.sortedBy { it.name }
+                        .map { extractEntry(jar, archive, it, cacheDir) },
+                    attachments
+                )
             }
         } catch (e: ZipException) {
             null
@@ -55,11 +75,11 @@ object MappingArchive {
         entry: java.util.jar.JarEntry,
         cacheDir: Path
     ): Path {
-        val out = cacheDir.resolve(
-            "${archive.fileName}-${entry.name.replace('/', '_')}"
-        )
+        // keep entry names verbatim under an archive-named dir — some
+        // readers detect on filename (e.g. MCP's `params.csv`)
+        val out = cacheDir.resolve(archive.fileName.toString()).resolve(entry.name)
         if (!Files.exists(out)) {
-            Files.createDirectories(cacheDir)
+            Files.createDirectories(out.parent)
             jar.getInputStream(entry).use { Files.copy(it, out) }
         }
         return out

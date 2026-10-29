@@ -11,6 +11,7 @@ import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 import xyz.wagyourtail.unimined.source.DecompilerRegistry
@@ -54,8 +55,16 @@ internal object GenModSourcesWiring {
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val source = project.extensions.getByType(SourceExtension::class.java)
         val environmentId = environment.environmentId
-        val libraries = project.configurations.getByName(
-            environment.minecraftLibrariesConfigurationName
+        // decompiler classpath: the env's library set plus the dev MC
+        // artifact — decompilers resolve supertypes/signatures for
+        // output quality, and mods' ancestors live in the dev jar
+        val libraries = project.files(
+            project.configurations.getByName(
+                environment.minecraftLibrariesConfigurationName
+            ),
+            project.provider {
+                minecraft.devViewConfigurations[environmentId] ?: project.files()
+            }
         )
         val devNamespace = minecraft.devNamespace(environmentId)
         val sourceSteps = remap.pipelineSteps(environmentId, RemapSurface.SOURCES).get()
@@ -110,12 +119,18 @@ internal object GenModSourcesWiring {
                         ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, finalType
                     )
                     t.parameters { p ->
+                        p.label.set("$environmentId/$bucketName-sources")
+                        p.modMarkers.set(project.provider {
+                            ModMarkerScan.DEFAULT_MARKERS +
+                                    remap.sourceSet(environmentId).modMarkerContributions
+                        })
                         p.sourceNamespace.set(devNamespace)
                         p.targetNamespace.set(devNamespace)
                         p.mappingBundleJson.set(
                             minecraft.mappingBundleJson(environmentId, devNamespace, devNamespace)
                         )
-                        p.classpath.from(libraries)
+                        // no classpath — see EnvironmentClasspathWiring;
+                        // `libraries` remains the *decompiler* classpath
                         p.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.SOURCES))
                     }
                 }

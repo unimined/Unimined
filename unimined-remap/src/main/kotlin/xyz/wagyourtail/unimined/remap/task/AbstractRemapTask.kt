@@ -1,25 +1,14 @@
 package xyz.wagyourtail.unimined.remap.task
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.mapping.MappingData
+import org.gradle.api.tasks.*
+import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
@@ -88,6 +77,16 @@ abstract class AbstractRemapTask : DefaultTask() {
     @get:Internal
     abstract val mappingData: Property<MappingData>
 
+    /**
+     * Serialized [AccessModel] — the merged AW/AT/CT rules of the remap
+     * batch, fed to `needsAccessModel` steps as the analysis overlay.
+     * Text input keeps the fingerprint content-addressed without a task
+     * dependency; absent means no overlay.
+     */
+    @get:Optional
+    @get:Input
+    abstract val accessModel: Property<String>
+
     @TaskAction
     fun runPipeline() {
         val mappings = mappingFile.orNull
@@ -108,7 +107,8 @@ abstract class AbstractRemapTask : DefaultTask() {
             classpath = remapClasspath.files.map { it.toPath() },
             workDir = temporaryDir.toPath(),
             logger = logger,
-            host = path
+            host = path,
+            accessModel = accessModel.orNull?.let(AccessModel::parse)
         )
     }
 

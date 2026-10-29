@@ -5,12 +5,12 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
-import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
 import xyz.wagyourtail.unimined.remap.RemapExtension
-import xyz.wagyourtail.unimined.transform.GradlePlugin as TransformPlugin
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
+import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
+import xyz.wagyourtail.unimined.transform.GradlePlugin as TransformPlugin
 
 class UniminedExtensionGroovyTest {
 

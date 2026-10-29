@@ -13,4 +13,6 @@ internal class MutableRunConfigSpec(override val name: String) : RunConfigSpec {
 
     override val environment: MutableMap<String, String> = mutableMapOf()
 
+    override val properties: MutableMap<String, () -> String> = mutableMapOf()
+
 }

@@ -35,16 +35,16 @@ class NativeLaunchMetadata(
 
     @Synchronized
     private fun resolver(): ManifestResolver = resolver ?: (
-        resolverFactory?.invoke() ?: ManifestResolver(
-            downloader = Downloader(
-                cacheDir = cacheDir,
-                offline = offline,
-                refreshCache = refreshCache,
-                metadataTtl = metadataTtlMillis?.let(Duration::ofMillis) ?: Duration.ofHours(24)
-            ),
-            metadataTtlOverride = metadataTtlMillis?.let(Duration::ofMillis)
-        )
-    ).also { resolver = it }
+            resolverFactory?.invoke() ?: ManifestResolver(
+                downloader = Downloader(
+                    cacheDir = cacheDir,
+                    offline = offline,
+                    refreshCache = refreshCache,
+                    metadataTtl = metadataTtlMillis?.let(Duration::ofMillis) ?: Duration.ofHours(24)
+                ),
+                metadataTtlOverride = metadataTtlMillis?.let(Duration::ofMillis)
+            )
+            ).also { resolver = it }
 
     override fun versionJson(id: String): JsonObject = resolver().versionJsonDocument(id)
 

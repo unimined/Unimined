@@ -1,0 +1,4 @@
+xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevBinpatchStepType
+xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepType
+xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixesStepType
+xyz.wagyourtail.unimined.transform.forge.internal.fg2.StringClassNamesStepType

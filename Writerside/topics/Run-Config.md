@@ -24,9 +24,9 @@ unimined.minecraft {
 }
 
 ```
+
 </tab>
 <tab id="Kotlin-Run-Config" title="Kotlin" group-key="kotlin">
-
 
 ```kotlin
 
@@ -44,7 +44,9 @@ unimined.minecraft {
 }
 
 ```
+
 </tab>
 </tabs>
 
-for more details on what can be changed in the run configurations, see [RunConfig](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.runs/-run-config/index.html)
+for more details on what can be changed in the run configurations,
+see [RunConfig](https://unimined.wagyourtail.xyz/unimined/%version%/api-docs/unimined/xyz.wagyourtail.unimined.api.runs/-run-config/index.html)

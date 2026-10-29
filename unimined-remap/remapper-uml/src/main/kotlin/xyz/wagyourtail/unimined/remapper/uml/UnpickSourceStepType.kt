@@ -1,17 +1,16 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
-import kotlin.reflect.KClass
 import kotlinx.coroutines.runBlocking
 import okio.buffer
 import okio.source
 import org.gradle.api.GradleException
-import org.gradle.api.logging.Logger
+import xyz.wagyourtail.commons.core.logger.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mapping.UmlMappingTreeView
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.element.mapping.MutableConstantGroupMapping
@@ -29,6 +28,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipFile
 import kotlin.io.path.exists
+import kotlin.reflect.KClass
 
 /**
  * The `unpick` step for [RemapSurface.SOURCES] — replaces inlined
@@ -58,11 +58,11 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
         ArtifactStep { input, c -> unpick(input, spec, c) }
 
     private fun unpick(input: Path, spec: UnpickSourceStepSpec, ctx: StepContext): Path {
-        val view = ctx.mappings?.view<UmlMappingTreeView>()
+        val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
-                "unpick step 'uml' requires mapping data exposing a UmlMappingTreeView"
+                "unpick step 'uml' requires mapping data exposing a UML MappingTree view"
             )
-        val tree = view.tree as? MutableMappingTree
+        val tree = view as? MutableMappingTree
         val defs = spec.defs.files
         if (defs.isNotEmpty()) {
             if (tree == null) throw GradleException(
@@ -76,7 +76,7 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
         }
         if (tree != null) {
             materializeExpressions(
-                tree, Namespace(ctx.spec.sourceNamespace), ctx.classpath, ctx.logger
+                tree, Namespace(ctx.spec.sourceNamespace), ctx.classpath, ctx.log.subLogger("unpick")
             )
         }
 
@@ -84,15 +84,14 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
         val target = Files.createTempDirectory(ctx.workDir, "unpick")
             .resolve(input.fileName.toString())
 
-        ctx.logger.info(
-            "[remap/unpick:sources] unpicking constants in {}",
-            input.fileName
+        ctx.log.subLogger("unpick:sources").info(
+            "unpicking constants in ${input.fileName}"
         )
 
         SourceRemapper.remap(
             input,
             target,
-            view.tree,
+            view,
             Namespace(runtimeSpec.sourceNamespace),
             Namespace(runtimeSpec.targetNamespace),
             classpath = ctx.classpath.filter { it.exists() },
@@ -112,7 +111,7 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
         tree: MutableMappingTree,
         fns: Namespace,
         classpath: List<Path>,
-        logger: Logger,
+        log: Logger,
     ) {
         val groups = tree.constantGroups.filter {
             it.baseNs == fns && it.constants.any()
@@ -131,7 +130,7 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
                             ClassReader(zip.getInputStream(entry)).accept(
                                 node,
                                 ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG
-                                    or ClassReader.SKIP_FRAMES
+                                        or ClassReader.SKIP_FRAMES
                             )
                             for (field in node.fields) {
                                 if (field.value != null
@@ -148,7 +147,7 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
                     }
                 }
             } catch (e: Exception) {
-                logger.debug("[remap/unpick] skipping unreadable jar {}", jar)
+                log.debug("skipping unreadable jar $jar")
             }
         }
         if (fieldValues.isEmpty()) return
@@ -171,9 +170,8 @@ class UnpickSourceStepType : RemapStepType<UnpickSourceStepSpec> {
             }
         }
         if (added > 0) {
-            logger.info(
-                "[remap/unpick] materialized {} constant literal expressions",
-                added
+            log.info(
+                "materialized $added constant literal expressions"
             )
         }
     }

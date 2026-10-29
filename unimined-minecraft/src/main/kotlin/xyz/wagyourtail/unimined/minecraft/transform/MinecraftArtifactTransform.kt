@@ -1,21 +1,19 @@
 package xyz.wagyourtail.unimined.minecraft.transform
 
-import org.gradle.api.artifacts.transform.CacheableTransform
-import org.gradle.api.artifacts.transform.InputArtifact
-import org.gradle.api.artifacts.transform.TransformAction
-import org.gradle.api.artifacts.transform.TransformOutputs
-import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.artifacts.transform.*
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logging
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.minecraft.MinecraftArtifactProducerRegistry
-import xyz.wagyourtail.unimined.minecraft.internal.RuntimeLoaderSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
@@ -52,6 +50,12 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
         @get:Input
         val artifactKey: Property<String>
 
+        /** Output filename stem (`MinecraftEnvironment
+         *  .artifactBaseName`) — `forge-<fullVersion>` on forge-family
+         *  environments so FML's `matchFileName` finds the jar. */
+        @get:Input
+        val artifactBaseName: Property<String>
+
         /** Producer selection override (`minecraft.provider`). */
         @get:Optional
         @get:Input
@@ -81,6 +85,27 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
         @get:Input
         val metadataCacheTtl: Property<String>
 
+        /** Resolved `minecraftLibraries` jars the merge strip checks
+         *  server entries against (`@Classpath` — content
+         *  fingerprinted so library-set changes re-run the merge). */
+        @get:InputFiles
+        @get:Classpath
+        val libraryJars: ConfigurableFileCollection
+
+        /** Merge keep-override entry globs (`MinecraftEnvironment
+         *  .mergeIncludeGlobs`). */
+        @get:Input
+        val mergeIncludeGlobs: ListProperty<String>
+
+        /** Extra server-side strip globs (`MinecraftEnvironment
+         *  .mergeExcludeGlobs`). */
+        @get:Input
+        val mergeExcludeGlobs: ListProperty<String>
+
+        /** Master switch for the server-bundled-library strip. */
+        @get:Input
+        val stripBundledServerLibraries: Property<Boolean>
+
     }
 
     @get:InputArtifact
@@ -105,12 +130,16 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
             refreshUniminedDownloads = p.refreshUniminedDownloads.get(),
             rebuildUniminedArtifacts = p.rebuildUniminedArtifacts.get(),
             metadataCacheTtl = p.metadataCacheTtl.orNull?.let(Duration::parse),
+            libraryJars = p.libraryJars.files.map { it.toPath() },
+            mergeIncludeGlobs = p.mergeIncludeGlobs.get(),
+            mergeExcludeGlobs = p.mergeExcludeGlobs.get(),
+            stripBundledServerLibraries = p.stripBundledServerLibraries.get(),
             logger = Logging.getLogger(MinecraftArtifactTransform::class.java)
         )
         val produced = producer.produce(spec, request)
         val output = outputs.file(
-            "minecraft-${p.environmentId.get()}-${p.version.get()}-" +
-                p.artifactKey.get().lowercase() + ".jar"
+            "${p.artifactBaseName.get()}-" +
+                    p.artifactKey.get().lowercase() + ".jar"
         ).toPath()
         Files.copy(produced, output, StandardCopyOption.REPLACE_EXISTING)
     }

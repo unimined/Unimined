@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.remapper.jst
 
-import kotlin.reflect.KClass
 import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
@@ -8,6 +7,7 @@ import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.io.File
+import kotlin.reflect.KClass
 
 /**
  * `jst` step on the SOURCES surface — runs `net.neoforged.jst.cli.Main`
@@ -30,7 +30,7 @@ class JstStep : RemapStepType<JstStepSpec> {
         val toolCp = spec.toolClasspath.files
         require(toolCp.isNotEmpty()) {
             "jst: toolClasspath is empty — wire a configuration " +
-                "resolving 'net.neoforged.jst:jst-cli'"
+                    "resolving 'net.neoforged.jst:jst-cli'"
         }
         val out = c.workDir.resolve("jst-out.jar")
         val javaBin = File(System.getProperty("java.home"), "bin/java").absolutePath
@@ -42,17 +42,19 @@ class JstStep : RemapStepType<JstStepSpec> {
             add("net.neoforged.jst.cli.Main")
             addAll(listOf("--input-format", "ARCHIVE", "--output-format", "ARCHIVE"))
             if (c.classpath.isNotEmpty()) {
-                addAll(listOf(
-                    "--classpath",
-                    c.classpath.joinToString(File.pathSeparator)
-                ))
+                addAll(
+                    listOf(
+                        "--classpath",
+                        c.classpath.joinToString(File.pathSeparator)
+                    )
+                )
             }
             spec.enable.get().forEach { addAll(listOf("--enable", it)) }
             addAll(spec.extraArgs.get())
             add(input.toString())
             add(out.toString())
         }
-        c.logger.info("[Unimined/JstStep] ${args.joinToString(" ")}")
+        c.log.subLogger("jst").info(args.joinToString(" "))
 
         val proc = ProcessBuilder(args).redirectErrorStream(true).start()
         val output = proc.inputStream.bufferedReader().readText()

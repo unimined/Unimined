@@ -3,25 +3,20 @@ package xyz.wagyourtail.unimined.provider.native
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.mapping.MappingTree
-import xyz.wagyourtail.unimined.api.mapping.MappingVisitor
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.Side
-import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
-import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
-import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
-import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
-import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
+import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
+import xyz.wagyourtail.unimined.minecraft.spi.*
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
+import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
 import xyz.wagyourtail.unimined.provider.native.metadata.NativeLaunchMetadata
 import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
 import java.nio.file.Path
 import java.time.Duration
-import java.util.Locale
+import java.util.*
 
 /**
  * Mojang's native version provider. It resolves bare Minecraft environments;
@@ -66,10 +61,23 @@ class NativeProvider(
         fun metadata(): ResolvedMinecraftMetadata =
             NativeArtifactProduction.metadata(versionId, resolver)
 
+        // ProviderContext cannot resolve configurations, so the eager
+        // merge honors the spec's glob/flag state but never the
+        // minecraftLibraries membership strip — the artifact-transform
+        // path carries the resolved library set and is the production
+        // merge consumers actually resolve.
+        val mergeOptions = (spec as? RuntimeMinecraftSpec)?.let { rs ->
+            JarMerger.Options(
+                includeGlobs = rs.mergeIncludeGlobs,
+                excludeGlobs = rs.mergeExcludeGlobs,
+                stripBundledServerLibraries = rs.stripBundledServerLibraries
+            )
+        } ?: JarMerger.Options()
+
         fun downloadedJar(key: ArtifactKey): Path =
             NativeArtifactProduction.produce(
                 versionId, key, downloader, resolver,
-                ctx.rebuildUniminedArtifacts
+                ctx.rebuildUniminedArtifacts, mergeOptions
             )
 
         fun artifactProvider(key: ArtifactKey): Provider<RegularFile> =
@@ -118,12 +126,20 @@ class NativeProvider(
         }
 
         val auxiliary = mutableMapOf<String, Provider<RegularFile>>()
+        // raw side jars — needed by loader pipelines (e.g. forge's
+        // mcpconfig clean jar) regardless of the environment side
+        for (key in listOf(ArtifactKey.CLIENT, ArtifactKey.SERVER)) {
+            auxiliary[key.name.lowercase(Locale.ROOT) + "_jar"] =
+                ctx.layout.file(ctx.providers.provider {
+                    downloadedJar(key).toFile()
+                })
+        }
         for (channel in listOf("client_mappings", "server_mappings")) {
             auxiliary[channel] = ctx.layout.file(ctx.providers.provider {
                 val ref = metadata().version.downloads?.get(channel)
                     ?: throw GradleException(
                         "Minecraft $versionId has no $channel download " +
-                            "(mojmap channel requires a version with official mappings)"
+                                "(mojmap channel requires a version with official mappings)"
                     )
                 downloader.fetch(
                     ref.url,
@@ -168,13 +184,5 @@ private class NativeAssetIndex(
 ) : AssetIndex
 
 /** Identity-only official namespace until a user mapping source is composed. */
-private object OfficialIdentityMappingTree : MappingTree {
-    override val namespaces: List<String> = listOf("official")
-
-    override fun accept(sourceNamespace: String, targetNamespace: String, visitor: MappingVisitor) {
-        require(sourceNamespace == "official" && targetNamespace == "official") {
-            "native provider only exposes the official identity mapping; declare a mappings source for " +
-                "$sourceNamespace -> $targetNamespace"
-        }
-    }
-}
+private val OfficialIdentityMappingTree: MappingTree =
+    MappingTree(listOf(Namespace("official")))

@@ -4,15 +4,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 /**
@@ -71,6 +63,16 @@ abstract class RemappedViewSpec {
     @get:Internal
     abstract val mappingBundleJson: Property<String>
 
+    /**
+     * Serialized [xyz.wagyourtail.unimined.api.access.AccessModel] —
+     * the merged AW/AT/CT rules of this view's remap batch, fed to
+     * `needsAccessModel` steps as the remap-analysis overlay. Host wiring
+     * sets it lazily from environment contributions; absent means no
+     * overlay.
+     */
+    @get:Internal
+    abstract val accessModel: Property<String>
+
     /** Whether [mappingBundleJson] was set — checked without evaluating it. */
     @get:Internal
     var hasLazyMappings: Boolean = false
@@ -83,5 +85,24 @@ abstract class RemappedViewSpec {
      */
     @get:Internal
     abstract val artifactTypeToken: Property<String>
+
+    /**
+     * Mod indicators for [onlyRemapMarkedJars] — prefixed matchers
+     * (`file:`, `suffix:`, `manifest:`, `refs:`) scanned per artifact;
+     * see [xyz.wagyourtail.unimined.remap.internal.ModMarkerScan] for
+     * semantics and the default set. Replaceable for loaders with
+     * different markers.
+     */
+    @get:Input
+    abstract val modMarkers: ListProperty<String>
+
+    /**
+     * When true (default), artifacts without a mod marker pass through
+     * unmapped — plain Java libraries on a `mod*` view don't reference
+     * mapped classes, so the full pipeline is wasted on them. Set false
+     * to remap every artifact.
+     */
+    @get:Input
+    abstract val onlyRemapMarkedJars: Property<Boolean>
 
 }

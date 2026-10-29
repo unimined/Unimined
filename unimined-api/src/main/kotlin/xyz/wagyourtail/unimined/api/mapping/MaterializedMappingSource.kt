@@ -23,4 +23,18 @@ interface MaterializedMappingSource {
     val nsMap: Map<String, String>
         get() = emptyMap()
 
+    /** Named-namespace flags propagated from the declaration — the
+     *  emitted tree namespaces carrying developer-facing names. */
+    val namedNamespaces: Set<String>
+        get() = declaration.namedNamespaces
+
+    /**
+     * Companion files extracted alongside the mapping documents — the
+     * yarn `v2` convention of shipping `extras/record_signatures.json`
+     * (and future extras) inside the published jar. Keyed by archive
+     * entry path; empty for non-archive sources.
+     */
+    val attachments: Map<String, Path>
+        get() = emptyMap()
+
 }
