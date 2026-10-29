@@ -2,13 +2,45 @@ package xyz.wagyourtail.unimined.transform.jarmod
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.transform.jarmod.internal.JarModEnvironmentWiring
+import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import java.net.URI
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.transform.jarmod`.
+ *
+ * Loader-gated jarmod transform: for environments declaring
+ * `loader("jarmod", <JarModAgent version>)`, wires the `jarMod<env>`
+ * configuration into a merge step that injects its contents into the
+ * dev Minecraft jar (1.x `JarModMinecraftTransformer` semantics —
+ * this is also the substrate FG1 Forge and ModLoader builds reuse).
+ * `JarModAgent` itself is the loader product; agent wiring for runs is
+ * a follow-up phase.
  */
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
+            val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
+            // jarmod mods run in the vanilla jar's own namespace
+            minecraft.loaderModSourceNamespaces["jarmod"] = listOf("official")
+            listOf(
+                "https://maven.wagyourtail.xyz/releases/",
+                "https://maven.wagyourtail.xyz/snapshots/"
+            ).forEach {
+                target.repositories.maven { r -> r.url = URI.create(it) }
+            }
+            target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
+                minecraft.onEnvironmentBound { environment, _ ->
+                    val family = environment.loaderSpec.orNull?.name
+                        ?.let { LoaderRegistry.resolveBuiltin(it)?.family }
+                    if (family == "jarmod") {
+                        JarModEnvironmentWiring.wire(target, environment)
+                    }
+                }
+            }
+        }
     }
 
 }

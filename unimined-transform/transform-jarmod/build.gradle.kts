@@ -5,6 +5,10 @@ plugins {
 dependencies {
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    api(project(":unimined-mod"))
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 gradlePlugin {
