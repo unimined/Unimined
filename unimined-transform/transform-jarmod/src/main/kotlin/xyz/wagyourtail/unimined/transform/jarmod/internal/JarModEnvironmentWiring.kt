@@ -31,15 +31,32 @@ internal object JarModEnvironmentWiring {
         project.afterEvaluate {
             environment.loaderSpec.orNull?.let { spec ->
                 project.dependencies.add(
-                    jarModAgent.name, "xyz.wagyourtail.unimined:JarModAgent:${spec.version}"
+                    jarModAgent.name, "xyz.wagyourtail.unimined:jarmod-agent:${spec.version}:all"
                 )
             }
         }
 
         val transform = project.extensions.getByType(TransformExtension::class.java)
-        transform.sourceSet(envId).transformer(
+        val envSpec = transform.sourceSet(envId)
+        envSpec.transformer(
             JarModMergeTransformer(project, envId, jarMod)
         )
+        // JarModAgent on the run classpath: -javaagent + system props
+        // (1.x JarModAgentMinecraftTransformer run config)
+        envSpec.runMutators += org.gradle.api.Action { config ->
+            val jmaFile = jarModAgent.resolve().first { it.extension == "jar" }
+            config.jvmArgs += "-javaagent:${jmaFile.absolutePath}"
+            val transforms = JarModEnvState.transforms(envId)
+            if (transforms.isNotEmpty()) {
+                config.jvmArgs += "-Djma.transformers=" +
+                    transforms.joinToString(java.io.File.pathSeparator)
+            }
+            val priority = JarModEnvState.priorityClasspath(envId)
+            if (priority.isNotEmpty()) {
+                config.jvmArgs += "-Djma.priorityClasspath=" +
+                    priority.joinToString(java.io.File.pathSeparator)
+            }
+        }
     }
 
 }

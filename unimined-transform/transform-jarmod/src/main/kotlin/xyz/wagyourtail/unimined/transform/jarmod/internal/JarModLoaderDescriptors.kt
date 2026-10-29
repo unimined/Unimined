@@ -20,7 +20,7 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
                 "https://maven.wagyourtail.xyz/releases/",
                 "https://maven.wagyourtail.xyz/snapshots/"
             ),
-            loaderCoords = { _, v -> "xyz.wagyourtail.unimined:JarModAgent:$v" },
+            loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             prodNamespace = "official",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         )

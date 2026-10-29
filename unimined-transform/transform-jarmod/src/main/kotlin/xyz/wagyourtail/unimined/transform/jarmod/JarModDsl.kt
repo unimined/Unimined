@@ -10,3 +10,16 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 fun MinecraftEnvironment.jarmod(version: String) {
     loader("jarmod", version)
 }
+
+/** Register a JarModAgent transformer class (applied at run time and,
+ *  when compile-time transforms land, during remap). */
+fun MinecraftEnvironment.jarmodTransformer(transform: String) {
+    xyz.wagyourtail.unimined.transform.jarmod.internal.JarModEnvState
+        .addTransforms(environmentId, listOf(transform))
+}
+
+/** Declare a jarModAgent transformer set. */
+fun MinecraftEnvironment.jarmodTransforms(transforms: List<String>) {
+    xyz.wagyourtail.unimined.transform.jarmod.internal.JarModEnvState
+        .addTransforms(environmentId, transforms)
+}
