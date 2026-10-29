@@ -36,8 +36,6 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeBinpatchStep
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeDevFixes
-import xyz.wagyourtail.unimined.transform.forge.internal.fg2.contributeDevSources
-import xyz.wagyourtail.unimined.transform.forge.internal.fg2.contributeUserdevLibraries
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.contributeLoaderResolution
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevSourcesChain
 

@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge.processor
 
-import xyz.wagyourtail.unimined.transform.forge.internal.putEntryWithDirs
+import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor.*
 import java.nio.file.Path

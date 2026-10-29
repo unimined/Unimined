@@ -1,7 +1,7 @@
 [versions]
 java = "17"
 kotlin = "2.4.21"
-commons = "1.0.5-SNAPSHOT"
+commons = "1.1.0-SNAPSHOT"
 kotlinx-serialization = "1.12.0"
 unimined-mapping-library = "2.4.0"
 tiny-remapper = "0.15.0"

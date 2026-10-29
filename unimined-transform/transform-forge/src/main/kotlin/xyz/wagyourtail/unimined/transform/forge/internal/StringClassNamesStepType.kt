@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.transform.forge.internal.fg2
+package xyz.wagyourtail.unimined.transform.forge.internal
 
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property

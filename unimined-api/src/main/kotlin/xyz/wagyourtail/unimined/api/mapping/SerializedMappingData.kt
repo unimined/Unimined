@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.api.mapping
 
+import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
@@ -55,7 +56,6 @@ object SerializedMappingData {
      */
     /** DOS epoch — the minimum representable zip timestamp; used
      *  so bundles are byte-reproducible across rebuilds. */
-    private const val DOS_EPOCH: Long = 315532800000
 
     fun write(data: MappingData, path: Path): List<String> {
         val payloads = serializers().mapNotNull { s ->
@@ -64,14 +64,14 @@ object SerializedMappingData {
         }
         if (payloads.isEmpty()) return emptyList()
         ZipOutputStream(path.outputStream()).use { zip ->
-            zip.putNextEntry(ZipEntry("views.json").apply { time = DOS_EPOCH })
+            zip.putNextEntry(ZipEntry("views.json").apply { time = CONSTANT_TIME_FOR_ZIP_ENTRIES })
             zip.write(
                 json.encodeToString(Manifest(payloads = payloads.map { it.first }))
                     .encodeToByteArray()
             )
             zip.closeEntry()
             for ((id, bytes) in payloads) {
-                zip.putNextEntry(ZipEntry("views/$id").apply { time = DOS_EPOCH })
+                zip.putNextEntry(ZipEntry("views/$id").apply { time = CONSTANT_TIME_FOR_ZIP_ENTRIES })
                 zip.write(bytes)
                 zip.closeEntry()
             }

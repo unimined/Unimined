@@ -36,7 +36,7 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixesStepSpec
-import xyz.wagyourtail.unimined.transform.forge.internal.fg2.mcpconfigCleanJar
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfigCleanJar
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevBinpatchStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile

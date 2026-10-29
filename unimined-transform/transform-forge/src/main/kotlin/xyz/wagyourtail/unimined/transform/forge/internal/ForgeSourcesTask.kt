@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.transform.forge.internal.fg2
+package xyz.wagyourtail.unimined.transform.forge.internal
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject

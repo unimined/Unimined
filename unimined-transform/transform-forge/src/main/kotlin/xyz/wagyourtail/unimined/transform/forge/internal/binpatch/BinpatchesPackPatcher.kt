@@ -13,7 +13,7 @@ import java.util.zip.Adler32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.io.path.outputStream
-import xyz.wagyourtail.unimined.transform.forge.internal.putEntryWithDirs
+import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 
 /**
  * FG2-era `binpatches.pack.lzma` application — a faithful port of

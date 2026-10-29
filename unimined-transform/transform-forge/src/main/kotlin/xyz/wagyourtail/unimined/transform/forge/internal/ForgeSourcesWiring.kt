@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.transform.forge.internal.fg2
+package xyz.wagyourtail.unimined.transform.forge.internal
 
 import xyz.wagyourtail.commonskt.utils.capitalized
 import kotlinx.serialization.json.JsonObject
@@ -35,7 +35,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.exists
-import xyz.wagyourtail.unimined.transform.forge.internal.fg2.ForgeSourcesTask
+import xyz.wagyourtail.unimined.transform.forge.internal.ForgeSourcesTask
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.bootstrapDevVersion
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.GradleExecPort

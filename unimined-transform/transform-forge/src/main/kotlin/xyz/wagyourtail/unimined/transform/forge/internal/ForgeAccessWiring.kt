@@ -35,7 +35,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.exists
-import xyz.wagyourtail.unimined.transform.forge.internal.fg2.StringClassNamesStepSpec
+import xyz.wagyourtail.unimined.transform.forge.internal.StringClassNamesStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevEnrichers
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
