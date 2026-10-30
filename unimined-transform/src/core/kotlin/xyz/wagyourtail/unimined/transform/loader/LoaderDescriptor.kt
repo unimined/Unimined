@@ -36,6 +36,13 @@ data class LoaderDescriptor(
      *  (`intermediary`/`searge`/`mojmap`/`legacyIntermediary`/…). */
     val prodNamespace: String,
 
+    /** Production-side mapping artifact coordinates for `(mcVersion)` —
+     *  the intermediary/calamus jar the family transform resolves for
+     *  the `official → prodNs` hop (fabric-family `*:intermediary:*:v2`
+     *  shape). `null` for products whose production mappings arrive
+     *  another way (forge userdev / mcp-config). */
+    val intermediaryCoords: ((String) -> String)? = null,
+
     /** Mod-metadata conventions (metadata file name, where AT/CT files
      *  and injected-interface/nested-jar declarations live). */
     val metadata: LoaderMetadataSpec = LoaderMetadataSpec(),

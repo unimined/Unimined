@@ -24,6 +24,7 @@ import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.fabric.processor.ModJavadocJarProcessor
 import xyz.wagyourtail.unimined.transform.fabric.processor.fabricSpecContext
+import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 
 /**
@@ -40,7 +41,9 @@ internal object FabricEnvironmentWiring {
         // loader behavior on top; convention lets users override, and the
         // convention itself only applies when the loader is fabric
         environment.provider.convention(
-            environment.loaderSpec.map { if (it.name == "fabric") "native" else null }
+            environment.loaderSpec.map {
+                if (LoaderRegistry.resolveBuiltin(it.name)?.family == "fabric") "native" else null
+            }
         )
         contributeLibrarySubstitutions(project, environment)
         contributeIntermediaryMappings(project, environment)
@@ -51,7 +54,6 @@ internal object FabricEnvironmentWiring {
     }
 
 
-    private const val INTERMEDIARY_MODULE = "net.fabricmc:intermediary"
     private const val ORNITHE_META = "https://meta.ornithemc.net"
 
     /**
@@ -120,19 +122,20 @@ internal object FabricEnvironmentWiring {
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
-                if (loaderSpec.orNull?.name == "fabric") {
-                    deps.add(
-                        dependencies.create(
-                            "$INTERMEDIARY_MODULE:${version.get()}:v2"
-                        )
-                    )
+                val spec = loaderSpec.orNull
+                val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+                    ?.takeIf { it.family == "fabric" }
+                val coord = descriptor?.intermediaryCoords?.invoke(version.get())
+                if (coord != null) {
+                    deps.add(dependencies.create(coord))
                 }
             }
         }
         val intermediaryJar = project.files(intermediary)
 
         val files = project.files(project.provider {
-            if (loaderSpec.orNull?.name != "fabric") {
+            val spec = loaderSpec.orNull
+            if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric") {
                 emptyList()
             } else {
                 listOf(intermediaryJar.singleFile)
@@ -155,10 +158,14 @@ internal object FabricEnvironmentWiring {
             conf.isTransitive = false
             conf.withDependencies { deps ->
                 val spec = loaderSpec.orNull
-                if (spec?.name == "fabric") {
+                val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+                    ?.takeIf { it.family == "fabric" }
+                if (descriptor != null) {
                     deps.add(
                         dependencies.create(
-                            "${FabricModAnalysis.LOADER_MODULE}:${spec.version}"
+                            descriptor.loaderCoords(
+                                environment.version.get(), spec!!.version
+                            )
                         )
                     )
                 }
@@ -175,7 +182,8 @@ internal object FabricEnvironmentWiring {
             conf.isTransitive = false
             conf.withDependencies { deps ->
                 val spec = loaderSpec.orNull
-                if (spec?.name != "fabric") return@withDependencies
+                if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric")
+                    return@withDependencies
                 val jar = loaderFiles.singleFile
                 FabricModAnalysis.loaderLibraries(jar.toPath()).forEach {
                     deps.add(dependencies.create(it))
@@ -242,7 +250,7 @@ internal object FabricEnvironmentWiring {
         // compile-artifact input filters to transitive rules below, but
         // the analysis model needs the complete rule set
         val extractedCts = project.provider {
-            if (loaderSpec.orNull?.name != "fabric" ||
+            if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric" ||
                 !environment.transitiveAccessWideners.get()
             ) {
                 emptyList()
@@ -310,7 +318,7 @@ internal object FabricEnvironmentWiring {
         envSpec.jarProcessorSpecContext = { productionNamespace, modPaths ->
             fabricSpecContext(
                 productionNamespace,
-                if (loaderSpec.orNull?.name == "fabric") modPaths else emptyList()
+                if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family == "fabric") modPaths else emptyList()
             )
         }
     }
@@ -330,7 +338,7 @@ internal object FabricEnvironmentWiring {
         val loaderFiles = project.files(loader)
 
         transform.sourceSet(environment.environmentId).runMutators += Action<RunConfigSpec> { config ->
-            if (loaderSpec.orNull?.name != "fabric") return@Action
+            if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric") return@Action
             val jar = loaderFiles.singleFile.toPath()
             val side = if (config.name.contains("server", ignoreCase = true)) "server" else "client"
             val fallback = if (side == "server") {

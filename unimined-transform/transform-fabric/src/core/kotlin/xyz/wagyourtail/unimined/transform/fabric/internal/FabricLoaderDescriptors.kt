@@ -22,6 +22,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             mavens = listOf("https://maven.fabricmc.net/"),
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "intermediary",
+            intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(
@@ -39,6 +40,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             mavens = listOf("https://maven.quiltmc.org/repository/release"),
             loaderCoords = { _, v -> "org.quiltmc:quilt-loader:$v" },
             prodNamespace = "intermediary",
+            // quilt rides fabric intermediary — quilt-mappings is
+            // the named layer on top
+            intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
             metadata = LoaderMetadataSpec(
                 fileName = "quilt.mod.json",
                 accessDiscovery = setOf(
@@ -57,6 +61,8 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // legacyfabric publishes under the upstream GAV on their own maven
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "legacyIntermediary",
+            // 1.x legacyFabricRevisionTransform: generation-keyed group
+            intermediaryCoords = { mc -> "net.legacyfabric.v1:intermediary:$mc:v2" },
             capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -71,6 +77,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             mavens = listOf("https://maven.glass-launcher.net/babric/"),
             loaderCoords = { _, v -> "babric:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
+            intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
@@ -86,6 +93,8 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // loader() — upstream fabric-loader, not an ornithe artifact
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "calamus",
+            // 1.x ornitheGenRevisionTransform: generation-keyed artifact
+            intermediaryCoords = { mc -> "net.ornithemc:calamus-intermediary-gen2:$mc:v2" },
             // ornithe runs on Java 17
             javaVersion = 17,
             metadata = LoaderMetadataSpec(
@@ -101,6 +110,8 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             mavens = listOf("https://maven.flintloader.net/releases/"),
             loaderCoords = { _, v -> "net.flintloader:punch:$v" },
             prodNamespace = "intermediary",
+            // flint rides fabric intermediary
+            intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),

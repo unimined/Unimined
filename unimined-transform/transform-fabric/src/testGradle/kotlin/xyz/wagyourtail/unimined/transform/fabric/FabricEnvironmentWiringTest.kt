@@ -109,6 +109,71 @@ class FabricEnvironmentWiringTest {
     }
 
     @Test
+    fun `family members contribute their own loader and intermediary deps`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val sourceSets = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        )
+        // loader -> (loaderVer, loader GAV, intermediary GAV incl.
+        // :v2 classifier) — coords from 1.x MappingsProvider
+        val repo = dir.resolve("repo").toFile()
+        fun serve(gav: String) {
+            // gav = g:a:v or g:a:v:classifier
+            val p = gav.split(":")
+            val jarDir = repo.resolve("${p[0].replace('.', '/')}/${p[1]}/${p[2]}")
+            jarDir.mkdirs()
+            val classifier = p.getOrNull(3)?.let { "-$it" } ?: ""
+            jarDir.resolve("${p[1]}-${p[2]}$classifier.jar").writeBytes(
+                byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+            )
+        }
+        project.repositories.maven {
+            it.url = repo.toURI()
+            it.metadataSources { s -> s.artifact() }
+        }
+        val cases = listOf(
+            FamilyCase("quilt", "0.25.0", "org.quiltmc:quilt-loader:0.25.0", "net.fabricmc:intermediary:1.20.1:v2"),
+            FamilyCase("legacyfabric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.legacyfabric.v1:intermediary:1.20.1:v2"),
+            FamilyCase("babric", "0.16.0", "babric:fabric-loader:0.16.0", "babric:intermediary-upstream:1.20.1:v2"),
+            FamilyCase("ornithe", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2"),
+            FamilyCase("flint", "1.0.0", "net.flintloader:punch:1.0.0", "net.fabricmc:intermediary:1.20.1:v2"),
+        )
+        for (c in cases) {
+            serve(c.loaderGav)
+            serve(c.interGav)
+            sourceSets.create(c.loader)
+            ext.sourceSet(c.loader) { env ->
+                env.version.set("1.20.1")
+                env.loader(c.loader, c.loaderVer)
+            }
+            val capitalized = c.loader.replaceFirstChar { it.uppercase() }
+            val loaderJar = c.loaderGav.split(":")[1] +
+                "-${c.loaderGav.split(":")[2]}.jar"
+            val resolved = project.configurations
+                .getByName("fabricLoader$capitalized").resolve()
+                .map { it.name }
+            assertTrue(loaderJar in resolved, "${c.loader} loader: $resolved")
+            val interGav = c.interGav.split(":")
+            val interJar = "${interGav[1]}-${interGav[2]}-v2.jar"
+            val resolvedInter = project.configurations
+                .getByName("fabricIntermediary$capitalized").resolve()
+                .map { it.name }
+            assertTrue(
+                interJar in resolvedInter,
+                "${c.loader} intermediary: $resolvedInter"
+            )
+        }
+    }
+
+    private data class FamilyCase(
+        val loader: String,
+        val loaderVer: String,
+        val loaderGav: String,
+        val interGav: String
+    )
+
+    @Test
     fun `contributes the access model with own aw sections`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
