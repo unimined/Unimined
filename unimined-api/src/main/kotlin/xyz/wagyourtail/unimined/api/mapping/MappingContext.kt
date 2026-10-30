@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.mapping
 
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.unimined.api.spec.Side
 import java.nio.file.Path
 
 /**
@@ -11,6 +12,15 @@ interface MappingContext {
 
     /** The environment this resolution serves, normally the source-set name. */
     val environmentId: String
+
+    /**
+     * The environment's side, when known — used to drop side-specific
+     * documents (era `mcp_legacy` zips ship both `client.srg` and
+     * `server.srg` whose obf names are independent namespaces that
+     * must not be composed together). `null`/`MERGED` keeps all docs.
+     */
+    val envSide: Side?
+        get() = null
 
     val logger: Logger
 

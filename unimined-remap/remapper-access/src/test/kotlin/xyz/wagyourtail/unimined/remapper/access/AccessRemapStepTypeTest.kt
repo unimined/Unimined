@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remapper.access
 
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import org.gradle.api.GradleException
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
@@ -45,6 +46,7 @@ class AccessRemapStepTypeTest {
     private val mappings: MappingData = UmlMappingData(tree)
 
     private fun ctx(): StepContext = object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@AccessRemapStepTypeTest.spec
         override val mappings = this@AccessRemapStepTypeTest.mappings
         override val classpath = emptyList<Path>()

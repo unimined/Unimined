@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remapper.tiny
 
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -47,6 +48,7 @@ class TinyRemapStepTypeTest {
         classpath: List<Path> = emptyList(),
         accessModel: AccessModel? = null
     ): StepContext = object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@TinyRemapStepTypeTest.spec
         override val mappings = this@TinyRemapStepTypeTest.mappings
         override val classpath = classpath
@@ -171,6 +173,7 @@ class TinyRemapStepTypeTest {
     private fun propagationCtx(baseJar: Path, model: AccessModel?): StepContext {
         val mappings: MappingData = UmlMappingData(propagationTree)
         return object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = this@TinyRemapStepTypeTest.spec
             override val mappings = mappings
             override val classpath = listOf(baseJar)

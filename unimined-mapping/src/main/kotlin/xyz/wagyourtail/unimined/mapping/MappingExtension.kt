@@ -47,7 +47,8 @@ abstract class MappingExtension @Inject constructor(
     private fun ctx(
         environmentId: String,
         resolveMaven: Function<String, Path>,
-        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null,
+        envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
     ) = RuntimeMappingContext(
         environmentId, logger, cacheDir.orNull?.asFile?.toPath(),
         globalCacheDir.orNull?.asFile?.toPath(), resolveMaven::apply,
@@ -56,7 +57,8 @@ abstract class MappingExtension @Inject constructor(
                 throw UnsupportedOperationException(
                     "builtin channel '$channel' is not supported in this context"
                 )
-            }
+            },
+        envSide
     )
 
     /**
@@ -69,9 +71,10 @@ abstract class MappingExtension @Inject constructor(
         spec: MappingsSpecImpl,
         environmentId: String,
         resolveMaven: Function<String, Path>,
-        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null,
+        envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
     ): List<Path> = MappingResolver.materializeSources(
-        spec, ctx(environmentId, resolveMaven, resolveChannel), sourceProviders
+        spec, ctx(environmentId, resolveMaven, resolveChannel, envSide), sourceProviders
     )
 
     /** Resolve [spec]'s declared sources into environment-level [MappingData]. */
@@ -80,9 +83,10 @@ abstract class MappingExtension @Inject constructor(
         spec: MappingsSpecImpl,
         environmentId: String,
         resolveMaven: Function<String, Path>,
-        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null
+        resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null,
+        envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
     ): MappingData = MappingResolver.resolve(
-        spec, ctx(environmentId, resolveMaven, resolveChannel),
+        spec, ctx(environmentId, resolveMaven, resolveChannel, envSide),
         sourceProviders, registry, composers, postProcessors
     )
 

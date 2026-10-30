@@ -1,12 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.fg2
 
-import net.lenni0451.classtransform.TransformerManager
-import net.lenni0451.classtransform.additionalclassprovider.FileSystemClassProvider
-import net.lenni0451.classtransform.utils.tree.BasicClassProvider
-import net.lenni0451.classtransform.transformer.HandlerPosition
-import xyz.wagyourtail.unimined.transform.internal.classtransform.CSuperOverrideAnnotationHandler
-import xyz.wagyourtail.unimined.transform.internal.classtransform.SelfSuperTarget
-import java.io.IOException
+import xyz.wagyourtail.unimined.transform.internal.classtransform.ClassTransformJarFix
 import java.nio.file.FileSystem
 import kotlin.io.path.exists
 import kotlin.io.path.readBytes
@@ -79,45 +73,7 @@ object FG2DevFixes {
         ),
     )
 
-    fun fix(fs: FileSystem) {
-        // jar-backed provider: stubs/targets resolve from the dev jar
-        // itself; classpath fallback finds our transformer classes
-        val provider = FileSystemClassProvider(fs, BasicClassProvider())
-        val manager = TransformerManager(provider)
-        // `super.<sameName>` call sites — for CRedirect when the
-        // overridden member's name is only known at apply time
-        manager.addInjectionTarget("SUPER_SELF", SelfSuperTarget())
-        // delegate generation named after super members resolved from
-        // the jar (names are apply-time data: obf/srg)
-        manager.addCustomAnnotationHandler(CSuperOverrideAnnotationHandler(), HandlerPosition.PRE)
-        for (tx in transformers.keys) manager.addTransformer(tx)
-
-        for (entries in transformers.values) {
-            for (file in entries) {
-                val path = fs.getPath(file)
-                if (!path.exists()) continue
-                val name = file.removeSuffix(".class").replace('/', '.')
-                // transform returns null when no transformer applies
-                manager.transform(name, path.readBytes())?.let(path::writeBytes)
-            }
-        }
-
-        spliceHelpers(fs)
-    }
-
-    /**
-     * Copy the compiled helper class into the dev jar [fs] — it's the
-     * only runtime piece the injected code references.
-     */
-    fun spliceHelpers(fs: FileSystem) {
-        val target = fs.getPath(HELPER_ENTRY)
-        javaClass.classLoader.getResourceAsStream(HELPER_ENTRY)?.use {
-            target.parent?.let { p -> java.nio.file.Files.createDirectories(p) }
-            java.nio.file.Files.copy(
-                it, target,
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING
-            )
-        } ?: throw IOException("helper class $HELPER_ENTRY not on plugin classpath")
-    }
+    fun fix(fs: FileSystem) =
+        ClassTransformJarFix.fix(fs, transformers, listOf(HELPER_ENTRY))
 
 }

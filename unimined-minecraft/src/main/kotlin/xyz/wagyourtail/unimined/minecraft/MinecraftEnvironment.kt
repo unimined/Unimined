@@ -130,6 +130,21 @@ class MinecraftEnvironment internal constructor(
      */
     val accessTransformers: ConfigurableFileCollection = objects.fileCollection()
 
+    /**
+     * Predicates consulted when the env's provider-declared MC
+     * libraries populate `minecraftLibraries`/`minecraftDeclaredLibraries`
+     * — a dep is kept only when every filter accepts it. Transform
+     * wiring contributes exclusions (e.g. FG1-era FML dropping
+     * `org.ow2.asm` because it supplies its own `asm-all`).
+     */
+    val libraryFilters: MutableList<(org.gradle.api.artifacts.Dependency) -> Boolean> =
+        mutableListOf()
+
+    /** Contribute a library keep-filter — see [libraryFilters]. */
+    fun libraryFilter(filter: (org.gradle.api.artifacts.Dependency) -> Boolean) {
+        libraryFilters += filter
+    }
+
     /** Dependency bucket for the generated Minecraft artifact stub. */
     val minecraftConfigurationName: String
         get() = if (environmentId == "main") {

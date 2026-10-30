@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
@@ -91,6 +92,16 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:Input
         val accessModel: Property<String>
 
+        /**
+         * The environment's side (`CLIENT`/`SERVER`/`MERGED`) for
+         * env-scoped transforms — carried into [PipelineState] so steps
+         * and jar processors can validate side-sensitive inputs.
+         * Absent on env-agnostic transforms (mod views, standalone use).
+         */
+        @get:Optional
+        @get:Input
+        val envSide: Property<String>
+
         @get:Nested
         val stepSpecs: ListProperty<StepSpec>
 
@@ -140,7 +151,8 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
                 workDir = workDir,
                 logger = Logging.getLogger(RemapDependencyTransform::class.java),
                 host = "${parameters.label.orNull?.let { "$it:" } ?: ""}remap ${input.fileName}",
-                accessModel = parameters.accessModel.orNull?.let(AccessModel::parse)
+                accessModel = parameters.accessModel.orNull?.let(AccessModel::parse),
+                envSide = parameters.envSide.orNull?.let(Side::valueOf)
             )
         } finally {
             workDir.toFile().deleteRecursively()

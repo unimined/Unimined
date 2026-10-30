@@ -8,6 +8,7 @@ import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepPipeline
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -37,7 +38,8 @@ object PipelineRunner {
         workDir: Path,
         logger: Logger,
         host: String,
-        accessModel: AccessModel? = null
+        accessModel: AccessModel? = null,
+        envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
     ) {
         val registry = RemapStepRegistry()
         val resolved = stepSpecs.map { registry.resolve(it, surface, spec) }
@@ -63,7 +65,8 @@ object PipelineRunner {
             // the analysis overlay is additive — absent is a valid state
             // (no access rules declared anywhere in the batch)
             accessModel = if (resolved.any { it.needsAccessModel }) accessModel else null,
-            log = log
+            log = log,
+            state = PipelineState(spec.sourceNamespace, envSide)
         )
 
         val steps = stepSpecs.zip(resolved)

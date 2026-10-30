@@ -254,7 +254,10 @@ abstract class MinecraftExtension @Inject constructor(
             isCanBeResolved = true
         }
         librariesBucket.withDependencies { deps ->
-            deps.addAll(artifacts(environmentId).get().libraries.get())
+            deps.addAll(
+                artifacts(environmentId).get().libraries.get()
+                    .filter { dep -> environment.libraryFilters.all { it(dep) } }
+            )
         }
         // the provider-declared lib set only — no user/transform
         // contributions (client-extra & co carry the raw-artifact
@@ -267,7 +270,10 @@ abstract class MinecraftExtension @Inject constructor(
             conf.isCanBeResolved = true
         }
         declaredLibraries.withDependencies { deps ->
-            deps.addAll(artifacts(environmentId).get().libraries.get())
+            deps.addAll(
+                artifacts(environmentId).get().libraries.get()
+                    .filter { dep -> environment.libraryFilters.all { it(dep) } }
+            )
         }
         project.configurations.named(sourceSet.compileClasspathConfigurationName) {
             it.extendsFrom(librariesBucket)
@@ -698,6 +704,22 @@ abstract class MinecraftExtension @Inject constructor(
                     )
                 }
 
+                "forgeBuiltinMCP" -> {
+                    val version = params["version"]
+                        ?: throw GradleException("forgeBuiltinMCP() requires a forge version")
+                    val mcVersion = environment.version.get().let {
+                        // 1.x forgeMCVersion: short mc versions map to
+                        // their three-part form in forge coordinates
+                        if (it == "1.4") "1.4.0" else if (it == "1.0") "1.0.0" else it
+                    }
+                    ensureRepo("Minecraft Forge", "https://maven.minecraftforge.net/")
+                    listOf(
+                        resolveMavenNotation(
+                            "net.minecraftforge:forge:$mcVersion-$version:src@zip"
+                        )
+                    )
+                }
+
                 "parchment" -> {
                     val mcVersion = params["mcVersion"]
                         ?: throw GradleException("parchment() requires mcVersion")
@@ -724,6 +746,12 @@ abstract class MinecraftExtension @Inject constructor(
             project.repositories.maven { repo ->
                 repo.name = name
                 repo.setUrl(url)
+                // pre-maven forge artifacts have no POMs — allow
+                // direct artifact resolution alongside POM metadata
+                repo.metadataSources {
+                    it.mavenPom()
+                    it.artifact()
+                }
             }
         }
     }
@@ -765,7 +793,8 @@ abstract class MinecraftExtension @Inject constructor(
             environment.validateCombinations()
             mappingExtension.resolve(
                 environment.mappingsSpec, environment.environmentId,
-                mavenResolver, channelResolver(environment)
+                mavenResolver, channelResolver(environment),
+                environment.side.get()
             ).also {
                 uniminedLogger(environment.environmentId, project.logger)
                     .subLogger("mappings").lifecycle(
@@ -838,7 +867,8 @@ abstract class MinecraftExtension @Inject constructor(
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
-                    mavenResolver, channelResolver(environment)
+                    mavenResolver, channelResolver(environment),
+                    environment.side.get()
                 )
             })
             t.sourceNamespace.set(from)
@@ -874,7 +904,8 @@ abstract class MinecraftExtension @Inject constructor(
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
-                    mavenResolver, channelResolver(environment)
+                    mavenResolver, channelResolver(environment),
+                    environment.side.get()
                 )
             })
             t.sourceNamespace.set(from)

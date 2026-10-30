@@ -7,6 +7,8 @@ import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWWriter
@@ -51,7 +53,7 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         rewriteJar(
             input, output, tree,
             Namespace(c.spec.sourceNamespace), Namespace(c.spec.targetNamespace),
-            formats, spec.paths
+            formats, spec.paths, spec.legacyAt
         )
         output
     }
@@ -65,7 +67,8 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         sourceNs: Namespace,
         targetNs: Namespace,
         formats: Set<String>,
-        explicitPaths: Set<String>
+        explicitPaths: Set<String>,
+        legacyAt: Boolean
     ) {
         JarFile(input.toFile()).use { jar ->
             // FMLAT manifest attr — old-FML custom AT paths
@@ -84,11 +87,16 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
                     if (!entry.isDirectory) {
                         val bytes = jar.getInputStream(entry).readBytes()
                         out.write(
-                            when (kind(entry.name, bytes, explicit, formats)) {
-                                Kind.AW -> remapAw(bytes, tree, targetNs)
-                                Kind.AT -> remapAt(bytes, tree, sourceNs, targetNs)
-                                Kind.CT -> remapCt(bytes, tree, targetNs)
-                                null -> bytes
+                            try {
+                                when (kind(entry.name, bytes, explicit, formats)) {
+                                    Kind.AW -> remapAw(bytes, tree, targetNs)
+                                    Kind.AT -> remapAt(bytes, tree, sourceNs, targetNs, legacyAt)
+                                    Kind.CT -> remapCt(bytes, tree, targetNs)
+                                    null -> bytes
+                                }
+                            } catch (e: Exception) {
+                                throw GradleException(
+                                    "remap-access failed on entry ${entry.name}: ${e.message}", e)
                             }
                         )
                     }
@@ -157,16 +165,46 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         bytes: ByteArray,
         tree: MappingTree,
         sourceNs: Namespace,
-        targetNs: Namespace
+        targetNs: Namespace,
+        legacy: Boolean
     ): ByteArray {
         val out = StringBuilder()
-        ATWriter.writeData(
-            ATWriter.remapMappings(
-                ATReader.readData(StringCharReader(bytes.toString(Charsets.UTF_8)), leinient = true),
-                tree, sourceNs, targetNs
-            )
-        ) { out.append(it) }
+        val useLegacy = legacy || looksLegacyAt(bytes)
+        val remapped = ATWriter.remapMappings(
+            if (useLegacy)
+                LegacyATReader.readData(
+                    StringCharReader(bytes.toString(Charsets.UTF_8)), leinient = true)
+            else
+                ATReader.readData(
+                    StringCharReader(bytes.toString(Charsets.UTF_8)), leinient = true),
+            tree, sourceNs, targetNs
+        )
+        if (useLegacy) LegacyATWriter.writeData(remapped) { out.append(it) }
+        else ATWriter.writeData(remapped) { out.append(it) }
         return out.toString().toByteArray()
+    }
+
+    /**
+     * Forge 1.3–1.6.4-era ATs join the member onto the class token
+     * (`cls.member` / `cls.member(desc)`); modern files separate them
+     * by whitespace. Detected from the first content line: a `(` in
+     * the second token, or a dotted token whose trailing segment is
+     * lowercase/`*` with no whitespace-separated member following.
+     */
+    private fun looksLegacyAt(bytes: ByteArray): Boolean {
+        for (l in bytes.toString(Charsets.UTF_8).lineSequence()) {
+            val t = l.trim()
+            if (t.isEmpty() || t.startsWith("#")) continue
+            val toks = t.split(Regex("\\s+"))
+            if (toks.size < 2) return false
+            val c = toks[1]
+            if ('(' in c) return true
+            val last = c.substringAfterLast('.')
+            return '.' in c &&
+                    (last == "*" || last.firstOrNull()?.isLowerCase() == true) &&
+                    (toks.size == 2 || toks[2].startsWith("#"))
+        }
+        return false
     }
 
     private fun remapCt(bytes: ByteArray, tree: MappingTree, targetNs: Namespace): ByteArray {

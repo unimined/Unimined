@@ -75,15 +75,55 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
             "remapping ${input.fileName} ${spec.sourceNamespace} -> ${spec.targetNamespace}"
         )
 
+        // the jar's live namespace — remap steps publish their output ns
+        // onto state.currentNamespace, so a chained pipeline validates
+        // against the post-remap truth, not the stale declared source
+        val fns = Namespace(ctx.state.currentNamespace)
+        val tns = Namespace(spec.targetNamespace)
+        val referenceTree = ctx.mappings?.view<MappingTree>()
         // remap-analysis overlay: AW/AT/CT rules declared by the batch
         // ride the trees list as a synthetic AccessElement-bearing layer,
         // folded into the inheritance scan before propagation
-        val fns = Namespace(spec.sourceNamespace)
-        val referenceTree = ctx.mappings?.view<MappingTree>()
         val overlay = ctx.accessModel
             ?.entries(spec.sourceNamespace, referenceTree)
             ?.takeUnless { it.isEmpty() }
             ?.let { accessModelOverlay(it, fns, referenceTree) }
+
+        // fail loudly when the input jar isn't actually in the declared
+        // source namespace — a mismatched/sparse tree layer would
+        // otherwise "remap" to an identity copy (obf bytes in a
+        // dev-namespace-named artifact)
+        val probe = java.util.zip.ZipFile(input.toFile()).use { z ->
+            val names = z.entries().asSequence()
+                .filter { !it.isDirectory && it.name.endsWith(".class") }
+                .map { it.name.removeSuffix(".class") }
+                .toList()
+            // stride-sample — merged/unmapped classes legitimately
+            // absent from the tree cluster at the front of the jar
+            val stride = (names.size / 64).coerceAtLeast(1)
+            names.filterIndexed { i, _ -> i % stride == 0 }
+        }
+        // skip when the fns layer carries no classes at all (nothing to
+        // validate against) or the jar is too small to infer a mismatch
+        // — a handful of legitimately-unmapped classes looks identical
+        // to a mislabeled layer; ~64-sample jars can't all be unmapped
+        val fnsPopulated = view.classes.any { it.names.containsKey(fns) }
+        if (fnsPopulated && probe.size >= 8 &&
+            probe.none { view.getClass(fns, InternalName.unchecked(it)) != null }
+        ) {
+            throw GradleException(
+                "uml:remap ${input.fileName}: none of ${probe.size} sampled " +
+                    "classes exist in namespace " +
+                    "'${ctx.state.currentNamespace}' — the input jar is in a " +
+                    "different namespace"
+            )
+        }
+        // classes the tree says SHOULD be renamed — used by the output
+        // verification below; identity rows legitimately produce none
+        val expectedRenames = probe.mapNotNull { name ->
+            view.getClass(fns, InternalName.unchecked(name))
+                ?.names?.get(tns)?.value?.takeIf { it != name }
+        }.toSet()
 
         // the mod-view classpath is identical across a batch's transforms
         // (sibling mod jars + the source-ns MC artifact) — its class→jar
@@ -123,7 +163,7 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                 target,
                 listOf(view) + listOfNotNull(overlay),
                 fns,
-                Namespace(spec.targetNamespace),
+                tns,
                 LazyASMInheritanceTree(fns, inputScan, index),
                 // FIX — package-private members of classes whose package
                 // the mappings relocate get widened (tiny's
@@ -134,6 +174,29 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                 )
             )
         }
+        // output verification — expected renames that never appear mean
+        // the dst layer produced an identity copy (the forge-1.2.5
+        // official->mcp bug: an exists-but-empty layer "remapped" nothing)
+        if (expectedRenames.isNotEmpty()) {
+            val produced = java.util.zip.ZipFile(target.toFile()).use { z ->
+                z.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.endsWith(".class") }
+                    .map { it.name.removeSuffix(".class") }
+                    .toHashSet()
+            }
+            if (produced.none { it in expectedRenames }) {
+                throw GradleException(
+                    "uml:remap ${input.fileName}: none of the " +
+                        "${expectedRenames.size} expected class renames " +
+                        "appear in the output — the " +
+                        "'${spec.targetNamespace}' layer produced an " +
+                        "identity remap"
+                )
+            }
+        }
+        // publish the artifact's new namespace so downstream steps
+        // validate against the post-remap truth
+        ctx.state.currentNamespace = spec.targetNamespace
         return target
     }
 

@@ -102,8 +102,15 @@ internal object EnvironmentClasspathWiring {
         // declare processors after this wiring runs.
         val envSpec = project.extensions.getByType(TransformExtension::class.java)
             .sourceSet(environmentId)
-        val jarProcessorsSpec = JarProcessorWiring.stepSpec(
-            project, minecraft, environment, envSpec, modBatch
+        // jar processors split by stage: pre-remap processors (jarMod
+        // merges etc. — prod-named content) run before the pipeline's
+        // remap step so the renamer carries them; post-remap processors
+        // keep their trailing position
+        val jarProcessorsPreSpec = JarProcessorWiring.stepSpec(
+            project, minecraft, environment, envSpec, modBatch, preRemap = true
+        )
+        val jarProcessorsPostSpec = JarProcessorWiring.stepSpec(
+            project, minecraft, environment, envSpec, modBatch, preRemap = false
         )
         JarProcessorWiring.wireMappings(
             minecraft, environment, envSpec, modBatch
@@ -122,11 +129,12 @@ internal object EnvironmentClasspathWiring {
                 p.label.set("$environmentId/dev")
                 p.sourceNamespace.set(devSrcNamespace)
                 p.targetNamespace.set(devNamespace)
+                p.envSide.set(environment.side.map { it.name })
                 p.mappingBundleJson.set(mcBundleJson)
                 p.classpath.from(libraries)
                 p.stepSpecs.set(
                     remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
-                        steps + jarProcessorsSpec
+                        listOf(jarProcessorsPreSpec) + steps + jarProcessorsPostSpec
                     }
                 )
             }
@@ -148,6 +156,7 @@ internal object EnvironmentClasspathWiring {
             t.parameters { p ->
                 p.label.set("$environmentId/modsource")
                 p.sourceNamespace.set(devSrcNamespace)
+                p.envSide.set(environment.side.map { it.name })
                 p.targetNamespace.set(
                     minecraft.modSourceNamespaces(environmentId).map { namespaces ->
                         require(namespaces.size == 1) {

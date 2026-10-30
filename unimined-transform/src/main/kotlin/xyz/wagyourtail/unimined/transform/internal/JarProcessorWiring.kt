@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.internal
 
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
+import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec
@@ -34,13 +35,18 @@ internal object JarProcessorWiring {
         minecraft: MinecraftExtension,
         environment: MinecraftEnvironment,
         envSpec: TransformEnvironmentSpec,
-        modBatch: FileCollection
+        modBatch: FileCollection,
+        preRemap: Boolean? = null
     ): JarProcessorsStepSpec =
         project.objects.newInstance(JarProcessorsStepSpec::class.java).apply {
             processorSpecs.set(project.provider {
                 buildSpecs(
                     envSpec,
-                    specContextProvider(minecraft, environment.environmentId, envSpec, modBatch)
+                    specContextProvider(
+                        minecraft, environment.environmentId, envSpec, modBatch,
+                        environment.side.get()
+                    ),
+                    preRemap
                 )
             })
             modJars.from(modBatch)
@@ -60,7 +66,10 @@ internal object JarProcessorWiring {
     ) {
         environment.mappingsSpec.postProcessors += JarProcessorsMappingsPostProcessor(
             { envSpec.effectiveJarProcessors() },
-            specContextProvider(minecraft, environment.environmentId, envSpec, modBatch)
+            specContextProvider(
+                minecraft, environment.environmentId, envSpec, modBatch,
+                environment.side.get()
+            )
         )
     }
 
@@ -74,7 +83,8 @@ internal object JarProcessorWiring {
         minecraft: MinecraftExtension,
         environmentId: String,
         envSpec: TransformEnvironmentSpec,
-        modBatch: FileCollection
+        modBatch: FileCollection,
+        envSide: Side? = null
     ): (String?) -> JarProcessor.SpecContext = { nsOverride ->
         // callers processing mapping data may supply the production
         // namespace from the in-flight tree — resolving it via
@@ -84,9 +94,15 @@ internal object JarProcessorWiring {
             .modSourceNamespaces(environmentId)
             .map { it.singleOrNull() ?: it.first() }.get()
         val modPaths = modBatch.files.map { it.toPath() }
-        envSpec.effectiveJarProcessorSpecContext()
+        val inner = envSpec.effectiveJarProcessorSpecContext()
             ?.invoke(productionNamespace, modPaths)
-            ?: BasicSpecContext(productionNamespace, modPaths)
+            ?: BasicSpecContext(productionNamespace, modPaths, envSide)
+        // loader-provided factories predate envSide — wrap so the env's
+        // side still reaches processor specs unless they set their own
+        if (inner.envSide != null || envSide == null) inner
+        else object : JarProcessor.SpecContext by inner {
+            override val envSide = envSide
+        }
     }
 
     /**
@@ -96,9 +112,11 @@ internal object JarProcessorWiring {
      */
     private fun buildSpecs(
         envSpec: TransformEnvironmentSpec,
-        specContext: (String?) -> JarProcessor.SpecContext
+        specContext: (String?) -> JarProcessor.SpecContext,
+        preRemap: Boolean? = null
     ): List<String> {
         val processors = envSpec.effectiveJarProcessors()
+            .filter { preRemap == null || it.preRemap == preRemap }
         if (processors.isEmpty()) return emptyList()
         val ctx = specContext(null)
         return processors.mapNotNull { processor ->
@@ -113,7 +131,8 @@ internal object JarProcessorWiring {
 /** File-only [JarProcessor.SpecContext] — the non-loader-aware default. */
 internal class BasicSpecContext(
     override val productionNamespace: String,
-    private val modPaths: List<Path>
+    private val modPaths: List<Path>,
+    override val envSide: Side? = null
 ) : JarProcessor.SpecContext {
 
     override fun mods(): List<JarProcessor.ModJarInfo> =

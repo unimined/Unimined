@@ -24,4 +24,12 @@ class AccessRemapStepSpec(
     @get:Input
     var paths: Set<String> = emptySet()
 
+    /**
+     * AT files use the legacy `cls.member(desc)` syntax (forge
+     * 1.3–1.6.4) — they round-trip through the legacy reader/writer so
+     * era runtimes can still parse them.
+     */
+    @get:Input
+    var legacyAt: Boolean = false
+
 }

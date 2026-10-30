@@ -5,7 +5,12 @@ import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6FieldReader
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6MethodReader
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6PackageReader
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6ParamReader
 import xyz.wagyourtail.unimined.mapping.formats.proguard.ProguardReader
+import xyz.wagyourtail.unimined.mapping.formats.srg.SrgReader
 import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Reader
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV2Reader
@@ -46,10 +51,11 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             "official" -> officialSource(source, ctx)
             "mojmap" -> mojmapSource(source, ctx)
             "searge" -> seargeSource(source, ctx, params)
+            "forgeBuiltinMCP" -> forgeBuiltinMCPSource(source, ctx, params)
             "parchment" -> parchmentSource(source, ctx, params)
             else -> throw GradleException(
                 "mappings { ${source.channel}() }: unknown builtin channel; " +
-                        "expected one of official, mojmap, searge, parchment"
+                        "expected one of official, mojmap, searge, forgeBuiltinMCP, parchment"
             )
         }
     }
@@ -245,6 +251,80 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         return RuntimeMaterializedMappingSource(
             source, listOf(out), null,
             namedNamespaces = emptySet()
+        )
+    }
+
+    /**
+     * `forgeBuiltinMCP(version)` — FG1-era forge ships its own MCP
+     * data inside the `:src` zip (`forge/fml/conf/`): `joined.srg`
+     * carries `official -> searge`, the csvs layer
+     * `searge -> mcp` member/package/param names on top. Port of 1.x
+     * `MappingsProvider.forgeBuiltinMCP`: the mcp namespace is
+     * relabeled `forgeMCP` and flagged named (the dev namespace);
+     * `searge` stays intermediate.
+     */
+    private fun forgeBuiltinMCPSource(
+        source: BuiltinMappingSource,
+        ctx: MappingContext,
+        params: Map<String, String>
+    ): MaterializedMappingSource {
+        val version = params["version"]
+            ?: throw GradleException("mappings { forgeBuiltinMCP() }: missing forge version")
+        val zip = ctx.resolveChannel("forgeBuiltinMCP", params).singleOrNull()
+            ?: throw GradleException(
+                "mappings { forgeBuiltinMCP($version) }: the environment's " +
+                        "provider did not resolve the forge src artifact"
+            )
+
+        val official = Namespace("official")
+        val searge = Namespace("searge")
+        val forgeMCP = Namespace("forgeMCP")
+        val confNs = mapOf("mcp" to "forgeMCP")
+
+        val out = writeDerived(
+            channelCacheDir(ctx, "forgeBuiltinMCP"),
+            "forgeBuiltinMCP-$version-${contentTag(zip)}.umf"
+        ) { sb ->
+            val tree = MutableMappingTree()
+            ZipFile(zip.toFile()).use { file ->
+                val conf = file.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.endsWith("/conf/" + it.name.substringAfterLast('/')) }
+                    .associateBy { it.name.substringAfterLast('/') }
+                fun entry(name: String) =
+                    conf[name]?.let { file.getInputStream(it).bufferedReader().readText() }
+
+                runBlocking {
+                    val srg = entry("joined.srg") ?: throw GradleException(
+                        "forge src artifact $zip has no forge/fml/conf/joined.srg"
+                    )
+                    SrgReader.read(
+                        srg, tree,
+                        mapOf("source" to "official", "target" to "searge")
+                    )
+                    // csv readers are context formats — they attach
+                    // searge-keyed names onto the srg-populated tree
+                    entry("fields.csv")?.let {
+                        MCPv6FieldReader.read(it, tree, confNs)
+                    }
+                    entry("methods.csv")?.let {
+                        MCPv6MethodReader.read(it, tree, confNs)
+                    }
+                    entry("params.csv")?.let {
+                        MCPv6ParamReader.read(it, tree, confNs)
+                    }
+                    entry("packages.csv")?.let {
+                        MCPv6PackageReader.read(it, tree, confNs)
+                    }
+                }
+            }
+            tree.emit(
+                UMFWriter.write(sb::append, false),
+                nsFilter = listOf(official, searge, forgeMCP)
+            )
+        }
+        return RuntimeMaterializedMappingSource(
+            source, listOf(out), null,
+            namedNamespaces = setOf("forgeMCP")
         )
     }
 

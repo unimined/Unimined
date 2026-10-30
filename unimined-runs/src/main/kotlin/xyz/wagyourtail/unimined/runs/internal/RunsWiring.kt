@@ -134,6 +134,7 @@ internal object RunsWiring {
             task.mutatedProgramArgs.set(mutated.map { it.programArgs })
             task.mutatedEnvironment.set(mutated.map { it.environment })
             task.environmentVariables.set(run.environmentVariables)
+            transformSpec.effectiveRunTaskMutators().forEach { it.execute(task) }
             task.stdin.set(run.stdin)
             task.launcherVersion.set(
                 project.provider {

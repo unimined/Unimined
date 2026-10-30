@@ -4,7 +4,9 @@ import org.gradle.api.logging.Logger
 import xyz.wagyourtail.commons.core.logger.Logger as CommonsLogger
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
 import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import java.io.Serializable
 import java.nio.file.Path
 
@@ -30,6 +32,14 @@ interface JarProcessor {
 
     /** Stable impl id — diagnostics and spec-payload keys. */
     val name: String
+
+    /**
+     * `true` when this processor must apply on the raw (production-
+     * namespace) jar *before* the remap step — e.g. jarMod merges that
+     * inject prod-named patch classes, which remap must then carry to
+     * the dev namespace. `false` (default) runs post-remap.
+     */
+    val preRemap: Boolean get() = false
 
     /**
      * Build this processor's deterministic spec over [context], or
@@ -69,6 +79,10 @@ interface JarProcessor {
         /** The environment's production namespace. */
         val productionNamespace: String
 
+        /** The environment's side, when env-scoped — `null` for
+         *  env-agnostic contexts. */
+        val envSide: Side? get() = null
+
         /** Mods on the compile+runtime views, in resolution order. */
         fun mods(): List<ModJarInfo>
 
@@ -107,6 +121,10 @@ interface JarProcessor {
 
         /** Composed mappings when the pipeline step needs them. */
         val mappings: MappingData?
+
+        /** The pipeline's live namespace + env side, when env-scoped. */
+        val state: PipelineState?
+            get() = null
 
         /**
          * The mapping-resolution context — present only on the

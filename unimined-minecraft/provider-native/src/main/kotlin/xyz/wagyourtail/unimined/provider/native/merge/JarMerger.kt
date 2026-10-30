@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.provider.native.merge
 
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.PathMatcher
@@ -42,7 +45,7 @@ object JarMerger {
      * merge: bump this whenever merge semantics change (v2 = pre
      * bundled-library strip).
      */
-    const val FORMAT_VERSION = "v3"
+    const val FORMAT_VERSION = "v4"
 
     /**
      * Server-side strip controls for [merge].
@@ -85,14 +88,33 @@ object JarMerger {
             return true
         }
 
-        val entries = linkedMapOf<String, ByteArray>()
+        // .class entries merge member-wise (1.x ClassMerger parity):
+        // client+server classes diverge (side-only members), so a
+        // per-entry overlay silently drops one side's methods/fields
+        // (e.g. 1.4.7 Achievement.a(ji) — server class won, client
+        // caller broke). Non-class resources keep overlay semantics —
+        // client wins conflicts, server fills in client-absent entries.
+        val clientClasses = linkedMapOf<String, ClassNode>()
+        val serverClasses = linkedMapOf<String, ClassNode>()
+        val resourceOrder = mutableListOf<String>()
+        val resources = linkedMapOf<String, ByteArray>()
 
         fun read(jar: Path, serverSide: Boolean) {
             ZipInputStream(jar.inputStream()).use { zin ->
                 var e = zin.nextEntry
                 while (e != null) {
-                    if (!e.isDirectory && !e.name.startsWith("META-INF/") && keep(e.name, serverSide)) {
-                        entries[e.name] = zin.readBytes()
+                    if (e.isDirectory || e.name.startsWith("META-INF/") || !keep(e.name, serverSide)) {
+                        e = zin.nextEntry
+                        continue
+                    }
+                    if (e.name.endsWith(".class")) {
+                        val node = ClassNode()
+                        ClassReader(zin).accept(node, 0)
+                        (if (serverSide) serverClasses else clientClasses)[e.name] = node
+                    } else if (!serverSide || !resources.containsKey(e.name)) {
+                        if (resources.put(e.name, zin.readBytes()) == null) {
+                            resourceOrder.add(e.name)
+                        }
                     }
                     e = zin.nextEntry
                 }
@@ -101,10 +123,31 @@ object JarMerger {
         read(client, serverSide = false)
         read(server, serverSide = true)
 
+        val merger = ClassMerger()
+        val mergedClasses = linkedMapOf<String, ByteArray>()
+        for ((name, node) in clientClasses) {
+            val serverNode = serverClasses.remove(name)
+            val merged = try {
+                merger.accept(node, serverNode)
+            } catch (e: Exception) {
+                throw RuntimeException("Error merging class $name", e)
+            }
+            mergedClasses[name] = ClassWriter(0).also { merged.accept(it) }.toByteArray()
+        }
+        for ((name, node) in serverClasses) {
+            val merged = merger.accept(null, node)
+            mergedClasses[name] = ClassWriter(0).also { merged.accept(it) }.toByteArray()
+        }
+
         ZipOutputStream(out.outputStream()).use { zout ->
-            for ((name, data) in entries) {
+            for ((name, data) in mergedClasses) {
                 zout.putNextEntry(java.util.zip.ZipEntry(name))
                 zout.write(data)
+                zout.closeEntry()
+            }
+            for (name in resourceOrder) {
+                zout.putNextEntry(java.util.zip.ZipEntry(name))
+                zout.write(resources.getValue(name))
                 zout.closeEntry()
             }
         }

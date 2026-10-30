@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import kotlinx.coroutines.runBlocking
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
@@ -48,6 +49,7 @@ class UmlRemapStepTypeTest {
     private val mappings: MappingData = UmlMappingData(tree)
 
     private fun ctx(): StepContext = object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@UmlRemapStepTypeTest.spec
         override val mappings = this@UmlRemapStepTypeTest.mappings
         override val classpath = emptyList<Path>()
@@ -194,6 +196,7 @@ class UmlRemapStepTypeTest {
             )
         )
         val ctx = object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = this@UmlRemapStepTypeTest.spec
             override val mappings = mappings
             override val classpath = listOf(baseJar)

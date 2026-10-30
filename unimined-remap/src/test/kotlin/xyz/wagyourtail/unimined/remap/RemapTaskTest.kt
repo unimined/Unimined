@@ -51,6 +51,7 @@ class RemapTaskTest {
         task.archiveFileName.set("out.jar")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
+        task.surface.set(RemapSurface.JAR)
         task.stepSpecs.set(ext.stepSpecs(RemapSurface.JAR))
 
         task.copy()
@@ -90,6 +91,7 @@ class RemapTaskTest {
         task.archiveFileName.set("out.jar")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
+        task.surface.set(RemapSurface.JAR)
         task.stepSpecs.set(ext.stepSpecs(RemapSurface.JAR))
         task.accessModel.set(model.serialize())
 
@@ -112,6 +114,7 @@ class RemapTaskTest {
         task.archiveFileName.set("out.jar")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
+        task.surface.set(RemapSurface.JAR)
         task.stepSpecs.set(emptyList())
 
         task.copy()

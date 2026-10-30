@@ -41,6 +41,13 @@ interface StepContext {
     val accessModel: AccessModel?
         get() = null
 
+    /**
+     * Mutable run state shared by all steps in this pipeline — the
+     * artifact's live namespace and the environment's side. Remap
+     * steps update `state.currentNamespace` after producing output.
+     */
+    val state: PipelineState
+
     /** Scratch directory for step intermediates. */
     val workDir: Path
 

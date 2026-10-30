@@ -123,7 +123,14 @@ class MappingsSpecImpl(
      */
     fun mcp(channel: String, version: String) = maven(
         "de.oceanlabs.mcp:mcp_$channel:$version@zip"
-    ) { named("mcp") }
+    ) {
+        named("mcp")
+        // 1.x per-format relabels, applied source-wide: srg-family docs
+        // inside the zip label the obf side `source`/`target`, v3-era
+        // csvs label it `notch` — the shipped jar is `official`-named
+        mapNamespace("source" to "official", "target" to "searge")
+        mapNamespace("notch" to "official")
+    }
 
     /**
      * Declare RetroMCP mappings for pre-1.3-era Minecraft —
@@ -183,6 +190,21 @@ class MappingsSpecImpl(
     /** Declare Searge mappings at the environment's Minecraft version. */
     fun searge() =
         builtin("searge", mapOf("version" to requireMcVersion("searge")))
+
+    /**
+     * Declare the MCP data bundled inside an FG1-era forge `:src` zip —
+     * `net.minecraftforge:forge:<mcVersion>-<version>:src@zip`. The zip's
+     * `joined.srg` provides the `official -> searge` hop; its csvs layer
+     * `searge -> forgeMCP` member/package/param names (`forgeMCP` is the
+     * named namespace). [version] is the forge build, e.g. `6.6.2.534`
+     * for `1.4.7-6.6.2.534`. FG1 environments wire this automatically
+     * unless [customSearge]-style opt-out is declared on the env.
+     */
+    fun forgeBuiltinMCP(version: String) =
+        builtin(
+            "forgeBuiltinMCP",
+            mapOf("version" to const(version))
+        ) { named("forgeMCP") }
 
     /**
      * Declare Parchment parameter/javadoc mappings layered on `mojmap`.

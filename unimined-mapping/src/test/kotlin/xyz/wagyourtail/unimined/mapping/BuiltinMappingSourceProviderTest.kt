@@ -138,6 +138,104 @@ class BuiltinMappingSourceProviderTest {
         assertEquals("net/minecraft/src/C_1_", cls.names[Namespace("searge")]?.toString())
     }
 
+    private fun forgeSrcZip(path: Path = dir.resolve("forge-src.zip")): Path {
+        ZipOutputStream(Files.newOutputStream(path)).use { out ->
+            fun e(name: String, content: String) {
+                out.putNextEntry(ZipEntry(name))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+            e(
+                "forge/fml/conf/joined.srg", """
+                PK: . net/minecraft/src
+                CL: a net/minecraft/src/Thing
+                FD: a/a net/minecraft/src/Thing/field_1_a
+                MD: a/b ()I net/minecraft/src/Thing/func_1_b ()I
+                """.trimIndent() + "\n"
+            )
+            e(
+                "forge/fml/conf/fields.csv",
+                "searge,name,side,desc\nfield_1_a,chatBuffer,2,\n"
+            )
+            e(
+                "forge/fml/conf/methods.csv",
+                "searge,name,side,desc\nfunc_1_b,doThing,2,\n"
+            )
+            e(
+                "forge/fml/conf/params.csv",
+                "param,name,side\np_1_1_,par1Foo,2\n"
+            )
+            e(
+                "forge/fml/conf/packages.csv",
+                "class,package\nThing,net/minecraft/src\n"
+            )
+        }
+        return path
+    }
+
+    @Test
+    fun `forgeBuiltinMCP layers forge csvs onto bundled srg`() {
+        channelFiles["forgeBuiltinMCP"] = listOf(forgeSrcZip())
+        val out = provider.materialize(
+            source("forgeBuiltinMCP", "version" to "6.6.2.534"), ctx
+        )
+        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
+        assertEquals(
+            listOf("official", "searge", "forgeMCP"),
+            tree.namespaces.map { it.name }
+        )
+        val cls = tree.getClass(Namespace("official"), InternalName.read("a"))!!
+        assertEquals(
+            "net/minecraft/src/Thing",
+            cls.names[Namespace("searge")]?.toString()
+        )
+        assertEquals(
+            "chatBuffer",
+            cls.fields.single().names[Namespace("forgeMCP")]?.toString()
+        )
+        assertEquals(
+            "doThing",
+            cls.methods.single().names[Namespace("forgeMCP")]?.toString()
+        )
+        assertEquals(setOf("forgeMCP"), out.namedNamespaces)
+    }
+
+    @Test
+    fun `forgeBuiltinMCP reads real fg1 src zips`() {
+        val dir = Path.of("/tmp/fg1-smoke")
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+            Files.exists(dir.resolve("forge-1.4.7-6.6.2.534-src.zip")),
+            "real fg1 zips not downloaded"
+        )
+        for (v in listOf("1.3.2-4.3.5.318", "1.4.7-6.6.2.534", "1.5.2-7.8.1.738")) {
+            channelFiles["forgeBuiltinMCP"] =
+                listOf(dir.resolve("forge-$v-src.zip"))
+            val out = provider.materialize(
+                source("forgeBuiltinMCP", "version" to v.substringAfter('-')), ctx
+            )
+            val tree = runBlocking {
+                UMFReader.read(Files.readString(out.files.single()))
+            }
+            assertEquals(
+                listOf("official", "searge", "forgeMCP"),
+                tree.namespaces.map { it.name }, "ns order for $v"
+            )
+            assertTrue(tree.classes.iterator().hasNext(), "no classes for $v")
+            // chatBuffer/field_70009_b exists in every fg1 bundle
+            var mcpName: String? = null
+            outer@ for (c in tree.classes) for (f in c.fields) {
+                if (f.names[Namespace("searge")]?.toString() == "field_70009_b") {
+                    mcpName = f.names[Namespace("forgeMCP")]?.toString()
+                    break@outer
+                }
+            }
+            assertTrue(
+                !mcpName.isNullOrEmpty(),
+                "forgeMCP name for field_70009_b missing for $v"
+            )
+        }
+    }
+
     @Test
     fun `parchment extracts parchment json with mojmap relabel`() {
         channelFiles["parchment"] = listOf(

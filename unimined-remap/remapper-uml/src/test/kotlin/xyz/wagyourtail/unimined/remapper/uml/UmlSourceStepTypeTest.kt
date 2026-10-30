@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import kotlinx.coroutines.runBlocking
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
@@ -47,6 +48,7 @@ class UmlSourceStepTypeTest {
 
     private fun ctx(spec: RemapSpec, tree: MutableMappingTree, classpath: List<Path>) =
         object : StepContext {
+            override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = spec
             override val mappings: MappingData = UmlMappingData(tree)
             override val classpath = classpath

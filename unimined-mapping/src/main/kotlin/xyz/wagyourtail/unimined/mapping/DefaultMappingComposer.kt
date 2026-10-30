@@ -81,17 +81,19 @@ class DefaultMappingComposer : MappingComposer {
             composed.renest(srcNs, tree.namespaces.drop(1).toSet())
         }
 
-        // fill missing namespace names from each part's base namespace —
+        // fill missing namespace names along each part's hop chain —
         // a member unmapped by a later source keeps its parent hop's name
-        // (yarn-unmapped members stay `field_*`, not `official`). Each
-        // target namespace is filled by the first part providing it.
+        // (yarn-unmapped members stay `field_*`, not `official`; srg-era
+        // class names in `searge` propagate to `mcp`, not `official`).
+        // Each target namespace is filled by the first part providing it.
         val filled = mutableSetOf<Namespace>()
         val toFill = mutableListOf<Pair<Namespace, Set<Namespace>>>()
         for (tree in trees) {
-            val targets = tree.namespaces.drop(1).toSet() - filled
-            if (targets.isNotEmpty()) {
-                toFill += tree.namespaces.first() to targets
-                filled += targets
+            for ((parent, target) in tree.namespaces.zipWithNext()) {
+                if (target !in filled) {
+                    toFill += parent to setOf(target)
+                    filled += target
+                }
             }
         }
         composed.fillMissingNames(*toFill.toTypedArray())

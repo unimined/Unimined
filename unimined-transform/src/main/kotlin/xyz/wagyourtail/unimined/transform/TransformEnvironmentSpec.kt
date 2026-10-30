@@ -33,6 +33,13 @@ class TransformEnvironmentSpec internal constructor(
     val runMutators: MutableList<Action<RunConfigSpec>> = mutableListOf()
 
     /**
+     * Mutators applied to the registered run *task* after spec-level
+     * [runMutators] — for actions needing task state (e.g. runDirectory
+     * for copying files into the run dir), which the spec cannot see.
+     */
+    val runTaskMutators: MutableList<Action<org.gradle.api.Task>> = mutableListOf()
+
+    /**
      * [JarProcessor][xyz.wagyourtail.unimined.transform.processor.JarProcessor]
      * declarations in execution order — their specs run over the
      * dev-Minecraft artifact via the `jar-processors` pipeline step, and
@@ -129,6 +136,23 @@ class TransformEnvironmentSpec internal constructor(
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveRunMutators(visiting)
             } + runMutators
+        } finally {
+            visiting.remove(key)
+        }
+    }
+
+    /** Run task mutators compose like [effectiveRunMutators]. */
+    fun effectiveRunTaskMutators(
+        visiting: MutableSet<String> = mutableSetOf()
+    ): List<Action<org.gradle.api.Task>> {
+        val key = "$projectPath:$environmentId"
+        if (!visiting.add(key)) {
+            throw GradleException("cyclic Unimined transform inheritance involving $key")
+        }
+        try {
+            return inheritedEnvironments.values.flatMap { resolver ->
+                resolver().effectiveRunTaskMutators(visiting)
+            } + runTaskMutators
         } finally {
             visiting.remove(key)
         }

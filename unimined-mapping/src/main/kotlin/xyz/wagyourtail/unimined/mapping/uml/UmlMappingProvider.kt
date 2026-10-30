@@ -46,8 +46,14 @@ class UmlMappingProvider : MappingProvider {
         }
         val nsMap = source.nsMap
         val tree = MutableMappingTree()
-        for (file in source.files) {
-            readTree(file, hint, ctx).emit(
+        // context formats (the MCP csv readers) mutate searge-keyed rows
+        // on an existing tree — they must run after the base documents
+        // and see the accumulating tree, not a null context
+        val files = source.files.sortedBy {
+            (detect(it)?.mustBeAfter?.isNotEmpty() == true).compareTo(false)
+        }
+        for (file in files) {
+            readTree(file, hint, ctx, tree).emit(
                 CountingMappingSink(tree, composeGate(file.name, ctx)),
                 nsRenamer = { ns -> nsMap[ns.name]?.let { Namespace(it) } ?: ns }
             )
@@ -126,7 +132,10 @@ class UmlMappingProvider : MappingProvider {
         )
     }.getOrNull()
 
-    private fun readTree(path: Path, hint: FormatProvider?, ctx: MappingContext) = runBlocking {
+    private fun readTree(
+        path: Path, hint: FormatProvider?, ctx: MappingContext,
+        context: xyz.wagyourtail.unimined.mapping.MappingTree? = null
+    ) = runBlocking {
         val content = path.readText()
         val format = hint ?: FormatRegistry.autodetectFormat(
             path.name, content.byteInputStream().source().buffer()
@@ -143,7 +152,7 @@ class UmlMappingProvider : MappingProvider {
         MutableMappingTree().also { temp ->
             format.reader.readImpl(
                 StringCharReader(content.replace("\r", "")),
-                null,
+                context,
                 CountingMappingSink(temp, gate),
                 emptyMap(),
                 format.reader

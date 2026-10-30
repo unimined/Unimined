@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.mapping.internal
 
 import org.gradle.api.logging.Logger
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
+import xyz.wagyourtail.unimined.api.spec.Side
 import java.nio.file.Path
 
 internal class RuntimeMappingContext(
@@ -14,7 +15,8 @@ internal class RuntimeMappingContext(
         throw UnsupportedOperationException(
             "builtin channel '$channel' is not supported in this context"
         )
-    }
+    },
+    override val envSide: Side? = null
 ) : MappingContext {
 
     override fun resolveMaven(notation: String): Path = mavenResolver(notation)

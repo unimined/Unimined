@@ -7,8 +7,9 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
 /**
  * Jarmod-family loader products — `jarmod` (vanilla jar injection +
  * JarModAgent runtime coremodding). The "loader" coordinate is the
- * JarModAgent artifact itself; `modloader` and `fg1`-era forge reuse
- * this family with their own descriptors once layered.
+ * JarModAgent artifact itself. ModLoader isn't a loader — it's a
+ * `jarMod` dep patched by `jarmod-modloader-fixes` (exists-gated
+ * on `ModLoader.class`); `fg1` is FML-era forge on the same family.
  */
 internal class JarModLoaderDescriptors : LoaderDescriptorSource {
 
@@ -23,7 +24,17 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             prodNamespace = "official",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
+        ),
+        LoaderDescriptor(
+            id = "fg1",
+            family = "jarmod",
+            mavens = listOf(
+                "https://maven.wagyourtail.xyz/releases/",
+                "https://maven.wagyourtail.xyz/snapshots/"
+            ),
+            loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
+            prodNamespace = "official",
+            transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         )
     )
-
 }

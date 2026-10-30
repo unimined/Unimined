@@ -141,6 +141,7 @@ class TransformPipelineTest {
             override val jvmArgs = mutableListOf<String>()
             override val programArgs = mutableListOf<String>()
             override val environment = mutableMapOf<String, String>()
+            override val properties = mutableMapOf<String, () -> String>()
         }
         ext.transformRun(cfg)
         assertEquals(listOf("declare:x", "declare:y", "run:x", "run:y"), order)

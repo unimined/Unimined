@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform
 
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -32,6 +33,7 @@ class JarProcessorsStepTypeTest {
 
     private val ctx
         get() = object : StepContext {
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = object : RemapSpec {
                 override val sourceNamespace = "official"
                 override val targetNamespace = "named"

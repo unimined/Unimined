@@ -187,6 +187,18 @@ class MappingBundle(
                     }
                 }
             }
+            // exists-but-empty source layer guard: a src!=dst capture
+            // with zero renamed classes means the source layer carried
+            // no real rows (mislabeled namespace) — the resulting
+            // bundle remaps to identity while looking valid
+            if (source != target &&
+                rows.none { it.kind == Kind.CLASS && it.srcName != it.dstName }) {
+                error(
+                    "bundle $source -> $target produced zero renamed " +
+                        "classes — the '$source' layer is empty or " +
+                        "mislabeled (namespaces: ${tree.namespaces.map { it.name }})"
+                )
+            }
             return MappingBundle(tree.namespaces.map { it.name }, source, target, rows)
         }
 

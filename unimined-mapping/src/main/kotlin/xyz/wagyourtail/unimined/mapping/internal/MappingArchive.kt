@@ -76,8 +76,11 @@ object MappingArchive {
         cacheDir: Path
     ): Path {
         // keep entry names verbatim under an archive-named dir — some
-        // readers detect on filename (e.g. MCP's `params.csv`)
-        val out = cacheDir.resolve(archive.fileName.toString()).resolve(entry.name)
+        // readers detect on filename (e.g. MCP's `params.csv`). Era zips
+        // may carry Windows-style `conf\classes.csv` entries — normalize
+        // to real path separators so they land as nested files.
+        val out = cacheDir.resolve(archive.fileName.toString())
+            .resolve(entry.name.replace('\\', '/'))
         if (!Files.exists(out)) {
             Files.createDirectories(out.parent)
             jar.getInputStream(entry).use { Files.copy(it, out) }

@@ -5,6 +5,7 @@ import xyz.wagyourtail.commons.core.logger.Logger as CommonsLogger
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Path
 
@@ -19,5 +20,6 @@ internal class TaskStepContext(
     override val workDir: Path,
     override val logger: Logger,
     override val accessModel: AccessModel?,
-    override val log: CommonsLogger
+    override val log: CommonsLogger,
+    override val state: PipelineState
 ) : StepContext

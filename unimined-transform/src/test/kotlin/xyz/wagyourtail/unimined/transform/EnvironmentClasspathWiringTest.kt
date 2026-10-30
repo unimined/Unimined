@@ -148,7 +148,7 @@ class EnvironmentClasspathWiringTest {
         // i.e. the dev jar's name with the -dev suffix removed
         assertEquals(
             jar.archiveFileName.get().replace("-dev.", "."),
-            remapJar.outputArtifact.get().asFile.name
+            remapJar.archiveFile.get().asFile.name
         )
         assertTrue(
             (remapJar as org.gradle.api.internal.TaskInternal)
@@ -247,7 +247,7 @@ class EnvironmentClasspathWiringTest {
         assertEquals("shadow-dev", jar.archiveClassifier.get())
         val remapJar = project.tasks.getByName("remapJar")
                 as xyz.wagyourtail.unimined.remap.task.RemapJarTask
-        assertTrue(remapJar.outputArtifact.get().asFile.name.endsWith("-shadow.jar"))
+        assertTrue(remapJar.archiveFile.get().asFile.name.endsWith("-shadow.jar"))
     }
 
 }

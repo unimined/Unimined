@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.mapping.FileMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import xyz.wagyourtail.unimined.api.spec.Side
 import java.security.MessageDigest
 import java.nio.file.Files
 
@@ -21,6 +22,24 @@ import java.nio.file.Files
  * the [MappingPostProcessorRegistry] stages before being returned.
  */
 internal object MappingResolver {
+
+    /**
+     * Drops the wrong side's `client.srg`/`server.srg` era document —
+     * `mcp_legacy` zips ship BOTH, and pre-1.3 client/server obf
+     * namespaces are independent, so composing the wrong side's rows
+     * renames classes through a foreign namespace (same obf name,
+     * different target) and permutes class contents. Only fires when
+     * the pair is actually present; `null`/`MERGED` keeps everything.
+     */
+    private fun filterSideDocs(files: List<Path>, side: Side?): List<Path> {
+        if (side == null || side == Side.MERGED) return files
+        val other = if (side == Side.CLIENT) "server" else "client"
+        val names = files.map { it.fileName.toString() }
+        if (!names.any { it.equals("client.srg", true) } ||
+            !names.any { it.equals("server.srg", true) }
+        ) return files
+        return files.filter { !it.fileName.toString().equals("$other.srg", true) }
+    }
 
     /** Resolve [spec]'s declared sources into environment-level [MappingData]. */
     fun resolve(
@@ -45,7 +64,14 @@ internal object MappingResolver {
         // merged-output cache, and cheap materialization is shared by
         // hit and miss paths alike
         val mats = sources.mapNotNull { src ->
-            val m = sourceProviders.select(src).materialize(src, ctx)
+            var m = sourceProviders.select(src).materialize(src, ctx)
+            val filtered = filterSideDocs(m.files, ctx.envSide)
+            if (filtered !== m.files) {
+                m = RuntimeMaterializedMappingSource(
+                    m.declaration, filtered, m.formatHint,
+                    m.nsMap, m.namedNamespaces, m.attachments
+                )
+            }
             if (m.files.isEmpty()) {
                 // lazily-empty declarations (e.g. a conditional loader hop)
                 // contribute no part — reading them would emit a tree with
@@ -108,7 +134,10 @@ internal object MappingResolver {
         ctx: MappingContext,
         sourceProviders: MappingSourceProviderRegistry = MappingSourceProviderRegistry()
     ): List<Path> = spec.effectiveSources().flatMap { src ->
-        sourceProviders.select(src).materialize(src, ctx).files
+        filterSideDocs(
+            sourceProviders.select(src).materialize(src, ctx).files,
+            ctx.envSide
+        )
     }
 
     /**
@@ -123,6 +152,7 @@ internal object MappingResolver {
         postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
         val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
+        val files = filterSideDocs(files, ctx.envSide)
         val cacheFile = mergedCacheFile(ctx, files)
         var data = cacheFile?.takeIf { Files.exists(it) }?.let { f ->
             runCatching {
@@ -188,7 +218,7 @@ internal object MappingResolver {
         // share. Unhashable (missing/lazy) files just disable the cache.
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-merged-v1")
+        put("unimined-merged-v3")
         for ((_, m) in mats) {
             put(m.formatHint ?: "")
             put(m.nsMap.toString())
@@ -212,7 +242,7 @@ internal object MappingResolver {
         val root = ctx.globalCacheDir ?: return null
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-readfiles-v1")
+        put("unimined-readfiles-v2")
         for (f in files) {
             put(f.fileName.toString())
             val bytes = runCatching { Files.readAllBytes(f) }
@@ -225,9 +255,10 @@ internal object MappingResolver {
     }
 
     fun standaloneContext(
-        environmentId: String, logger: Logger, globalCacheDir: Path? = null
+        environmentId: String, logger: Logger, globalCacheDir: Path? = null,
+        envSide: Side? = null
     ): MappingContext =
-        RuntimeMappingContext(environmentId, logger, null, globalCacheDir, { notation ->
+        RuntimeMappingContext(environmentId, logger, null, globalCacheDir, envSide = envSide, mavenResolver = { notation ->
             throw UnsupportedOperationException(
                 "maven resolution is not available here; materialize '$notation' " +
                         "through the environment's mapping spec first"

@@ -31,12 +31,19 @@ class GradlePlugin : Plugin<Project> {
             ).forEach {
                 target.repositories.maven { r -> r.url = URI.create(it) }
             }
+            // env-registration-time: configs must exist before the
+            // script's `dependencies {}` block evaluates
+            minecraft.environments.all { environment ->
+                JarModEnvironmentWiring.createConfigurations(target, environment)
+            }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 minecraft.onEnvironmentBound { environment, _ ->
-                    val family = environment.loaderSpec.orNull?.name
-                        ?.let { LoaderRegistry.resolveBuiltin(it)?.family }
-                    if (family == "jarmod") {
-                        JarModEnvironmentWiring.wire(target, environment)
+                    // loaderSpec populates during script eval, after the
+                    // bound event fires — defer the loader check
+                    target.afterEvaluate {
+                        if (environment.spec().loader?.name in setOf("jarmod", "fg1")) {
+                            JarModEnvironmentWiring.wire(target, environment)
+                        }
                     }
                 }
             }

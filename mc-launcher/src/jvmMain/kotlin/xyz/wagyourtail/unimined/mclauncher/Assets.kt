@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mclauncher
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
@@ -9,6 +10,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
@@ -25,7 +27,9 @@ object Assets {
     /** The asset index document (`indexes/<id>.json`). */
     @Serializable
     class AssetIndex(
-        val objects: Map<String, AssetObject> = emptyMap()
+        val objects: Map<String, AssetObject> = emptyMap(),
+        @SerialName("map_to_resources") val mapToResources: Boolean = false,
+        val virtual: Boolean = false
     ) {
         @Serializable
         class AssetObject(val hash: String, val size: Long = 0L)
@@ -68,6 +72,38 @@ object Assets {
             downloaded++
         }
         return downloaded
+    }
+
+    /**
+     * Whether [indexJson] declares `map_to_resources` — pre-1.6 era games
+     * read sounds/music from `<gamedir>/resources`, so the objects have to
+     * be materialized there instead of just living under `objects/`.
+     */
+    fun mapsToResources(indexJson: String): Boolean =
+        json.decodeFromString<AssetIndex>(indexJson).mapToResources
+
+    /**
+     * Copy every object in [indexJson] from [root]'s `objects/` layout into
+     * [resourcesDir] under its index name (e.g. `music/game/calm1.ogg`).
+     * Objects already present with the right size are skipped. Returns the
+     * number of files written.
+     */
+    fun copyToResources(indexJson: String, root: Path, resourcesDir: Path): Int {
+        val index = json.decodeFromString<AssetIndex>(indexJson)
+        var copied = 0
+        for ((name, obj) in index.objects) {
+            val src = root.resolve(objectPath(obj.hash))
+            if (!src.exists()) continue
+            // index names are paths like "sound/step/grass1.ogg" — guard
+            // against a hostile/poisoned index escaping resourcesDir
+            val dst = resourcesDir.resolve(name).normalize()
+            if (!dst.startsWith(resourcesDir.normalize())) continue
+            if (dst.exists() && Files.size(dst) == obj.size) continue
+            dst.parent.createDirectories()
+            Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING)
+            copied++
+        }
+        return copied
     }
 
     private val defaultFetcher: (String) -> ByteArray = { url ->
