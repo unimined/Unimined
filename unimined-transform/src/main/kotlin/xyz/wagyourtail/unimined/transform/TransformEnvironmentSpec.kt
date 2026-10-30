@@ -40,6 +40,14 @@ class TransformEnvironmentSpec internal constructor(
     val runTaskMutators: MutableList<Action<org.gradle.api.Task>> = mutableListOf()
 
     /**
+     * Mutators applied to the `prepare<run>` task — staging that must
+     * materialize *before* the run task executes (run-dir contents,
+     * mod staging, dyn-lib copies). The prepare task carries the same
+     * `runDirectory` property, so mutators shape it identically.
+     */
+    val prepareTaskMutators: MutableList<Action<org.gradle.api.Task>> = mutableListOf()
+
+    /**
      * [JarProcessor][xyz.wagyourtail.unimined.transform.processor.JarProcessor]
      * declarations in execution order — their specs run over the
      * dev-Minecraft artifact via the `jar-processors` pipeline step, and
@@ -153,6 +161,23 @@ class TransformEnvironmentSpec internal constructor(
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveRunTaskMutators(visiting)
             } + runTaskMutators
+        } finally {
+            visiting.remove(key)
+        }
+    }
+
+    /** Prepare task mutators compose like [effectiveRunTaskMutators]. */
+    fun effectivePrepareTaskMutators(
+        visiting: MutableSet<String> = mutableSetOf()
+    ): List<Action<org.gradle.api.Task>> {
+        val key = "$projectPath:$environmentId"
+        if (!visiting.add(key)) {
+            throw GradleException("cyclic Unimined transform inheritance involving $key")
+        }
+        try {
+            return inheritedEnvironments.values.flatMap { resolver ->
+                resolver().effectivePrepareTaskMutators(visiting)
+            } + prepareTaskMutators
         } finally {
             visiting.remove(key)
         }

@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.runs.MinecraftRunTask
+import xyz.wagyourtail.unimined.runs.PrepareRunTask
 import xyz.wagyourtail.unimined.runs.RunConfig
 import xyz.wagyourtail.unimined.runs.RunsExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
@@ -96,7 +97,21 @@ internal object RunsWiring {
             spec
         }
 
+        val prepare = project.tasks.register(
+            "prepare${taskName.replaceFirstChar { it.uppercase() }}",
+            PrepareRunTask::class.java
+        ) { t ->
+            t.description = "Stage run directory for $taskName"
+            t.runDirectory.set(
+                project.layout.projectDirectory.dir(
+                    run.workingDirectory.orElse("run/$environmentId-${run.name}").get()
+                )
+            )
+            transformSpec.effectivePrepareTaskMutators().forEach { it.execute(t) }
+        }
+
         project.tasks.register(taskName, MinecraftRunTask::class.java) { task ->
+            task.dependsOn(prepare)
             task.group = "unimined"
             task.description = "Launch Minecraft " +
                     (environment.version.orNull ?: "<unset>") +

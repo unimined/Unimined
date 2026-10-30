@@ -316,9 +316,9 @@ internal object JarModEnvironmentWiring {
         transform.sourceSet(envId).runMutators += org.gradle.api.Action { config ->
             config.jvmArgs += "-Dminecraft.applet.TargetDirectory=${'$'}{game_dir}"
         }
-        // runTaskMutators see the task — copy forgeDeps into
-        // runDirectory/lib at execution (FML's dyn-lib dir)
-        transform.sourceSet(envId).runTaskMutators += org.gradle.api.Action { task ->
+        // prepareTaskMutators stage the run dir — copy forgeDeps into
+        // runDirectory/lib before the run task executes (FML's dyn-lib dir)
+        transform.sourceSet(envId).prepareTaskMutators += org.gradle.api.Action { task ->
             task.doFirst { t ->
                 val dir = (t.property("runDirectory") as? org.gradle.api.file.DirectoryProperty)
                     ?.get()?.asFile ?: return@doFirst
