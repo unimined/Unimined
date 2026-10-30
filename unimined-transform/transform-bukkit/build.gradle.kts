@@ -3,8 +3,11 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-transform"))
+    "coreApi"(project(":unimined-api"))
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    api(project(":unimined-minecraft"))
 }
 
 gradlePlugin {
