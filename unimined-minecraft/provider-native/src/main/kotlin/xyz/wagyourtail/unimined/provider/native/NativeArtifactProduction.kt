@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.provider.native.metadata.PlatformInfo
 import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import xyz.wagyourtail.unimined.provider.native.internal.io.AtomicIo
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
@@ -116,8 +117,14 @@ internal object NativeArtifactProduction {
             val entry = zip.getEntry(entryName) ?: return serverJar
             if (Files.exists(out) && !rebuild) return out
             Files.createDirectories(out.parent)
-            zip.getInputStream(entry).use { input ->
-                Files.copy(input, out, StandardCopyOption.REPLACE_EXISTING)
+            val tmp = AtomicIo.tempSibling(out)
+            try {
+                zip.getInputStream(entry).use { input ->
+                    Files.copy(input, tmp, StandardCopyOption.REPLACE_EXISTING)
+                }
+                AtomicIo.moveAtomic(tmp, out)
+            } finally {
+                Files.deleteIfExists(tmp)
             }
         }
         return out
@@ -173,7 +180,10 @@ internal object NativeArtifactProduction {
         val path = cacheDir.resolve("assets/index-empty.json")
         if (!Files.exists(path)) {
             Files.createDirectories(path.parent)
-            Files.writeString(path, "{}")
+            AtomicIo.tempSibling(path).also {
+                Files.writeString(it, "{}")
+                AtomicIo.moveAtomic(it, path)
+            }
         }
         return path
     }

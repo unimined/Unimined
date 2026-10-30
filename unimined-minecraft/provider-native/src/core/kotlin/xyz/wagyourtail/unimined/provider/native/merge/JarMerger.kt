@@ -10,7 +10,9 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.inputStream
+import java.nio.file.Files
 import kotlin.io.path.outputStream
+import xyz.wagyourtail.unimined.provider.native.internal.io.AtomicIo
 
 /**
  * Merges the client + server jars into a combined dev jar for the
@@ -148,7 +150,9 @@ object JarMerger {
             mergedClasses[name] = ClassWriter(0).also { merged.accept(it) }.toByteArray()
         }
 
-        ZipOutputStream(out.outputStream()).use { zout ->
+        val tmp = AtomicIo.tempSibling(out)
+        try {
+            ZipOutputStream(tmp.outputStream()).use { zout ->
             for ((name, data) in mergedClasses) {
                 zout.putNextEntry(java.util.zip.ZipEntry(name))
                 zout.write(data)
@@ -159,6 +163,10 @@ object JarMerger {
                 zout.write(resources.getValue(name))
                 zout.closeEntry()
             }
+            }
+            AtomicIo.moveAtomic(tmp, out)
+        } finally {
+            Files.deleteIfExists(tmp)
         }
     }
 

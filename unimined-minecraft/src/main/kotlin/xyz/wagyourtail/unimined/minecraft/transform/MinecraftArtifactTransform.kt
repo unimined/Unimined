@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactProductionRequest
 import java.nio.file.Files
+import xyz.wagyourtail.unimined.minecraft.internal.io.AtomicIo
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
@@ -141,7 +142,7 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
             "${p.artifactBaseName.get()}-" +
                     p.artifactKey.get().lowercase() + ".jar"
         ).toPath()
-        Files.copy(produced, output, StandardCopyOption.REPLACE_EXISTING)
+        AtomicIo.copyAtomic(produced, output)
     }
 
 }

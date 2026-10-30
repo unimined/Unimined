@@ -64,10 +64,8 @@ object LocalMavenPublisher {
                 if (classifier.isNotEmpty()) append("-$classifier")
                 append(".jar")
             }
-            java.nio.file.Files.copy(
-                file, moduleDir.resolve(name),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING
-            )
+            xyz.wagyourtail.unimined.minecraft.internal.io.AtomicIo
+                .copyAtomic(file, moduleDir.resolve(name))
         }
         return moduleDir
     }
