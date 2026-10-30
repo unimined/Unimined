@@ -18,19 +18,31 @@ object MinecraftMetadataAssembler {
     fun assemble(
         version: VersionJson,
         root: JsonObject,
-        platform: PlatformInfo = PlatformInfo.current()
+        platform: PlatformInfo = PlatformInfo.current(),
+        obfuscatedPrefixes: List<String> = emptyList()
     ): ResolvedMinecraftMetadata {
         val downloads = buildMap {
             version.downloads?.get("client")?.let { put(ArtifactKey.CLIENT, it) }
             version.downloads?.get("server")?.let { put(ArtifactKey.SERVER, it) }
         }
-        val libraries = version.libraries
+        val (auxLibs, libs) = version.libraries
             .filter { it.appliesTo(platform) }
-            .map { it.name }
+            .partition { lib ->
+                obfuscatedPrefixes.any { lib.name.startsWith("$it:") }
+            }
         return ResolvedMinecraftMetadata(
             version = version,
             downloads = downloads,
-            libraries = libraries,
+            libraries = libs.map { it.name },
+            obfuscatedAuxArtifacts = auxLibs.mapNotNull { lib ->
+                val artifact = lib.downloads?.get("artifact")
+                val url = artifact?.url ?: return@mapNotNull null
+                ResolvedMinecraftMetadata.AuxArtifact(
+                    name = lib.name,
+                    url = url,
+                    sha1 = artifact.sha1
+                )
+            },
             assetIndex = version.assetIndex
         )
     }

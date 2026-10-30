@@ -245,6 +245,16 @@ abstract class MinecraftExtension @Inject constructor(
         // the marker stub is (re)written alongside the dependency
         minecraftBucket.withDependencies { deps ->
             deps.add(project.dependencies.create(stubDependencyNotation(environment)))
+            // obfuscated aux artifacts (e.g. the Realms jar — issue #27)
+            // ride the same raw->dev view so they remap with the MC jar
+            deps.add(
+                project.dependencies.create(
+                    project.files(project.provider {
+                        artifacts(environmentId).get()
+                            .obfuscatedAuxArtifacts.get()
+                    })
+                )
+            )
         }
 
         val librariesBucket = project.configurations.maybeCreate(

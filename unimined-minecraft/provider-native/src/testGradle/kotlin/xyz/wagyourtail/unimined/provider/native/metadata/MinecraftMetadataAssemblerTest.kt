@@ -89,4 +89,46 @@ class MinecraftMetadataAssemblerTest {
         )
     }
 
+    @Test
+    fun `obfuscated-prefixed libraries become aux artifacts with download refs`() {
+        val version = VersionJson(
+            id = "1.5.2",
+            type = "release",
+            libraries = listOf(
+                VersionJson.Library("org.example:common:1.0"),
+                VersionJson.Library(
+                    "com.mojang:realms:1.3.5",
+                    downloads = mapOf(
+                        "artifact" to VersionJson.ArtifactOrRules(
+                            url = "https://libs.example/com/mojang/realms/1.3.5/realms-1.3.5.jar",
+                            sha1 = "abc123"
+                        )
+                    )
+                ),
+                // flagged but no artifact download — stays out of both
+                VersionJson.Library("com.mojang:realms:urlless")
+            )
+        )
+        val root = Json.parseToJsonElement("{}") as kotlinx.serialization.json.JsonObject
+
+        val assembled = MinecraftMetadataAssembler.assemble(
+            version = version,
+            root = root,
+            platform = PlatformInfo("windows", "amd64", "10.0"),
+            obfuscatedPrefixes = listOf("com.mojang:realms")
+        )
+
+        assertEquals(listOf("org.example:common:1.0"), assembled.libraries)
+        assertEquals(
+            listOf(
+                ResolvedMinecraftMetadata.AuxArtifact(
+                    name = "com.mojang:realms:1.3.5",
+                    url = "https://libs.example/com/mojang/realms/1.3.5/realms-1.3.5.jar",
+                    sha1 = "abc123"
+                )
+            ),
+            assembled.obfuscatedAuxArtifacts
+        )
+    }
+
 }

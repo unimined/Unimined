@@ -439,6 +439,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  per-generation backport list). */
     val libraryOverlays = mutableListOf<String>()
 
+    /** Coord prefixes (`group:name`+) of version-JSON libraries that are
+     *  obfuscated Mojang artifacts — they route through the env's
+     *  raw→dev artifact view so they remap with the MC jar rather than
+     *  sitting on the classpath in production namespace (`com.mojang:
+     *  realms` is flagged by the provider; this list adds others). */
+    val obfuscatedLibraries = mutableListOf<String>()
+
     /** Build the provider-facing immutable spec for this environment. */
     fun spec(): MinecraftSpec {
         validateCombinations()
@@ -453,7 +460,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             stripBundledServerLibraries = stripBundledServerLibraries.get(),
             librarySubstitutions = librarySubstitutions.toList(),
             manifestUrls = manifestUrls.toList(),
-            libraryOverlays = libraryOverlays.toList()
+            libraryOverlays = libraryOverlays.toList(),
+            obfuscatedLibraries = obfuscatedLibraries.toList()
         )
     }
 

@@ -28,14 +28,16 @@ internal object NativeArtifactProduction {
 
     fun metadata(
         versionId: String,
-        resolver: ManifestResolver
+        resolver: ManifestResolver,
+        obfuscatedPrefixes: List<String> = emptyList()
     ): ResolvedMinecraftMetadata {
         val version = resolver.versionJson(versionId)
         val root = resolver.versionJsonDocument(versionId)
         return MinecraftMetadataAssembler.assemble(
             version = version,
             root = root,
-            platform = PlatformInfo.current()
+            platform = PlatformInfo.current(),
+            obfuscatedPrefixes = obfuscatedPrefixes
         )
     }
 

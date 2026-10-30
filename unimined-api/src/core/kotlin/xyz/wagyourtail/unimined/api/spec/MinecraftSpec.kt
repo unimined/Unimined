@@ -51,4 +51,13 @@ interface MinecraftSpec {
     val libraryOverlays: List<String>
         get() = emptyList()
 
+    /** Coord prefixes (`group:name` or longer) of version-JSON libraries
+     *  that are themselves obfuscated Mojang artifacts — they must ride
+     *  the raw→dev remap view alongside the MC jar instead of landing on
+     *  the classpath in production namespace (issue #27: the Realms
+     *  jar). The provider always flags `com.mojang:realms`; loaders and
+     *  users contribute extras here. */
+    val obfuscatedLibraries: List<String>
+        get() = emptyList()
+
 }

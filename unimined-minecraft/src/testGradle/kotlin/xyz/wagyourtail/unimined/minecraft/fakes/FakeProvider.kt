@@ -10,6 +10,10 @@ import xyz.wagyourtail.unimined.minecraft.spi.*
 
 /** Test-only MinecraftArtifacts over fixed providers. */
 class FakeArtifacts(private val ctx: ProviderContext) : MinecraftArtifacts {
+
+    override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
+        ctx.providers.provider { emptyList() }
+
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = mapOf(
         ArtifactKey.MERGED to ctx.layout.buildDirectory.file("fake/merged.jar")
     )

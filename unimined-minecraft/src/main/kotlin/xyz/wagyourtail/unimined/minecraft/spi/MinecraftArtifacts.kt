@@ -20,6 +20,13 @@ interface MinecraftArtifacts {
     val auxiliaryArtifacts: Map<String, Provider<RegularFile>>
         get() = emptyMap()
 
+    /** Obfuscated Mojang artifact libraries flagged for the raw→dev
+     *  artifact view — they remap alongside the MC jar instead of
+     *  landing on the classpath in production namespace (issue #27,
+     *  e.g. the Realms jar). The environment adds them to the raw
+     *  artifact bucket so the artifact-transform chain carries them. */
+    val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>>
+
     /** Resolved mapping tree for remap specs. */
     val mappings: Provider<MappingTree>
 

@@ -63,8 +63,12 @@ class NativeProvider(
             manifestUrls = listOf(ManifestResolver.VERSION_MANIFEST_V2) + spec.manifestUrls
         )
 
+        // providers flag obfuscated Mojang artifact libraries (issue
+        // #27 — the Realms jar): they must ride the raw->dev remap
+        // view, not land on the classpath in production namespace
+        val obfPrefixes = spec.obfuscatedLibraries + listOf(OBF_AUX_PREFIXES)
         fun metadata(): ResolvedMinecraftMetadata =
-            NativeArtifactProduction.metadata(versionId, resolver)
+            NativeArtifactProduction.metadata(versionId, resolver, obfPrefixes)
 
         // ProviderContext cannot resolve configurations, so the eager
         // merge honors the spec's glob/flag state but never the
@@ -158,6 +162,21 @@ class NativeProvider(
             })
         }
 
+        // flagged libraries resolve as jars for the env's raw->dev
+        // artifact view — same cache layout as version libraries
+        val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
+            ctx.providers.provider {
+                metadata().obfuscatedAuxArtifacts.map { aux ->
+                    ctx.layout.file(ctx.providers.provider {
+                        downloader.fetch(
+                            aux.url,
+                            "libraries/${aux.name.replace(':', '-')}.jar",
+                            aux.sha1?.lowercase(Locale.ROOT)
+                        ).toFile()
+                    })
+                }
+            }
+
         return NativeMinecraftArtifacts(
             artifacts = artifacts,
             auxiliaryArtifacts = auxiliary,
@@ -167,6 +186,7 @@ class NativeProvider(
             libraries = libraries,
             extraDependencies = ctx.objects.fileCollection(),
             extraCompileSources = ctx.objects.fileCollection(),
+            obfuscatedAuxArtifacts = obfuscatedAuxArtifacts,
             assets = ctx.providers.provider { assetIndex },
             launch = launch
         )
@@ -183,6 +203,7 @@ private class NativeMinecraftArtifacts(
     override val libraries: Provider<List<org.gradle.api.artifacts.Dependency>>,
     override val extraDependencies: org.gradle.api.file.FileCollection,
     override val extraCompileSources: org.gradle.api.file.FileCollection,
+    override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>>,
     override val assets: Provider<AssetIndex>,
     override val launch: LaunchMetadata
 ) : MinecraftArtifacts
@@ -195,6 +216,10 @@ private class NativeAssetIndex(
 /** Identity-only official namespace until a user mapping source is composed. */
 private val OfficialIdentityMappingTree: MappingTree =
     MappingTree(listOf(Namespace("official")))
+
+/** Version-JSON library prefixes the native provider always treats as
+ *  obfuscated artifacts (Realms is the only Mojang-published one). */
+private const val OBF_AUX_PREFIXES = "com.mojang:realms"
 
 /** Apply the spec's typed library-version substitutions
  *  (1.x `replaceLibraryVersion`): a coord `group:name:version[:classifier]`

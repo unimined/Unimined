@@ -23,7 +23,8 @@ data class RuntimeMinecraftSpec(
     val stripBundledServerLibraries: Boolean = true,
     override val librarySubstitutions: List<Pair<String, String>> = emptyList(),
     override val manifestUrls: List<String> = emptyList(),
-    override val libraryOverlays: List<String> = emptyList()
+    override val libraryOverlays: List<String> = emptyList(),
+    override val obfuscatedLibraries: List<String> = emptyList()
 ) : MinecraftSpec
 
 internal class RuntimeVersionSpec(
