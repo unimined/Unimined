@@ -23,6 +23,11 @@ class RemapEnvironmentSpec internal constructor(
 ) {
 
     private val surfaces = mutableMapOf<RemapSurface, RemapSurfaceSpec>()
+
+    /** Plugin-registered DSL verb factories — populated by
+     *  [RemapExtension.registerDslVerb] before spec creation. */
+    var dslVerbs: Map<String, (RemapSurfaceSpec) -> Any> = emptyMap()
+        internal set
     private val inheritedEnvironments =
         linkedMapOf<EnvironmentReference, () -> RemapEnvironmentSpec>()
 
@@ -55,7 +60,19 @@ class RemapEnvironmentSpec internal constructor(
 
     /** The declared steps for [surface], creating an empty surface if needed. */
     fun surface(surface: RemapSurface): RemapSurfaceSpec =
-        surfaces.getOrPut(surface) { RemapSurfaceSpec(surface, objects) }
+        surfaces.getOrPut(surface) {
+            // newInstance (not a plain ctor) — decoration wires the
+            // Groovy metaclass so extension-verb dispatch works
+            objects.newInstance(RemapSurfaceSpec::class.java, surface, objects).also { spec ->
+                dslVerbs.forEach { (name, factory) ->
+                    val verb = factory(spec)
+                    check(verb is Closure<*>) {
+                        "remap DSL verb '$name' must be a Closure (use stepVerb)"
+                    }
+                    spec.dslVerbObjects[name] = verb
+                }
+            }
+        }
 
     /** Surfaces configured directly on this environment, in declaration order. */
     fun configuredSurfaces(): Map<RemapSurface, RemapSurfaceSpec> = surfaces.toMap()

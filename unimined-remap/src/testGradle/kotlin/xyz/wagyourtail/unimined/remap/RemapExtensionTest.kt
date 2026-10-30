@@ -77,7 +77,8 @@ class RemapExtensionTest {
     @Test
     fun `Groovy closure can configure a managed step spec`() {
         val project = ProjectBuilder.builder().build()
-        val spec = RemapSurfaceSpec(RemapSurface.JAR, project.objects)
+        val spec = project.objects.newInstance(
+            RemapSurfaceSpec::class.java, RemapSurface.JAR, project.objects)
         val closure = object : Closure<Any?>(this) {
             fun doCall() {
                 (getDelegate() as ConfigurableStepSpec).marker.set("configured-from-groovy")

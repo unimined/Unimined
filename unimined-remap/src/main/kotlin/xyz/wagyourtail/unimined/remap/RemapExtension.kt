@@ -44,6 +44,32 @@ abstract class RemapExtension @Inject constructor(
 
     private val environments = mutableMapOf<String, RemapEnvironmentSpec>()
 
+    /**
+     * Plugin-registered DSL verbs for [RemapSurfaceSpec] — engine plugins
+     * register a factory per verb during `apply` so Groovy reaches their
+     * step DSL through [ExtensionAware] dispatch (`remap { jst {} }`),
+     * where the Kotlin extension functions are invisible.
+     */
+    private val dslVerbs = mutableMapOf<String, (RemapSurfaceSpec) -> Any>()
+
+    /** Register a Groovy-dispatchable DSL verb object for remap surfaces. */
+    fun registerDslVerb(name: String, factory: (RemapSurfaceSpec) -> Any) {
+        dslVerbs[name] = factory
+        // verbs registered after spec creation land on existing specs too
+        environments.values.forEach { env ->
+            env.dslVerbs = dslVerbs.toMap()
+            env.configuredSurfaces().values.forEach { spec ->
+                spec.dslVerbObjects.getOrPut(name) {
+                    val verb = factory(spec)
+                    check(verb is Closure<*>) {
+                        "remap DSL verb '$name' must be a Closure (use stepVerb)"
+                    }
+                    verb
+                }
+            }
+        }
+    }
+
     init {
         EnvironmentCopyRegistry.registerHandler(
             project,
@@ -55,7 +81,9 @@ abstract class RemapExtension @Inject constructor(
     /** Get or create the remap pipelines for [environmentId]. */
     fun sourceSet(environmentId: String): RemapEnvironmentSpec =
         environments.getOrPut(environmentId) {
-            RemapEnvironmentSpec(environmentId, project.path, objects)
+            RemapEnvironmentSpec(environmentId, project.path, objects).also {
+                it.dslVerbs = dslVerbs.toMap()
+            }
         }
 
     /** Configure remap pipelines for one Minecraft environment. */

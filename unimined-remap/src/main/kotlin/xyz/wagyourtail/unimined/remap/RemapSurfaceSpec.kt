@@ -1,9 +1,12 @@
 package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
+import groovy.lang.MissingMethodException
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.ExtensionAware
+import javax.inject.Inject
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -15,10 +18,28 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * Engine plugins extend the DSL with their own verbs via extension
  * functions — e.g. `fun RemapSurfaceSpec.unpick(defs) = step(UnpickSpec(defs))`.
  */
-class RemapSurfaceSpec(
+abstract class RemapSurfaceSpec @Inject constructor(
     val surface: RemapSurface,
     private val objects: ObjectFactory
-) {
+) : ExtensionAware {
+    // `extensions` is supplied by Gradle decoration — instances MUST be
+    // created via objects.newInstance so the generated storage is the
+    // same one Groovy method dispatch consults. Step-type plugins
+    // register DSL verbs via RemapExtension.registerDslVerb — each
+    // maps to a Closure-valued impl invoked by [methodMissing] (the
+    // dispatch point Gradle Groovy reaches after member + named-
+    // extension lookups fail; extension-object methods can't be used
+    // because `verb {}` always configures the named extension).
+    internal val dslVerbObjects = mutableMapOf<String, Closure<*>>()
+
+    /** Groovy DSL dispatch for plugin verbs: `jst { }`, `unpick("defs")`
+     *  — invokes the registered verb closure with the call args. */
+    fun methodMissing(name: String, args: Any): Any {
+        val verb = dslVerbObjects[name]
+            ?: throw MissingMethodException(name, javaClass, args as? Array<Any>)
+        @Suppress("UNCHECKED_CAST")
+        return verb.call(*(args as Array<Any?>))
+    }
 
     /** Declared steps, in declaration order. */
     val steps: MutableList<StepSpec> = mutableListOf()

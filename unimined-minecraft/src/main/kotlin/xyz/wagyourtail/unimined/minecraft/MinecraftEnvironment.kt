@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft
 
+import groovy.lang.MissingMethodException
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
@@ -37,20 +38,39 @@ import javax.inject.Inject
  * [environmentId]. Each instance owns independent version, loader, provider, and
  * mapping declarations.
  */
-class MinecraftEnvironment internal constructor(
+abstract class MinecraftEnvironment @Inject internal constructor(
     val environmentId: String,
     private val project: Project,
     objects: ObjectFactory
 ) : Named, ExtensionAware {
 
-    // extension container from a decorated managed object — the public
-    // API way to back ExtensionAware on a non-managed domain object,
-    // required so plugin DSL objects registered on the env dispatch
-    // from Groovy.
-    private val extensionContainer =
-        objects.newInstance(MinecraftEnvExtensionHolder::class.java).extensions
+    // `extensions` is supplied by Gradle decoration — envs MUST be
+    // created via objects.newInstance so the generated storage is the
+    // same one Groovy method dispatch consults (env.jarmod(...)).
 
-    override fun getExtensions(): ExtensionContainer = extensionContainer
+    /** Groovy DSL dispatch for extension-registered verbs like
+     *  `env.jarmod("0.1.5")` / `env.fg1("1.0.0")`: a non-closure call
+     *  `verb(args)` can't reach a named extension's methods through
+     *  Gradle's dynamic dispatch, so route it here — the verb name
+     *  matches the extension name (`jarmod`, `fg1`, ...) and the
+     *  same-named method on that extension object is invoked. A
+     *  `verb { }` closure call still configures the extension
+     *  directly, so both forms work. */
+    fun methodMissing(name: String, args: Any): Any? {
+        val argArray = args as Array<*>
+        val target = extensions.findByName(name)
+            ?: throw MissingMethodException(name, javaClass,
+                argArray.filterNotNull().toTypedArray())
+        val method = target.javaClass.methods.filter {
+            it.name == name && it.parameterCount == argArray.size
+        }.firstOrNull { m ->
+            argArray.indices.all { i ->
+                argArray[i] == null || m.parameterTypes[i].isInstance(argArray[i])
+            }
+        } ?: throw MissingMethodException(name, javaClass,
+            argArray.filterNotNull().toTypedArray())
+        return method.invoke(target, *argArray)
+    }
 
     override fun getName(): String = environmentId
 
@@ -684,4 +704,4 @@ class MinecraftEnvironment internal constructor(
 /** Managed-object shell whose decorated extension container backs
  *  [MinecraftEnvironment.getExtensions] — Gradle provides the real
  *  container; nothing is ever registered on this type itself. */
-internal abstract class MinecraftEnvExtensionHolder @Inject constructor() : ExtensionAware
+

@@ -14,6 +14,7 @@
         <toc-element topic="Remapping.md"/>
         <toc-element topic="Standard-Libraries.md"/>
         <toc-element topic="Multi-SourceSet-Multi-Project.md"/>
+        <toc-element topic="Migration-1x-to-2.0.md"/>
         <toc-element topic="Run-Config.md">
             <toc-element topic="Auth.md"/>
         </toc-element>

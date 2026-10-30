@@ -1,8 +1,10 @@
 package xyz.wagyourtail.unimined
 
 import groovy.lang.Closure
+import groovy.lang.MissingMethodException
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -21,6 +23,51 @@ import javax.inject.Inject
  * the transform builder API on [TransformExtension].
  */
 abstract class UniminedExtension @Inject constructor(private val project: Project) {
+
+    /**
+     * 1.x `unimined { }` verbs removed or re-shaped in 2.0 — Groovy
+     *  scripts hit [methodMissing] and get a migration note instead
+     *  of a bare missing-method error. Warnings, not emulation.
+     */
+    private val removed1xVerbs: Map<String, String> = buildMap {
+        // env blocks moved inside unimined.minecraft { sourceSet(name) {} }
+        this["reIndev"] = "configure the environment inside `unimined.minecraft { }` (loader/infra helpers live on the env now)"
+        this["bta"] = "configure the environment inside `unimined.minecraft { }` (loader/infra helpers live on the env now)"
+        this["modsRemapRepo"] = "mod dependencies resolve through unimined's managed repositories automatically — remove this call"
+        // repo helpers: maven repos are auto-registered per loader
+        val repos = "maven repositories are auto-registered per loader environment in 2.0 — remove this call (custom repos can be added via `repositories {}`)"
+        listOf(
+            "minecraftForgeMaven", "neoForgedMaven", "fabricMaven",
+            "ornitheMaven", "legacyFabricMaven", "quiltMaven",
+            "glassLauncherMaven", "wispForestMaven", "sleepingTownMaven",
+            "wagYourMaven", "mcphackersIvy", "parchmentMaven",
+            "sonatypeStaging", "spongeMaven", "jitpack", "spigot",
+            "flintMaven", "cleanroomRepos", "arcseekersMaven",
+            "fox2codeMaven", "signalumMaven", "modrinthMaven",
+            "curseMaven", "liteloaderMaven"
+        ).forEach { this[it] = repos }
+    }
+
+    /** Migration bridge for removed 1.x `unimined { }` verbs. */
+    fun methodMissing(name: String, args: Any): Any? {
+        val argArray = args as Array<*>
+        if (name == "minecraft" && argArray.isNotEmpty()) {
+            throw GradleException(
+                "unimined.minecraft(<sourceSet>) { } moved in Unimined 2.0 — " +
+                "use `unimined.minecraft { }` and configure the source-set " +
+                "environment inside (`minecraft { sourceSet(<name>) { } }`). " +
+                "See Writerside/topics/Migration-1x-to-2.0.md for the 2.0 migration notes."
+            )
+        }
+        removed1xVerbs[name]?.let {
+            throw GradleException(
+                "unimined.$name(...) was removed in Unimined 2.0 — $it"
+            )
+        }
+        throw MissingMethodException(name, javaClass,
+            argArray.filterNotNull().toTypedArray())
+    }
+
 
     /**
      * Global java-toolchain kill-switch — delegates to

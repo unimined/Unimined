@@ -76,7 +76,9 @@ abstract class MinecraftExtension @Inject constructor(
     /** Environments keyed by source-set name (`main`, `test`, `fabric`, ...). */
     val environments: NamedDomainObjectContainer<MinecraftEnvironment> =
         objects.domainObjectContainer(MinecraftEnvironment::class.java) { name ->
-            MinecraftEnvironment(name, project, objects)
+            // newInstance — decoration is what dispatches Groovy calls
+            // (env.jarmod(...)) to the ExtensionAware extensions
+            objects.newInstance(MinecraftEnvironment::class.java, name, project, objects)
         }
 
     /**
