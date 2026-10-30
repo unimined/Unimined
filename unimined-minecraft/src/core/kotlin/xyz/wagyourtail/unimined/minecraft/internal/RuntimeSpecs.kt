@@ -20,7 +20,8 @@ data class RuntimeMinecraftSpec(
      *  has no configuration access). */
     val mergeIncludeGlobs: List<String> = emptyList(),
     val mergeExcludeGlobs: List<String> = emptyList(),
-    val stripBundledServerLibraries: Boolean = true
+    val stripBundledServerLibraries: Boolean = true,
+    override val librarySubstitutions: List<Pair<String, String>> = emptyList()
 ) : MinecraftSpec
 
 internal class RuntimeVersionSpec(

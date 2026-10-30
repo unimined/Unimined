@@ -38,6 +38,7 @@ internal object FabricEnvironmentWiring {
         environment.provider.convention(
             environment.loaderSpec.map { if (it.name == "fabric") "native" else null }
         )
+        contributeLibrarySubstitutions(environment)
         contributeIntermediaryMappings(project, environment)
         contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)
@@ -56,6 +57,21 @@ internal object FabricEnvironmentWiring {
      * The raw `intermediary` jar is contributed as the source; the
      * mapping materializer unwraps its `mappings/mappings.tiny`.
      */
+    /** LWJGL2-era loaders need the patched LWJGL2 builds to run on
+     *  modern JVMs (1.x `replaceLwjglVersion`): `legacyfabric`/`babric`/
+     *  `ornithe` swap `org.lwjgl:*` onto `2.9.4+legacyfabric.8` (the
+     *  1.x LegacyFabric default); BTA-era `flint` follows the 1.x BTA
+     *  rule — `org.lwjgl.lwjgl:*` onto `2.9.4+legacyfabric.10`. Modern
+     *  `fabric`/`quilt` run LWJGL3 and get no swap. */
+    private fun contributeLibrarySubstitutions(environment: MinecraftEnvironment) {
+        when (environment.loaderSpec.orNull?.name) {
+            "legacyfabric", "babric", "ornithe" ->
+                environment.librarySubstitutions += "org.lwjgl" to "2.9.4+legacyfabric.8"
+            "flint" ->
+                environment.librarySubstitutions += "org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"
+        }
+    }
+
     private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {
         val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
         val version = environment.version

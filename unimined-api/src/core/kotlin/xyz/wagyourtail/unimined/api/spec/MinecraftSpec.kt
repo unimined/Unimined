@@ -24,4 +24,13 @@ interface MinecraftSpec {
     /** `null` for a bare (unmodded / no-loader) environment. */
     val loader: LoaderSpec?
 
+    /** Typed library-version substitutions applied to version-JSON
+     *  `libraries` before dependency creation: `(coordPrefix, version)`
+     *  pairs — a library whose `group:name` starts with the prefix gets
+     *  its version component replaced (1.x `replaceLibraryVersion`).
+     *  Providers apply these for the environment; transforms/envs
+     *  register rules such as the LWJGL2 patched-build swap. */
+    val librarySubstitutions: List<Pair<String, String>>
+        get() = emptyList()
+
 }

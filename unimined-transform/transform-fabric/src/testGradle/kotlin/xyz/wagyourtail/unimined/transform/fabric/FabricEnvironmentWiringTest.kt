@@ -170,6 +170,51 @@ class FabricEnvironmentWiringTest {
     }
 
     @Test
+    fun `legacy fabric-family loaders get the LWJGL2 substitution`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        for ((loader, rule) in mapOf(
+            "legacyfabric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
+            "babric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
+            "ornithe" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
+            "flint" to ("org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"),
+        )) {
+            // loader() before the matching sourceSet: env wiring reads
+            // loaderSpec eagerly when the env binds (production order is
+            // guaranteed by lazy transform-plugin apply)
+            val env = ext.sourceSet(loader) { e ->
+                e.version.set("1.20.1")
+                e.loader(loader, "1.0")
+            }
+            project.extensions.getByType(
+                org.gradle.api.tasks.SourceSetContainer::class.java
+            ).create(loader)
+            assertEquals(listOf(rule), env.librarySubstitutions,
+                "$loader should carry its 1.x LWJGL2 substitution")
+            // the rule reaches the provider-facing spec
+            assertEquals(listOf(rule), env.spec().librarySubstitutions)
+        }
+    }
+
+    @Test
+    fun `modern fabric and quilt get no LWJGL swap`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("quilt") { e ->
+            e.version.set("1.20.1")
+            e.loader("quilt", "1.0")
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).create("quilt")
+        assertEquals(emptyList<Pair<String, String>>(), env.librarySubstitutions)
+        assertEquals(
+            emptyList<Pair<String, String>>(),
+            env.spec().librarySubstitutions
+        )
+    }
+
+    @Test
     fun `non-fabric environments get no loader dep`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

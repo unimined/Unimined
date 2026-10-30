@@ -421,6 +421,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val stripBundledServerLibraries: Property<Boolean> = objects
         .property(Boolean::class.java).convention(true)
 
+    /** Typed library-version substitutions forwarded to the provider:
+     *  `(coordPrefix, version)` — a version-JSON library whose
+     *  `group:name` starts with the prefix gets its version replaced
+     *  (1.x `replaceLibraryVersion`; e.g. the LWJGL2 patched-build
+     *  swap legacy loaders need on modern JVMs). */
+    val librarySubstitutions = mutableListOf<Pair<String, String>>()
+
     /** Build the provider-facing immutable spec for this environment. */
     fun spec(): MinecraftSpec {
         validateCombinations()
@@ -432,7 +439,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             loader = loaderSpec.orNull,
             mergeIncludeGlobs = mergeIncludeGlobs.getOrElse(emptyList()),
             mergeExcludeGlobs = mergeExcludeGlobs.getOrElse(emptyList()),
-            stripBundledServerLibraries = stripBundledServerLibraries.get()
+            stripBundledServerLibraries = stripBundledServerLibraries.get(),
+            librarySubstitutions = librarySubstitutions.toList()
         )
     }
 

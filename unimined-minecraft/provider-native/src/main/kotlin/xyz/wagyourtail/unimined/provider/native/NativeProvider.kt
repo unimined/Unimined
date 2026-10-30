@@ -92,7 +92,9 @@ class NativeProvider(
 
         val libraries: Provider<List<org.gradle.api.artifacts.Dependency>> =
             ctx.providers.provider {
-                metadata().libraries.map { ctx.dependencyFactory.create(it) }
+                metadata().libraries.map {
+                    ctx.dependencyFactory.create(substitute(it, spec.librarySubstitutions))
+                }
             }
         val assetIndex = NativeAssetIndex(
             id = versionId,
@@ -186,3 +188,16 @@ private class NativeAssetIndex(
 /** Identity-only official namespace until a user mapping source is composed. */
 private val OfficialIdentityMappingTree: MappingTree =
     MappingTree(listOf(Namespace("official")))
+
+/** Apply the spec's typed library-version substitutions
+ *  (1.x `replaceLibraryVersion`): a coord `group:name:version[:classifier]`
+ *  whose `group:name` matches a rule's prefix gets its version component
+ *  replaced; first matching rule wins. */
+internal fun substitute(coord: String, rules: List<Pair<String, String>>): String {
+    val parts = coord.split(':')
+    if (parts.size < 3) return coord
+    val groupName = "${parts[0]}:${parts[1]}"
+    val version = rules.firstOrNull { groupName.startsWith(it.first) }?.second
+        ?: return coord
+    return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
+}
