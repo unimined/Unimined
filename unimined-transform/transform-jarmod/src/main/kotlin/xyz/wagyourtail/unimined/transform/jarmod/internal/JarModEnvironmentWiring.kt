@@ -173,8 +173,12 @@ internal object JarModEnvironmentWiring {
             xyz.wagyourtail.unimined.remap.spi.StepScope.ENVIRONMENT_ARTIFACT
         )
         // JarModAgent on the run classpath: -javaagent + system props
-        // (1.x JarModAgentMinecraftTransformer run config)
-        envSpec.runMutators += org.gradle.api.Action { config ->
+        // (1.x JarModAgentMinecraftTransformer run config). Jarmod-
+        // loader envs only — fg1/modloader reuse this wiring as a
+        // substrate but run their own transform systems (FML/CoreMod);
+        // an attached agent would suppress their transformers.
+        if (environment.spec().loader?.name == "jarmod") {
+            envSpec.runMutators += org.gradle.api.Action { config ->
             val jmaFile = jarModAgent.resolve().first { it.extension == "jar" }
             config.jvmArgs += "-javaagent:${jmaFile.absolutePath}"
             val transforms = JarModEnvState.transforms(envId)
@@ -186,6 +190,7 @@ internal object JarModEnvironmentWiring {
             if (priority.isNotEmpty()) {
                 config.jvmArgs += "-Djma.priorityClasspath=" +
                     priority.joinToString(java.io.File.pathSeparator)
+            }
             }
         }
     }
