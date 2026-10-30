@@ -21,7 +21,14 @@ class VersionManifest(
         val type: String,
         val url: String,
         val time: String,
-        val releaseTime: String
+        val releaseTime: String,
+        /**
+         * Optional extended per-version metadata URL used by non-Mojang
+         * manifests (e.g. skyrising's mc-versions `details`) for fields
+         * the Mojang schema doesn't carry. Enrichment only — never
+         * required for resolution.
+         */
+        val details: String? = null
     )
 
     /** Find a version's metadata url by id (`"1.20.1"`, `"23w13a"`, ...). */

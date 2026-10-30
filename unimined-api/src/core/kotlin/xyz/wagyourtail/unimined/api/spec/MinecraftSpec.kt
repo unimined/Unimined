@@ -33,4 +33,22 @@ interface MinecraftSpec {
     val librarySubstitutions: List<Pair<String, String>>
         get() = emptyList()
 
+    /** Additional ordered version-manifest locations searched after
+     *  Mojang's official manifest (first match wins — official entries
+     *  always take precedence; alternates fill gaps). Any manifest
+     *  serving the Mojang schema works, e.g. skyrising's mc-versions
+     *  `version_manifest.json` which restores removed alpha/beta/
+     *  classic, april-fools and experimental entries. */
+    val manifestUrls: List<String>
+        get() = emptyList()
+
+    /** URLs of library-overlay documents merged into the version JSON's
+     *  `libraries` before dependency creation. Each serves a JSON array
+     *  of `{name, url?, maxGameVersion?}` entries — `name` is a maven
+     *  coordinate; entries whose `maxGameVersion` is below the spec's
+     *  version are skipped (ornithe-meta's per-generation overlay
+     *  backporting slf4j/log4j + modernized deps onto pre-1.7 versions). */
+    val libraryOverlays: List<String>
+        get() = emptyList()
+
 }

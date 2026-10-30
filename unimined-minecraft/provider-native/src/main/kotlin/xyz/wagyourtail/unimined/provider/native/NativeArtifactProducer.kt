@@ -37,7 +37,8 @@ class NativeArtifactProducer : MinecraftArtifactProducer {
         )
         val resolver = ManifestResolver(
             downloader = downloader,
-            metadataTtlOverride = request.metadataCacheTtl
+            metadataTtlOverride = request.metadataCacheTtl,
+            manifestUrls = listOf(ManifestResolver.VERSION_MANIFEST_V2) + spec.manifestUrls
         )
         return NativeArtifactProduction.produce(
             versionId = spec.version.version,

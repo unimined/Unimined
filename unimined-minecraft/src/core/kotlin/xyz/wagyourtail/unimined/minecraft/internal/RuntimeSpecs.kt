@@ -21,7 +21,9 @@ data class RuntimeMinecraftSpec(
     val mergeIncludeGlobs: List<String> = emptyList(),
     val mergeExcludeGlobs: List<String> = emptyList(),
     val stripBundledServerLibraries: Boolean = true,
-    override val librarySubstitutions: List<Pair<String, String>> = emptyList()
+    override val librarySubstitutions: List<Pair<String, String>> = emptyList(),
+    override val manifestUrls: List<String> = emptyList(),
+    override val libraryOverlays: List<String> = emptyList()
 ) : MinecraftSpec
 
 internal class RuntimeVersionSpec(

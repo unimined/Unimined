@@ -1,6 +1,10 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
 import xyz.wagyourtail.commonskt.utils.capitalized
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
@@ -38,7 +42,7 @@ internal object FabricEnvironmentWiring {
         environment.provider.convention(
             environment.loaderSpec.map { if (it.name == "fabric") "native" else null }
         )
-        contributeLibrarySubstitutions(environment)
+        contributeLibrarySubstitutions(project, environment)
         contributeIntermediaryMappings(project, environment)
         contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)
@@ -48,6 +52,7 @@ internal object FabricEnvironmentWiring {
 
 
     private const val INTERMEDIARY_MODULE = "net.fabricmc:intermediary"
+    private const val ORNITHE_META = "https://meta.ornithemc.net"
 
     /**
      * Prepend `official -> intermediary` to the environment's mapping
@@ -63,13 +68,45 @@ internal object FabricEnvironmentWiring {
      *  1.x LegacyFabric default); BTA-era `flint` follows the 1.x BTA
      *  rule — `org.lwjgl.lwjgl:*` onto `2.9.4+legacyfabric.10`. Modern
      *  `fabric`/`quilt` run LWJGL3 and get no swap. */
-    private fun contributeLibrarySubstitutions(environment: MinecraftEnvironment) {
+    private fun contributeLibrarySubstitutions(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
         when (environment.loaderSpec.orNull?.name) {
             "legacyfabric", "babric", "ornithe" ->
                 environment.librarySubstitutions += "org.lwjgl" to "2.9.4+legacyfabric.8"
             "flint" ->
                 environment.librarySubstitutions += "org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"
         }
+        if (environment.loaderSpec.orNull?.name == "ornithe") {
+            contributeOrnitheLibraryOverlay(project, environment)
+        }
+    }
+
+    /** Ornithe backports slf4j/log4j + modernized deps onto pre-1.7
+     *  versions via a per-generation overlay — fetch meta's versions
+     *  index for the stable intermediary generation, then register the
+     *  `gen{n}/libraries` overlay URL with the environment (1.x never
+     *  hard-coded dep lists; the plan keeps the same shape). */
+    private fun contributeOrnitheLibraryOverlay(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        val gen = try {
+            val index = Json.parseToJsonElement(
+                java.net.URI("$ORNITHE_META/v3/versions").toURL()
+                    .openStream().use { it.readBytes().decodeToString() }
+            ).jsonObject
+            index["intermediaryGenerations"]?.jsonObject
+                ?.get("stableIntermediaryGeneration")?.jsonPrimitive?.int ?: 2
+        } catch (t: Throwable) {
+            project.logger.warn(
+                "[Unimined/Fabric] ornithe meta unreachable, " +
+                    "defaulting library overlay to gen2: ${t.message}"
+            )
+            2
+        }
+        environment.libraryOverlays += "$ORNITHE_META/v3/versions/gen$gen/libraries"
     }
 
     private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {

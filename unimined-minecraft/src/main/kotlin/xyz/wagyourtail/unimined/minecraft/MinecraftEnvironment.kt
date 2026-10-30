@@ -428,6 +428,17 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  swap legacy loaders need on modern JVMs). */
     val librarySubstitutions = mutableListOf<Pair<String, String>>()
 
+    /** Additional ordered version-manifest locations searched after
+     *  Mojang's official manifest (first match wins; e.g.
+     *  `ManifestResolver.SKYRISING_MC_VERSIONS` to restore removed
+     *  alpha/beta/classic versions). */
+    val manifestUrls = mutableListOf<String>()
+
+    /** Library-overlay URLs merged into the version JSON's `libraries`
+     *  (`{name, url?, maxGameVersion?}` arrays; e.g. ornithe-meta's
+     *  per-generation backport list). */
+    val libraryOverlays = mutableListOf<String>()
+
     /** Build the provider-facing immutable spec for this environment. */
     fun spec(): MinecraftSpec {
         validateCombinations()
@@ -440,7 +451,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             mergeIncludeGlobs = mergeIncludeGlobs.getOrElse(emptyList()),
             mergeExcludeGlobs = mergeExcludeGlobs.getOrElse(emptyList()),
             stripBundledServerLibraries = stripBundledServerLibraries.get(),
-            librarySubstitutions = librarySubstitutions.toList()
+            librarySubstitutions = librarySubstitutions.toList(),
+            manifestUrls = manifestUrls.toList(),
+            libraryOverlays = libraryOverlays.toList()
         )
     }
 

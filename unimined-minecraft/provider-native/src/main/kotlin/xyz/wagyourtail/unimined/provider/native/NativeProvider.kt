@@ -15,6 +15,10 @@ import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
 import xyz.wagyourtail.unimined.provider.native.metadata.NativeLaunchMetadata
 import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
 import java.nio.file.Path
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Duration
 import java.util.*
 
@@ -55,7 +59,8 @@ class NativeProvider(
         val downloader = downloaderFactory(ctx, cacheDir)
         val resolver = ManifestResolver(
             downloader = downloader,
-            metadataTtlOverride = ctx.metadataCacheTtl
+            metadataTtlOverride = ctx.metadataCacheTtl,
+            manifestUrls = listOf(ManifestResolver.VERSION_MANIFEST_V2) + spec.manifestUrls
         )
 
         fun metadata(): ResolvedMinecraftMetadata =
@@ -92,7 +97,9 @@ class NativeProvider(
 
         val libraries: Provider<List<org.gradle.api.artifacts.Dependency>> =
             ctx.providers.provider {
-                metadata().libraries.map {
+                (metadata().libraries + overlayLibraries(
+                    spec.libraryOverlays, versionId, downloader
+                )).map {
                     ctx.dependencyFactory.create(substitute(it, spec.librarySubstitutions))
                 }
             }
@@ -200,4 +207,51 @@ internal fun substitute(coord: String, rules: List<Pair<String, String>>): Strin
     val version = rules.firstOrNull { groupName.startsWith(it.first) }?.second
         ?: return coord
     return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
+}
+
+private val overlayJson = Json { ignoreUnknownKeys = true }
+
+/**
+ * Fetch each library-overlay document (JSON array of
+ * `{name, url?, maxGameVersion?}` entries) and return the maven coords
+ * to merge into the version's libraries. `maxGameVersion` bounds an
+ * entry's applicability — entries whose bound is below [versionId]
+ * are dropped (ornithe-meta's per-generation backports).
+ */
+internal fun overlayLibraries(
+    overlays: List<String>,
+    versionId: String,
+    downloader: Downloader
+): List<String> {
+    return overlays.flatMap { url ->
+        val file = downloader.fetchMetadata(
+            url, "metadata/overlay-${java.net.URI(url).host}-${
+                url.substringAfterLast('/').substringBefore('.')}.json",
+            Duration.ofDays(7)
+        )
+        overlayJson.parseToJsonElement(
+            java.nio.file.Files.readString(file)
+        ).jsonArray.filter { entry ->
+            val max = entry.jsonObject["maxGameVersion"]
+                ?.jsonPrimitive?.content
+            max == null || versionAtMost(versionId, max)
+        }.mapNotNull {
+            it.jsonObject["name"]?.jsonPrimitive?.content
+        }
+    }
+}
+
+/** Loose MC-version compare: numeric on dot-separated components where
+ *  both parse (covers `1.4.7`/`1.8` shapes); `null`/`a`/`b`/`c`-
+ *  prefixed ids fall through to string equality. */
+private fun versionAtMost(versionId: String, max: String): Boolean {
+    val a = versionId.split('.', '-', '_')
+    val b = max.split('.', '-', '_')
+    val len = maxOf(a.size, b.size)
+    for (i in 0 until len) {
+        val x = a.getOrNull(i)?.toIntOrNull() ?: return versionId <= max
+        val y = b.getOrNull(i)?.toIntOrNull() ?: return versionId <= max
+        if (x != y) return x < y
+    }
+    return true
 }

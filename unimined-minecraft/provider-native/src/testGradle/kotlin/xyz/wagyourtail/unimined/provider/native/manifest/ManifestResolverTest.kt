@@ -75,6 +75,47 @@ class ManifestResolverTest {
     }
 
     @Test
+    fun `alternate manifest resolves versions mojang lacks`() {
+        val altManifest = """
+            {
+              "latest": {"release": "1.20.1", "snapshot": "23w13a"},
+              "versions": [
+                {"id": "a1.1.0", "type": "old_alpha",
+                 "url": "https://alt.example/a1.1.0.json",
+                 "details": "https://alt.example/a1.1.0-details.json",
+                 "time": "t", "releaseTime": "t"}
+              ]
+            }
+        """.trimIndent()
+        val alphaJson = """{"id": "a1.1.0", "type": "old_alpha",
+            |"mainClass": "net.minecraft.client.main.Main"}""".trimMargin()
+        val detailsJson = """{"extraField": "from-details",
+            |"mainClass": "details-must-not-override"}""".trimMargin()
+        val r = ManifestResolver(
+            Downloader(dir, fetch = { url ->
+                when {
+                    url.contains("alt.example/a1.1.0-details") ->
+                        detailsJson.toByteArray()
+                    url.contains("alt.example/a1.1.0") ->
+                        alphaJson.toByteArray()
+                    url.contains("alt.example") -> altManifest.toByteArray()
+                    else -> manifestJson.toByteArray()
+                }
+            }),
+            manifestUrls = listOf(
+                ManifestResolver.VERSION_MANIFEST_V2,
+                "https://alt.example/version_manifest.json"
+            )
+        )
+        val doc = r.versionJsonDocument("a1.1.0")
+        assertEquals("a1.1.0", doc["id"]!!.toString().trim('"'))
+        // details fills keys the standard doc lacks but never overrides
+        assertEquals("from-details", doc["extraField"]!!.toString().trim('"'))
+        assertEquals("net.minecraft.client.main.Main",
+            doc["mainClass"]!!.toString().trim('"'))
+    }
+
+    @Test
     fun `manifest and version json resolve from cache offline`() {
         val onlineResolver = resolver { url ->
             if (url.contains("version_manifest")) manifestJson else versionJson
