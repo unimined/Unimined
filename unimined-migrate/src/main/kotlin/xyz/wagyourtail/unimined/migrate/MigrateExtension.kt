@@ -55,7 +55,9 @@ abstract class MigrateExtension @Inject constructor(
             t.targetMcVersion.set(
                 minecraft.environments.getByName(environmentId).version
             )
-            t.sourceDirs.from(sourceSet.allSource)
+            // allSource resolves to FILES — feeding dirs preserves
+            // package-relative paths in the scratch jar
+            t.sourceDirs.from(sourceSet.allSource.srcDirs)
             t.remapClasspath.from(sourceSet.compileClasspath)
             t.outputDir.set(project.layout.projectDirectory.dir("remappedSrc"))
             t.globalCacheDir.set(project.layout.dir(project.provider {
