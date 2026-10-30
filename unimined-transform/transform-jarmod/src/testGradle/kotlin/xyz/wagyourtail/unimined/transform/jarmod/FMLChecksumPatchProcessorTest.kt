@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.jarmod
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,6 +12,7 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FMLChecksumPatchProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -88,22 +90,47 @@ class FMLChecksumPatchProcessorTest {
         })
         proc.processJar(jar, spec, ctx)
         ZipFile(jar.toFile()).use { z ->
+            // per-env sums ship inside the jar for the spliced helper
+            val sumsText = z.getInputStream(
+                z.getEntry("unimined/fg1-lib-sums.txt")
+            ).readBytes().decodeToString()
+            val expect = java.security.MessageDigest.getInstance("SHA-1")
+                .digest("fake asm 5.2 content".toByteArray())
+                .joinToString("") { "%02x".format(it) }
+            assertTrue(
+                "asm-all-4.0.jar=$expect" in sumsText.split("\n"),
+                "sums resource wrong: $sumsText"
+            )
+            // helper spliced for the injected call
+            assertNotNull(z.getEntry(
+                "xyz/wagyourtail/unimined/transform/jarmod/internal/fg1/rt/UniminedFg1ChecksumFix.class"
+            ))
             val cn = ClassNode()
             ClassReader(z.getInputStream(
                 z.getEntry("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
             ).readBytes()).accept(cn, 0)
             val clinit = cn.methods.first { it.name == "<clinit>" }
+            // CInject copies the transformer method into the class and
+            // injects a call to the copy — the helper invoke lives in
+            // the copied method's body, not in clinit itself
+            val callsFix = cn.methods.any { m ->
+                m.instructions.toArray().filterIsInstance<MethodInsnNode>().any {
+                    it.name == "apply" &&
+                        it.owner == "xyz/wagyourtail/unimined/transform/jarmod/internal/fg1/rt/UniminedFg1ChecksumFix"
+                }
+            }
+            assertTrue(callsFix, "no injected checksum-fix call anywhere in the class")
+            // and clinit must invoke the copied transformer method
+            val clinitCalls = clinit.instructions.toArray()
+                .filterIsInstance<MethodInsnNode>()
+                .any { it.owner == "cpw/mods/fml/relauncher/CoreFMLLibraries" }
+            assertTrue(clinitCalls, "clinit does not call the injected method")
+            // original checksums untouched at build time — the helper
+            // rewrites them when FML loads the class
             val ldcs = clinit.instructions.toArray()
                 .filterIsInstance<LdcInsnNode>().map { it.cst as String }
-            // expected sha1 of the fake artifact content
-            val expect = java.security.MessageDigest.getInstance("SHA-1")
-                .digest("fake asm 5.2 content".toByteArray())
-                .joinToString("") { "%02x".format(it) }
-            assertTrue(expect in ldcs, "patched sha1 not present: $ldcs")
-            assertTrue("deadbeef" + "0".repeat(32) !in ldcs)
-            // guava's checksum untouched (no substitution shipped)
+            assertTrue("deadbeef" + "0".repeat(32) in ldcs)
             assertTrue("cafe" + "0".repeat(36) in ldcs)
-            assertEquals("asm-all-4.0.jar", ldcs[0])
         }
     }
 }
