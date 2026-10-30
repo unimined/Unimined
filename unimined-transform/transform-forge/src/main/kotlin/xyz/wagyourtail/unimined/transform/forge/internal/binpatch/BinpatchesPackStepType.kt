@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.jar.JarFile
 import kotlin.reflect.KClass
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 
 /**
  * `forge-binpatch-pack` JAR-surface step — FG2-era binary patching:
@@ -25,6 +27,11 @@ import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPack
  * Passthrough when fields are absent (non-Binpatches profiles).
  */
 abstract class BinpatchesPackStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /** The jar carrying the patch pack — universal jar or dev package. */
     @get:InputFile

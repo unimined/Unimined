@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.remap
 
-import org.gradle.api.file.FileSystemLocation
+import java.nio.file.Path
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
@@ -27,7 +27,7 @@ class RemapStepRegistryTest {
     private val remapSpec = object : RemapSpec {
         override val sourceNamespace = "official"
         override val targetNamespace = "named"
-        override val classpath: List<FileSystemLocation> = emptyList()
+        override val classpath: List<Path> = emptyList()
     }
 
     @Test
@@ -74,9 +74,9 @@ class RemapStepRegistryTest {
         val registry = RemapStepRegistry()
         registry.register(FakeStep("a")) // JAR only
 
-        // no impl registered for this spec *on this surface* — selection
-        // fails with the surface named in the message
-        val ex = assertThrows(SpiSelectionException::class.java) {
+        // impl exists for the spec but not this surface — IllegalArgumentException
+        // per the resolve() contract, with the surface named in the message
+        val ex = assertThrows(IllegalArgumentException::class.java) {
             registry.resolve(FakeSpec(), RemapSurface.SOURCES, remapSpec)
         }
         assertTrue(ex.message!!.contains("SOURCES"))

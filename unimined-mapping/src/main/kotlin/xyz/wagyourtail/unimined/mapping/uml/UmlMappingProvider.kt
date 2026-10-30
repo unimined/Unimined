@@ -114,7 +114,7 @@ class UmlMappingProvider : MappingProvider {
         is BuiltinMappingSource -> {
             val properties = linkedMapOf("channel" to declaration.channel)
             for ((key, value) in declaration.params) {
-                runCatching { value.get() }.getOrNull()?.let {
+                runCatching { value() }.getOrNull()?.let {
                     properties[key] = it
                     properties["${declaration.channel}.$key"] = it
                 }

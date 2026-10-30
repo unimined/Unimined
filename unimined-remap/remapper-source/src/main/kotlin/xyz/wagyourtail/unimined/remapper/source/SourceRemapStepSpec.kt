@@ -16,6 +16,11 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * sources jar, port of `SourceRemapperImpl`.
  */
 abstract class SourceRemapStepSpec : StepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /**
      * Resolved classpath of the source-remap tool itself

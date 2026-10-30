@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption
 import kotlin.reflect.KClass
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixes
+import org.gradle.api.tasks.Optional
 
 /**
  * `forge-fg2-fixes` JAR-surface step — the FG2 dev-environment
@@ -22,6 +23,11 @@ import xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixes
  * only input.
  */
 abstract class FG2DevFixesStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /** Whether the FG2 dev injections apply (profile-dependent). */
     @get:Input

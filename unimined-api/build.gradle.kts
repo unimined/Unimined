@@ -6,6 +6,10 @@ plugins {
 dependencies {
     compileOnly(gradleApi())
 
+    "coreApi"(libs.commons.kt)
+    "coreApi"(libs.commons.core)
+    "coreApi"(libs.kotlinx.serialization.json)
+    "coreApi"(libs.unimined.mapping.library)
     api(libs.commons.kt)
     api(libs.commons.gradle)
     api(libs.kotlinx.serialization.json)

@@ -13,6 +13,8 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.plugins.ExtensionAware
+import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -28,6 +30,7 @@ import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeLoaderSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
+import javax.inject.Inject
 
 /**
  * One Minecraft environment, normally bound to the source set named by
@@ -38,7 +41,16 @@ class MinecraftEnvironment internal constructor(
     val environmentId: String,
     private val project: Project,
     objects: ObjectFactory
-) : Named {
+) : Named, ExtensionAware {
+
+    // extension container from a decorated managed object — the public
+    // API way to back ExtensionAware on a non-managed domain object,
+    // required so plugin DSL objects registered on the env dispatch
+    // from Groovy.
+    private val extensionContainer =
+        objects.newInstance(MinecraftEnvExtensionHolder::class.java).extensions
+
+    override fun getExtensions(): ExtensionContainer = extensionContainer
 
     override fun getName(): String = environmentId
 
@@ -668,3 +680,8 @@ class MinecraftEnvironment internal constructor(
     }
 
 }
+
+/** Managed-object shell whose decorated extension container backs
+ *  [MinecraftEnvironment.getExtensions] — Gradle provides the real
+ *  container; nothing is ever registered on this type itself. */
+internal abstract class MinecraftEnvExtensionHolder @Inject constructor() : ExtensionAware

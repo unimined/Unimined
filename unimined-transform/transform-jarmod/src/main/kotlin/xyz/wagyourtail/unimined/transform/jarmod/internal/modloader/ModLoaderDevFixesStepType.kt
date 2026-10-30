@@ -8,9 +8,15 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.reflect.KClass
+import org.gradle.api.tasks.Optional
 
 /** `jarmod-modloader-fixes` step — ModLoader dev-environment fixes. */
 abstract class ModLoaderDevFixesStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
     @get:Input
     abstract val enabled: Property<Boolean>
 }

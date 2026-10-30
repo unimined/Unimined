@@ -48,7 +48,7 @@ class JarProcessorsStepType : RemapStepType<JarProcessorsStepSpec> {
 
         val mods = spec.modJars.files.map { BasicModJarInfo(it.toPath()) }
         val context = object : JarProcessor.ProcessorContext {
-            override val logger = Logging.getLogger(JarProcessorsStepType::class.java)
+            override val logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(JarProcessorsStepType::class.java))
             override val log = c.log.subLogger("jar-processors")
             override val mappings: MappingData? = c.mappings
             override val state = c.state

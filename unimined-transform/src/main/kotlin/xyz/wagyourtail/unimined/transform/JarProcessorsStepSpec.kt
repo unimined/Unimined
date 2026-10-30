@@ -7,6 +7,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
+import org.gradle.api.tasks.Optional
 
 /**
  * Spec for the `jar-processors` step — runs every environment-declared
@@ -23,6 +24,11 @@ import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
  * meaningless.
  */
 abstract class JarProcessorsStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /**
      * `name:payload` entries — one per processor whose `buildSpec`

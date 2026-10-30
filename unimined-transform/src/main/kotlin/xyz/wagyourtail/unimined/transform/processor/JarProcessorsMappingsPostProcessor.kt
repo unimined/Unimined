@@ -36,7 +36,7 @@ class JarProcessorsMappingsPostProcessor(
         for ((processor, mappings) in active) {
             val spec = processor.buildSpec(specContext) ?: continue
             val context = object : JarProcessor.ProcessorContext {
-                override val logger: Logger = Logging.getLogger(JarProcessorsMappingsPostProcessor::class.java)
+                override val logger: xyz.wagyourtail.commons.core.logger.Logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(JarProcessorsMappingsPostProcessor::class.java))
                 override val mappings: MappingData get() = result
                 override val mappingContext: MappingContext get() = ctx
                 override fun mods() = specContext.mods()

@@ -295,7 +295,10 @@ class MappingsSpecImpl(
         }
 
         /** A local mapping file collection resolved lazily. */
-        class File(override val files: ConfigurableFileCollection) : Source(), FileMappingSource
+        class File(fileCollection: ConfigurableFileCollection) : Source(), FileMappingSource {
+            override val files: () -> List<java.nio.file.Path> =
+                { fileCollection.files.map { it.toPath() } }
+        }
 
         /** A Maven mapping coordinate resolved lazily. */
         class Maven(val notationProvider: Provider<String>) : Source(), MavenMappingSource {
@@ -307,8 +310,10 @@ class MappingsSpecImpl(
          *  key the channel off a lazily-probed profile. */
         class Builtin(
             val nameProvider: Provider<String>,
-            override val params: Map<String, Provider<String>> = emptyMap()
+            providerParams: Map<String, Provider<String>> = emptyMap()
         ) : Source(), BuiltinMappingSource {
+            override val params: Map<String, () -> String> =
+                providerParams.mapValues { v -> { v.value.get() } }
             override val channel get() = nameProvider.get()
         }
     }

@@ -3,6 +3,10 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.unimined.mapping.library)
+    "coreApi"(libs.commons.kt)
+    "coreApi"(libs.commons.core)
     api(project(":unimined-api"))
     // the default composer merges typed views through UML's tree/sink model
     api(libs.unimined.mapping.library)

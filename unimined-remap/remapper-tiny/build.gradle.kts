@@ -3,6 +3,9 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-remap"))
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.tiny.remapper)
     api(project(":unimined-remap"))
     implementation(libs.tiny.remapper)
 

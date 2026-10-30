@@ -14,6 +14,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.reflect.KClass
+import org.gradle.api.tasks.Optional
 
 /**
  * `forge-string-classnames` JAR-surface step — 1.x
@@ -30,6 +31,11 @@ import kotlin.reflect.KClass
  * remap pass).
  */
 abstract class StringClassNamesStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /** Whether the pass applies (profile-dependent). */
     @get:Input
@@ -110,7 +116,7 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
         tree: MappingTree,
         fromNs: Namespace,
         toNs: Namespace,
-        logger: org.gradle.api.logging.Logger
+        logger: xyz.wagyourtail.commons.core.logger.Logger
     ): String {
         if (classDescRegex.containsMatchIn(value)) {
             return classDescRegex.replace(value) {

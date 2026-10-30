@@ -18,6 +18,7 @@ commons = { id = "xyz.wagyourtail.commons-gradle", version.ref = "commons" }
 
 [libraries]
 commons-kt = { module = "xyz.wagyourtail.commons:commons-kt", version.ref = "commons" }
+commons-core = { module = "xyz.wagyourtail.commons:commons-core", version.ref = "commons" }
 commons-gradle = { module = "xyz.wagyourtail.commons:commons-gradle", version.ref = "commons" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

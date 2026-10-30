@@ -17,7 +17,6 @@ import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
-import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -116,7 +115,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         val spec = RuntimeRemapSpec(
             parameters.sourceNamespace.get(),
             parameters.targetNamespace.get(),
-            parameters.classpath.files.map(::RuntimeLocation)
+            parameters.classpath.files.map { it.toPath() }
         )
         val mappings = parameters.mappingBundleJson.orNull
             ?.let { json -> BundleMappingData(bundleCache.computeIfAbsent(json, MappingBundle::fromJson)) }
@@ -149,7 +148,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
                 mappings = mappings,
                 classpath = parameters.classpath.files.map { it.toPath() },
                 workDir = workDir,
-                logger = Logging.getLogger(RemapDependencyTransform::class.java),
+                logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(RemapDependencyTransform::class.java)),
                 host = "${parameters.label.orNull?.let { "$it:" } ?: ""}remap ${input.fileName}",
                 accessModel = parameters.accessModel.orNull?.let(AccessModel::parse),
                 envSide = parameters.envSide.orNull?.let(Side::valueOf)

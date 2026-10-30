@@ -47,7 +47,7 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
     fun produce() {
         val data = MappingResolver.readFiles(
             mappingFiles.files.map { it.toPath() },
-            MappingResolver.standaloneContext(environmentId.get(), logger)
+            MappingResolver.standaloneContext(environmentId.get(), uniminedLogger(logger))
         )
         val path = bundleFile.get().asFile.toPath()
         val written = SerializedMappingData.write(data, path)

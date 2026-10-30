@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft.spi
 
-import org.gradle.api.logging.Logger
+import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spi.Supports
 import java.nio.file.Path

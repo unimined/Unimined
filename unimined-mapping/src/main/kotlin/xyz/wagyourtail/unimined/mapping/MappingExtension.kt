@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mapping
 
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logging
@@ -50,7 +51,7 @@ abstract class MappingExtension @Inject constructor(
         resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null,
         envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
     ) = RuntimeMappingContext(
-        environmentId, logger, cacheDir.orNull?.asFile?.toPath(),
+        environmentId, uniminedLogger(logger), cacheDir.orNull?.asFile?.toPath(),
         globalCacheDir.orNull?.asFile?.toPath(), resolveMaven::apply,
         resolveChannel?.let { ch -> { c: String, p: Map<String, String> -> ch.apply(c, p) } }
             ?: { channel, _ ->
@@ -97,7 +98,7 @@ abstract class MappingExtension @Inject constructor(
     fun readFiles(files: List<Path>, environmentId: String): MappingData =
         MappingResolver.readFiles(
             files, MappingResolver.standaloneContext(
-                environmentId, logger,
+                environmentId, uniminedLogger(logger),
                 globalCacheDir.orNull?.asFile?.toPath()
             ),
             registry, composers, postProcessors

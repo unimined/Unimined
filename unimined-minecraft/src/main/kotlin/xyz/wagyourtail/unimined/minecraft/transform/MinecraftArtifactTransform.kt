@@ -134,7 +134,7 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
             mergeIncludeGlobs = p.mergeIncludeGlobs.get(),
             mergeExcludeGlobs = p.mergeExcludeGlobs.get(),
             stripBundledServerLibraries = p.stripBundledServerLibraries.get(),
-            logger = Logging.getLogger(MinecraftArtifactTransform::class.java)
+            logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(MinecraftArtifactTransform::class.java))
         )
         val produced = producer.produce(spec, request)
         val output = outputs.file(

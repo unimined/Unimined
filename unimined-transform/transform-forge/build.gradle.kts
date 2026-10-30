@@ -3,6 +3,10 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-transform"))
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.unimined.mapping.library)
+    "coreApi"(libs.kotlinx.serialization.json)
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
     api(project(":unimined-minecraft"))
@@ -10,6 +14,8 @@ dependencies {
     implementation(project(":unimined-remap:remapper-jst"))
     // GDiffPatcher for binpatch application; pack200 unpack +
     // lzma decode are commons-compress (+xz)
+    "coreImplementation"(libs.javaxdelta)
+    "coreImplementation"(libs.commons.compress)
     implementation(libs.javaxdelta)
     implementation(libs.commons.compress)
     implementation(libs.xz)

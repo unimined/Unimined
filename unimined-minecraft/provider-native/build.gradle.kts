@@ -9,6 +9,10 @@ dependencies {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-minecraft"))
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.kotlinx.serialization.json)
+    "coreApi"(libs.asm)
     api(project(":unimined-minecraft"))
     api(project(":unimined-remap"))
 }

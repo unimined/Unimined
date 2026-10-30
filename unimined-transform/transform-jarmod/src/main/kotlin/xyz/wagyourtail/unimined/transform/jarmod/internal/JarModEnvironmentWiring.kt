@@ -92,8 +92,8 @@ internal object JarModEnvironmentWiring {
         // (modloader's unpatched copies break FML's mod container +
         // dev-time URI fix gating).
         envSpec.jarProcessors += JarModMergeProcessor(
-            if (sideForge != null) sideForge + jarMod else jarMod,
-            project.providers.provider { JarModEnvState.deleteMetaInf(envId) }
+            (if (sideForge != null) sideForge + jarMod else jarMod).files.map { it.toPath() },
+            { JarModEnvState.deleteMetaInf(envId) }
         )
 
         // fg1: forge zips merge into the jar too; its ATs come out

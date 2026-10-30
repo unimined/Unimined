@@ -167,7 +167,15 @@ internal object FabricEnvironmentWiring {
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.extendsFrom(
-                project.configurations.getByName(environment.modImplementationConfigurationName)
+                project.configurations.getByName(environment.modImplementationConfigurationName),
+                // loom parity: loader + its embedded libraries ride the
+                // same view onto the mod classpath
+                project.configurations.getByName(
+                    "fabricLoader${environment.environmentId.capitalized()}"
+                ),
+                project.configurations.getByName(
+                    "fabricLoaderLibraries${environment.environmentId.capitalized()}"
+                )
             )
             conf.attributes.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,

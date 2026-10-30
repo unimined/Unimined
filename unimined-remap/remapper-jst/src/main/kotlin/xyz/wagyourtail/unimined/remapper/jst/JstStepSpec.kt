@@ -8,6 +8,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import xyz.wagyourtail.unimined.remap.RemapSurfaceSpec
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import org.gradle.api.tasks.Optional
 
 /**
  * Spec for the `jst` step — wraps NeoForged's
@@ -17,6 +18,11 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * internally, so it's a single step rather than separate unimined steps.
  */
 abstract class JstStepSpec : StepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /**
      * Resolved classpath of the JST CLI tool — e.g. a detached

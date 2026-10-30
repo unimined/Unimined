@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-api"))
     api(project(":unimined-minecraft"))
     implementation(libs.kotlinx.serialization.json)
 

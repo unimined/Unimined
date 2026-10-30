@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.remap
 
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 /**
@@ -8,5 +10,5 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * `null` defers to capability selection.
  */
 class RemapStepSpec(
-    override val engine: String? = null
+    @get:Input @get:Optional override val engine: String? = null
 ) : StepSpec

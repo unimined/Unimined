@@ -6,6 +6,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.remap.RemapSurfaceSpec
 import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 
 /**
  * Spec for the `apply-class-tweaker` step: rewrites class access flags
@@ -20,6 +22,11 @@ import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
  * classes that aren't there.
  */
 abstract class ApplyClassTweakerStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /**
      * Access files to apply (`*.accesswidener`/`*.classTweaker`/`*_at.cfg`)

@@ -11,7 +11,6 @@ import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
-import xyz.wagyourtail.unimined.remap.internal.RuntimeLocation
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -101,12 +100,12 @@ abstract class AbstractRemapTask : DefaultTask() {
             spec = RuntimeRemapSpec(
                 sourceNamespace.get(),
                 targetNamespace.get(),
-                remapClasspath.files.map(::RuntimeLocation)
+                remapClasspath.files.map({ it.toPath() })
             ),
             mappings = mappings,
             classpath = remapClasspath.files.map { it.toPath() },
             workDir = temporaryDir.toPath(),
-            logger = logger,
+            logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(logger),
             host = path,
             accessModel = accessModel.orNull?.let(AccessModel::parse)
         )

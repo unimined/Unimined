@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.remap
 
 import org.gradle.api.tasks.Input
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import org.gradle.api.tasks.Optional
 
 /**
  * Spec for the `remap-access` step. Rewrites access-modification resources
@@ -13,7 +14,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * grammars when loader metadata declares a non-standard path.
  */
 class AccessRemapStepSpec(
-    override val engine: String? = null
+    @get:Input @get:Optional override val engine: String? = null
 ) : StepSpec {
 
     /** Enabled resource formats: `aw`, `at`, and/or `ct`. */

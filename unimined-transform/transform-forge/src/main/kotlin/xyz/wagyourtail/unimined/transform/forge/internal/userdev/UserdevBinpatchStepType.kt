@@ -10,6 +10,8 @@ import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KClass
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 
 /**
  * `forge-binpatch` JAR-surface step — applies the userdev `binpatches`
@@ -23,6 +25,11 @@ import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPack
  * (`net.minecraft:joined:<ver>:srg`), not the pipeline input.
  */
 abstract class UserdevBinpatchStepSpec : DevArtifactOnlyStepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /** The userdev jar — carries the lzma archive at [binpatchesKey].
      *  Optional: absent on non-Userdev profiles (spec passes the jar

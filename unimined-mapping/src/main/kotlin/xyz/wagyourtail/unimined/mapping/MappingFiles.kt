@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mapping
 
+import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import org.gradle.api.logging.Logger
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
@@ -17,5 +18,5 @@ fun readMappingFiles(
     globalCacheDir: java.nio.file.Path? = null
 ): MappingData =
     MappingResolver.readFiles(
-        files, MappingResolver.standaloneContext(environmentId, logger, globalCacheDir)
+        files, MappingResolver.standaloneContext(environmentId, uniminedLogger(logger), globalCacheDir)
     )

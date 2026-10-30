@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.mapping.internal
 
-import org.gradle.api.logging.Logger
+import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.*

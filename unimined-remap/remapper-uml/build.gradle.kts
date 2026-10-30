@@ -3,6 +3,10 @@ plugins {
 }
 
 dependencies {
+    "coreApi"(project(":unimined-remap"))
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.unimined.mapping.library)
+    "coreApi"(libs.unimined.mapping.remapper)
     api(project(":unimined-remap"))
     api(libs.unimined.mapping.library)
     api(libs.unimined.mapping.remapper)

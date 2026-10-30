@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.remapper.uml
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -14,6 +15,11 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * sources via UML's `ConstantGroupSourceExtension`.
  */
 abstract class UnpickSourceStepSpec : StepSpec {
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = null
+
 
     /**
      * Extra unpick definition files (`*.unpick`, or any UML-readable

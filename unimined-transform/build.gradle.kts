@@ -4,7 +4,12 @@ plugins {
 
 dependencies {
     api(project(":unimined-minecraft"))
+    "coreApi"(project(":unimined-remap"))
+    "coreApi"(project(":unimined-api"))
+    "coreApi"(libs.asm)
     api(project(":unimined-remap"))
+    "coreApi"(libs.classtransform)
+    "coreApi"(libs.classtransform.acp)
     api(libs.classtransform)
     implementation(libs.classtransform.acp)
 

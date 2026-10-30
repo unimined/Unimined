@@ -32,8 +32,11 @@ class GradlePlugin : Plugin<Project> {
                 target.repositories.maven { r -> r.url = URI.create(it) }
             }
             // env-registration-time: configs must exist before the
-            // script's `dependencies {}` block evaluates
+            // script's `dependencies {}` block evaluates; the `jarmod`
+            // extension must also exist before `minecraft { }` bodies
+            // run so Groovy DSL can dispatch env.jarmod(...) etc.
             minecraft.environments.all { environment ->
+                environment.extensions.add("jarmod", JarModEnvExtension(environment))
                 JarModEnvironmentWiring.createConfigurations(target, environment)
             }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
