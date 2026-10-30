@@ -30,7 +30,10 @@ data class LaunchEnvironment(
     val resolutionWidth: Int? = null,
     val resolutionHeight: Int? = null,
     /** Extra `${name}` substitutions (e.g. loader-injected variables). */
-    val extraVars: Map<String, String> = emptyMap()
+    val extraVars: Map<String, String> = emptyMap(),
+    /** Additional JVM args appended verbatim (e.g. betacraft
+     *  `proxy-args` for pre-1.6 resource/sound downloads). */
+    val extraJvmArgs: List<String> = emptyList()
 )
 
 /**
@@ -66,6 +69,7 @@ object LaunchResolver {
             }
         }
         val jvmArgs = buildList {
+            addAll(env.extraJvmArgs)
             document.jvmArguments?.forEach { entry ->
                 if (entry.appliesTo(OperatingSystem.current(), features)) {
                     entry.value.mapTo(this) { substitute(it, variables) }

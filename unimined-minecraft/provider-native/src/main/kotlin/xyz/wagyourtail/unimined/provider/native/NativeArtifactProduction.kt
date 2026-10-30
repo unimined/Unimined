@@ -1,6 +1,9 @@
 package xyz.wagyourtail.unimined.provider.native
 
 import org.gradle.api.GradleException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
@@ -43,14 +46,59 @@ internal object NativeArtifactProduction {
         downloader: Downloader
     ): Path {
         val ref = metadata.downloads[key]
-            ?: throw GradleException(
+        if (ref == null) {
+            if (key != ArtifactKey.SERVER) throw GradleException(
                 "Minecraft $versionId has no ${key.name.lowercase(Locale.ROOT)} jar download"
             )
+            // pre-1.6 metadata carries no server download — fall back to
+            // the betacraft archive (1.x parity)
+            return downloader.fetch(
+                betacraftServerUrl(versionId, downloader),
+                "versions/$versionId/server.jar",
+                null
+            )
+        }
         return downloader.fetch(
             ref.url,
             "versions/$versionId/${key.name.lowercase(Locale.ROOT)}.jar",
             ref.sha1?.lowercase(Locale.ROOT)
         )
+    }
+
+    private const val MC_C2S_URL =
+        "https://maven.wagyourtail.xyz/releases/mc-c2s.json"
+
+    private const val BETACRAFT_SERVER_ARCHIVE =
+        "https://files.betacraft.uk/server-archive"
+
+    /**
+     * Beta/alpha/early-release server jar URL on the betacraft archive.
+     * Client and server version ids diverge for old versions, so the id
+     * is first mapped through the `mc-c2s` override list (1.x semantics).
+     */
+    private fun betacraftServerUrl(versionId: String, downloader: Downloader): String {
+        val overrides = try {
+            val f = downloader.fetchMetadata(
+                MC_C2S_URL, "metadata/mc-c2s.json", java.time.Duration.ofDays(7)
+            )
+            kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+            }.parseToJsonElement(
+                Files.readString(f)
+            ).jsonObject.mapValues { it.value.jsonPrimitive.content }
+        } catch (t: Throwable) {
+            emptyMap()
+        }
+        val serverId = overrides[versionId] ?: versionId
+        val uriPart = when {
+            versionId.startsWith("b") -> "beta/$serverId"
+            versionId.startsWith("a") -> "alpha/$serverId"
+            else -> {
+                val folder = versionId.split(".").subList(0, 2).joinToString(".")
+                "release/$folder/$serverId"
+            }
+        }
+        return "$BETACRAFT_SERVER_ARCHIVE/$uriPart.jar"
     }
 
     fun produce(

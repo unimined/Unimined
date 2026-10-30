@@ -231,7 +231,8 @@ abstract class MinecraftRunTask @Inject constructor(
                 features = features.get(),
                 resolutionWidth = width.orNull,
                 resolutionHeight = height.orNull,
-                launcherVersion = launcherVersion.get()
+                launcherVersion = launcherVersion.get(),
+                extraJvmArgs = betacraftProxyArgs(document.id)
             )
         )
 
@@ -325,6 +326,32 @@ abstract class MinecraftRunTask @Inject constructor(
         values.mapValues { (_, v) -> resolveLaunchArgs(listOf(v)).single() }
 
     private fun session(): Session = OfflineAuth(username.get()).session()
+
+    /**
+     * Beta/alpha-era games fetched their resources through betacraft's
+     * proxy — its `.info` file carries `proxy-args` that must reach the
+     * JVM args (1.x parity). Pre-1.6 ids (`a`/`b`/`c` prefix) only;
+     * fail-soft — missing/invalid `.info` just means no proxy args.
+     */
+    private fun betacraftProxyArgs(versionId: String?): List<String> {
+        if (versionId.isNullOrEmpty() || versionId[0] !in "abc") return emptyList()
+        return try {
+            val info = runDirectory.get().asFile
+                .resolve(".unimined/betacraft.info")
+            if (!info.exists() && !offline.get()) {
+                info.parentFile.mkdirs()
+                java.net.URI(
+                    "https://files.betacraft.uk/launcher/assets/jsons/$versionId.info"
+                ).toURL().openStream().use { info.writeBytes(it.readBytes()) }
+            }
+            if (!info.exists()) return emptyList()
+            java.util.Properties().also {
+                info.inputStream().use(it::load)
+            }.getProperty("proxy-args")?.split(" ") ?: emptyList()
+        } catch (t: Throwable) {
+            emptyList()
+        }
+    }
 
     /** Server runs get no `mainClass` from the version document — fall
      *  back through the era's server entrypoints. */
