@@ -15,7 +15,6 @@ import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
 import xyz.wagyourtail.unimined.provider.native.metadata.NativeLaunchMetadata
 import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
 import java.nio.file.Path
-import kotlin.io.path.readText
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -177,29 +176,6 @@ class NativeProvider(
                     })
                 }
             }
-
-        // bukkit-family envs resolve natively (paper's cheap path)
-        // but may still want `mappings { spigot() }` — supply the
-        // BuildData archive channel provider-buildtools supplies for
-        // craftbukkit/spigot
-        if (spec.loader?.name in setOf("craftbukkit", "spigot", "paper")) {
-            auxiliary["spigot_builddata"] = ctx.layout.file(ctx.providers.provider {
-                val info = downloader.fetch(
-                    "https://hub.spigotmc.org/versions/$versionId.json",
-                    "spigot/$versionId/build-info.json"
-                )
-                val ref = Regex(""""BuildData"\s*:\s*"([0-9a-f]+)"""")
-                    .find(info.readText())?.groupValues?.get(1)
-                    ?: throw GradleException(
-                        "spigot: no BuildData ref in $info")
-                downloader.fetch(
-                    "https://hub.spigotmc.org/stash/rest/api/latest/" +
-                        "projects/SPIGOT/repos/builddata/archive" +
-                        "?at=$ref&format=zip",
-                    "spigot/$versionId/build-data.zip"
-                ).toFile()
-            })
-        }
 
         return NativeMinecraftArtifacts(
             artifacts = artifacts,

@@ -11,7 +11,6 @@ import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.provider.native.NativeProvider
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import java.time.Duration
-import kotlin.io.path.readText
 
 /**
  * Produces craftbukkit/spigot server artifacts by delegating vanilla
@@ -69,35 +68,11 @@ class BuildToolsProvider : MinecraftProvider {
             )
         }
 
-        // BuildData archive — the `spigot` mapping channel reads
-        // info.json's classMappings/memberMappings entries out of it;
-        // lazy so consumers without a `mappings { spigot() }` block
-        // never pay the stash fetch
-        val buildDataFile: Provider<RegularFile> = ctx.providers.provider {
-            val info = downloader.fetch(
-                "https://hub.spigotmc.org/versions/$rev.json",
-                "spigot/$rev/build-info.json"
-            )
-            val ref = Regex(""""BuildData"\s*:\s*"([0-9a-f]+)"""")
-                .find(info.readText())?.groupValues?.get(1)
-                ?: error("no BuildData ref in $info")
-            ctx.layout.projectDirectory.file(
-                downloader.fetch(
-                    "https://hub.spigotmc.org/stash/rest/api/latest/" +
-                        "projects/SPIGOT/repos/builddata/archive" +
-                        "?at=$ref&format=zip",
-                    "spigot/$rev/build-data.zip"
-                ).toAbsolutePath().toString()
-            )
-        }
-
         return object : MinecraftArtifacts by base {
             override val artifacts = base.artifacts + mapOf(
                 ArtifactKey.SERVER to serverFile,
                 ArtifactKey.MERGED to serverFile
             )
-            override val auxiliaryArtifacts =
-                base.auxiliaryArtifacts + ("spigot_builddata" to buildDataFile)
         }
     }
 }
