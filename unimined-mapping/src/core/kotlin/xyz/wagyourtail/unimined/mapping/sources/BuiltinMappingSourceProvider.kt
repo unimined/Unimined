@@ -359,9 +359,11 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val classMap = Regex(""""classMappings"\s*:\s*"([^"]+)"""")
             .find(info)?.groupValues?.get(1)
             ?: throw IllegalStateException("BuildData $zip info.json has no classMappings")
+        // mojmap-era BuildData (>=1.17-ish) carries no memberMappings —
+        // members come from a mojmap source composed downstream (1.x's
+        // layerMojmap/hasMembers fork), so it's optional here
         val memberMap = Regex(""""memberMappings"\s*:\s*"([^"]+)"""")
             .find(info)?.groupValues?.get(1)
-            ?: throw IllegalStateException("BuildData $zip info.json has no memberMappings")
 
         val official = Namespace("official")
         val spigot = Namespace("spigot")
@@ -371,7 +373,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         ) { sb ->
             val tree = MutableMappingTree()
             runBlocking {
-                for (name in listOf(classMap, memberMap)) {
+                for (name in listOfNotNull(classMap, memberMap)) {
                     val doc = readZipEntry(zip, name)
                         ?: throw IllegalStateException(
                             "BuildData $zip missing mapping file $name")
