@@ -128,6 +128,11 @@ class TransformEnvironmentSpec internal constructor(
     internal var transformerClaimContext:
             (() -> TransformerClaim.TransformerEnvContext)? = null
 
+    /** Registry claims resolve through — plugins may register
+     *  additional claims programmatically (ServiceLoader builtins
+     *  still apply via [TransformerRegistry.builtins]). */
+    val transformerRegistry = TransformerRegistry()
+
     /**
      * Install the claim context — called by environment wiring that
      * knows the env's loader descriptor (resolved lazily at selection
@@ -164,7 +169,7 @@ class TransformEnvironmentSpec internal constructor(
             // no explicit or inherited transform — let registry claims
             // resolve (`custom` wins envs no bundled transform claims)
             transformerClaimContext?.invoke()
-                ?.let { ctx -> TransformerRegistry().select(ctx) }
+                ?.let { ctx -> transformerRegistry.select(ctx) }
                 ?.let { return listOf(it) }
             return emptyList()
         } finally {

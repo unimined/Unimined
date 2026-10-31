@@ -92,6 +92,19 @@ class TransformerRegistryTest {
     }
 
     @Test
+    fun `effectiveTransformers falls through to registry claim`() {
+        // no explicit transformer — the env's claim context resolves
+        // through the spec-owned registry
+        env.installClaimContext(project, descriptor = { descriptor("fabric") })
+        env.transformerRegistry.register(
+            claim(tag = "fabric", families = setOf("fabric"))
+        )
+        val resolved = env.effectiveTransformers()
+        assertEquals(1, resolved.size)
+        assertEquals("fabric", tagOf(resolved.single()))
+    }
+
+    @Test
     fun `env explicit push bypasses registry`() {
         // explicit transformers() push wins — the registry is never
         // consulted (effectiveTransformers early-returns)
