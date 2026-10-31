@@ -1,0 +1,104 @@
+package xyz.wagyourtail.unimined.cli
+
+import xyz.wagyourtail.unimined.init.InitSpec
+import xyz.wagyourtail.unimined.init.ProjectGenerator
+import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.system.exitProcess
+
+private const val USAGE = """
+unimined — scaffold a new mod project
+
+usage:
+  unimined new <name> [options]     generate into ./<name>
+  unimined init [options]           generate into the current directory
+
+options:
+  --group <g>            Maven group (required)
+  --mc <ver>             Minecraft version (required)
+  --plugin-version <v>   unimined plugin version (required)
+  --loader <l=v>         loader, repeatable or comma-separated:
+                         --loader fabric=0.16.0 --loader forge=47.2.0
+  --mappings <dsl>       mappings DSL line, repeatable: --mappings "yarn(10)"
+  --modid <id>           mod id (derived from name when omitted)
+  --package <pkg>        base package (group.modid default)
+  --mod-version <v>      mod version (1.0.0 default)
+  --dsl <kotlin|groovy>  build-script DSL (kotlin default)
+  --gradle <ver>         Gradle wrapper version (8.10.2 default)
+  --out <dir>            output directory (overrides the subcommand default)
+
+all versions must be pinned — `latest` resolution against real
+manifests lands with unimined-init's version resolver.
+"""
+
+fun main(args: Array<String>) {
+    if (args.isEmpty()) {
+        print(USAGE); return
+    }
+    try {
+        run(args)
+    } catch (e: IllegalArgumentException) {
+        System.err.println("error: ${e.message}")
+        exitProcess(2)
+    }
+}
+
+private fun run(args: Array<String>) {
+    val rest = args.toMutableList()
+    val command = rest.removeAt(0)
+    require(command == "new" || command == "init") { "unknown command '$command'\n$USAGE" }
+
+    var name: String? = null
+    if (command == "new") {
+        name = rest.firstOrNull()?.takeIf { !it.startsWith("--") }
+            ?.also { rest.removeAt(0) }
+            ?: throw IllegalArgumentException("`new` requires a project name")
+    }
+
+    val flags = linkedMapOf<String, MutableList<String>>()
+    var i = 0
+    while (i < rest.size) {
+        val a = rest[i]
+        require(a.startsWith("--")) { "unexpected argument '$a'" }
+        val eq = a.indexOf('=')
+        if (eq > 0) {
+            flags.getOrPut(a.substring(0, eq)) { mutableListOf() } += a.substring(eq + 1)
+            i++
+        } else {
+            require(i + 1 < rest.size) { "flag '$a' requires a value" }
+            flags.getOrPut(a) { mutableListOf() } += rest[i + 1]
+            i += 2
+        }
+    }
+
+    fun one(flag: String): String? = flags[flag]?.lastOrNull()
+    fun need(flag: String): String =
+        one(flag) ?: throw IllegalArgumentException("missing required $flag")
+
+    val loaders = flags["--loader"].orEmpty()
+        .flatMap { it.split(',') }
+        .map { entry ->
+            val eq = entry.indexOf('=')
+            require(eq > 0) { "--loader wants name=version, got '$entry'" }
+            entry.substring(0, eq).trim() to entry.substring(eq + 1).trim()
+        }
+
+    val spec = InitSpec(
+        group = need("--group"),
+        name = name ?: Paths.get("").toAbsolutePath().fileName.toString(),
+        version = one("--mod-version") ?: "1.0.0",
+        modid = one("--modid"),
+        packageName = one("--package"),
+        mcVersion = need("--mc"),
+        loaders = loaders,
+        mappings = flags["--mappings"].orEmpty(),
+        dsl = if (one("--dsl") == "groovy") InitSpec.Dsl.GROOVY else InitSpec.Dsl.KOTLIN,
+        pluginVersion = need("--plugin-version"),
+        gradleVersion = one("--gradle"),
+    )
+
+    val out = one("--out")?.let { Paths.get(it) }
+        ?: if (command == "new") Paths.get(name!!) else Paths.get("")
+    val written = ProjectGenerator.generate(spec, out, overwrite = command == "init")
+    println("generated ${written.size} files in ${out.toAbsolutePath().normalize()}")
+}
