@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.init
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -107,6 +108,40 @@ object ProjectGenerator {
         return written
     }
 
+    /**
+     * Emitted-path set for the wrapper files — when [wrapperDownloader]
+     * succeeds these bundled `Render.Resource` entries are skipped.
+     */
+    private val wrapperRemote = setOf(
+        "gradlew", "gradlew.bat", "gradle/wrapper/gradle-wrapper.jar"
+    )
+
+    /**
+     * Fetches the real wrapper files for [version] from gradle/gradle
+     * at tag `v<version>` — injected for tests (throw = offline path).
+     */
+    internal var wrapperDownloader: (version: String, outDir: Path) -> Unit =
+        ::defaultWrapperDownload
+
+    private fun defaultWrapperDownload(version: String, outDir: Path) {
+        val base = "https://raw.githubusercontent.com/gradle/gradle/v$version"
+        val files = mapOf(
+            "gradlew" to "$base/gradlew",
+            "gradlew.bat" to "$base/gradlew.bat",
+            "gradle/wrapper/gradle-wrapper.jar" to
+                    "$base/gradle/wrapper/gradle-wrapper.jar",
+        )
+        for ((rel, url) in files) {
+            val target = outDir.resolve(rel)
+            target.parent?.let { Files.createDirectories(it) }
+            URI.create(url).toURL().openStream().use {
+                Files.copy(it, target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+        outDir.resolve("gradlew").toFile().setExecutable(true)
+    }
+
     fun generate(spec: InitSpec, outDir: Path, overwrite: Boolean = false): List<Path> {
         if (Files.exists(outDir) && !overwrite) {
             Files.list(outDir).use { stream ->
@@ -118,8 +153,18 @@ object ProjectGenerator {
         if (spec.templateName != null) {
             return extractTemplate(spec, outDir, overwrite)
         }
-        val written = mutableListOf<Path>()
+        // wrapper: download the real files for the target version,
+        // bundled resources are the offline fallback
+        val downloaded = try {
+            wrapperDownloader(spec.wrapperGradleVersion, outDir); true
+        } catch (e: Exception) {
+            false
+        }
+        val written = if (downloaded) {
+            wrapperRemote.mapTo(mutableListOf()) { outDir.resolve(it) }
+        } else mutableListOf()
         for ((rel, render) in files(spec)) {
+            if (downloaded && rel in wrapperRemote) continue
             val target = outDir.resolve(rel)
             Files.createDirectories(target.parent)
             when (render) {

@@ -26,6 +26,37 @@ class ProjectGeneratorTest {
         templatesZip = templatesZip
     )
 
+    @org.junit.jupiter.api.BeforeEach
+    fun offlineWrapper() {
+        // hermetic — bundled-resource fallback is the tested default
+        ProjectGenerator.wrapperDownloader = { _, _ ->
+            throw java.io.IOException("offline")
+        }
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    fun restoreWrapper() {
+        ProjectGenerator.wrapperDownloader = { _, _ ->
+            throw java.io.IOException("offline")
+        }
+    }
+
+    @Test
+    fun `downloaded wrapper replaces bundled resources`(@TempDir dir: Path) {
+        ProjectGenerator.wrapperDownloader = { _, out ->
+            Files.writeString(out.resolve("gradlew"), "#!/bin/sh\n")
+            Files.writeString(out.resolve("gradlew.bat"), "@rem bat\n")
+            out.resolve("gradle/wrapper").let { d ->
+                Files.createDirectories(d)
+                Files.write(d.resolve("gradle-wrapper.jar"), byteArrayOf(1, 2))
+            }
+        }
+        val written = ProjectGenerator.generate(spec(), dir)
+            .map { dir.relativize(it).toString() }
+        assertTrue("gradlew" in written && "gradlew.bat" in written)
+        assertEquals("#!/bin/sh", Files.readAllLines(dir.resolve("gradlew")).first())
+    }
+
     @Test
     fun `generates a complete fabric project`(@TempDir dir: Path) {
         val written = ProjectGenerator.generate(spec(), dir).map { dir.relativize(it).toString() }
