@@ -118,10 +118,29 @@ internal object BukkitEnvironmentWiring {
                 )
             }
         )
-        envSpec.jarProcessors += PaperPatchProcessor {
+        val distJar = {
             PaperDistResolver.serverJar(
                 downloader, environment.version.get(), loader.version
             )
+        }
+        envSpec.jarProcessors += PaperPatchProcessor(distJar)
+
+        // bundler-era runtime classpath: the dist jar's libraries.list
+        // holds the maven coords paperclip resolves at launch —
+        // surfaced as a resolution-time extendsFrom so Gradle manages
+        // them like any other dependency
+        val paperLibs = project.configurations.create("paperLibraries${
+            environment.environmentId.replaceFirstChar { it.uppercaseChar() }}")
+        paperLibs.withDependencies { deps ->
+            PaperBundlerLibraries.coords(distJar()).forEach {
+                deps.add(project.dependencies.create(it))
+            }
+        }
+        val envSourceSet = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java)
+            .getByName(environment.environmentId)
+        project.configurations.named(envSourceSet.runtimeClasspathConfigurationName) { conf ->
+            conf.extendsFrom(paperLibs)
         }
     }
 

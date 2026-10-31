@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.bukkit
 
 import io.sigpipe.jbsdiff.Diff
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -79,5 +80,44 @@ class PaperPatchProcessorTest {
             processor.buildSpec(specCtx)
         }
         assertTrue(error.message!!.contains("carries no server patch"))
+    }
+}
+
+class PaperBundlerLibrariesTest {
+
+    @org.junit.jupiter.api.io.TempDir
+    lateinit var dir: Path
+
+    private fun bundlerWithLibraries(list: String): Path {
+        val jar = dir.resolve("bundler.jar")
+        ZipOutputStream(Files.newOutputStream(jar)).use { zip ->
+            zip.putNextEntry(ZipEntry("META-INF/libraries.list"))
+            zip.write(list.toByteArray())
+            zip.closeEntry()
+        }
+        return jar
+    }
+
+    @Test
+    fun `libraries_list yields maven coords`() {
+        val jar = bundlerWithLibraries(
+            "abc123\tio.papermc:paper-api:1.20.4\tpaper-api-1.20.4.jar\n" +
+            "def456\torg.slf4j:slf4j-api:2.0.9\tslf4j-api-2.0.9.jar\n"
+        )
+        assertEquals(
+            listOf("io.papermc:paper-api:1.20.4", "org.slf4j:slf4j-api:2.0.9"),
+            xyz.wagyourtail.unimined.transform.bukkit.internal
+                .PaperBundlerLibraries.coords(jar)
+        )
+    }
+
+    @Test
+    fun `jar without libraries_list yields empty`() {
+        val jar = dir.resolve("legacy.jar")
+        ZipOutputStream(Files.newOutputStream(jar)).use {
+            it.putNextEntry(ZipEntry("META-INF/MANIFEST.MF")); it.closeEntry()
+        }
+        assertTrue(xyz.wagyourtail.unimined.transform.bukkit.internal
+            .PaperBundlerLibraries.coords(jar).isEmpty())
     }
 }
