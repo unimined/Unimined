@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.transform.spi
 
 import java.util.ServiceLoader
+import org.gradle.api.Project
+import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 
 /**
@@ -26,10 +28,14 @@ interface TransformerClaim {
     /** The transform for a claimed env. */
     fun transformer(env: TransformerEnvContext): MinecraftTransformer
 
-    /** Minimal context a claim receives to build its transform —
-     *  the descriptor row (null for rowless custom envs). */
+    /** Context a claim receives to build its transform — the
+     *  descriptor row (null for rowless custom envs), the env's
+     *  declared pipeline/features spec, and the project for task
+     *  registration. */
     interface TransformerEnvContext {
+        val project: Project
         val descriptor: LoaderDescriptor?
+        val env: TransformEnvironmentSpec
     }
 
 }

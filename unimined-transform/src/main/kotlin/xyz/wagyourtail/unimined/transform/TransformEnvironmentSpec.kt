@@ -10,6 +10,8 @@ import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
+import xyz.wagyourtail.unimined.transform.spi.TransformerClaim
+import xyz.wagyourtail.unimined.transform.spi.TransformerRegistry
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
 import java.nio.file.Path
 
@@ -119,6 +121,13 @@ class TransformEnvironmentSpec internal constructor(
      * configured target pipeline. This lets `copyFrom(...)` supply a neutral
      * common pipeline while a later loader transform still replaces it.
      */
+    /** Selection-context factory — env wiring installs a
+     *  [TransformerClaim.TransformerEnvContext] so a registry claim
+     *  (`custom`'s fallback) can build a transform for envs that
+     *  declare no explicit transformer. */
+    internal var transformerClaimContext:
+            (() -> TransformerClaim.TransformerEnvContext)? = null
+
     internal fun effectiveTransformers(
         visiting: MutableSet<String> = mutableSetOf()
     ): List<MinecraftTransformer> {
@@ -132,6 +141,11 @@ class TransformEnvironmentSpec internal constructor(
                 val inherited = resolver().effectiveTransformers(visiting)
                 if (inherited.isNotEmpty()) return inherited
             }
+            // no explicit or inherited transform — let registry claims
+            // resolve (`custom` wins envs no bundled transform claims)
+            transformerClaimContext?.invoke()
+                ?.let { ctx -> TransformerRegistry().select(ctx) }
+                ?.let { return listOf(it) }
             return emptyList()
         } finally {
             visiting.remove(key)
