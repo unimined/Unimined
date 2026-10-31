@@ -1,0 +1,118 @@
+name: Docs
+
+on:
+  push:
+    branches: [main, feature/2.0]
+    paths:
+      - 'docs/**'
+      - 'web/**'
+      - 'mkdocs*.yml'
+      - 'requirements-docs.txt'
+      - '.github/workflows/docs.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'mike version to deploy (e.g. 1.x, 2.0-SNAPSHOT)'
+        required: true
+      alias:
+        description: 'alias to update (e.g. latest) — empty for none'
+        required: false
+        default: ''
+      set_default:
+        description: 'make this the default docs version'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# all deploys commit to gh-pages — serialize
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install docs toolchain
+        run: pip install -r requirements-docs.txt
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate API reference (Dokka)
+        run: |
+          ./gradlew dokkaGenerate
+          mkdir -p docs/api
+          if [ -d build/dokka/html ]; then
+            cp -r build/dokka/html/. docs/api/
+          else
+            cp -r build/dokka/. docs/api/
+          fi
+
+      - name: Build landing site
+        run: |
+          mkdocs build -f mkdocs-web.yml
+          touch site-web/.nojekyll
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # landing site occupies the gh-pages root; mike owns the docs/ prefix
+      - name: Deploy landing site to gh-pages root
+        run: |
+          if git ls-remote --exit-code origin gh-pages >/dev/null 2>&1; then
+            git fetch origin gh-pages:gh-pages
+            git worktree add .gh-pages gh-pages
+          else
+            git worktree add --detach .gh-pages
+            git -C .gh-pages checkout --orphan gh-pages
+            git -C .gh-pages rm -rf . || true
+          fi
+          rsync -a --delete --exclude='docs/' site-web/ .gh-pages/
+          git -C .gh-pages add -A
+          git -C .gh-pages commit -m "Deploy landing site" || true
+          git -C .gh-pages push origin HEAD:gh-pages
+          git worktree remove .gh-pages --force
+
+      - name: Deploy versioned docs (mike)
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.ref_name }}
+          IN_VERSION: ${{ inputs.version }}
+          IN_ALIAS: ${{ inputs.alias }}
+          IN_SET_DEFAULT: ${{ inputs.set_default }}
+        run: |
+          if [ "$EVENT" = "release" ]; then
+            VER="${TAG#v}"
+            mike deploy --deploy-prefix docs --push --update-aliases "$VER" latest
+            mike set-default --deploy-prefix docs --push latest
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ -n "$IN_ALIAS" ]; then
+              mike deploy --deploy-prefix docs --push --update-aliases "$IN_VERSION" $IN_ALIAS
+            else
+              mike deploy --deploy-prefix docs --push "$IN_VERSION"
+            fi
+            if [ "$IN_SET_DEFAULT" = "true" ]; then
+              mike set-default --deploy-prefix docs --push "${IN_ALIAS:-$IN_VERSION}"
+            fi
+          else
+            mike deploy --deploy-prefix docs --push dev
+          fi

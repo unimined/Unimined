@@ -1,0 +1,73 @@
+site_name: Unimined Docs
+site_description: Unified Minecraft modding environment — modern and legacy
+site_url: https://wagyourtail.github.io/unimined/docs/
+repo_url: https://github.com/wagyourtail/unimined
+edit_uri: edit/feature/2.0/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.tabs.link
+    - content.code.copy
+
+plugins:
+  - search
+  - macros
+  - mike:
+      deploy_prefix: docs
+      canonical_version: latest
+      version_selector: true
+
+extra:
+  version:
+    provider: mike
+    default: latest
+  plugin_version: "1.4.1"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Usage:
+    - Setup: setup.md
+    - Mappings: mappings.md
+    - Modloaders: modloaders.md
+    - Remapping: remapping.md
+    - Standard Libraries: standard-libraries.md
+    - Multi-SourceSet & Multi-Project: multi-sourceset-multi-project.md
+    - Migrating 1.x to 2.0: migration-1x-to-2.0.md
+    - Run Config:
+      - run-config.md
+      - Auth: auth.md
+  - API Reference: api-reference.md

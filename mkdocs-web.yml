@@ -1,0 +1,54 @@
+site_name: Unimined
+site_description: Unified Minecraft modding environment — modern and legacy
+site_url: https://wagyourtail.github.io/unimined/
+docs_dir: web
+site_dir: site-web
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.top
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/landing.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/wagyourtail/unimined
+      name: Unimined on GitHub
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Supported Loaders: loaders.md

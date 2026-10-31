@@ -5,6 +5,7 @@ plugins {
     id("xyz.wagyourtail.commons-gradle") version "1.0.5-SNAPSHOT"
     id("org.jetbrains.kotlin.jvm") version "2.4.21" apply false
     id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21" apply false
+    id("org.jetbrains.dokka") version "2.2.0"
 }
 
 subprojects {
@@ -15,6 +16,7 @@ subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "maven-publish")
     apply(plugin = "xyz.wagyourtail.commons-gradle")
+    apply(plugin = "org.jetbrains.dokka")
 
     extensions.configure<GradleProjectExtension>("commons") {
         autoGroup()
@@ -183,5 +185,18 @@ subprojects {
                 }
             }
         }
+    }
+}
+
+// aggregated API docs — `:dokkaGenerate` at the root produces
+// build/dokka/ (copied into docs/api/ by the docs workflow)
+dokka {
+    moduleName.set("unimined")
+}
+
+dependencies {
+    subprojects.forEach {
+        // mc-launcher doesn't apply the dokka plugin (see subprojects block)
+        if (it.name != "mc-launcher") dokka(project(it.path))
     }
 }
