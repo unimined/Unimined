@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.fabric.internal
 import xyz.wagyourtail.unimined.transform.loader.AccessDiscovery
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
+import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
 
 /**
@@ -19,7 +20,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "fabric",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.fabricmc.net/"),
+            repos = listOf(LoaderRepo.Maven("https://maven.fabricmc.net/")),
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "intermediary",
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
@@ -37,7 +38,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "quilt",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.quiltmc.org/repository/release"),
+            repos = listOf(LoaderRepo.Maven("https://maven.quiltmc.org/repository/release")),
             loaderCoords = { _, v -> "org.quiltmc:quilt-loader:$v" },
             prodNamespace = "intermediary",
             // quilt rides fabric intermediary — quilt-mappings is
@@ -57,7 +58,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "legacyfabric",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.legacyfabric.net"),
+            repos = listOf(LoaderRepo.Maven("https://maven.legacyfabric.net")),
             // legacyfabric publishes under the upstream GAV on their own maven
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "legacyIntermediary",
@@ -74,7 +75,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "babric",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.glass-launcher.net/babric/"),
+            repos = listOf(LoaderRepo.Maven("https://maven.glass-launcher.net/babric/")),
             loaderCoords = { _, v -> "babric:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
@@ -88,7 +89,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "ornithe",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.ornithemc.net/releases"),
+            repos = listOf(LoaderRepo.Maven("https://maven.ornithemc.net/releases")),
             // 1.x OrnitheFabricMinecraftTransformer inherits legacyfabric's
             // loader() — upstream fabric-loader, not an ornithe artifact
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
@@ -107,7 +108,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "flint",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            mavens = listOf("https://maven.flintloader.net/releases/"),
+            repos = listOf(LoaderRepo.Maven("https://maven.flintloader.net/releases/")),
             loaderCoords = { _, v -> "net.flintloader:punch:$v" },
             prodNamespace = "intermediary",
             // flint rides fabric intermediary

@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.jarmod.internal
 
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
+import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
 
 /**
@@ -17,9 +18,9 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "jarmod",
             family = "jarmod",
-            mavens = listOf(
-                "https://maven.wagyourtail.xyz/releases/",
-                "https://maven.wagyourtail.xyz/snapshots/"
+            repos = listOf(
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/"),
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/")
             ),
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             prodNamespace = "official",
@@ -28,9 +29,9 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "fg1",
             family = "jarmod",
-            mavens = listOf(
-                "https://maven.wagyourtail.xyz/releases/",
-                "https://maven.wagyourtail.xyz/snapshots/"
+            repos = listOf(
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/"),
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/")
             ),
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             prodNamespace = "official",
@@ -43,9 +44,19 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "liteloader",
             family = "jarmod",
-            mavens = listOf(
-                "https://dl.liteloader.com/versions/",
-                "https://repo.spongepowered.org/maven/"
+            repos = listOf(
+                // artifact-only feed — no poms/module metadata
+                LoaderRepo.Maven(
+                    "https://dl.liteloader.com/versions/",
+                    metadata = LoaderRepo.MetadataMode.ARTIFACT_ONLY
+                ),
+                LoaderRepo.Maven("https://repo.spongepowered.org/maven/"),
+                // legacy redist is a plain file feed — ivy pattern
+                LoaderRepo.Ivy(
+                    "https://dl.liteloader.com/redist/legacy/",
+                    "[artifact]_[revision].[ext]",
+                    includeModules = setOf("com.mumfrey" to "liteloader")
+                )
             ),
             loaderCoords = { _, v -> "com.mumfrey:liteloader:$v" },
             prodNamespace = "official",

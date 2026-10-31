@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.bukkit.internal
 import xyz.wagyourtail.unimined.transform.loader.AccessDiscovery
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
+import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
 
 /**
@@ -24,14 +25,14 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
  */
 internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
 
-    private val spigotNexus =
-        "https://hub.spigotmc.org/nexus/content/groups/public/"
-    private val sonatypeSnapshots =
-        "https://oss.sonatype.org/content/repositories/snapshots/"
+    private val spigotNexus = LoaderRepo.Maven(
+        "https://hub.spigotmc.org/nexus/content/groups/public/")
+    private val sonatypeSnapshots = LoaderRepo.Maven(
+        "https://oss.sonatype.org/content/repositories/snapshots/")
 
 private val wagYourMaven = listOf(
-    "https://maven.wagyourtail.xyz/releases",
-    "https://maven.wagyourtail.xyz/snapshots"
+    LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases"),
+    LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots")
 )
 
     override fun descriptors(): List<LoaderDescriptor> = listOf(
@@ -39,10 +40,10 @@ private val wagYourMaven = listOf(
             id = "craftbukkit",
             family = "bukkit",
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
-            mavens = listOf(
+            repos = listOf(
                 spigotNexus,
                 sonatypeSnapshots,
-                "https://maven.minecraftforge.net/"
+                LoaderRepo.Maven("https://maven.minecraftforge.net/")
             ) + wagYourMaven,
             // server jar comes from a non-native provider; the maven
             // coordinate is the api/implementation surface users can
@@ -62,7 +63,7 @@ private val wagYourMaven = listOf(
             id = "spigot",
             family = "bukkit",
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
-            mavens = listOf(spigotNexus, sonatypeSnapshots) + wagYourMaven,
+            repos = listOf(spigotNexus, sonatypeSnapshots) + wagYourMaven,
             loaderCoords = { _, v -> "org.spigotmc:spigot:$v" },
             prodNamespace = "spigotProd",
             capabilities = mapOf(
@@ -78,8 +79,8 @@ private val wagYourMaven = listOf(
             id = "paper",
             family = "bukkit",
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
-            mavens = listOf(
-                "https://repo.papermc.io/repository/maven-public/"
+            repos = listOf(
+                LoaderRepo.Maven("https://repo.papermc.io/repository/maven-public/")
             ) + wagYourMaven,
             // api-side maven surface — paper-api is published; the
             // server jar resolves through the dist endpoint, not maven

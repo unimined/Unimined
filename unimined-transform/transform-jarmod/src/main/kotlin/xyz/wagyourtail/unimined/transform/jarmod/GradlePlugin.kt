@@ -25,12 +25,10 @@ class GradlePlugin : Plugin<Project> {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             // jarmod mods run in the vanilla jar's own namespace
             minecraft.loaderModSourceNamespaces["jarmod"] = listOf("official")
-            listOf(
-                "https://maven.wagyourtail.xyz/releases/",
-                "https://maven.wagyourtail.xyz/snapshots/"
-            ).forEach {
-                target.repositories.maven { r -> r.url = URI.create(it) }
-            }
+            // family repos from the descriptors — includes
+            // liteloader's artifact-only + legacy ivy feeds
+            LoaderRegistry().family("jarmod").flatMap { it.repos }.toSet()
+                .forEach { repo -> repo.registerOn(target.repositories) }
             // env-registration-time: configs must exist before the
             // script's `dependencies {}` block evaluates; the `jarmod`
             // extension must also exist before `minecraft { }` bodies
@@ -38,29 +36,6 @@ class GradlePlugin : Plugin<Project> {
             minecraft.environments.all { environment ->
                 environment.extensions.add("jarmod", JarModEnvExtension(environment))
                 JarModEnvironmentWiring.createConfigurations(target, environment)
-            }
-            // liteloader envs need artifact-only repos + the legacy
-            // redist ivy feed (pattern layout, no metadata) — gated on
-            // a liteloader env existing since loaderSpec populates
-            // during script eval
-            target.afterEvaluate {
-                if (minecraft.environments.any {
-                    it.spec().loader?.name == "liteloader"
-                }) {
-                    target.repositories.maven { r ->
-                        r.url = URI.create("https://dl.liteloader.com/versions/")
-                        r.metadataSources { s -> s.artifact() }
-                    }
-                    target.repositories.maven { r ->
-                        r.url = URI.create("https://repo.spongepowered.org/maven/")
-                    }
-                    target.repositories.ivy { r ->
-                        r.url = URI.create("https://dl.liteloader.com/redist/legacy/")
-                        r.patternLayout { p -> p.artifact("[artifact]_[revision].[ext]") }
-                        r.content { c -> c.includeModule("com.mumfrey", "liteloader") }
-                        r.metadataSources { s -> s.artifact() }
-                    }
-                }
             }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 minecraft.onEnvironmentBound { environment, _ ->

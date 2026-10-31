@@ -24,15 +24,8 @@ class GradlePlugin : Plugin<Project> {
             // `artifact()` metadata source — forge mavens host jar-only
             // artifacts (scala `_*_mc` FML libs, etc.) without poms
             // (1.x `minecraftForgeMaven` parity)
-            LoaderRegistry().family("forge").flatMap { it.mavens }.toSet().forEach { maven ->
-                target.repositories.maven { repo ->
-                    repo.url = URI.create(maven)
-                    repo.metadataSources { sources ->
-                        sources.mavenPom()
-                        sources.artifact()
-                    }
-                }
-            }
+            LoaderRegistry().family("forge").flatMap { it.repos }.toSet()
+                .forEach { repo -> repo.registerOn(target.repositories) }
             // JetBrains mavens — JST (sources-surface enrichers on
             // userdev-era forge) depends on IntelliJ platform modules
             // and `-jb`-suffixed republished deps that aren't on Central.

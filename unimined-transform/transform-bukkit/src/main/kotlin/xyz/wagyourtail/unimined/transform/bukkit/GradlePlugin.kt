@@ -18,15 +18,8 @@ class GradlePlugin : Plugin<Project> {
     override fun apply(target: Project) {
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
-            LoaderRegistry().family("bukkit").flatMap { it.mavens }.toSet().forEach { maven ->
-                target.repositories.maven { repo ->
-                    repo.url = URI.create(maven)
-                    repo.metadataSources { sources ->
-                        sources.mavenPom()
-                        sources.artifact()
-                    }
-                }
-            }
+            LoaderRegistry().family("bukkit").flatMap { it.repos }.toSet()
+                .forEach { repo -> repo.registerOn(target.repositories) }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                     minecraft.onEnvironmentBound { environment, _ ->

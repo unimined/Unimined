@@ -21,9 +21,11 @@ data class LoaderDescriptor(
      *  on this, never on [id]. */
     val family: String,
 
-    /** Maven repository URLs for this product's artifacts — products
-     *  can need several (cleanroom adds arcseekers + forge mavens). */
-    val mavens: List<String>,
+    /** Repositories this product's artifacts resolve from — products
+     *  can need several (cleanroom adds arcseekers + forge mavens) and
+     *  of mixed shape (ivy pattern-layout feeds like liteloader's
+     *  legacy redist). */
+    val repos: List<LoaderRepo>,
 
     /** Dependency coordinates for the loader artifact for
      *  `(mcVersion, loaderVersion)` — e.g.

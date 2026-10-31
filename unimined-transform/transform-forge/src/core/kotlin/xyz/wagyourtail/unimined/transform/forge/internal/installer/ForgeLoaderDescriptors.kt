@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.forge.internal.installer
 import xyz.wagyourtail.unimined.transform.loader.AccessDiscovery
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
+import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
 
 /**
@@ -20,7 +21,7 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "forge",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            mavens = listOf("https://maven.minecraftforge.net/"),
+            repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
             loaderCoords = { mc, v -> "net.minecraftforge:forge:$mc-$v" },
             prodNamespace = "searge",
             capabilities = mapOf("atTool" to "8.2.2"),
@@ -36,7 +37,7 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "lexforge",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            mavens = listOf("https://maven.minecraftforge.net/"),
+            repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
             loaderCoords = { mc, v -> "net.minecraftforge:forge:$mc-$v" },
             prodNamespace = "searge",
             capabilities = mapOf("atTool" to "8.2.2"),
@@ -52,7 +53,7 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "neoforge",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            mavens = listOf("https://maven.neoforged.net/releases"),
+            repos = listOf(LoaderRepo.Maven("https://maven.neoforged.net/releases")),
             // 1.x: `forge:$mc-$v` on 1.20.1; later `neoforge:<mc-minus-1.>.$v`
             // appends .0 if mc version isn't 3-length (e.g. 1.20 -> 1.20.0, or 26.3 -> 26.3.0)
             loaderCoords = { mc, v ->
@@ -80,11 +81,11 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "cleanroom",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            mavens = listOf(
-                "https://repo.cleanroommc.com/releases",
-                "https://repo.cleanroommc.com/snapshots",
-                "https://maven.arcseekers.com/releases",
-                "https://maven.minecraftforge.net/"
+            repos = listOf(
+                LoaderRepo.Maven("https://repo.cleanroommc.com/releases"),
+                LoaderRepo.Maven("https://repo.cleanroommc.com/snapshots"),
+                LoaderRepo.Maven("https://maven.arcseekers.com/releases"),
+                LoaderRepo.Maven("https://maven.minecraftforge.net/")
             ),
             loaderCoords = { _, v -> "com.cleanroommc:cleanroom:$v" },
             prodNamespace = "searge",
