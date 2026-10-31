@@ -43,6 +43,23 @@ class MappingsSpecImpl(
 
     private var inheritedSources: ((MutableSet<MappingsSpecImpl>) -> List<Source>)? = null
 
+    /**
+     * Ornithe mapping generation — `1` uses the original
+     * `calamus-intermediary`/`feather` artifacts on the `calamus`
+     * namespace; `>=2` selects the `-gen<N>` generated series on a
+     * separate `calamusGen<N>`/`featherGen<N>` namespace so both gens
+     * can be imported at once (per-call `gen` params override this).
+     */
+    var ornitheGenVersion: Int = 1
+
+    /**
+     * Legacy Fabric mapping generation — `>=2` selects the
+     * `net.legacyfabric.v<N>` group on `legacyIntermediaryGen<N>`/
+     * `legacyYarnGen<N>` namespaces, same both-gens model as
+     * [ornitheGenVersion].
+     */
+    var legacyFabricGenVersion: Int = 1
+
     /** Namespace chain — populated by the mapping host at resolve time. */
     override var namespaces: List<String> = emptyList()
         internal set
@@ -147,9 +164,18 @@ class MappingsSpecImpl(
      * version — `feather(4)` ⇢ `net.ornithemc:feather:<mc>+build.4:v2`
      * on the Ornithe maven; rides the `intermediary` hop.
      */
-    fun feather(build: Int) = maven(
-        requireMcVersion("feather").map { "net.ornithemc:feather:$it+build.$build:v2" }
-    )
+    @JvmOverloads
+    fun feather(build: Int, gen: Int = ornitheGenVersion) = maven(
+        requireMcVersion("feather").map {
+            val artifact = if (gen < 2) "feather" else "feather-gen$gen"
+            "net.ornithemc:$artifact:$it+build.$build:v2"
+        }
+    ) {
+        if (gen >= 2) mapNamespace(
+            "intermediary" to "calamusGen$gen",
+            "named" to "featherGen$gen"
+        )
+    }
 
     /**
      * Declare Legacy Fabric Yarn for the environment's Minecraft
@@ -157,9 +183,15 @@ class MappingsSpecImpl(
      * `net.legacyfabric:yarn:<mc>+build.510:v2` on the Legacy Fabric
      * maven; rides the `intermediary` hop.
      */
-    fun legacyYarn(build: Int) = maven(
-        requireMcVersion("legacyYarn").map { "net.legacyfabric:yarn:$it+build.$build:v2" }
-    )
+    @JvmOverloads
+    fun legacyYarn(build: Int, gen: Int = legacyFabricGenVersion) = maven(
+        requireMcVersion("legacyYarn").map {
+            val group = if (gen < 2) "net.legacyfabric" else "net.legacyfabric.v$gen"
+            "$group:yarn:$it+build.$build:v2"
+        }
+    ) {
+        if (gen >= 2) mapNamespace("named" to "legacyYarnGen$gen")
+    }
 
     /**
      * Declare Babric Barn mappings for the environment's Minecraft
@@ -185,10 +217,15 @@ class MappingsSpecImpl(
      * maven; the `intermediary` column is relabeled `calamus` (1.x
      * `provides("calamus" to false) + mapNamespace`).
      */
-    fun calamus() = maven(
-        requireMcVersion("calamus").map { "net.ornithemc:calamus-intermediary:$it:v2" }
+    @JvmOverloads
+    fun calamus(gen: Int = ornitheGenVersion) = maven(
+        requireMcVersion("calamus").map {
+            val artifact =
+                if (gen < 2) "calamus-intermediary" else "calamus-intermediary-gen$gen"
+            "net.ornithemc:$artifact:$it:v2"
+        }
     ) {
-        mapNamespace("intermediary" to "calamus")
+        mapNamespace("intermediary" to if (gen < 2) "calamus" else "calamusGen$gen")
     }
 
     /**
@@ -196,10 +233,15 @@ class MappingsSpecImpl(
      * `net.legacyfabric:intermediary:<mcVersion>:v2`; relabeled
      * `legacyIntermediary` like [calamus].
      */
-    fun legacyIntermediary() = maven(
-        requireMcVersion("legacyIntermediary").map { "net.legacyfabric:intermediary:$it:v2" }
+    @JvmOverloads
+    fun legacyIntermediary(gen: Int = legacyFabricGenVersion) = maven(
+        requireMcVersion("legacyIntermediary").map {
+            val group = if (gen < 2) "net.legacyfabric" else "net.legacyfabric.v$gen"
+            "$group:intermediary:$it:v2"
+        }
     ) {
-        mapNamespace("intermediary" to "legacyIntermediary")
+        mapNamespace("intermediary" to
+            if (gen < 2) "legacyIntermediary" else "legacyIntermediaryGen$gen")
     }
 
     /**
