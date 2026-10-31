@@ -126,7 +126,9 @@ internal object GenSourcesWiring {
             override val input: Provider<RegularFile> = input
             override val classpath: FileCollection = libraries
             override val options: Map<String, String>
-                get() = source.options.get()
+                // bsm=1 emits vineflower linemap extras (0x4646) for the
+                // -linemapped jar; user options override
+                get() = mapOf("bsm" to "1") + source.options.get()
         }
 
         val engine = DecompilerRegistry().select(spec, source.engine.orNull)
@@ -141,6 +143,21 @@ internal object GenSourcesWiring {
                 else project.layout.buildDirectory.file(
                     "unimined/sources/minecraft-$environmentId-decompiled.jar"
                 ).get().asFile
+            )
+        }
+
+        // -linemapped classifier: binary line tables tracking the
+        // (enriched) sources — extras preserved/adjusted by the UML step
+        project.tasks.register(
+            "gen${if (environmentId == "main") "" else "${environmentId.cap()}"}Linemapped",
+            LinemappedJarTask::class.java
+        ) { t ->
+            t.group = "unimined"
+            t.binaryJar.set(input)
+            t.sourcesJar.fileValue(repoSlot)
+            t.linemappedJar.fileValue(
+                java.io.File(repoSlot.absolutePath
+                    .replace("-sources.jar", "-linemapped.jar"))
             )
         }
 
