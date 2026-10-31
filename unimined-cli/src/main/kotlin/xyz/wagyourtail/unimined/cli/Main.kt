@@ -31,6 +31,10 @@ options:
 `latest` resolves against real manifests (piston-meta, fabric-meta,
 loader maven-metadata.xml, wagyourtail maven) — pin explicitly to
 skip resolution.
+
+--template <name> --templates <zip> extracts testing/<name>/ from a
+unimined-templates.zip instead of the minimal emit (scaffold flags
+unused).
 """
 
 fun main(args: Array<String>) {
@@ -77,12 +81,17 @@ private fun run(args: Array<String>) {
     fun need(flag: String): String =
         one(flag) ?: throw IllegalArgumentException("missing required $flag")
 
+    // --template <name> extracts testing/<name>/ from a templates
+    // zip instead of the minimal emit — scaffold flags unused
+    val template = one("--template")
+
     val resolver = VersionResolver(
         cacheDir = Paths.get(
             System.getProperty("user.home"), ".unimined", "cache"
         )
     )
-    val mc = need("--mc").let { if (it == "latest") resolver.latestMinecraft() else it }
+    val mc = (if (template != null) "" else need("--mc"))
+        .let { if (it == "latest") resolver.latestMinecraft() else it }
 
     val loaders = flags["--loader"].orEmpty()
         .flatMap { it.split(',') }
@@ -95,7 +104,7 @@ private fun run(args: Array<String>) {
         }
 
     val spec = InitSpec(
-        group = need("--group"),
+        group = if (template != null) "com.example" else need("--group"),
         name = name ?: Paths.get("").toAbsolutePath().fileName.toString(),
         version = one("--mod-version") ?: "1.0.0",
         modid = one("--modid"),
@@ -104,9 +113,11 @@ private fun run(args: Array<String>) {
         loaders = loaders,
         mappings = flags["--mappings"].orEmpty(),
         dsl = if (one("--dsl") == "groovy") InitSpec.Dsl.GROOVY else InitSpec.Dsl.KOTLIN,
-        pluginVersion = need("--plugin-version")
+        pluginVersion = (if (template != null) "" else need("--plugin-version"))
             .let { if (it == "latest") resolver.latestPlugin() else it },
         gradleVersion = one("--gradle"),
+        templateName = template,
+        templatesZip = one("--templates")?.let { Paths.get(it) },
     )
 
     val out = one("--out")?.let { Paths.get(it) }

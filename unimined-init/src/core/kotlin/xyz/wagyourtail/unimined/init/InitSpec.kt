@@ -28,6 +28,14 @@ data class InitSpec(
     val pluginVersion: String,
     /** Gradle wrapper version string (for wrapper.properties). */
     val gradleVersion: String? = null,
+    /**
+     * Template name inside a `unimined-templates` zip — when set,
+     * generation extracts `testing/<name>/` wholesale instead of
+     * the minimal emit; scaffold fields are ignored.
+     */
+    val templateName: String? = null,
+    /** Local path to a `unimined-templates` zip. */
+    val templatesZip: java.nio.file.Path? = null,
 ) {
 
     enum class Dsl(val scriptSuffix: String) {

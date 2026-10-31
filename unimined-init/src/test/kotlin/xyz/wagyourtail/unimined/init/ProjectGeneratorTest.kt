@@ -12,14 +12,18 @@ import org.junit.jupiter.api.Assertions.assertTrue
 class ProjectGeneratorTest {
 
     private fun spec(
-        loaders: List<Pair<String, String>> = listOf("fabric" to "0.16.0")
+        loaders: List<Pair<String, String>> = listOf("fabric" to "0.16.0"),
+        templateName: String? = null,
+        templatesZip: Path? = null
     ) = InitSpec(
         group = "com.example",
         name = "my-mod",
         mcVersion = "1.20.1",
         loaders = loaders,
         mappings = listOf("yarn(10)"),
-        pluginVersion = "2.0.0-SNAPSHOT"
+        pluginVersion = "2.0.0-SNAPSHOT",
+        templateName = templateName,
+        templatesZip = templatesZip
     )
 
     @Test
@@ -84,6 +88,32 @@ class ProjectGeneratorTest {
         assertTrue(Files.exists(dir.resolve("src/forge/resources/META-INF/mods.toml")))
         assertTrue(Files.exists(dir.resolve("src/fabric/java/com/example/mymod/MyMod.java")))
         assertTrue(Files.exists(dir.resolve("src/forge/java/com/example/mymod/MyMod.java")))
+    }
+
+    @Test
+    fun `template mode extracts testing subtree from zip`(
+        @TempDir dir: Path, @TempDir zipDir: Path
+    ) {
+        // fake unimined-templates.zip: testing/demo/ + other/ entries
+        val zipPath = zipDir.resolve("templates.zip")
+        java.util.zip.ZipOutputStream(
+            Files.newOutputStream(zipPath)
+        ).use { z ->
+            z.putNextEntry(java.util.zip.ZipEntry("testing/demo/build.gradle.kts"))
+            z.write("// demo build\n".toByteArray()); z.closeEntry()
+            z.putNextEntry(java.util.zip.ZipEntry("testing/demo/src/main/java/Foo.java"))
+            z.write("class Foo {}\n".toByteArray()); z.closeEntry()
+            z.putNextEntry(java.util.zip.ZipEntry("testing/other/settings.gradle.kts"))
+            z.write("// not demo\n".toByteArray()); z.closeEntry()
+        }
+        val written = ProjectGenerator.generate(
+            spec(templateName = "demo", templatesZip = zipPath), dir
+        )
+        assertTrue(Files.exists(dir.resolve("build.gradle.kts")))
+        assertTrue(Files.exists(dir.resolve("src/main/java/Foo.java")))
+        // other template subtrees stay out
+        assertTrue(!Files.exists(dir.resolve("settings.gradle.kts")))
+        assertEquals(2, written.size)
     }
 
     @Test

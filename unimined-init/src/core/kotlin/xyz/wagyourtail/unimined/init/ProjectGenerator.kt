@@ -70,6 +70,40 @@ object ProjectGenerator {
      * existing non-empty directory unless [overwrite] is set.
      * Returns the emitted paths.
      */
+    /** Extract `testing/<name>/` from a templates zip (plan §13). */
+    private fun extractTemplate(
+        spec: InitSpec, outDir: Path, overwrite: Boolean
+    ): List<Path> {
+        val zip = spec.templatesZip
+            ?: error("templateName set but no templatesZip")
+        val prefix = "testing/${spec.templateName}/"
+        val written = mutableListOf<Path>()
+        java.util.zip.ZipFile(zip.toFile()).use { zf ->
+            zf.entries().asSequence()
+                .filter { it.name.startsWith(prefix) && !it.isDirectory }
+                .forEach { e ->
+                    val rel = e.name.removePrefix(prefix)
+                    val target = outDir.resolve(rel).normalize()
+                    require(target.startsWith(outDir)) {
+                        "template entry escapes outDir: ${e.name}"
+                    }
+                    if (Files.exists(target) && !overwrite) {
+                        error("refusing to overwrite $target")
+                    }
+                    target.parent?.let { Files.createDirectories(it) }
+                    zf.getInputStream(e).use { input ->
+                        Files.copy(input, target,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    written.add(target)
+                }
+        }
+        require(written.isNotEmpty()) {
+            "template '${spec.templateName}' not found in $zip"
+        }
+        return written
+    }
+
     fun generate(spec: InitSpec, outDir: Path, overwrite: Boolean = false): List<Path> {
         if (Files.exists(outDir) && !overwrite) {
             Files.list(outDir).use { stream ->
@@ -77,6 +111,9 @@ object ProjectGenerator {
                     "output directory $outDir is not empty (pass overwrite=true)"
                 }
             }
+        }
+        if (spec.templateName != null) {
+            return extractTemplate(spec, outDir, overwrite)
         }
         val written = mutableListOf<Path>()
         for ((rel, render) in files(spec)) {
