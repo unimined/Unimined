@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 /**
  * `jst` step on the SOURCES surface — runs `net.neoforged.jst.cli.Main`
  * in a JVM subprocess. JST handles jar input/output natively
- * (`--input-format ARCHIVE --output-format ARCHIVE`), so unlike
+ * (`--in-format ARCHIVE --out-format ARCHIVE`), so unlike
  * `source-remap` no unpack/repack is needed. The step declares
  * [needsClasspath] — JST resolves symbols against the compile classpath.
  */
@@ -40,7 +40,7 @@ class JstStep : RemapStepType<JstStepSpec> {
             add("-cp")
             add(toolCp.joinToString(File.pathSeparator) { it.absolutePath })
             add("net.neoforged.jst.cli.Main")
-            addAll(listOf("--input-format", "ARCHIVE", "--output-format", "ARCHIVE"))
+            addAll(listOf("--in-format", "ARCHIVE", "--out-format", "ARCHIVE"))
             if (c.classpath.isNotEmpty()) {
                 addAll(
                     listOf(
