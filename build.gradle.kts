@@ -200,3 +200,18 @@ dependencies {
         if (it.name != "mc-launcher") dokka(project(it.path))
     }
 }
+
+// `unimined-templates` artifact (plan §13) — packaged testing/
+// projects CI attaches to releases; init frontends consume richer
+// templates from the zip than the built-in minimal emit
+tasks.register<Zip>("packageTemplates") {
+    group = "unimined"
+    description = "Packages testing/ projects as the unimined-templates artifact"
+    archiveFileName.set("unimined-templates.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    from("testing") {
+        exclude("**/build/**", "**/run/**", "**/.gradle/**",
+                "**/remappedSrc/**", "**/.idea/**")
+        into("testing")
+    }
+}
