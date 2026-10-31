@@ -132,4 +132,17 @@ class BukkitEnvironmentWiringTest {
             it.javaClass.simpleName == "PaperPatchProcessor"
         }, "apiOnly should skip the dist-patch processor")
     }
+
+    @Test
+    fun `reobf convention offers spigot namespaces`() {
+        project = project()
+        val (ext, envId) = paperEnv()
+        val env = ext.environments.getByName(envId)
+        assertTrue(env.modSourceNamespaces.get().contains("spigotProd"),
+            "mod-source namespaces should include spigotProd for reobf")
+        assertTrue(env.modSourceNamespaces.get().contains("spigot"),
+            "mod-source namespaces should include named spigot")
+        assertTrue(env.defaultRemapJar.get(),
+            "remapJar convention should stay enabled for reobf")
+    }
 }
