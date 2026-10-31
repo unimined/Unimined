@@ -10,6 +10,9 @@ dependencies {
     compileOnly("com.hypherionmc.modutils:modpublisher:2.2.4")
 
     testImplementation(project(":unimined-mod-loader-merge"))
+    // real ModPublisher for the dry-run e2e — uploads never happen
+    // (debug.set(true) short-circuits them)
+    testImplementation("com.hypherionmc.modutils:modpublisher:2.2.4")
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
