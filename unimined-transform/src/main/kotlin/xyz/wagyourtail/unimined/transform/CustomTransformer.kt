@@ -48,12 +48,34 @@ class CustomTransformer(
             )
         }
         ctx.emit("jar", transformTaskProvider.flatMap { it.outputArtifact })
+
+        // declared pipeline steps contributing artifact-pipeline
+        // StepSpecs (binpatches, merges) — consumed through the remap
+        // env's contributeStep channel, riding the declared pipeline
+        applyRemapStepContributions(ctx)
+
         // declared feature bindings — validate applies() at selection,
         // run-config surface mutators flow into transformRun
         runFeatures = this.ctx.env.features.resolve(featureContext(ctx))
     }
 
     private var runFeatures: List<EnvironmentFeature> = emptyList()
+
+    private fun applyRemapStepContributions(ctx: TransformContext) {
+        val remap = this.ctx.project.extensions
+            .findByType(xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+            ?: return
+        val remapEnv = remap.sourceSet(ctx.environmentId)
+        this.ctx.env.pipeline
+            .realize { key -> this.ctx.env.probeResolver?.invoke(key) }
+            .forEach { step ->
+                (step.spec as? xyz.wagyourtail.unimined.transform.step.PipelineStepSpec)
+                    ?.stepSpecs()?.forEach { c ->
+                        if (c.pre) remapEnv.contributePreStep(c.surface, c.spec, c.scope)
+                        else remapEnv.contributeStep(c.surface, c.spec, c.scope)
+                    }
+            }
+    }
 
     private fun featureContext(ctx: TransformContext) =
         object : EnvironmentFeature.FeatureContext {
