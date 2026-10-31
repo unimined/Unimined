@@ -40,6 +40,16 @@ interface MinecraftArtifacts {
     /** Effective environment feature data (versions, platform, toolchain). */
     val capabilities: Provider<EnvironmentCapabilities>
 
+    /**
+     * Per-artifact ordered pipeline-state log — the pipeline prefix the
+     * provider already produced (e.g. a paperclip-patched server reports
+     * `paperclip:binpatch` + `paperclip:libraryExtract`). Steps gate on
+     * positional queries, never raw list membership. Empty when the
+     * provider emits raw unprocessed artifacts.
+     */
+    val completedStages: Map<ArtifactKey, Provider<ArtifactStateLog>>
+        get() = emptyMap()
+
     /** MC runtime dependencies (libraries). */
     val libraries: Provider<List<Dependency>>
 
