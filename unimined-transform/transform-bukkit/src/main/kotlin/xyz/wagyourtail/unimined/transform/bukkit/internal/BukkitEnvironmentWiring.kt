@@ -145,8 +145,7 @@ internal object BukkitEnvironmentWiring {
         )
 
         val buildData = SpigotBuildData(downloader)
-        if (descriptor.capabilities["serverArtifact"] == "provider" &&
-            buildData.supportsVersionedNms(environment.version.get())) {
+        if (descriptor.capabilities["serverArtifact"] == "provider") {
             envSpec.jarProcessors += SpigotNmsRelocationProcessor {
                 buildData.versionPackage(environment.version.get())
             }
