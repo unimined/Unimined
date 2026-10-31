@@ -73,7 +73,7 @@ abstract class PipelineSpec @Inject constructor(
      * expand matching [selectors] branches, then topo-sort over
      * `requires`/`runsAfter` hints with registration-order fallback.
      */
-    fun realize(probeResult: (String) -> String): List<DeclaredStep> {
+    fun realize(probeResult: (String) -> String?): List<DeclaredStep> {
         val steps = declaredSteps.toMutableList()
         for (sel in selectors.sortedBy { it.orderIndex }) {
             val branch = sel.branch(probeResult(sel.key))

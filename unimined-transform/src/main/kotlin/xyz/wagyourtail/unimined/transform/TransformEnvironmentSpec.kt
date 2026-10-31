@@ -5,6 +5,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
 import xyz.wagyourtail.unimined.transform.feature.FeatureRegistry
+import xyz.wagyourtail.unimined.transform.step.PipelineStepSpec
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -205,7 +206,8 @@ class TransformEnvironmentSpec internal constructor(
         }
     }
 
-    /** Jar processors compose like decorators: inherited before local. */
+    /** Jar processors compose like decorators: inherited before local,
+     *  then declared-pipeline step contributions in realize() order. */
     internal fun effectiveJarProcessors(
         visiting: MutableSet<String> = mutableSetOf()
     ): List<JarProcessor> {
@@ -216,11 +218,21 @@ class TransformEnvironmentSpec internal constructor(
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveJarProcessors(visiting)
-            } + jarProcessors
+            } + jarProcessors + pipelineJarProcessors()
         } finally {
             visiting.remove(key)
         }
     }
+
+    /**
+     * Declared `pipeline { }` steps contributing jar processors via
+     * [xyz.wagyourtail.unimined.transform.step.PipelineStepSpec], in
+     * topological/registration order. Selector probe keys resolve
+     * against the env probe — `null` selects nothing.
+     */
+    private fun pipelineJarProcessors(): List<JarProcessor> =
+        pipeline.realize { null }
+            .flatMap { (it.spec as? PipelineStepSpec)?.jarProcessors() ?: emptyList() }
 
     /**
      * The effective spec-context factory — nearest declaration wins,
