@@ -83,6 +83,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /** Optional provider override for this source set. */
     val provider: Property<String> = objects.property(String::class.java)
 
+    /** API-only mode — transforms that ship a full server artifact
+     *  (bukkit family) may read this to compile against the loader's
+     *  published api artifact instead of producing the patched
+     *  server jar. No effect on transforms that don't check it. */
+    val apiOnly: Property<Boolean> = objects.property(Boolean::class.java)
+
     /** Declared modloader for this environment — read by transform plugins
      *  to contribute loader-specific wiring (dependency defaults, namespace
      *  conventions, transformers). */

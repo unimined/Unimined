@@ -52,6 +52,29 @@ internal object BukkitEnvironmentWiring {
      * `classpathPluginLoader<env>` configuration defaulting to
      * `0.1.0-SNAPSHOT`; users may override the dependency.
      */
+    /**
+     * API-only mode — compiles against the descriptor's published api
+     * artifact (`<g>:<a>:<mc>-R0.1-SNAPSHOT`, spigot/paper convention)
+     * instead of producing a patched server jar. Still carries the
+     * production namespace so reobf targets stay consistent.
+     */
+    private fun contributeApiArtifact(
+        project: Project,
+        environment: MinecraftEnvironment,
+        descriptor: xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
+    ) {
+        val api = descriptor.capabilities["apiArtifact"] ?: return
+        val envSourceSet = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java)
+            .getByName(environment.environmentId)
+        project.configurations.named(envSourceSet.compileClasspathConfigurationName) { conf ->
+            conf.withDependencies { deps ->
+                deps.add(project.dependencies.create(
+                    "$api:${environment.version.get()}-R0.1-SNAPSHOT"))
+            }
+        }
+    }
+
     private fun contributeRunConfig(
         project: Project,
         environment: MinecraftEnvironment
@@ -100,6 +123,10 @@ internal object BukkitEnvironmentWiring {
         val loader = environment.loaderSpec.get()
         val descriptor = LoaderRegistry.resolveBuiltin(loader.name)
             ?.takeIf { it.family == "bukkit" } ?: return
+        if (environment.apiOnly.orElse(false).get()) {
+            contributeApiArtifact(project, environment, descriptor)
+            return
+        }
         if (descriptor.capabilities["serverArtifact"] != "distPatch") return
 
         val transform = project.extensions.getByType(TransformExtension::class.java)

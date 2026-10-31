@@ -113,4 +113,23 @@ class BukkitEnvironmentWiringTest {
             it.javaClass.simpleName == "PaperPatchProcessor"
         })
     }
+
+    @Test
+    fun `apiOnly env compiles api artifact and skips server processing`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("paperapi") { env ->
+            env.version.set("1.20.4")
+            env.loader("paper", "496")
+            env.apiOnly.set(true)
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).create("paperapi")
+        val envSpec = project.extensions
+            .getByType(TransformExtension::class.java).sourceSet("paperapi")
+        assertTrue(envSpec.jarProcessors.none {
+            it.javaClass.simpleName == "PaperPatchProcessor"
+        }, "apiOnly should skip the dist-patch processor")
+    }
 }
