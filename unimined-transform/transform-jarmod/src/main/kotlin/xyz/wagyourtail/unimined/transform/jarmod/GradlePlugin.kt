@@ -39,6 +39,29 @@ class GradlePlugin : Plugin<Project> {
                 environment.extensions.add("jarmod", JarModEnvExtension(environment))
                 JarModEnvironmentWiring.createConfigurations(target, environment)
             }
+            // liteloader envs need artifact-only repos + the legacy
+            // redist ivy feed (pattern layout, no metadata) — gated on
+            // a liteloader env existing since loaderSpec populates
+            // during script eval
+            target.afterEvaluate {
+                if (minecraft.environments.any {
+                    it.spec().loader?.name == "liteloader"
+                }) {
+                    target.repositories.maven { r ->
+                        r.url = URI.create("https://dl.liteloader.com/versions/")
+                        r.metadataSources { s -> s.artifact() }
+                    }
+                    target.repositories.maven { r ->
+                        r.url = URI.create("https://repo.spongepowered.org/maven/")
+                    }
+                    target.repositories.ivy { r ->
+                        r.url = URI.create("https://dl.liteloader.com/redist/legacy/")
+                        r.patternLayout { p -> p.artifact("[artifact]_[revision].[ext]") }
+                        r.content { c -> c.includeModule("com.mumfrey", "liteloader") }
+                        r.metadataSources { s -> s.artifact() }
+                    }
+                }
+            }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 minecraft.onEnvironmentBound { environment, _ ->
                         val spec = target.extensions.getByType(

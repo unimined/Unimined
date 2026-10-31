@@ -45,7 +45,6 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             family = "jarmod",
             mavens = listOf(
                 "https://dl.liteloader.com/versions/",
-                "http://repo.liteloader.com/",
                 "https://repo.spongepowered.org/maven/"
             ),
             loaderCoords = { _, v -> "com.mumfrey:liteloader:$v" },
