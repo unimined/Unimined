@@ -266,7 +266,12 @@ internal fun contributeAccessSteps(
         val r = resolved.orNull ?: return@provider emptyList<Any>()
         if (r.profile !is ForgeProfile.Userdev) return@provider emptyList<Any>()
         val conf = project.configurations.detachedConfiguration(
-            project.dependencies.create("net.neoforged.jst:jst-cli:2.0.11")
+            // thin jars + picocli — transitive resolution pulls
+            // JetBrains-only artifacts; cli+api+picocli is the
+            // runtime requirement for net.neoforged.jst.cli.Main
+            project.dependencies.create("net.neoforged.jst:jst-cli:2.0.11"),
+            project.dependencies.create("net.neoforged.jst:jst-api:2.0.11"),
+            project.dependencies.create("info.picocli:picocli:4.7.6"),
         )
         conf.isTransitive = false
         conf.files.toList()
