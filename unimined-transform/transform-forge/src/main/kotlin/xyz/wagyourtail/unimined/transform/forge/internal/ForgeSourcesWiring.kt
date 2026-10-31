@@ -262,7 +262,7 @@ internal fun mcpconfigCleanJar(
     val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
     fun aux(key: String) = project.provider {
         minecraft.artifacts(envId).get()
-            .auxiliaryArtifacts.getValue(key).get().asFile
+            .auxiliaryArtifacts[key]?.orNull?.asFile
     }
     val side = when (environment.side.get()) {
         Side.CLIENT -> "client"

@@ -732,12 +732,13 @@ abstract class MinecraftExtension @Inject constructor(
                         "client_mappings"
                     }
                     val file = resolved(environment).auxiliaryArtifacts[key]
+                        ?.orNull
                         ?: throw GradleException(
                             "mappings { mojmap() }: provider " +
                                     "'${environment.provider.orNull ?: "auto"}' supplies no " +
                                     "$key channel for ${environment.version.orNull}"
                         )
-                    listOf(file.get().asFile.toPath())
+                    listOf(file.asFile.toPath())
                 }
 
                 "searge" -> {

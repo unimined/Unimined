@@ -107,7 +107,21 @@ abstract class McpConfigTransform @Inject constructor(
                 params.serverMappings.orNull?.asFile
                     ?.let { "serverMappings" to { it } },
             ).toMap(),
-            toolResolver = { toolJars.map { it.toPath() } },
+            // per-tool isolated classpath: the union pollutes
+            // serialization (e.g. asm-6.1-beta2 shadowing
+            // mergetool's bundled 6.0 produces non-canonical
+            // merge output). mcpconfig tools are fat/shaded and
+            // self-contained, so filter by artifact name; fall
+            // back to the union if nothing matches (thin tools).
+            toolResolver = { coord ->
+                val artifact = coord.substringAfter(':')
+                    .substringBefore(':')
+                val own = toolJars.filter {
+                    it.name.startsWith("$artifact-") ||
+                            it.name == "$artifact.jar"
+                }
+                (own.ifEmpty { toolJars }).map { it.toPath() }
+            },
             listBindings = mapOf(
                 "libraries" to { params.libraries.files.toList() }
             ),

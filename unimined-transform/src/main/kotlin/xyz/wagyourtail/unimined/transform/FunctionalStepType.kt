@@ -6,6 +6,10 @@ import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import xyz.wagyourtail.unimined.transform.step.TransformStep
 import xyz.wagyourtail.unimined.transform.step.TransformStepContext
 import java.io.File
@@ -23,12 +27,30 @@ import kotlin.reflect.KClass
  * serialization-only state).
  */
 class FunctionalStepSpec(
-    val stepId: String,
-    val step: TransformStep,
+    @get:Input val stepId: String,
+    @get:Internal val step: TransformStep,
     /** Named aux inputs resolved at wiring from env-artifact
      *  bindings — handed to [TransformStepContext.inputs]. */
-    val inputs: Map<String, List<File>> = emptyMap(),
-) : StepSpec
+    @get:Internal val inputs: Map<String, List<File>> = emptyMap(),
+) : StepSpec {
+
+    /** Flattened input jars for fingerprinting — a `Map` can't
+     *  carry `@InputFiles`, so the files surface as a derived
+     *  property while `inputs` stays `@Internal`. */
+    @get:InputFiles
+    @get:Optional
+    @get:org.gradle.api.tasks.Classpath
+    val inputFiles: List<File>
+        get() = inputs.values.flatten()
+
+    /** Annotated override — [StepSpec] lives in the Gradle-free
+     *  core sourceset, so the bean annotation goes on impls. */
+    @get:Input
+    @get:Optional
+    override val engine: String?
+        get() = super.engine
+
+}
 
 /**
  * `unimined:functional` — executes a [TransformStep] contributed by a

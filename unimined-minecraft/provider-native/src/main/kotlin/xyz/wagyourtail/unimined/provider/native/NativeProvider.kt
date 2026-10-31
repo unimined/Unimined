@@ -148,12 +148,14 @@ class NativeProvider(
                 })
         }
         for (channel in listOf("client_mappings", "server_mappings")) {
+            // absent (not thrown) when the version has no download —
+            // pre-1.14.4 has no official mappings; consumers binding
+            // aux channels into optional params must not fail on
+            // provider resolution. Direct consumers (mojmap channel
+            // resolver) throw their own informative error.
             auxiliary[channel] = ctx.layout.file(ctx.providers.provider {
                 val ref = metadata().version.downloads?.get(channel)
-                    ?: throw GradleException(
-                        "Minecraft $versionId has no $channel download " +
-                                "(mojmap channel requires a version with official mappings)"
-                    )
+                    ?: return@provider null
                 downloader.fetch(
                     ref.url,
                     "versions/$versionId/$channel.txt",

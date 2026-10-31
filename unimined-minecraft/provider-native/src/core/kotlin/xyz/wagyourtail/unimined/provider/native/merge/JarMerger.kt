@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined.provider.native.merge
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.unimined.mapping.EnvType
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.PathMatcher
@@ -47,7 +49,7 @@ object JarMerger {
      * merge: bump this whenever merge semantics change (v2 = pre
      * bundled-library strip).
      */
-    const val FORMAT_VERSION = "v4"
+    const val FORMAT_VERSION = "v6"
 
     /**
      * Server-side strip controls for [merge].
@@ -69,7 +71,57 @@ object JarMerger {
         val includeGlobs: List<String> = emptyList(),
         val excludeGlobs: List<String> = emptyList(),
         val stripBundledServerLibraries: Boolean = true,
+        /** Side-marker annotations injected on single-side
+         *  class/field/method content — the merge consumer passes
+         *  the ecosystem its env expects (patch checksums are
+         *  era-canonical, so extra markers break them). */
+        val sideMarkers: List<SideMarker> = listOf(SideMarker.FORGE_FML),
     )
+
+    /** A sided annotation stamped on single-side content — e.g.
+     *  forge `SideOnly(Side.CLIENT)` or fabric
+     *  `Environment(EnvType.CLIENT)`. */
+    class SideMarker(
+        /** annotation internal name, e.g.
+         *  `cpw/mods/fml/relauncher/SideOnly` */
+        val annotation: String,
+        /** enum internal name for the value, e.g.
+         *  `cpw/mods/fml/relauncher/Side` */
+        val enumType: String,
+        /** enum constant for client-side content. */
+        val clientValue: String,
+        /** enum constant for server-side content. */
+        val serverValue: String,
+    ) : java.io.Serializable {
+        companion object {
+            /** FML-era forge ≤1.7.x: `cpw.mods.fml.relauncher.SideOnly`. */
+            val FORGE_CPMODS = SideMarker(
+                "cpw/mods/fml/relauncher/SideOnly",
+                "cpw/mods/fml/relauncher/Side", "CLIENT", "SERVER")
+            /** FML-era forge 1.8–1.12.x: `net.minecraftforge.fml
+             *  .relauncher.SideOnly` — what mergetool injects for
+             *  FG2-era (e.g. 1.12.2 userdev3) merges. */
+            val FORGE_FML = SideMarker(
+                "net/minecraftforge/fml/relauncher/SideOnly",
+                "net/minecraftforge/fml/relauncher/Side",
+                "CLIENT", "SERVER")
+            /** Modern forge (1.13+): `net.minecraftforge.api
+             *  .distmarker.OnlyIn`. */
+            val FORGE_MODERN = SideMarker(
+                "net/minecraftforge/api/distmarker/OnlyIn",
+                "net/minecraftforge/api/distmarker/Dist",
+                "CLIENT", "DEDICATED_SERVER")
+            /** NeoForge: `net.neoforged.api.distmarker.OnlyIn`. */
+            val NEOFORGE = SideMarker(
+                "net/neoforged/api/distmarker/OnlyIn",
+                "net/neoforged/api/distmarker/Dist",
+                "CLIENT", "DEDICATED_SERVER")
+            /** Fabric: `net.fabricmc.api.Environment`. */
+            val FABRIC = SideMarker(
+                "net/fabricmc/api/Environment",
+                "net/fabricmc/api/EnvType", "CLIENT", "SERVER")
+        }
+    }
 
     /** Merge [server] onto [client] → [out]. */
     fun merge(client: Path, server: Path, out: Path, options: Options = Options()) {
@@ -99,6 +151,12 @@ object JarMerger {
         // (the server jar is the authoritative overlay; 1.x parity).
         val clientClasses = linkedMapOf<String, ClassNode>()
         val serverClasses = linkedMapOf<String, ClassNode>()
+        // raw entry bytes alongside the parsed node — needed so
+        // byte-identical classes can be emitted verbatim (the
+        // canonical MCP-era merge never rewrites an entry whose
+        // sides agree; joined binpatches checksum those bytes)
+        val clientClassBytes = linkedMapOf<String, ByteArray>()
+        val serverClassBytes = linkedMapOf<String, ByteArray>()
         val resourceOrder = mutableListOf<String>()
         val resources = linkedMapOf<String, ByteArray>()
 
@@ -122,6 +180,7 @@ object JarMerger {
                     if (node != null) {
                         resources.remove(e.name)
                         (if (serverSide) serverClasses else clientClasses)[e.name] = node
+                        (if (serverSide) serverClassBytes else clientClassBytes)[e.name] = bytes
                     } else {
                         if (resources.put(e.name, bytes) == null) {
                             resourceOrder.add(e.name)
@@ -134,21 +193,67 @@ object JarMerger {
         read(client, serverSide = false)
         read(server, serverSide = true)
 
-        val merger = ClassMerger()
+        // side-only content gets the canonical
+        // `@SideOnly(Side.CLIENT|SERVER)` marker — FML-era merges
+        // (and the binpatch checksums built against them) carry the
+        // annotation on every single-side class/field/method
+        fun addSideOnly(annotations: MutableList<AnnotationNode>?,
+                        set: (MutableList<AnnotationNode>) -> Unit,
+                        side: EnvType) {
+            val target = annotations ?: mutableListOf<AnnotationNode>().also(set)
+            for (marker in options.sideMarkers) {
+                target.add(AnnotationNode("L${marker.annotation};").apply {
+                    values = listOf("value", arrayOf(
+                        "L${marker.enumType};",
+                        if (side == EnvType.CLIENT) marker.clientValue
+                        else marker.serverValue))
+                })
+            }
+        }
+        val merger = ClassMerger(
+            toMergedClass = { node, side ->
+                addSideOnly(node.visibleAnnotations,
+                    { node.visibleAnnotations = it }, side)
+            },
+            toMergedFields = { node, side ->
+                addSideOnly(node.visibleAnnotations,
+                    { node.visibleAnnotations = it }, side)
+            },
+            toMergedMethods = { node, side ->
+                addSideOnly(node.visibleAnnotations,
+                    { node.visibleAnnotations = it }, side)
+            },
+        )
+        // merge+serialize fans out — ClassMerger is stateless and
+        // each pair owns its ClassNodes; `toList()` on an ordered
+        // parallel stream preserves encounter order, so the output
+        // jar ordering stays deterministic
         val mergedClasses = linkedMapOf<String, ByteArray>()
-        for ((name, node) in clientClasses) {
-            val serverNode = serverClasses.remove(name)
-            val merged = try {
-                merger.accept(node, serverNode)
+        clientClasses.entries.toList().parallelStream().map { (name, node) ->
+            val serverNode = serverClasses[name]
+            name to try {
+                // byte-identical sides emit verbatim — the canonical
+                // merge the binpatch checksums were built against
+                // never rewrites an entry both sides agree on (ASM
+                // round-trip perturbs constant-pool order etc.)
+                val cb = clientClassBytes[name]
+                val sb = serverClassBytes[name]
+                if (serverNode != null && cb != null && cb.contentEquals(sb)) cb
+                else ClassWriter(0)
+                    .also { merger.accept(node, serverNode).accept(it) }
+                    .toByteArray()
             } catch (e: Exception) {
                 throw RuntimeException("Error merging class $name", e)
             }
-            mergedClasses[name] = ClassWriter(0).also { merged.accept(it) }.toByteArray()
+        }.toList().forEach { (name, bytes) ->
+            mergedClasses[name] = bytes
+            serverClasses.remove(name)
         }
-        for ((name, node) in serverClasses) {
-            val merged = merger.accept(null, node)
-            mergedClasses[name] = ClassWriter(0).also { merged.accept(it) }.toByteArray()
-        }
+        serverClasses.entries.toList().parallelStream().map { (name, node) ->
+            name to ClassWriter(0)
+                .also { merger.accept(null, node).accept(it) }
+                .toByteArray()
+        }.toList().forEach { (name, bytes) -> mergedClasses[name] = bytes }
 
         val tmp = AtomicIo.tempSibling(out)
         try {
