@@ -44,6 +44,7 @@ import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.minecraft.transform.MinecraftArtifactTransform
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.readText
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import javax.inject.Inject
@@ -680,6 +681,44 @@ abstract class MinecraftExtension @Inject constructor(
      * `mojmap` from the provider's manifest downloads, `searge`/`parchment`
      * from Maven (registering the channel's repository when absent).
      */
+
+    /**
+     * Fetch the Spigot BuildData archive for [environment]'s mc
+     * version into the global cache — used by the `spigot` mapping
+     * channel when the provider doesn't supply `spigot_builddata`
+     * (e.g. fabric/forge envs). Plain URL fetch honoring --offline
+     * and --refresh-dependencies, per the project convention.
+     */
+    private fun spigotBuildData(environment: MinecraftEnvironment): Path {
+        val mc = environment.version.get()
+        val dir = UniminedCache.global(project).resolve("spigot/$mc")
+        fun cached(name: String, url: String): Path {
+            val dest = dir.resolve(name)
+            val refresh = project.gradle.startParameter.isRefreshDependencies
+            if (dest.toFile().exists() && !refresh) return dest
+            if (project.gradle.startParameter.isOffline) {
+                if (dest.toFile().exists()) return dest
+                throw GradleException(
+                    "spigot channel: --offline and no cached $name under $dir")
+            }
+            dest.toFile().parentFile.mkdirs()
+            java.net.URI.create(url).toURL().openStream().use {
+                java.nio.file.Files.copy(it, dest,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            return dest
+        }
+        val info = cached("build-info.json",
+            "https://hub.spigotmc.org/versions/$mc.json")
+        val ref = Regex(""""BuildData"\s*:\s*"([0-9a-f]+)"""")
+            .find(info.readText())?.groupValues?.get(1)
+            ?: throw GradleException("spigot: no BuildData ref in $info")
+        return cached("build-data.zip",
+            "https://hub.spigotmc.org/stash/rest/api/latest/" +
+                "projects/SPIGOT/repos/builddata/archive" +
+                "?at=$ref&format=zip")
+    }
+
     private fun channelResolver(environment: MinecraftEnvironment) =
         java.util.function.BiFunction<String, Map<String, String>, List<Path>> { channel, params ->
             when (channel) {
@@ -733,18 +772,15 @@ abstract class MinecraftExtension @Inject constructor(
                 }
 
                 "spigot" -> {
-                    // BuildData archive — supplied by the environment's
-                    // provider (provider-buildtools for cb/spigot envs);
-                    // the spigot channel consumer reads info.json's
-                    // classMappings/memberMappings entries out of it
-                    val file = resolved(environment)
+                    // BuildData archive — prefer the provider's
+                    // spigot_builddata aux artifact (proper Downloader
+                    // caching), else fetch it ourselves so the channel
+                    // works on any env (e.g. a fabric server env that
+                    // wants spigot member names for cursed reasons)
+                    val supplied = resolved(environment)
                         .auxiliaryArtifacts["spigot_builddata"]
-                        ?: throw GradleException(
-                            "mappings { spigot() }: provider " +
-                                    "'${environment.provider.orNull ?: "auto"}' supplies no " +
-                                    "spigot_builddata channel for ${environment.version.orNull}"
-                        )
-                    listOf(file.get().asFile.toPath())
+                        ?.get()?.asFile?.toPath()
+                    listOf(supplied ?: spigotBuildData(environment))
                 }
 
                 "parchment" -> {

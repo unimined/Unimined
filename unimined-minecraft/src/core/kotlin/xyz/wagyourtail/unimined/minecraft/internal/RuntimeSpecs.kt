@@ -27,11 +27,11 @@ data class RuntimeMinecraftSpec(
     override val obfuscatedLibraries: List<String> = emptyList()
 ) : MinecraftSpec
 
-internal class RuntimeVersionSpec(
+class RuntimeVersionSpec(
     override val version: String
 ) : MinecraftVersionSpec
 
-internal class RuntimeLoaderSpec(
+class RuntimeLoaderSpec(
     override val name: String,
     override val version: String
 ) : LoaderSpec
