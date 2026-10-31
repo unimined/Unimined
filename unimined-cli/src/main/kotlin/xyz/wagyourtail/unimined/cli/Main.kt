@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.cli
 import xyz.wagyourtail.unimined.init.InitSpec
 import xyz.wagyourtail.unimined.init.ProjectGenerator
 import xyz.wagyourtail.unimined.init.VersionResolver
+import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -117,7 +119,23 @@ private fun run(args: Array<String>) {
             .let { if (it == "latest") resolver.latestPlugin() else it },
         gradleVersion = one("--gradle"),
         templateName = template,
-        templatesZip = one("--templates")?.let { Paths.get(it) },
+        // local path or http(s) URI — remote zips land in the cache
+        templatesZip = one("--templates")?.let { raw ->
+            val p = Paths.get(raw)
+            if (Files.exists(p)) p else {
+                val uri = URI.create(raw)
+                val cache = Paths.get(
+                    System.getProperty("user.home"),
+                    ".unimined", "cache", "unimined-templates.zip"
+                )
+                Files.createDirectories(cache.parent)
+                uri.toURL().openStream().use {
+                    Files.copy(it, cache,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+                cache
+            }
+        },
     )
 
     val out = one("--out")?.let { Paths.get(it) }
