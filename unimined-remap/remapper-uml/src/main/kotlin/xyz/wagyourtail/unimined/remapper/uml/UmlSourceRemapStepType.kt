@@ -7,6 +7,9 @@ import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.remapper.source.SourceOptions
 import xyz.wagyourtail.unimined.mapping.remapper.source.SourceRemapper
+import xyz.wagyourtail.unimined.mapping.remapper.source.psi.AccessSourceExtension
+import xyz.wagyourtail.unimined.mapping.remapper.source.psi.ConstantGroupSourceExtension
+import xyz.wagyourtail.unimined.mapping.remapper.source.psi.InterfaceInjectionExtension
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.JavadocExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
@@ -21,9 +24,10 @@ import kotlin.reflect.KClass
 /**
  * The `remap` step for [RemapSurface.SOURCES] — UML's PSI-driven
  * [SourceRemapper] over a sources jar. Renames members through the
- * environment mapping tree and attaches javadoc from the mapping data
- * ([JavadocExtension] is part of this step, matching the plan's
- * `remap("uml") // remap + javadoc-from-mappings` contract).
+ * environment mapping data with all UML source extensions enabled:
+ * javadoc, access-flag propagation, constant groups and interface
+ * injection — matching the plan's
+ * `remap("uml") // remap + javadoc-from-mappings` contract.
  *
  * The resolved classpath goes on the engine's resolution classpath so
  * member access resolution is exact.
@@ -63,7 +67,14 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
             Namespace(spec.sourceNamespace),
             Namespace(spec.targetNamespace),
             classpath = ctx.classpath.filter { it.exists() },
-            options = SourceOptions(extensions = listOf(JavadocExtension()))
+            options = SourceOptions(
+                extensions = listOf(
+                    JavadocExtension(),
+                    AccessSourceExtension(),
+                    ConstantGroupSourceExtension(),
+                    InterfaceInjectionExtension()
+                )
+            )
         )
         return target
     }
