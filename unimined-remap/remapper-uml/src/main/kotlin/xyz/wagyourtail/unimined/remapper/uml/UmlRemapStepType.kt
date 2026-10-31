@@ -12,7 +12,7 @@ import xyz.wagyourtail.unimined.mapping.inheritance.LazyASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.BuiltinAsmExtensions
-import xyz.wagyourtail.unimined.mapping.remapper.asm.Jsr308AsmExtension
+import xyz.wagyourtail.unimined.mapping.remapper.asm.Jsr305AsmExtension
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.asm.PackageAccess
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
@@ -61,11 +61,11 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
     override val priority: Int = 1
 
     override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
-        val jsr308 = spec.jsr308ToJetbrains
-        return ArtifactStep { input, c -> remap(input, c, jsr308) }
+        val jsr305 = spec.jsr305ToJetbrains
+        return ArtifactStep { input, c -> remap(input, c, jsr305) }
     }
 
-    private fun remap(input: Path, ctx: StepContext, jsr308: Boolean): Path {
+    private fun remap(input: Path, ctx: StepContext, jsr305: Boolean): Path {
         val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
                 "remap step 'uml' requires mapping data exposing a UML MappingTree view"
@@ -178,9 +178,9 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                     // are valid identifiers — flag them via pattern so
                     // renameInvalidLocals replaces them
                     invalidLvNamePattern = Regex(".*\\$\\$.*"),
-                    // JSR-308/JSR-305 annotation descriptors -> JetBrains
+                    // JSR-305 annotation descriptors -> JetBrains
                     extensions = BuiltinAsmExtensions.defaults() +
-                        if (jsr308) listOf(Jsr308AsmExtension.factory()) else emptyList(),
+                        if (jsr305) listOf(Jsr305AsmExtension.factory()) else emptyList(),
                     onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
                 )
             )

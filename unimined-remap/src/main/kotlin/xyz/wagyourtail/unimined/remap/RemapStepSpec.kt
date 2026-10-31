@@ -11,7 +11,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  */
 class RemapStepSpec(
     @get:Input @get:Optional override val engine: String? = null,
-    /** rewrite JSR-308/JSR-305 annotation usages to
+    /** rewrite JSR-305-era nullness annotation usages to
      *  `org.jetbrains.annotations` equivalents — sources and bytecode */
-    @get:Input val jsr308ToJetbrains: Boolean = true
+    @get:Input val jsr305ToJetbrains: Boolean = true
 ) : StepSpec

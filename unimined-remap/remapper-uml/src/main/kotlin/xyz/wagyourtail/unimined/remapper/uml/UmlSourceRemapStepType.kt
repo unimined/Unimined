@@ -11,7 +11,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.source.psi.AccessSourceExtensio
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.ConstantGroupSourceExtension
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.InterfaceInjectionExtension
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.JavadocExtension
-import xyz.wagyourtail.unimined.mapping.remapper.source.psi.Jsr308Extension
+import xyz.wagyourtail.unimined.mapping.remapper.source.psi.Jsr305Extension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
@@ -46,11 +46,11 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
     override fun supports(spec: RemapSpec) = true
 
     override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
-        val jsr308 = spec.jsr308ToJetbrains
-        return ArtifactStep { input, c -> remap(input, c, jsr308) }
+        val jsr305 = spec.jsr305ToJetbrains
+        return ArtifactStep { input, c -> remap(input, c, jsr305) }
     }
 
-    private fun remap(input: Path, ctx: StepContext, jsr308: Boolean): Path {
+    private fun remap(input: Path, ctx: StepContext, jsr305: Boolean): Path {
         val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
                 "remap step 'uml' (sources) requires mapping data exposing a UML MappingTree view"
@@ -76,7 +76,7 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
                     add(AccessSourceExtension())
                     add(ConstantGroupSourceExtension())
                     add(InterfaceInjectionExtension())
-                    if (jsr308) add(Jsr308Extension())
+                    if (jsr305) add(Jsr305Extension())
                 }
             )
         )
