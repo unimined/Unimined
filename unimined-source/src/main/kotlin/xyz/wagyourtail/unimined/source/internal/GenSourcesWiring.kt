@@ -148,7 +148,7 @@ internal object GenSourcesWiring {
 
         // -linemapped classifier: binary line tables tracking the
         // (enriched) sources — extras preserved/adjusted by the UML step
-        project.tasks.register(
+        val linemapped = project.tasks.register(
             "gen${if (environmentId == "main") "" else "${environmentId.cap()}"}Linemapped",
             LinemappedJarTask::class.java
         ) { t ->
@@ -160,6 +160,8 @@ internal object GenSourcesWiring {
                     .replace("-sources.jar", "-linemapped.jar"))
             )
         }
+        // demand the classifier alongside sources
+        task.configure { it.finalizedBy(linemapped) }
 
         if (sourceSteps.isNotEmpty()) {
             val devNamespace = minecraft.devNamespace(environmentId)
