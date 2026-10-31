@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.Action
 import org.gradle.api.GradleException
+import org.gradle.api.model.ObjectFactory
+import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -16,8 +18,19 @@ import java.nio.file.Path
 class TransformEnvironmentSpec internal constructor(
     /** Stable source-set/environment id. */
     val environmentId: String,
-    private val projectPath: String
+    private val projectPath: String,
+    objects: ObjectFactory
 ) {
+
+    /** Declared step pipeline — `pipeline { binpatches { } … }`.
+     *  Empty for environments driven by [transformers] (the monolith
+     *  path still resolves while modules port to declared steps). */
+    val pipeline = objects.newInstance(PipelineSpec::class.java, StepTypeRegistry(), objects)
+
+    /** `pipeline { }` DSL verb. */
+    fun pipeline(action: Action<in PipelineSpec>) {
+        action.execute(pipeline)
+    }
 
     /** Declared transformers in execution order. */
     val transformers: MutableList<MinecraftTransformer> = mutableListOf()

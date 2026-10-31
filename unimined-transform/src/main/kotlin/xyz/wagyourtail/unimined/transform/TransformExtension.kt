@@ -30,7 +30,7 @@ abstract class TransformExtension @Inject constructor(
 ) {
 
     private val environments = mutableMapOf(
-        "main" to TransformEnvironmentSpec("main", project.path)
+        "main" to TransformEnvironmentSpec("main", project.path, project.objects)
     )
 
     init {
@@ -51,7 +51,7 @@ abstract class TransformExtension @Inject constructor(
     /** Get or create this source-set environment's transform configuration. */
     fun sourceSet(environmentId: String): TransformEnvironmentSpec =
         environments.getOrPut(environmentId) {
-            TransformEnvironmentSpec(environmentId, project.path)
+            TransformEnvironmentSpec(environmentId, project.path, project.objects)
         }
 
     /** Configure a source-set environment's transform pipeline. */

@@ -44,9 +44,9 @@ class StepTypeRegistry {
      * [StepType.runsAfter] hints. Unconstrained steps keep
      * registration order. Missing required deps throw.
      */
-    fun resolveOrder(steps: List<StepType>): List<StepType> {
+    fun <T : StepType> resolveOrder(steps: List<T>): List<T> {
         val ids = steps.mapTo(HashSet()) { it.id }
-        val resolved = mutableListOf<StepType>()
+        val resolved = mutableListOf<T>()
         val pending = steps.toMutableList()
         val seen = mutableSetOf<String>()
         while (pending.isNotEmpty()) {
