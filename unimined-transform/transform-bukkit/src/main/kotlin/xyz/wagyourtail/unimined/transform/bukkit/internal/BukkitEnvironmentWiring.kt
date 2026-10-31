@@ -2,7 +2,10 @@ package xyz.wagyourtail.unimined.transform.bukkit.internal
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
+import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import java.time.Duration
 
 /**
  * Environment wiring for bukkit-family products — every product
@@ -36,6 +39,45 @@ internal object BukkitEnvironmentWiring {
                 if (d != null) listOf(d.prodNamespace) else emptyList()
             }
         )
+        contributeServerProcessors(project, environment)
+    }
+
+    /**
+     * Paper-era `distPatch` products patch the vanilla server jar
+     * inside the jar-processors pipeline — the embedded binary patch
+     * rides the serialized spec so the step is cache-keyed on the
+     * dist build, not the download itself.
+     */
+    private fun contributeServerProcessors(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        val loader = environment.loaderSpec.get()
+        val descriptor = LoaderRegistry.resolveBuiltin(loader.name)
+            ?.takeIf { it.family == "bukkit" } ?: return
+        if (descriptor.capabilities["serverArtifact"] != "distPatch") return
+
+        val transform = project.extensions.getByType(TransformExtension::class.java)
+        val envSpec = transform.sourceSet(environment.environmentId)
+        val downloader = Downloader(
+            cacheDir = project.layout.projectDirectory
+                .dir(".gradle/unimined/paper-cache").asFile.toPath(),
+            offline = project.gradle.startParameter.isOffline,
+            refreshCache = project.gradle.startParameter.isRefreshDependencies ||
+                project.findProperty("unimined.forceReload") == "true" ||
+                project.findProperty("unimined.refreshDownloads") == "true",
+            metadataTtl = Duration.ofHours(24),
+            onRefreshFallback = { file, error ->
+                project.logger.warn(
+                    "[Unimined/Cache] Using cached $file after refresh failed: ${error.message}"
+                )
+            }
+        )
+        envSpec.jarProcessors += PaperPatchProcessor {
+            PaperDistResolver.serverJar(
+                downloader, environment.version.get(), loader.version
+            )
+        }
     }
 
 }

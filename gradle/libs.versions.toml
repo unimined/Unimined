@@ -36,6 +36,7 @@ jst-cli = { module = "net.neoforged.jst:jst-cli", version.ref = "jst-cli" }
 # GDiffPatcher — the only class binpatch application needs (the
 # binarypatcher fat-jar dep only re-bundled this + lzma-java)
 javaxdelta = { module = "com.nothome:javaxdelta", version = "2.0.1" }
+jbsdiff = { module = "io.sigpipe:jbsdiff", version = "1.0" }
 # declarative class transforms for FG2-era dev fixes (applied jar-side, @CInline — no runtime dep)
 classtransform = { module = "net.lenni0451.classtransform:core", version.ref = "classtransform" }
 classtransform-acp = { module = "net.lenni0451.classtransform:additionalclassprovider", version.ref = "classtransform" }
