@@ -84,6 +84,15 @@ interface JarProcessor {
         /** Mods on the compile+runtime views, in resolution order. */
         fun mods(): List<ModJarInfo>
 
+        /**
+         * Loader-bound named artifact sets — env artifacts a loader's
+         * spec-context factory supplies for processors that consume
+         * resolved inputs (e.g. forge's probed ZipPatches jar feeding
+         * `jarmod:merge`). Evaluated at spec-build time, so values
+         * may come from lazy resolution. Default: none.
+         */
+        fun envArtifacts(name: String): List<Path> = emptyList()
+
     }
 
     /**

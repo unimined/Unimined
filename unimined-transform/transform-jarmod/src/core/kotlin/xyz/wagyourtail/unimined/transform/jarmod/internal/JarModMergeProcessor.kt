@@ -36,7 +36,9 @@ internal class JarModMergeProcessor(
     }
 
     override fun buildSpec(context: JarProcessor.SpecContext): JarProcessor.JarProcessorSpec? {
-        val jars = (jarMod ?: return null).filter { java.nio.file.Files.isRegularFile(it) }
+        val jars = (jarMod.orEmpty() + context.envArtifacts("jarmod:merge"))
+            .filter { java.nio.file.Files.isRegularFile(it) }
+        if (jars.isEmpty()) return null
         if (jars.isEmpty()) return null
         return Spec(
             jars.map { Spec.Entry(it.toAbsolutePath().toString(), sha1(it.toFile())) },

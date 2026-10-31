@@ -39,6 +39,20 @@ internal object EnvironmentClasspathWiring {
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val environmentId = environment.environmentId
 
+        // declared pipeline contributions — claim-agnostic: stepSpecs +
+        // functional transform steps push onto the remap env, inline
+        // execute() glue runs in declaration order. Deferred past
+        // evaluation so family-installed probeResolvers (forge-era
+        // select("era")) are in place; idempotent with the claim-side
+        // application in CustomTransformer
+        project.extensions.findByType(TransformExtension::class.java)
+            ?.sourceSet(environmentId)
+            ?.let { spec ->
+                project.afterEvaluate {
+                    spec.applyDeclaredPipeline(project, environment)
+                }
+            }
+
         // the loader-declared java floor (cleanroom→21, ornithe→17, …)
         // raises the environment's effective java version — a
         // convention, so a user's explicit `javaVersion` wins

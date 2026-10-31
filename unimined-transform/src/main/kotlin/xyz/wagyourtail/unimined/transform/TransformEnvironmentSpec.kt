@@ -13,6 +13,8 @@ import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformerClaim
 import xyz.wagyourtail.unimined.transform.spi.TransformerRegistry
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
+import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import java.nio.file.Path
 
 /**
@@ -272,6 +274,68 @@ class TransformEnvironmentSpec internal constructor(
      * realization per [PipelineSpec.SelectorNode.branch].
      */
     var probeResolver: ((String) -> String?)? = null
+
+    /**
+     * Loader-bound named artifact sets surfaced through
+     * `JarProcessor.SpecContext.envArtifacts` — e.g.
+     * `"jarmod:merge"` → the loader's resolved merge-input jars.
+     * Lambdas evaluate at spec-build time (inside deferred
+     * providers), so they may back lazy artifact resolution.
+     */
+    val envArtifactBindings = mutableMapOf<String, () -> List<Path>>()
+
+    private var declaredApplied = false
+
+    /**
+     * Push this env's declared `pipeline { }` onto its execution
+     * channels — `stepSpecs()`/`transformSteps()` contributions ride
+     * the remap env's deferred provider (evaluated at pipeline
+     * materialization, so `select()` probes never resolve at
+     * configuration time); inline `execute()` glue runs eagerly in
+     * declaration order (it is config-time wiring — the widened
+     * [PipelineSpec.PipelineExecutionScope] exists precisely for it).
+     * Idempotent and claim-agnostic: every path that can consume the
+     * declared pipeline (claim selection, env post-wiring) calls
+     * this; the first call wins.
+     */
+    internal fun applyDeclaredPipeline(
+        project: org.gradle.api.Project,
+        environment: xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment?
+    ) {
+        if (declaredApplied) return
+        declaredApplied = true
+        // inline glue first — declaration order; it may mutate the
+        // wiring the deferred contributions later read
+        val scope = object : PipelineSpec.PipelineExecutionScope {
+            override val environmentId = this@TransformEnvironmentSpec.environmentId
+            override val project = project
+            override val env = this@TransformEnvironmentSpec
+            override val minecraft = environment
+        }
+        pipeline.inlineActions.forEach { it.action.execute(scope) }
+        project.extensions
+            .findByType(RemapExtension::class.java)
+            ?.sourceSet(environmentId)
+            ?.contributeDeferredSteps(project.provider {
+                pipeline.realizeAll { key -> probeResolver?.invoke(key) }
+                    .filterIsInstance<PipelineSpec.DeclaredStep>()
+                    .flatMap { step ->
+                        val spec = step.spec as? PipelineStepSpec
+                            ?: return@flatMap emptyList()
+                        spec.stepSpecs().map { c ->
+                            DeferredStepContribution(
+                                c.surface, c.spec, c.pre, c.scope
+                            )
+                        } + spec.transformSteps().map { c ->
+                            DeferredStepContribution(
+                                c.surface,
+                                FunctionalStepSpec(step.id, c.step),
+                                c.pre, c.scope
+                            )
+                        }
+                    }
+            })
+    }
 
     /**
      * Declared `pipeline { }` steps contributing jar processors via

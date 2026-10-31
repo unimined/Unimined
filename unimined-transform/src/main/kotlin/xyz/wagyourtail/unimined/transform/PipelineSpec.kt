@@ -85,7 +85,18 @@ abstract class PipelineSpec @Inject constructor(
      * expand matching [selectors] branches, then topo-sort over
      * `requires`/`runsAfter` hints with registration-order fallback.
      */
-    fun realize(probeResult: (String) -> String?): List<DeclaredStep> {
+    fun realize(probeResult: (String) -> String?): List<DeclaredStep> =
+        realizeAll(probeResult).filterIsInstance<DeclaredStep>()
+
+    /**
+     * Realize the declared pipeline including inline [execute] glue:
+     * the step list from [realize] with [NamedAction]s merged back at
+     * their declaration position — an action declared after *k* step
+     * declarations runs before the resolved step holding
+     * `orderIndex == k` (and before any step topo-moved past it).
+     * Consumers dispatch on the component type.
+     */
+    fun realizeAll(probeResult: (String) -> String?): List<OrderedComponent> {
         val steps = declaredSteps.toMutableList()
         for (sel in selectors.sortedBy { it.orderIndex }) {
             val branch = sel.branch(probeResult(sel.key))
@@ -93,7 +104,13 @@ abstract class PipelineSpec @Inject constructor(
                 .takeIf { it >= 0 } ?: steps.size
             steps.addAll(at, branch)
         }
-        return registry.resolveOrder(steps)
+        val out = registry.resolveOrder(steps).toMutableList<OrderedComponent>()
+        for (a in inlineActions) {
+            val at = out.indexOfFirst { it.orderIndex >= a.orderIndex }
+                .takeIf { it >= 0 } ?: out.size
+            out.add(at, a)
+        }
+        return out
     }
 
     /** A declared step — its type, configured spec, registration index. */
@@ -138,9 +155,18 @@ abstract class PipelineSpec @Inject constructor(
         val orderIndex: Int
     }
 
-    /** Scope an inline `execute {}` body receives at run time. */
+    /**
+     * Scope an inline `execute {}` body receives at transform-build
+     * time — config-time glue, not artifact work. Exposes the env's
+     * wiring channels (`env.runMutators`, `env.probeResolver`, jar
+     * processors, …) and the bound Minecraft environment
+     * (`accessTransformers`, `modSourceNamespaces`, …).
+     */
     interface PipelineExecutionScope {
         val environmentId: String
+        val project: org.gradle.api.Project
+        val env: TransformEnvironmentSpec
+        val minecraft: xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment?
     }
 
 }

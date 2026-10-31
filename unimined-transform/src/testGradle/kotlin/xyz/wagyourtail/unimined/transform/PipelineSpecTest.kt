@@ -138,4 +138,48 @@ class PipelineSpecTest {
             pipeline.realize { "e" }.map { it.type.id })
     }
 
+
+    @Test
+    fun `realizeAll interleaves execute actions at declaration position`() {
+        pipeline.fakeStep("x:a")
+        pipeline.execute("glue") { }
+        pipeline.fakeStep("x:b")
+        assertEquals(
+            listOf("x:a", "glue", "x:b"),
+            pipeline.realizeAll { null }.map {
+                when (it) {
+                    is PipelineSpec.DeclaredStep -> it.type.id
+                    is PipelineSpec.NamedAction -> it.name
+                    else -> error("unexpected component")
+                }
+            }
+        )
+    }
+
+    @Test
+    fun `realizeAll keeps actions at edges`() {
+        pipeline.execute("first") { }
+        pipeline.fakeStep("x:a")
+        pipeline.execute("last") { }
+        assertEquals(
+            listOf("first", "x:a", "last"),
+            pipeline.realizeAll { null }.map {
+                when (it) {
+                    is PipelineSpec.DeclaredStep -> it.type.id
+                    is PipelineSpec.NamedAction -> it.name
+                    else -> error("unexpected component")
+                }
+            }
+        )
+    }
+
+    @Test
+    fun `realize drops actions`() {
+        pipeline.fakeStep("x:a")
+        pipeline.execute("glue") { }
+        pipeline.fakeStep("x:b")
+        assertEquals(listOf("x:a", "x:b"),
+            pipeline.realize { null }.map { it.type.id })
+    }
+
 }

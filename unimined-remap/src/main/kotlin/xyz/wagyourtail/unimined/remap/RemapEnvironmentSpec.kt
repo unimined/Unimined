@@ -8,6 +8,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
+import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -81,23 +82,52 @@ class RemapEnvironmentSpec internal constructor(
      *  declared/inherited pipeline. [scope] filters by artifact scope;
      *  `null` returns all contributions. */
     fun contributedSteps(surface: RemapSurface, scope: StepScope? = null): List<StepSpec> =
-        surfaces[surface]?.let { spec ->
+        (surfaces[surface]?.let { spec ->
             spec.contributed.filter {
                 scope == null ||
                         (spec.contributedScopes[it] ?: StepScope.ALL_ARTIFACTS) == scope
             }
-        }.orEmpty()
+        }.orEmpty()) + deferredFor(surface, pre = false, scope)
 
     /** Steps contributed by transform plugins for [surface] — run *before*
      *  the declared pipeline, on the original-namespace input.
      *  [scope] filters by artifact scope; `null` returns all. */
     fun contributedPreSteps(surface: RemapSurface, scope: StepScope? = null): List<StepSpec> =
-        surfaces[surface]?.let { spec ->
+        (surfaces[surface]?.let { spec ->
             spec.contributedPre.filter {
                 scope == null ||
                         (spec.contributedScopes[it] ?: StepScope.ALL_ARTIFACTS) == scope
             }
-        }.orEmpty()
+        }.orEmpty()) + deferredFor(surface, pre = true, scope)
+
+    /** Lazily-computed contributions — providers evaluate on pipeline
+     *  materialization, never during configuration (select-probe
+     *  resolution lives inside them). */
+    private val deferredContributions =
+        mutableListOf<Provider<List<DeferredStepContribution>>>()
+
+    private fun deferredFor(
+        surface: RemapSurface,
+        pre: Boolean,
+        scope: StepScope?
+    ): List<StepSpec> =
+        deferredContributions.flatMap { it.get() }
+            .filter { it.surface == surface && it.pre == pre }
+            .filter { scope == null || it.scope == scope }
+            .map { it.spec }
+
+    /**
+     * Contribute plugin steps whose spec set is computed lazily —
+     * [provider] evaluates when the surface's pipeline materializes
+     * (task-input/transform-parameter evaluation), so contributions
+     * depending on resolved artifacts or probes never resolve during
+     * configuration. Entries self-declare their surface/`pre`/scope.
+     */
+    fun contributeDeferredSteps(
+        provider: Provider<List<DeferredStepContribution>>
+    ) {
+        deferredContributions += provider
+    }
 
     /** Contribute a plugin step appended after this surface's declared pipeline. */
     @JvmOverloads

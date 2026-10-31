@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     "coreApi"(project(":unimined-transform"))
+    "coreApi"(project(":unimined-transform:transform-jarmod"))
     "coreApi"(project(":unimined-api"))
     "coreApi"(libs.unimined.mapping.library)
     "coreApi"(libs.kotlinx.serialization.json)

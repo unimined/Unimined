@@ -29,7 +29,10 @@ data class RemapStepContribution(
  * Declared steps ride the existing execution channels:
  * [jarProcessors] run inside the `jar-processors` artifact step in
  * realize() order; [stepSpecs] contribute onto the env's declared
- * artifact pipeline via `RemapEnvironmentSpec.contributeStep`.
+ * artifact pipeline via `RemapEnvironmentSpec.contributeStep`;
+ * [transformSteps] contribute arbitrary jar-in/jar-out work
+ * ([TransformStep]) through the same `contributeStep` channel via
+ * the `unimined:functional` step type.
  */
 interface PipelineStepSpec {
 
@@ -38,5 +41,8 @@ interface PipelineStepSpec {
 
     /** Artifact-pipeline step contributions (binpatches, merges…). */
     fun stepSpecs(): List<RemapStepContribution> = emptyList()
+
+    /** Functional jar-in/jar-out work (mergeInputs, launchwrapper…). */
+    fun transformSteps(): List<TransformStepContribution> = emptyList()
 
 }

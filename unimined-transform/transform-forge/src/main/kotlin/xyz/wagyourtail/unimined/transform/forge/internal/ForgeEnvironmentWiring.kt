@@ -84,6 +84,17 @@ internal object ForgeEnvironmentWiring {
                 }
             } else null
         }
+        // `jarmod:merge` env binding: the probed loader jar is the
+        // FG1 zip-patches merge input — bound lazily so resolution
+        // stays inside provider evaluation
+        project.extensions.findByType(TransformExtension::class.java)
+            ?.sourceSet(environment.environmentId)
+            ?.envArtifactBindings?.set("jarmod:merge") {
+                resolved.get()
+                    .takeIf { it.profile is ForgeProfile.ZipPatches }
+                    ?.jar?.let { listOf(it) }
+                    .orEmpty()
+            }
         // FML's userdev launch handler probes the classpath for
         // `<artifact>-<version>` (FileUtils.matchFileName =
         // `contains`) — name the dev jar after the loader coords

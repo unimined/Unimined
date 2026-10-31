@@ -97,11 +97,17 @@ internal object JarProcessorWiring {
         val inner = envSpec.effectiveJarProcessorSpecContext()
             ?.invoke(productionNamespace, modPaths)
             ?: BasicSpecContext(productionNamespace, modPaths, envSide)
-        // loader-provided factories predate envSide — wrap so the env's
-        // side still reaches processor specs unless they set their own
-        if (inner.envSide != null || envSide == null) inner
-        else object : JarProcessor.SpecContext by inner {
-            override val envSide = envSide
+        // loader-provided factories predate envSide — wrap so the
+        // env's side still reaches processor specs unless they set
+        // their own; env-level artifact bindings delegate
+        // unconditionally so loader wiring can feed resolved inputs
+        // (forge zip-patches → jarmod:merge)
+        object : JarProcessor.SpecContext by inner {
+            override val envSide = inner.envSide ?: envSide
+            override fun envArtifacts(name: String): List<Path> =
+                inner.envArtifacts(name).ifEmpty {
+                    envSpec.envArtifactBindings[name]?.invoke().orEmpty()
+                }
         }
     }
 

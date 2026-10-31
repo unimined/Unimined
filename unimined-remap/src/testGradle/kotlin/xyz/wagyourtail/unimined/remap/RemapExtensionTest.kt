@@ -8,7 +8,9 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 class RemapExtensionTest {
@@ -211,6 +213,66 @@ class RemapExtensionTest {
         assertEquals(
             "unimined-remapped-forge-named",
             forge.attributes.getAttribute(artifactType)
+        )
+    }
+
+
+    @Test
+    fun `deferred contributions evaluate at read time, not registration`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply(GradlePlugin::class.java)
+        val ext = project.extensions.getByType(RemapExtension::class.java)
+        val env = ext.sourceSet("main")
+        var evaluated = false
+        env.contributeDeferredSteps(
+            project.provider {
+                evaluated = true
+                listOf(
+                    DeferredStepContribution(
+                        RemapSurface.JAR,
+                        OtherStepSpec()
+                    )
+                )
+            }
+        )
+        assertFalse(evaluated)
+        val steps = env.contributedSteps(RemapSurface.JAR)
+        assertTrue(evaluated)
+        assertEquals(1, steps.size)
+        assertTrue(steps.single() is OtherStepSpec)
+    }
+
+    @Test
+    fun `deferred contributions honor pre and scope filtering`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply(GradlePlugin::class.java)
+        val ext = project.extensions.getByType(RemapExtension::class.java)
+        val env = ext.sourceSet("main")
+        val envSpec = OtherStepSpec()
+        env.contributeDeferredSteps(
+            project.provider {
+                listOf(
+                    DeferredStepContribution(
+                        RemapSurface.JAR, envSpec,
+                        pre = true,
+                        scope = StepScope.ENVIRONMENT_ARTIFACT
+                    ),
+                    DeferredStepContribution(
+                        RemapSurface.SOURCES, OtherStepSpec()
+                    )
+                )
+            }
+        )
+        assertEquals(
+            listOf<StepSpec>(envSpec),
+            env.contributedPreSteps(RemapSurface.JAR, StepScope.ENVIRONMENT_ARTIFACT)
+        )
+        assertEquals(emptyList<StepSpec>(), env.contributedSteps(RemapSurface.JAR))
+        assertEquals(1, env.contributedSteps(RemapSurface.SOURCES).size)
+        // env-scoped entries stay out of the dependency pipeline
+        assertEquals(
+            emptyList<StepSpec>(),
+            env.contributedPreSteps(RemapSurface.JAR, StepScope.ALL_ARTIFACTS)
         )
     }
 
