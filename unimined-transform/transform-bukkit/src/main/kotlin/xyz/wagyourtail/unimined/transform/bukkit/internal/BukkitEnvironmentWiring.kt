@@ -127,8 +127,6 @@ internal object BukkitEnvironmentWiring {
             contributeApiArtifact(project, environment, descriptor)
             return
         }
-        if (descriptor.capabilities["serverArtifact"] != "distPatch") return
-
         val transform = project.extensions.getByType(TransformExtension::class.java)
         val envSpec = transform.sourceSet(environment.environmentId)
         val downloader = Downloader(
@@ -145,6 +143,15 @@ internal object BukkitEnvironmentWiring {
                 )
             }
         )
+
+        val buildData = SpigotBuildData(downloader)
+        if (descriptor.capabilities["serverArtifact"] == "provider" &&
+            buildData.supportsVersionedNms(environment.version.get())) {
+            envSpec.jarProcessors += SpigotNmsRelocationProcessor {
+                buildData.versionPackage(environment.version.get())
+            }
+        }
+        if (descriptor.capabilities["serverArtifact"] != "distPatch") return
         val distJar = {
             PaperDistResolver.serverJar(
                 downloader, environment.version.get(), loader.version
