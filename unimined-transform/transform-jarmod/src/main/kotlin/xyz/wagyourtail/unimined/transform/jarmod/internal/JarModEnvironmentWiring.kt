@@ -39,6 +39,12 @@ internal object JarModEnvironmentWiring {
     }
 
     fun wire(project: Project, environment: MinecraftEnvironment) {
+        // liteloader envs don't ride the jarMod merge/agent — their
+        // artifact is a library dep + versions.json wiring, own path
+        if (environment.spec().loader?.name == "liteloader") {
+            LiteLoaderWiring.wire(project, environment)
+            return
+        }
         val envId = environment.environmentId
         val jarMod = project.configurations.getByName(
             if (envId == "main") "jarMod" else
@@ -48,12 +54,10 @@ internal object JarModEnvironmentWiring {
             if (envId == "main") "jarModAgent" else
                 "jarModAgent${envId.replaceFirstChar { it.uppercaseChar() }}"
         )
-        project.afterEvaluate {
-            environment.loaderSpec.orNull?.let { spec ->
-                project.dependencies.add(
-                    jarModAgent.name, "xyz.wagyourtail.unimined:jarmod-agent:${spec.version}:all"
-                )
-            }
+        environment.loaderSpec.orNull?.let { spec ->
+            project.dependencies.add(
+                jarModAgent.name, "xyz.wagyourtail.unimined:jarmod-agent:${spec.version}:all"
+            )
         }
 
         val transform = project.extensions.getByType(TransformExtension::class.java)

@@ -46,18 +46,11 @@ class GradlePlugin : Plugin<Project> {
                         environment.loaderSpec.takeIf { it.isPresent }?.get()
                             ?.let { xyz.wagyourtail.unimined.transform.loader.LoaderRegistry().resolve(it.name) }
                     }, { environment })
-                    // loaderSpec populates during script eval, after the
-                    // bound event fires — defer the loader check
-                    target.afterEvaluate {
-                        when (environment.spec().loader?.name) {
-                            "jarmod", "fg1" ->
-                                JarModEnvironmentWiring.wire(target, environment)
-                            "liteloader" ->
-                                xyz.wagyourtail.unimined.transform.jarmod.internal
-                                    .LiteLoaderWiring.wire(target, environment)
-                            else -> {}
-                        }
-                    }
+                    // plugin applies lazily once an env declares a
+                    // jarmod-family loader (LoaderDescriptor.transformPlugin)
+                    // — loaderSpec is already populated at bound time,
+                    // wire unconditionally and branch inside like forge
+                    JarModEnvironmentWiring.wire(target, environment)
                 }
             }
         }
