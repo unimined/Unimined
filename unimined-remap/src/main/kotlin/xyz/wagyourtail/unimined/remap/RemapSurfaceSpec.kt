@@ -72,8 +72,26 @@ abstract class RemapSurfaceSpec @Inject constructor(
      * @param engine engine impl name, or `null` for capability selection
      */
     @JvmOverloads
-    fun remap(engine: String? = null) {
-        steps.add(RemapStepSpec(engine))
+    fun remap(
+        engine: String? = null,
+        action: Action<RemapStepSpec> = Action {}
+    ): RemapStepSpec {
+        val spec = RemapStepSpec(engine)
+        action.execute(spec)
+        steps.add(spec)
+        return spec
+    }
+
+    /** Groovy DSL counterpart of [remap]. */
+    fun remap(
+        @DelegatesTo(target = "remapSpec", strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ): RemapStepSpec {
+        val spec = RemapStepSpec()
+        action.delegate = spec
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+        steps.add(spec)
+        return spec
     }
 
     /**
