@@ -453,7 +453,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val obfuscatedLibraries = mutableListOf<String>()
 
     /** Declared-source DSL state — populated by [legacydist]. */
-    val legacyDist = LegacyDistSpec()
+    val legacyDist = LegacyDistSpec(project)
 
     /**
      * Declare this environment's game jar as a user-declared source

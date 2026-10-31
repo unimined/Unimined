@@ -15,7 +15,9 @@ import xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec
  * }
  * ```
  */
-class LegacyDistSpec {
+class LegacyDistSpec(
+    private val project: org.gradle.api.Project
+) {
 
     /** The declared artifact source — one of [file]/[maven]/[url]/[producer]. */
     var source: DeclaredSource? = null
@@ -58,8 +60,24 @@ class LegacyDistSpec {
     }
 
     /** The immutable spec stamped onto the environment's spec —
-     *  `null` when no source was declared. */
+     *  `null` when no source was declared. Maven sources are
+     *  resolved here (the env side has project access — providers
+     *  can't resolve configurations) into a local file. */
     fun declaration(): DeclaredSourceSpec? =
-        source?.let { DeclaredSourceSpec(it, namespace, format) }
+        source?.let {
+            DeclaredSourceSpec(materializeMaven(it), namespace, format)
+        }
+
+    private fun materializeMaven(source: DeclaredSource): DeclaredSource {
+        if (source !is DeclaredSource.Maven) return source
+        val files = project.configurations.detachedConfiguration(
+            project.dependencies.create(source.notation)
+        ).apply { isTransitive = false }.resolve()
+        val jar = files.singleOrNull() ?: throw org.gradle.api.GradleException(
+            "legacydist maven source ${source.notation} resolved " +
+                    "${files.size} artifacts (expected exactly 1)"
+        )
+        return DeclaredSource.LocalFile(jar.absolutePath)
+    }
 
 }
