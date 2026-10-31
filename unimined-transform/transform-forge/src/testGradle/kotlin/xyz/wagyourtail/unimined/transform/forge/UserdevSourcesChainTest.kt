@@ -8,7 +8,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevSourcesChain
-import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
+import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredTool
+import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
+import xyz.wagyourtail.unimined.transform.step.subpipeline.PipelineFunction
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubStep
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineContext
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
+import java.io.File
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -39,14 +47,13 @@ class UserdevSourcesChainTest {
 
     /** Exec stub — records calls, writes an empty jar at the arg
      *  following `--out`/`--output` so chained steps see outputs. */
-    private class StubExec(val calls: MutableList<List<String>>) :
-        McpConfigRunner.ExecPort {
-        override fun exec(
-            mainClass: String?, classpath: List<Path>,
-            args: List<String>, jvmArgs: List<String>, javaVersion: Int?
-        ) {
+    private fun stubExec(calls: MutableList<List<String>>)
+            : (DeclaredTool, List<String>, List<String>, List<Path>) -> Unit =
+        { _, args, _, _ ->
             calls.add(args)
-            val outIdx = args.indexOfLast { it == "--out" || it == "--output" || it == "-o" }
+            val outIdx = args.indexOfLast {
+                it == "--out" || it == "--output" || it == "-o"
+            }
             if (outIdx >= 0) {
                 val out = Path.of(args[outIdx + 1])
                 out.parent?.let { java.nio.file.Files.createDirectories(it) }
@@ -56,7 +63,6 @@ class UserdevSourcesChainTest {
                 }
             }
         }
-    }
 
     private fun configZip(steps: String): Path =
         jar(
@@ -76,27 +82,68 @@ class UserdevSourcesChainTest {
             }"""
             ) + steps.let { emptyMap() })
 
-    private fun runner(zip: Path, calls: MutableList<List<String>>) =
-        McpConfigRunner(
-            zip, dir.resolve("cache"), "client",
-            McpConfigRunner.Env(
-                clientJar = { jar("client.jar", mapOf("a.class" to "x")) },
-                serverJar = { jar("server.jar", emptyMap()) },
-                clientMappings = { dir.resolve("cm.txt") },
-                serverMappings = { dir.resolve("sm.txt") },
-                libraries = { emptyList() },
-                toolClasspath = {
-                    listOf(
-                        jar(
-                            "tool.jar", mapOf(
-                                "META-INF/MANIFEST.MF" to "Manifest-Version: 1.0\nMain-Class: T\n\n"
-                            )
+    private fun run(
+        zip: Path,
+        calls: MutableList<List<String>>,
+        userdev: Path,
+        sourcesDir: Path,
+        ats: List<Path>,
+        applyAts: (input: Path, ats: List<Path>, output: Path) -> Unit,
+        cfg: UserdevConfig,
+        untilStep: String
+    ): Path? {
+        val fmt = McpConfigDescriptorFormat()
+        var pipeline = fmt.parse(zip.toFile(), object : FormatContext {
+            override val side = "client"
+            override val bindingNames = setOf(
+                "client", "server", "clientMappings", "serverMappings"
+            )
+        })
+        val (spliced, tools) = UserdevSourcesChain.install(
+            pipeline, userdev, sourcesDir,
+            dir.resolve("forge-cache"), cfg
+        )
+        pipeline = spliced.copy(functions = spliced.functions + tools)
+        val applyAtsFn = object : PipelineFunction {
+            override val name = "forge:applyAts"
+            override fun run(
+                step: SubStep, ctx: SubpipelineContext
+            ): Path {
+                val input = Path.of(ctx.vars.getValue("input"))
+                val output = ctx.workDir.resolve("applyAtsOutput.jar")
+                applyAts(input, ats, output)
+                return output
+            }
+        }
+        return SubpipelineExecutor(
+            pipeline, fmt,
+            McpConfigFunctionSource().functions()
+                .associateBy { it.name } + (applyAtsFn.name to applyAtsFn),
+            bindings = mapOf(
+                "client" to {
+                    jar("client.jar", mapOf("a.class" to "x")).toFile()
+                },
+                "server" to { jar("server.jar", emptyMap()).toFile() },
+                "clientMappings" to { dir.resolve("cm.txt").toFile() },
+                "serverMappings" to { dir.resolve("sm.txt").toFile() },
+            ),
+            toolResolver = {
+                listOf(
+                    jar(
+                        "tool.jar", mapOf(
+                            "META-INF/MANIFEST.MF" to
+                                    "Manifest-Version: 1.0\nMain-Class: T\n\n"
                         )
                     )
-                },
-                exec = StubExec(calls)
-            )
+                )
+            },
+            listBindings = mapOf("libraries" to { emptyList<File>() }),
+            toolExec = stubExec(calls)
+        ).execute(
+            zip.toFile(), "client", null, dir.resolve("cache"),
+            untilStep = untilStep
         )
+    }
 
     private fun userdevCfg(extra: String = "") = UserdevConfig(
         Json.parseToJsonElement("""{"notchObf": false, "patches": "patches"$extra}""")
@@ -107,21 +154,17 @@ class UserdevSourcesChainTest {
     fun `applyAts runs before decompile with renamed input`() {
         val calls = mutableListOf<List<String>>()
         val atsCalls = mutableListOf<Triple<Path, List<Path>, Path>>()
-        val r = runner(configZip(""), calls)
         val userdev = jar("userdev.jar", mapOf("patches/A.java.patch" to "patch"))
-        val sourcesDir = dir.resolve("src")
 
-        UserdevSourcesChain.install(
-            r, userdev, sourcesDir,
+        run(
+            configZip(""), calls, userdev, dir.resolve("src"),
             listOf(dir.resolve("at.cfg")),
             { input, ats, output ->
                 atsCalls.add(Triple(input, ats, output))
                 JarOutputStream(output.outputStream()).use { it.close() }
             },
-            dir.resolve("forge-cache"), userdevCfg()
+            userdevCfg(), untilStep = "forgePatch"
         )
-
-        r.resultFor("forgePatch")
         assertEquals(1, atsCalls.size)
         // applyAts consumed the rename step's output jar
         assertEquals(dir.resolve("cache/rename/renameOutput.jar"), atsCalls[0].first)
@@ -130,7 +173,6 @@ class UserdevSourcesChainTest {
     @Test
     fun `forgeInject merges sources into patched jar`() {
         val calls = mutableListOf<List<String>>()
-        val r = runner(configZip(""), calls)
         val userdev = jar("userdev.jar", emptyMap())
         val sourcesDir = dir.resolve("src")
         java.nio.file.Files.createDirectories(sourcesDir)
@@ -138,15 +180,14 @@ class UserdevSourcesChainTest {
         java.nio.file.Files.createDirectories(forgeSrc.parent)
         java.nio.file.Files.writeString(forgeSrc, "// forge")
 
-        UserdevSourcesChain.install(
-            r, userdev, sourcesDir, emptyList(), { _, _, o ->
+        val result = run(
+            configZip(""), calls, userdev, sourcesDir,
+            emptyList(), { _, _, o ->
                 JarOutputStream(o.outputStream()).use { it.close() }
             },
-            dir.resolve("forge-cache"), userdevCfg()
+            userdevCfg(), untilStep = "forgeInject"
         )
-
-        val result = r.resultFor("forgeInject")
-        JarFile(result.output!!.toFile()).use { j ->
+        JarFile(result!!.toFile()).use { j ->
             val names = j.entries().asSequence().map { it.name }.toSet()
             assertTrue("net/minecraftforge/Y.java" in names)
         }

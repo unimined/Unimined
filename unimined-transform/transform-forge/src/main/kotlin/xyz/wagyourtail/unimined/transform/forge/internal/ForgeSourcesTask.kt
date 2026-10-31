@@ -11,7 +11,14 @@ import org.gradle.api.tasks.*
 import xyz.wagyourtail.commonskt.reader.CharReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
-import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
+import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
+import xyz.wagyourtail.unimined.transform.step.subpipeline.PipelineFunction
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubStep
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineContext
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
+import javax.inject.Inject
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -125,30 +132,16 @@ abstract class ForgeSourcesTask : DefaultTask() {
         val userdev = userdevJar.get().asFile.toPath()
         val index = toolIndex.get()
 
-        val env = McpConfigRunner.Env(
-            clientJar = { clientJar.get().asFile.toPath() },
-            serverJar = {
-                serverJar.orNull?.asFile?.toPath()
-                    ?: error("serverJar required for side=${side.get()}")
-            },
-            clientMappings = {
-                clientMappings.orNull?.asFile?.toPath()
-                    ?: error("clientMappings not provided")
-            },
-            serverMappings = {
-                serverMappings.orNull?.asFile?.toPath()
-                    ?: error("serverMappings not provided")
-            },
-            libraries = { libraries.files.map { it.toPath() } },
-            toolClasspath = { coord ->
-                index[coord]?.map { Path.of(it) }
-                    ?: error("no resolved tool classpath for $coord")
-            },
-            exec = port()
-        )
-
-        val runner = McpConfigRunner(
-            mcpConfigZip.get().asFile.toPath(), workDir, side.get(), env
+        val fmt = McpConfigDescriptorFormat()
+        val sideName = side.get()
+        var pipeline = fmt.parse(
+            mcpConfigZip.get().asFile,
+            object : FormatContext {
+                override val side = sideName
+                override val bindingNames = setOf(
+                    "client", "server", "clientMappings", "serverMappings"
+                )
+            }
         )
 
         // `*:sources` → forgeInject input dir
@@ -170,13 +163,57 @@ abstract class ForgeSourcesTask : DefaultTask() {
             )
         }
 
-        UserdevSourcesChain.install(
-            runner, userdev, sourcesDir, allAts, applyAts,
-            workDir.resolve("forge"), config
+        val (spliced, extraTools) = UserdevSourcesChain.install(
+            pipeline, userdev, sourcesDir, workDir.resolve("forge"), config
         )
+        pipeline = spliced.copy(functions = spliced.functions + extraTools)
 
-        val out = runner.resultFor("forgePatch").output
-            ?: error("forgePatch produced no output")
+        val applyAtsFn = object : PipelineFunction {
+            override val name = "forge:applyAts"
+            override fun run(step: SubStep, ctx: SubpipelineContext): Path {
+                val input = Path.of(ctx.vars.getValue("input"))
+                val output = ctx.workDir.resolve("applyAtsOutput.jar")
+                applyAts(input, allAts, output)
+                return output
+            }
+        }
+
+        val out = SubpipelineExecutor(
+            pipeline,
+            fmt,
+            McpConfigFunctionSource().functions()
+                .associateBy { it.name } + (applyAtsFn.name to applyAtsFn),
+            bindings = mapOf(
+                "client" to { clientJar.get().asFile },
+                "server" to {
+                    serverJar.orNull?.asFile
+                        ?: error("serverJar required for side=${side.get()}")
+                },
+                "clientMappings" to {
+                    clientMappings.orNull?.asFile
+                        ?: error("clientMappings not provided")
+                },
+                "serverMappings" to {
+                    serverMappings.orNull?.asFile
+                        ?: error("serverMappings not provided")
+                },
+            ),
+            toolResolver = { coord ->
+                index[coord]?.map { Path.of(it) }
+                    ?: error("no resolved tool classpath for $coord")
+            },
+            listBindings = mapOf(
+                "libraries" to { libraries.files.toList() }
+            ),
+            toolExec = { tool, args, jvmArgs, classpath ->
+                port().exec(
+                    tool.mainClass, classpath, args, jvmArgs, tool.javaVersion
+                )
+            }
+        ).execute(
+            mcpConfigZip.get().asFile, side.get(), null, workDir,
+            untilStep = "forgePatch"
+        ) ?: error("forgePatch produced no output")
         outputJar.get().asFile.parentFile.mkdirs()
         Files.copy(
             out, outputJar.get().asFile.toPath(),
@@ -220,9 +257,12 @@ abstract class ForgeSourcesTask : DefaultTask() {
         )
     }
 
+    @get:Inject
+    abstract val objects: org.gradle.api.model.ObjectFactory
+
     /** A toolchain-aware exec port for this task's runs. */
     private fun port(): GradleExecPort =
-        project.objects.newInstance(GradleExecPort::class.java).apply {
+        objects.newInstance(GradleExecPort::class.java).apply {
             useToolchains = { this@ForgeSourcesTask.useToolchains.get() }
             defaultJavaVersion = { mcJavaVersion.get() }
         }

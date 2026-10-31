@@ -1,11 +1,13 @@
 package xyz.wagyourtail.unimined.transform.forge.internal
 
 import xyz.wagyourtail.commonskt.utils.capitalized
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
@@ -29,6 +31,7 @@ import xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec
 
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigTransform
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
 import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
 import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
@@ -145,6 +148,33 @@ internal fun contributeDevSources(
                         .files.map { it.absolutePath }
                 } ?: emptyMap()
         })
+        // mcp descriptor's tool table — parsed, so synthetic entries
+        // the format injects (mcpconfig:diffpatch) count too, plus
+        // the constants the sources splice appends (mcpcleanup).
+        // The raw `functions` json alone misses all of those.
+        t.toolIndex.putAll(project.provider {
+            val zip = t.mcpConfigZip.orNull?.asFile
+                ?: return@provider emptyMap()
+            val sideName = t.side.get()
+            val parsed = McpConfigDescriptorFormat().parse(
+                zip, object : FormatContext {
+                    override val side = sideName
+                    override val bindingNames = setOf(
+                        "client", "server", "clientMappings",
+                        "serverMappings"
+                    )
+                }
+            )
+            (parsed.functions.values.map { it.coord } + listOf(
+                "net.minecraftforge:mcpcleanup:2.3.6",
+                "net.minecraftforge:DiffPatch:2.0.12"
+            )).toSet().associateWith { coord ->
+                project.configurations.detachedConfiguration(
+                    project.dependencies.create(coord)
+                ).apply { isTransitive = true }
+                    .files.map { it.absolutePath }
+            }
+        })
         t.side.set(environment.side.map {
             when (it) {
                 Side.CLIENT -> "client"
@@ -217,83 +247,150 @@ internal fun contributeDevSources(
 internal fun mcpconfigCleanJar(
     project: Project,
     environment: MinecraftEnvironment,
-    resolved: ResolvedForge
-): File? {
-    val profile = resolved.profile as? ForgeProfile.Userdev
-        ?: return null
-    val config = profile.config
+    resolved: Provider<ResolvedForge>
+): Provider<File> {
     val envId = environment.environmentId
-
-
-    val mcpConf = project.configurations.detachedConfiguration(
-        project.dependencies.create(config.mcp)
-    )
-    mcpConf.isTransitive = false
-    val mcpZip = mcpConf.files.single().toPath()
-
+    val toType = "mcpconfig-cleanjar-$envId"
+    val mcpConf = project.configurations.detachedConfiguration().apply {
+        isTransitive = false
+        withDependencies { deps ->
+            val cfg = (resolved.orNull?.profile as? ForgeProfile.Userdev)
+                ?.config ?: return@withDependencies
+            deps.add(project.dependencies.create(cfg.mcp))
+        }
+    }
     val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
-    val artifacts = minecraft.artifacts(envId).get()
-    fun aux(key: String) = artifacts.auxiliaryArtifacts.getValue(key)
-        .get().asFile.toPath()
-
+    fun aux(key: String) = project.provider {
+        minecraft.artifacts(envId).get()
+            .auxiliaryArtifacts.getValue(key).get().asFile
+    }
     val side = when (environment.side.get()) {
         Side.CLIENT -> "client"
         Side.SERVER -> "server"
         Side.MERGED -> "joined"
     }
-    // step outputs are content-keyed by (mcpconfig coord + side +
-    // step chain) — global cache; coord carries the MC version, so
-    // unrelated envs/versions never collide
-    val cacheDir = UniminedCache.global(project)
-        .resolve(
-            "forge/mcpconfig/" +
-                    config.mcp.replace(Regex("[^A-Za-z0-9._-]+"), "-") +
-                    "/$side"
+    // execution-time cleanJar: the mcpconfig graph runs inside a
+    // cached transform (tool execs are execution-phase), so a cold
+    // cache no longer spawns processes during CC-store. Per-env `to`
+    // type — transform selection is attribute-only, so per-env params
+    // need distinct types.
+    project.dependencies.registerTransform(McpConfigTransform::class.java) { spec ->
+        spec.from.attribute(
+            ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "zip"
         )
-
-    val execPort = project.objects.newInstance(GradleExecPort::class.java).apply {
-        useToolchains = { environment.useToolchains.get() }
-        defaultJavaVersion = { environment.requiredJavaVersion.get() }
+        spec.to.attribute(
+            ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, toType
+        )
+        spec.parameters { p ->
+            p.clientJar.set(project.layout.file(aux("client_jar")))
+            p.serverJar.set(project.layout.file(aux("server_jar")))
+            p.clientMappings.set(project.layout.file(aux("client_mappings")))
+            p.serverMappings.set(project.layout.file(aux("server_mappings")))
+            p.libraries.from(project.provider {
+                project.configurations.getByName(
+                    environment.minecraftLibrariesConfigurationName
+                ).files
+            })
+            p.toolJars.from(project.provider {
+                val zip = mcpConf.files.singleOrNull()
+                    ?: return@provider emptySet<File>()
+                val parsed = McpConfigDescriptorFormat().parse(
+                    zip,
+                    object : FormatContext {
+                        override val side = side
+                        override val bindingNames = setOf(
+                            "client", "server",
+                            "clientMappings", "serverMappings"
+                        )
+                    }
+                )
+                parsed.functions.values.flatMap { tool ->
+                    project.configurations.detachedConfiguration(
+                        project.dependencies.create(tool.coord)
+                    ).apply { isTransitive = true }.files
+                }
+            })
+            p.side.set(side)
+            p.notchObf.set(project.provider {
+                (resolved.orNull?.profile as? ForgeProfile.Userdev)
+                    ?.config?.notchObf ?: false
+            })
+            p.useToolchains.set(environment.useToolchains)
+            p.requiredJavaVersion.set(environment.requiredJavaVersion)
+            // eagerly resolve the env-required toolchain at wiring —
+            // provisioning (auto-download) during configuration is
+            // legal, during CC-store fingerprinting it would be an
+            // external process. Per-tool java_versions stay lazy: they
+            // require the mcp zip, which can't resolve eagerly while
+            // `resolved` may be absent.
+            val toolchains = project.extensions.getByType(
+                org.gradle.jvm.toolchain.JavaToolchainService::class.java
+            )
+            val fallbackJava = File(
+                System.getProperty("java.home"), "bin/java"
+            ).absolutePath
+            fun binaryFor(v: Int): String {
+                // global/per-env kill-switch: never touch the
+                // toolchain service when disabled
+                if (!environment.useToolchains.get()) return fallbackJava
+                return toolchains.launcherFor { spec ->
+                    spec.languageVersion.set(
+                        org.gradle.jvm.toolchain.JavaLanguageVersion.of(v)
+                    )
+                }.orNull?.executablePath?.asFile?.absolutePath
+                    ?: fallbackJava.takeIf {
+                        org.gradle.api.JavaVersion.current()
+                            .isCompatibleWith(
+                                org.gradle.api.JavaVersion.toVersion(v)
+                            )
+                    }
+                    ?: error(
+                        "no java toolchain for version $v " +
+                                "and the build JVM does not satisfy it"
+                    )
+            }
+            // may be unresolvable at wiring (e.g. version unset in
+            // tests) — fall back to the lazy param path then
+            val requiredBinary = runCatching {
+                environment.requiredJavaVersion.orNull
+                    ?.let { it.toString() to binaryFor(it) }
+            }.getOrNull()
+            p.javaBinaries.set(project.provider {
+                (parsedToolVersions(mcpConf, side)
+                    .associate { it.toString() to binaryFor(it) } +
+                        listOfNotNull(requiredBinary)).toMap()
+            })
+            p.cacheRoot.fileValue(
+                UniminedCache.global(project)
+                    .resolve("forge/mcpconfig").toFile()
+            )
+        }
     }
-    val pipeline = McpConfigDescriptorFormat().parse(
-        mcpZip.toFile(),
+    return project.provider {
+        if ((resolved.orNull?.profile as? ForgeProfile.Userdev) == null)
+            null
+        else mcpConf.incoming.artifactView { view ->
+            view.attributes.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, toType
+            )
+        }.files.singleFile
+    }
+}
+
+/** Distinct `java_version`s declared by `functions.*` tools in the
+ *  mcpconfig zip — resolved lazily so toolchain binaries can be
+ *  looked up at fingerprint time. */
+private fun parsedToolVersions(mcpConf: Configuration, side: String): List<Int> {
+    val zip = mcpConf.files.singleOrNull() ?: return emptyList()
+    return McpConfigDescriptorFormat().parse(
+        zip,
         object : FormatContext {
             override val side = side
             override val bindingNames = setOf(
                 "client", "server", "clientMappings", "serverMappings"
             )
         }
-    )
-    val step = if (config.notchObf && side == "joined") "merge" else "rename"
-    return SubpipelineExecutor(
-        pipeline,
-        McpConfigDescriptorFormat(),
-        McpConfigFunctionSource().functions().associateBy { it.name },
-        bindings = mapOf(
-            "client" to { aux("client_jar").toFile() },
-            "server" to { aux("server_jar").toFile() },
-            "clientMappings" to { aux("client_mappings").toFile() },
-            "serverMappings" to { aux("server_mappings").toFile() },
-        ),
-        toolResolver = { coord ->
-            project.configurations.detachedConfiguration(
-                project.dependencies.create(coord)
-            ).apply { isTransitive = true }.files.map { it.toPath() }
-        },
-        listBindings = mapOf(
-            "libraries" to {
-                project.configurations.getByName(
-                    environment.minecraftLibrariesConfigurationName
-                ).files.toList()
-            }
-        ),
-        toolExec = { tool, args, jvmArgs, classpath ->
-            execPort.exec(
-                tool.mainClass, classpath, args, jvmArgs, tool.javaVersion
-            )
-        }
-    ).execute(mcpZip.toFile(), side, null, cacheDir, untilStep = step)
-        ?.toFile()
+    ).functions.values.mapNotNull { it.javaVersion }
 }
 
 /**

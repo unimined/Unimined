@@ -73,11 +73,9 @@ internal fun contributeBinpatchStep(
     // the mcpconfig `rename`/`merge` output, produced lazily here.
     // Byte-identical to what forge's checksums were generated
     // against; a tiny-remap of the same input is not.
-    spec.cleanJar.set(project.layout.file(project.provider {
-        val r = resolved.orNull ?: return@provider null
-        (r.profile as? ForgeProfile.Userdev)
-            ?.let { mcpconfigCleanJar(project, environment, r) }
-    }))
+    spec.cleanJar.set(project.layout.file(
+        mcpconfigCleanJar(project, environment, resolved)
+    ))
     // patch steps are artifact-scoped — dependency jars routed
     // through the environment pipeline must not be binpatched.
     // Pre-remap for every era: the step substitutes the patched

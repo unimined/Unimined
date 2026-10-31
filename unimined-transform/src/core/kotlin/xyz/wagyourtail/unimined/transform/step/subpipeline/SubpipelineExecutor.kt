@@ -86,9 +86,17 @@ class SubpipelineExecutor(
                     // ports expect a resolved main class (1.x
                     // manifest-scan parity — DeclaredTool leaves it
                     // null when the descriptor omits one)
+                    // manifest scan prefers jars matching the coord's
+                    // artifact name — callers may pass a union
+                    // classpath of all tools
+                    val artifact = tool.coord
+                        .substringAfter(':').substringBefore(':')
+                    val scanOrder = cp.sortedByDescending {
+                        it.fileName.toString().contains(artifact)
+                    }
                     val resolved = if (tool.mainClass != null) tool
                     else tool.copy(
-                        mainClass = cp.firstNotNullOfOrNull { jar ->
+                        mainClass = scanOrder.firstNotNullOfOrNull { jar ->
                             runCatching {
                                 JarFile(jar.toFile()).use {
                                     it.manifest.mainAttributes.getValue(

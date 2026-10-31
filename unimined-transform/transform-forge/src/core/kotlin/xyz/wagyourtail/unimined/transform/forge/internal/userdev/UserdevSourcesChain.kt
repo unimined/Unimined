@@ -1,13 +1,14 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredSubpipeline
+import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredTool
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubStep
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.createDirectories
 import kotlin.io.path.outputStream
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
@@ -44,75 +45,90 @@ internal object UserdevSourcesChain {
      * @param cacheDir the post-`updateCacheDir` scratch root
      * @param config the userdev `config.json` interpretation
      */
+    /**
+     * @param pipeline the parsed mcpconfig graph — returned spliced
+     *  with the sources steps (`applyAts` before `decompile`,
+     *  `forgeInject`/`mcpCleanup`/`forgePatch` appended)
+     * @return the spliced pipeline plus extra functions to merge into
+     *  the executor's function map and extra tool-table entries to
+     *  append to `pipeline.functions`
+     */
     fun install(
-        runner: McpConfigRunner,
+        pipeline: DeclaredSubpipeline,
         userdevJar: Path,
         sourcesDir: Path,
-        atFiles: List<Path>,
-        applyAts: (input: Path, ats: List<Path>, output: Path) -> Unit,
         cacheDir: Path,
         config: UserdevConfig
-    ) {
-        runner.insertBefore(
-            "decompile",
-            McpConfigRunner.FileProviderStep("applyAts", null, mutableMapOf()) { dir ->
-                val input = Paths.get(variables.getValue("input").invoke())
-                val output = dir.resolve("applyAtsOutput.jar")
-                applyAts(input, atFiles, output)
-                output
-            },
-            mapOf("input" to {
-                runner.resultFor("applyAts").output!!.absolutePathString()
-            })
+    ): Pair<DeclaredSubpipeline, Map<String, DeclaredTool>> {
+        val steps = pipeline.steps.toMutableList()
+        val tools = mutableMapOf<String, DeclaredTool>()
+
+        // applyAts before decompile; decompile's input rebases to it
+        val decompileIdx = steps.indexOfFirst { it.name == "decompile" }
+        require(decompileIdx >= 0) { "no decompile step in mcpconfig" }
+        steps.add(
+            decompileIdx,
+            SubStep(
+                "applyAts", "forge:applyAts",
+                mapOf("input" to "{renameOutput}")
+            )
+        )
+        steps[decompileIdx + 1] = steps[decompileIdx + 1].copy(
+            args = steps[decompileIdx + 1].args +
+                    ("input" to "{applyAtsOutput}")
         )
 
-        runner.insertBefore(
-            "applyAts",
-            runner.UpdateCacheDirStep("updateCacheDir", null, cacheDir.createDirectories()),
-            emptyMap()
-        )
-
-        runner.addStep(
-            McpConfigRunner.InjectStep(
-                "forgeInject", "patch", mutableMapOf(
-                    "input" to {
-                        runner.resultFor("patch").output!!.absolutePathString()
-                    },
-                    "inject" to { sourcesDir.absolutePathString() }
+        // forgeInject merges the userdev :sources dir into the jar
+        val injectInput = if (config.notchObf) {
+            steps.add(
+                steps.indexOfFirst { it.name == "forgeInject" }
+                    .takeIf { it >= 0 } ?: steps.size,
+                SubStep(
+                    "mcpCleanup", "forge:mcpCleanup",
+                    mapOf("input" to "{patchOutput}")
+                )
+            )
+            tools["forge:mcpCleanup"] = DeclaredTool(
+                "net.minecraftforge:mcpcleanup:2.3.6", null,
+                listOf("--input", "{input}", "--output", "{output}"),
+                emptyList()
+            )
+            "{mcpCleanupOutput}"
+        } else "{patchOutput}"
+        steps.add(
+            SubStep(
+                "forgeInject", "mcpconfig:inject",
+                mapOf(
+                    "input" to injectInput,
+                    "inject" to sourcesDir.absolutePathString()
                 )
             )
         )
-
-        if (config.notchObf) {
-            runner.insertBefore(
-                "forgeInject",
-                runner.FunctionStep(
-                    "mcpCleanup", null, mutableMapOf(),
-                    McpConfigRunner.Function(
-                        "net.minecraftforge:mcpcleanup:2.3.6", null,
-                        listOf("--input", "{input}", "--output", "{output}"),
-                        emptyList()
-                    )
-                ),
-                mapOf("input" to {
-                    runner.resultFor("mcpCleanup").output!!.absolutePathString()
-                })
-            )
-        }
-
-        runner.addStep(
-            runner.PatchStep(
-                "forgePatch", "forgeInject", mutableMapOf(
-                    "input" to {
-                        runner.resultFor("forgeInject").output!!.absolutePathString()
-                    },
-                    "patches" to {
-                        patchSetJar(userdevJar, cacheDir, config).absolutePathString()
-                    },
-                    "prefix" to { config.patches ?: "patches" }
+        steps.add(
+            SubStep(
+                "forgePatch", "mcpconfig:diffpatch",
+                mapOf(
+                    "input" to "{forgeInjectOutput}",
+                    "patches" to patchSetJar(userdevJar, cacheDir, config)
+                        .absolutePathString(),
+                    "prefix" to (config.patches ?: "patches"),
+                    "reject" to "{output}.reject.jar"
                 )
             )
         )
+        tools.putIfAbsent(
+            "mcpconfig:diffpatch",
+            DeclaredTool(
+                "net.minecraftforge:DiffPatch:2.0.12",
+                args = listOf(
+                    "-p", "-m", "FUZZY", "-P", "{prefix}",
+                    "-A", "ZIP", "-o", "{output}",
+                    "-r", "{reject}", "-H", "ZIP", "-s",
+                    "-v", "{input}", "{patches}"
+                )
+            )
+        )
+        return pipeline.copy(steps = steps) to tools
     }
 
     /**
