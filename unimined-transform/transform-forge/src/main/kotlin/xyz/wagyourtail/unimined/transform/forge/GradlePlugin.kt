@@ -36,6 +36,13 @@ class GradlePlugin : Plugin<Project> {
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                     minecraft.onEnvironmentBound { environment, _ ->
+                        val spec = target.extensions.getByType(
+                        xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+                    ).sourceSet(environment.environmentId)
+                    spec.installClaimContext(target, {
+                        environment.loaderSpec.takeIf { it.isPresent }?.get()
+                            ?.let { xyz.wagyourtail.unimined.transform.loader.LoaderRegistry().resolve(it.name) }
+                    }, { environment })
                         ForgeEnvironmentWiring.wire(target, environment)
                     }
                 }

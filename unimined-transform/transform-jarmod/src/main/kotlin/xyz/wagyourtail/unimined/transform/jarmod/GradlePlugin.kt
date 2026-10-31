@@ -41,6 +41,13 @@ class GradlePlugin : Plugin<Project> {
             }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 minecraft.onEnvironmentBound { environment, _ ->
+                        val spec = target.extensions.getByType(
+                        xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+                    ).sourceSet(environment.environmentId)
+                    spec.installClaimContext(target, {
+                        environment.loaderSpec.takeIf { it.isPresent }?.get()
+                            ?.let { xyz.wagyourtail.unimined.transform.loader.LoaderRegistry().resolve(it.name) }
+                    }, { environment })
                     // loaderSpec populates during script eval, after the
                     // bound event fires — defer the loader check
                     target.afterEvaluate {
