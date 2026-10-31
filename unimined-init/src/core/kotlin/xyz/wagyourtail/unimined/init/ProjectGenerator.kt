@@ -59,8 +59,11 @@ object ProjectGenerator {
                 val ss = if (multi) loader else "main"
                 put("src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
                     Render.Text(Templates.mainClass(spec, loader)))
-                for ((path, content) in Templates.metadata(spec, loader)) {
-                    put("src/$ss/resources/$path", Render.Text(content))
+                // static files only when metadata isn't DSL-generated
+                if (!spec.metadataFromDsl) {
+                    for ((path, content) in Templates.metadata(spec, loader)) {
+                        put("src/$ss/resources/$path", Render.Text(content))
+                    }
                 }
             }
         }

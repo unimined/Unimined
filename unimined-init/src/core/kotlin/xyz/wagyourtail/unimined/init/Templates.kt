@@ -1,37 +1,46 @@
 package xyz.wagyourtail.unimined.init
 
 /**
- * File-template functions backing [ProjectGenerator]. Each returns the
- * complete file content — deterministic string building only.
+ * Resource-template rendering backing [ProjectGenerator]. Templates
+ * live in `src/core/resources/templates/` with `@@TOKEN@@` markers —
+ * this object builds the token maps and keeps the few looped
+ * fragments (repo lines, per-loader env blocks) as indented
+ * pre-built strings injected via tokens.
  */
 internal object Templates {
 
-    /** `settings.gradle(.kts)` — plugin + dependency repositories. */
-    fun settings(spec: InitSpec): String = buildString {
-        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
-        appendLine("pluginManagement {")
-        appendLine("    repositories {")
-        appendLine("        mavenLocal()")
-        appendLine("        maven(\"https://maven.wagyourtail.xyz/releases/\")")
-        appendLine("        maven(\"https://maven.wagyourtail.xyz/snapshots/\")")
-        appendLine("        mavenCentral()")
-        appendLine("        gradlePluginPortal()")
-        appendLine("    }")
-        appendLine("}")
-        appendLine()
-        appendLine("dependencyResolutionManagement {")
-        appendLine("    repositories {")
-        appendLine("        mavenLocal()")
-        appendLine("        mavenCentral()")
-        for (repo in loaderRepos(spec)) {
-            appendLine("        maven(\"$repo\")")
+    private fun resource(path: String): String =
+        javaClass.getResourceAsStream("/templates/$path")
+            ?.use { it.readBytes().decodeToString() }
+            ?: error("missing template resource /templates/$path")
+
+    /** Render a template — unresolved `@@TOKEN@@` markers fail. */
+    private fun render(path: String, tokens: Map<String, String>): String {
+        var out = resource(path)
+        for ((k, v) in tokens) out = out.replace("@@$k@@", v)
+        val leftover = Regex("@@\\w+@@").find(out)
+        require(leftover == null) {
+            "unresolved template marker ${leftover!!.value} in $path"
         }
-        appendLine("    }")
-        appendLine("}")
-        appendLine()
-        appendLine("rootProject.name = \"${spec.name}\"")
+        return out
     }
 
+    /** Indent every non-blank line of a rendered partial. */
+    private fun String.indented(indent: String): String =
+        lineSequence().joinToString("\n") {
+            if (it.isBlank()) it else indent + it
+        }
+
+    /** `mappings { }` partial — empty when no mappings configured. */
+    private fun mappingsBlock(spec: InitSpec, indent: String): String =
+        if (spec.mappings.isEmpty()) "" else
+            render("partials/mappings-block.gradle", mapOf(
+                "MAPPINGS_LINES" to spec.mappings.joinToString("\n") {
+                    "    $it"
+                }
+            )).indented(indent)
+
+    /** Loader-specific Maven repos needed for metadata resolution. */
     private fun loaderRepos(spec: InitSpec): List<String> =
         spec.loaders.map { (loader, _) -> loader.lowercase() }
             .mapNotNull {
@@ -45,93 +54,88 @@ internal object Templates {
                 }
             }.distinct()
 
-    /** `build.gradle(.kts)` — the unimined plugin + minecraft block. */
-    fun build(spec: InitSpec): String = buildString {
-        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
-        val pluginDecl = if (kts) {
-            "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
-        } else {
-            "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
-        }
-        appendLine("plugins {")
-        appendLine("    java")
-        appendLine("    $pluginDecl")
-        appendLine("}")
-        appendLine()
-        appendLine("repositories {")
-        appendLine("    mavenCentral()")
-        for (repo in loaderRepos(spec)) {
-            appendLine("    maven(\"$repo\")")
-        }
-        appendLine("}")
-        appendLine()
-        appendLine("unimined {")
-        appendLine("    minecraft {")
+    /** `settings.gradle(.kts)` — plugin + dependency repositories. */
+    fun settings(spec: InitSpec): String = render("settings.gradle", mapOf(
+        "DEP_REPOS" to loaderRepos(spec).joinToString("\n") {
+            "        maven(\"$it\")"
+        },
+        "NAME" to spec.name,
+    ))
+
+    /**
+     * The `minecraft { }` body — composed from partials; single-loader
+     * emits `minecraft-env`, multi-loader emits a `source-set-env`
+     * block per loader (§10 layout).
+     */
+    private fun minecraftBody(spec: InitSpec): String =
         if (spec.loaders.size > 1) {
-            for ((loader, version) in spec.loaders) {
-                appendLine("        sourceSet(\"$loader\") {")
-                appendLine("            version = \"${spec.mcVersion}\"")
-                appendLine("            loader(\"$loader\", \"$version\")")
-                if (spec.mappings.isNotEmpty()) {
-                    appendLine("            mappings {")
-                    for (line in spec.mappings) {
-                        appendLine("                $line")
-                    }
-                    appendLine("            }")
-                }
-                appendLine("        }")
+            spec.loaders.joinToString("\n") { (loader, version) ->
+                render("partials/source-set-env.gradle", mapOf(
+                    "LOADER" to loader,
+                    "LOADER_VERSION" to version,
+                    "MC_VERSION" to spec.mcVersion,
+                    "MAPPINGS" to mappingsBlock(spec, "    "),
+                ))
             }
         } else {
-            appendLine("        version = \"${spec.mcVersion}\"")
-            for ((loader, version) in spec.loaders) {
-                appendLine("        loader(\"$loader\", \"$version\")")
-            }
-            if (spec.mappings.isNotEmpty()) {
-                appendLine("        mappings {")
-                for (line in spec.mappings) {
-                    appendLine("            $line")
-                }
-                appendLine("        }")
-            }
-        }
-        appendLine("    }")
-        appendLine("}")
+            render("partials/minecraft-env.gradle", mapOf(
+                "MC_VERSION" to spec.mcVersion,
+                "LOADER_LINES" to spec.loaders.joinToString("\n") { (l, v) ->
+                    render("partials/loader-line.gradle", mapOf(
+                        "LOADER" to l, "LOADER_VERSION" to v
+                    ))
+                },
+                "MAPPINGS" to mappingsBlock(spec, ""),
+            ))
+        }.indented("        ")
+
+    /** `mod { }` block — metadata generated per env instead of files. */
+    private fun modBlock(spec: InitSpec): String =
+        if (!spec.metadataFromDsl) "" else "\n" + render(
+            "partials/mod-block.gradle", mapOf(
+                "MODID" to spec.modId,
+                "NAME" to spec.name,
+                "VERSION" to spec.version,
+                "LOADER_SECTIONS" to spec.loaders.joinToString("\n") { (l, _) ->
+                    render("partials/mod-loader-section.gradle", mapOf(
+                        "LOADER" to l
+                    ))
+                },
+            )
+        ).indented("    ")
+
+    /** `build.gradle(.kts)` — the unimined plugin + minecraft block. */
+    fun build(spec: InitSpec): String {
+        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
+        return render("build.gradle", mapOf(
+            "PLUGIN_DECL" to if (kts) {
+                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
+            } else {
+                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
+            },
+            "REPOS" to loaderRepos(spec).joinToString("\n") {
+                "    maven(\"$it\")"
+            },
+            "MINECRAFT_BODY" to minecraftBody(spec),
+            "MOD_BLOCK" to modBlock(spec),
+        ))
     }
 
     /** `gradle.properties` — Maven coordinates + mod metadata. */
-    fun gradleProperties(spec: InitSpec): String = buildString {
-        appendLine("org.gradle.jvmargs=-Xmx2G")
-        appendLine()
-        appendLine("group=${spec.group}")
-        appendLine("version=${spec.version}")
-        appendLine("modid=${spec.modId}")
-    }
+    fun gradleProperties(spec: InitSpec): String = render("gradle.properties", mapOf(
+        "GROUP" to spec.group,
+        "VERSION" to spec.version,
+        "MODID" to spec.modId,
+    ))
 
-    /** `.gitignore` — standard Gradle/JDK/IDE entries. */
-    val gitignore = """
-        .gradle/
-        build/
-        out/
-        .idea/
-        *.iml
-        .classpath
-        .project
-        .settings/
-        run/
-        logs/
-        .unimined/
-    """.trimIndent() + "\n"
+    /** `.gitignore` — standard Gradle/JDK/IDE entries (static). */
+    val gitignore get() = resource("gitignore")
 
     /** `gradle/wrapper/gradle-wrapper.properties`. */
-    fun wrapperProperties(spec: InitSpec): String = """
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-${spec.wrapperGradleVersion}-bin.zip
-        networkTimeout=10000
-        validateDistributionUrl=true
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-    """.trimIndent() + "\n"
+    fun wrapperProperties(spec: InitSpec): String =
+        render("gradle-wrapper.properties", mapOf(
+            "GRADLE_VERSION" to spec.wrapperGradleVersion
+        ))
 
     /** PascalCase class name derived from the project name. */
     fun mainClassName(spec: InitSpec): String =
@@ -143,106 +147,45 @@ internal object Templates {
      * loader's init method stubbed.
      */
     fun mainClass(spec: InitSpec, loader: String): String {
-        val pkg = spec.basePackage
-        val cls = mainClassName(spec)
-        val modId = spec.modId
-        val (header, clazzDecl, entrypoint) = when (loader.lowercase()) {
-            "fabric" -> Triple(
-                "",
-                "final class $cls implements net.fabricmc.api.ModInitializer",
-                "@Override public void onInitialize() { }"
-            )
-
-            "quilt" -> Triple(
-                "",
-                "final class $cls implements org.quiltmc.loader.api.ModInitializer",
-                "@Override public void onInitialize(org.quiltmc.qsl.base.api.entrypoint.ModInitializer.InitializationContext ctx) { }"
-            )
-
-            "neoforge" -> Triple(
-                "@net.neoforged.fml.common.Mod(\"$modId\")",
-                "final class $cls",
-                "public $cls(net.neoforged.bus.api.IEventBus modBus) { }"
-            )
-
-            "forge" -> Triple(
-                "@net.minecraftforge.fml.common.Mod(\"$modId\")",
-                "final class $cls",
-                "public $cls() { }"
-            )
-
-            else -> Triple("", "final class $cls", "public void init() { }")
+        val file = when (loader.lowercase()) {
+            "fabric", "quilt", "neoforge", "forge" -> loader.lowercase()
+            else -> "generic"
         }
-        return buildString {
-            appendLine("package $pkg;")
-            appendLine()
-            appendLine("/** Mod entrypoint generated by unimined-init. */")
-            if (header.isNotEmpty()) appendLine(header)
-            appendLine("public $clazzDecl {")
-            appendLine()
-            appendLine("    $entrypoint")
-            appendLine()
-            appendLine("}")
-        }
+        return render("entrypoint/$file.java", mapOf(
+            "PACKAGE" to spec.basePackage,
+            "CLASS" to mainClassName(spec),
+            "MODID" to spec.modId,
+        ))
     }
 
     /**
      * Loader metadata stubs — `(path, content)` pairs emitted under
-     * `src/main/resources/`.
+     * the env's `src/<ss>/resources/`.
      */
-    fun metadata(spec: InitSpec, loader: String): List<Pair<String, String>> =
-        when (loader.lowercase()) {
-            "fabric" -> listOf("fabric.mod.json" to """
-                {
-                  "schemaVersion": 1,
-                  "id": "${spec.modId}",
-                  "version": "${spec.version}",
-                  "name": "${spec.name}",
-                  "entrypoints": {
-                    "main": ["${spec.basePackage}.${mainClassName(spec)}"]
-                  },
-                  "depends": {
-                    "minecraft": "~${spec.mcVersion}"
-                  }
-                }
-                """.trimIndent() + "\n")
-
-            "quilt" -> listOf("quilt.mod.json" to """
-                {
-                  "schema_version": 1,
-                  "quilt_loader": {
-                    "id": "${spec.modId}",
-                    "version": "${spec.version}",
-                    "name": "${spec.name}",
-                    "entrypoints": {
-                      "init": "${spec.basePackage}.${mainClassName(spec)}"
-                    },
-                    "depends": [{"id": "minecraft", "versions": ">=${spec.mcVersion}"}]
-                  }
-                }
-                """.trimIndent() + "\n")
-
-            "neoforge" -> listOf("META-INF/neoforge.mods.toml" to """
-                modLoader = "javafml"
-                loaderVersion = "[1,)"
-                license = "MIT"
-                [[mods]]
-                  modId = "${spec.modId}"
-                  version = "${spec.version}"
-                  displayName = "${spec.name}"
-                """.trimIndent() + "\n")
-
-            "forge" -> listOf("META-INF/mods.toml" to """
-                modLoader = "javafml"
-                loaderVersion = "[1,)"
-                license = "MIT"
-                [[mods]]
-                  modId = "${spec.modId}"
-                  version = "${spec.version}"
-                  displayName = "${spec.name}"
-                """.trimIndent() + "\n")
-
+    fun metadata(spec: InitSpec, loader: String): List<Pair<String, String>> {
+        val tokens = mapOf(
+            "MODID" to spec.modId,
+            "VERSION" to spec.version,
+            "NAME" to spec.name,
+            "ENTRYPOINT" to "${spec.basePackage}.${mainClassName(spec)}",
+            "MC_VERSION" to spec.mcVersion,
+        )
+        return when (loader.lowercase()) {
+            "fabric" -> listOf(
+                "fabric.mod.json" to render("metadata/fabric.mod.json", tokens)
+            )
+            "quilt" -> listOf(
+                "quilt.mod.json" to render("metadata/quilt.mod.json", tokens)
+            )
+            "neoforge" -> listOf(
+                "META-INF/neoforge.mods.toml" to
+                        render("metadata/neoforge.mods.toml", tokens)
+            )
+            "forge" -> listOf(
+                "META-INF/mods.toml" to render("metadata/mods.toml", tokens)
+            )
             else -> emptyList()
         }
+    }
 
 }

@@ -37,6 +37,9 @@ skip resolution.
 --template <name> --templates <zip> extracts testing/<name>/ from a
 unimined-templates.zip instead of the minimal emit (scaffold flags
 unused).
+
+--metadata dsl emits a `mod { }` block — metadata generated per env
+by unimined-mod's emitters — instead of static files (default).
 """
 
 fun main(args: Array<String>) {
@@ -119,6 +122,9 @@ private fun run(args: Array<String>) {
             .let { if (it == "latest") resolver.latestPlugin() else it },
         gradleVersion = one("--gradle"),
         templateName = template,
+        // --metadata dsl: generate metadata via `mod { }` instead of
+        // static resource files (unimined-mod's emitters)
+        metadataFromDsl = one("--metadata") == "dsl",
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

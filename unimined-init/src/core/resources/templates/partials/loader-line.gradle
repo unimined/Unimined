@@ -1,0 +1,1 @@
+loader("@@LOADER@@", "@@LOADER_VERSION@@")

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "@@MODID@@",
+  "version": "@@VERSION@@",
+  "name": "@@NAME@@",
+  "entrypoints": {
+    "main": ["@@ENTRYPOINT@@"]
+  },
+  "depends": {
+    "minecraft": "~@@MC_VERSION@@"
+  }
+}

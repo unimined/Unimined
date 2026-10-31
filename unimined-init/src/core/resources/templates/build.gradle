@@ -1,0 +1,16 @@
+plugins {
+    java
+    @@PLUGIN_DECL@@
+}
+
+repositories {
+    mavenCentral()
+@@REPOS@@
+}
+
+unimined {
+    minecraft {
+@@MINECRAFT_BODY@@
+    }
+}
+@@MOD_BLOCK@@

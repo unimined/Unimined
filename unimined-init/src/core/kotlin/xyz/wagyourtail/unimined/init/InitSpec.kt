@@ -36,6 +36,12 @@ data class InitSpec(
     val templateName: String? = null,
     /** Local path to a `unimined-templates` zip. */
     val templatesZip: java.nio.file.Path? = null,
+    /**
+     * When true, emit a `mod { }` block in build.gradle — metadata is
+     * generated per env by `generate<Env>ModMetadata` — instead of
+     * static `src/<ss>/resources/` metadata files.
+     */
+    val metadataFromDsl: Boolean = false,
 ) {
 
     enum class Dsl(val scriptSuffix: String) {
