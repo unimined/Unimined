@@ -203,6 +203,49 @@ class MappingsSpecImpl(
     )
 
     /**
+     * Declare Nostalgia mappings — `nostalgia(<build>)` ⇢
+     * `me.alphamode:nostalgia:<mcVersion>+build.<N>:v2` on the Wisp
+     * Forest maven; babric-family named layer riding
+     * `babricIntermediary` (requires that hop to be present).
+     */
+    fun nostalgia(build: Int) = maven(
+        requireMcVersion("nostalgia").map { "me.alphamode:nostalgia:$it+build.$build:v2" }
+    ) {
+        mapNamespace("intermediary" to "babricIntermediary")
+    }
+
+    /** [String]-build overload of [nostalgia]. */
+    fun nostalgia(build: String) = maven(
+        requireMcVersion("nostalgia").map { "me.alphamode:nostalgia:$it+build.$build:v2" }
+    ) {
+        mapNamespace("intermediary" to "babricIntermediary")
+    }
+
+    /**
+     * Declare Unascribed "unknownthingy" mappings —
+     * `unknownThingy("<version>", "<format>")` resolves
+     * `com.unascribed:unknownthingy:<version>` with a per-format
+     * classifier/extension: `tiny`/`tinyv2` → `:v2` classifier,
+     * `tsrg2` → `@tsrg2`, anything else → `@tsrg`. Namespace
+     * relabels follow the format (tiny `named`, tsrg2 `srg`,
+     * tsrg `target` → `unknownThingy`).
+     */
+    @JvmOverloads
+    fun unknownThingy(version: String, format: String = "tsrg") = maven(
+        when (format.lowercase()) {
+            "tiny", "tinyv1", "tinyv2" -> "com.unascribed:unknownthingy:$version:v2"
+            "tsrg2" -> "com.unascribed:unknownthingy:$version@tsrg2"
+            else -> "com.unascribed:unknownthingy:$version@tsrg"
+        }
+    ) {
+        when (format.lowercase()) {
+            "tiny", "tinyv1", "tinyv2" -> mapNamespace("named" to "unknownThingy")
+            "tsrg2" -> mapNamespace("obf" to "official", "srg" to "unknownThingy")
+            else -> mapNamespace("source" to "official", "target" to "unknownThingy")
+        }
+    }
+
+    /**
      * Declare Quilt mappings for the environment's Minecraft version —
      * `quilt(12)` ⇢ `org.quiltmc:quilt-mappings:<mc>+build.12:intermediary-v2`
      * on the Quilt maven; rides the `intermediary` hop.
