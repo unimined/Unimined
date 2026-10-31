@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.source.psi.AccessSourceExtensio
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.ConstantGroupSourceExtension
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.InterfaceInjectionExtension
 import xyz.wagyourtail.unimined.mapping.remapper.source.psi.JavadocExtension
+import xyz.wagyourtail.unimined.mapping.remapper.source.psi.Jsr308Extension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
@@ -72,7 +73,8 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
                     JavadocExtension(),
                     AccessSourceExtension(),
                     ConstantGroupSourceExtension(),
-                    InterfaceInjectionExtension()
+                    InterfaceInjectionExtension(),
+                    Jsr308Extension()
                 )
             )
         )

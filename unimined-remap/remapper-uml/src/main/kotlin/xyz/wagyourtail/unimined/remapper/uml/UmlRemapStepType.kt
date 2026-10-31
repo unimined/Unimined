@@ -11,6 +11,8 @@ import xyz.wagyourtail.unimined.mapping.inheritance.ASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.inheritance.LazyASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
+import xyz.wagyourtail.unimined.mapping.remapper.asm.BuiltinAsmExtensions
+import xyz.wagyourtail.unimined.mapping.remapper.asm.Jsr308AsmExtension
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.asm.PackageAccess
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
@@ -174,6 +176,8 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                     // are valid identifiers — flag them via pattern so
                     // renameInvalidLocals replaces them
                     invalidLvNamePattern = Regex(".*\\$\\$.*"),
+                    // JSR-308/JSR-305 annotation descriptors -> JetBrains
+                    extensions = BuiltinAsmExtensions.defaults() + Jsr308AsmExtension.factory(),
                     onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
                 )
             )
