@@ -77,6 +77,12 @@ internal object GenSourcesWiring {
             inputNamespace: Provider<String>
         ) {
             val devNamespace = minecraft.devNamespace(environmentId)
+            // registers the bundle producer eagerly — calling it inside
+            // the task action would register during task realization,
+            // an illegal context (breaks `tasks`, task-graph calc)
+            val mappingFile = minecraft.mappingBundle(
+                environmentId, "sources-$environmentId", inputNamespace, devNamespace
+            )
             project.tasks.register(
                 "sourcesSurface${environmentId.cap()}",
                 RemapArtifactTask::class.java
@@ -98,11 +104,7 @@ internal object GenSourcesWiring {
                 })
                 t.sourceNamespace.set(inputNamespace)
                 t.targetNamespace.set(devNamespace)
-                t.mappingFile.set(
-                    minecraft.mappingBundle(
-                        environmentId, "sources-$environmentId", inputNamespace, devNamespace
-                    )
-                )
+                t.mappingFile.set(mappingFile)
                 // the source engine resolves members against the libraries
                 // plus the binary counterpart of the decompiled artifact
                 t.remapClasspath.from(libraries)
@@ -144,6 +146,9 @@ internal object GenSourcesWiring {
 
         if (sourceSteps.isNotEmpty()) {
             val devNamespace = minecraft.devNamespace(environmentId)
+            val mappingFile = minecraft.mappingBundle(
+                environmentId, "sources-$environmentId", devNamespace, devNamespace
+            )
             project.tasks.register(
                 "sourcesSurface${environmentId.cap()}",
                 RemapArtifactTask::class.java
@@ -156,11 +161,7 @@ internal object GenSourcesWiring {
                 t.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.SOURCES))
                 t.sourceNamespace.set(devNamespace)
                 t.targetNamespace.set(devNamespace)
-                t.mappingFile.set(
-                    minecraft.mappingBundle(
-                        environmentId, "sources-$environmentId", devNamespace, devNamespace
-                    )
-                )
+                t.mappingFile.set(mappingFile)
                 // the source engine resolves members against the libraries
                 // plus the binary counterpart of the decompiled artifact
                 t.remapClasspath.from(libraries)
@@ -190,6 +191,9 @@ internal object GenSourcesWiring {
         if (steps.isEmpty()) return devJar
 
         val devNamespace = minecraft.devNamespace(environmentId)
+        val mappingFile = minecraft.mappingBundle(
+            environmentId, "decompile-$environmentId", devNamespace, devNamespace
+        )
         val fork = project.tasks.register(
             "decompileSurface${environmentId.cap()}",
             RemapArtifactTask::class.java
@@ -202,11 +206,7 @@ internal object GenSourcesWiring {
             t.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.DECOMPILE))
             t.sourceNamespace.set(devNamespace)
             t.targetNamespace.set(devNamespace)
-            t.mappingFile.set(
-                minecraft.mappingBundle(
-                    environmentId, "decompile-$environmentId", devNamespace, devNamespace
-                )
-            )
+            t.mappingFile.set(mappingFile)
             t.outputArtifact.set(
                 project.layout.buildDirectory.file(
                     "unimined/sources/minecraft-$environmentId-decompile.jar"
