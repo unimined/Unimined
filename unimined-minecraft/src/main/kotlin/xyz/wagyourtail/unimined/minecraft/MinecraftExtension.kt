@@ -732,6 +732,21 @@ abstract class MinecraftExtension @Inject constructor(
                     )
                 }
 
+                "spigot" -> {
+                    // BuildData archive — supplied by the environment's
+                    // provider (provider-buildtools for cb/spigot envs);
+                    // the spigot channel consumer reads info.json's
+                    // classMappings/memberMappings entries out of it
+                    val file = resolved(environment)
+                        .auxiliaryArtifacts["spigot_builddata"]
+                        ?: throw GradleException(
+                            "mappings { spigot() }: provider " +
+                                    "'${environment.provider.orNull ?: "auto"}' supplies no " +
+                                    "spigot_builddata channel for ${environment.version.orNull}"
+                        )
+                    listOf(file.get().asFile.toPath())
+                }
+
                 "parchment" -> {
                     val mcVersion = params["mcVersion"]
                         ?: throw GradleException("parchment() requires mcVersion")

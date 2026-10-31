@@ -52,9 +52,10 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             "searge" -> seargeSource(source, ctx, params)
             "forgeBuiltinMCP" -> forgeBuiltinMCPSource(source, ctx, params)
             "parchment" -> parchmentSource(source, ctx, params)
+            "spigot" -> spigotSource(source, ctx, params)
             else -> throw IllegalStateException(
                 "mappings { ${source.channel}() }: unknown builtin channel; " +
-                        "expected one of official, mojmap, searge, forgeBuiltinMCP, parchment"
+                        "expected one of official, mojmap, searge, forgeBuiltinMCP, parchment, spigot"
             )
         }
     }
@@ -332,6 +333,61 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
      * javadoc. The document carries a single `source` namespace; it is
      * relabeled `mojmap` so it attaches to the mojmap hop in the chain.
      */
+
+    /**
+     * `spigot(version)` — Spigot BuildData class+member mappings as the
+     * named `spigot` namespace. The `spigot` channel resolves to the
+     * builddata archive zip; `info.json` names the `classMappings` /
+     * `memberMappings` entries (SRG). Classes and members both land
+     * under `spigot`; `spigotProd` (versioned-NMS relocation, members
+     * still obfuscated) is derived downstream by the bukkit transform.
+     */
+    private fun spigotSource(
+        source: BuiltinMappingSource,
+        ctx: MappingContext,
+        params: Map<String, String>
+    ): MaterializedMappingSource {
+        val version = params["version"]
+            ?: throw IllegalStateException("mappings { spigot() }: missing version")
+        val zip = ctx.resolveChannel("spigot", params).singleOrNull()
+            ?: throw IllegalStateException(
+                "mappings { spigot($version) }: the environment's provider " +
+                        "did not resolve the Spigot BuildData archive"
+            )
+        val info = readZipEntry(zip, "info.json")
+            ?: throw IllegalStateException("BuildData archive $zip has no info.json")
+        val classMap = Regex(""""classMappings"\s*:\s*"([^"]+)"""")
+            .find(info)?.groupValues?.get(1)
+            ?: throw IllegalStateException("BuildData $zip info.json has no classMappings")
+        val memberMap = Regex(""""memberMappings"\s*:\s*"([^"]+)"""")
+            .find(info)?.groupValues?.get(1)
+            ?: throw IllegalStateException("BuildData $zip info.json has no memberMappings")
+
+        val official = Namespace("official")
+        val spigot = Namespace("spigot")
+        val out = writeDerived(
+            channelCacheDir(ctx, "spigot"),
+            "spigot-$version-${contentTag(zip)}.umf"
+        ) { sb ->
+            val tree = MutableMappingTree()
+            runBlocking {
+                for (name in listOf(classMap, memberMap)) {
+                    val doc = readZipEntry(zip, name)
+                        ?: throw IllegalStateException(
+                            "BuildData $zip missing mapping file $name")
+                    SrgReader.read(doc, tree,
+                        mapOf("left" to "official", "right" to "spigot"))
+                }
+            }
+            tree.emit(UMFWriter.write(sb::append, false),
+                nsFilter = listOf(official, spigot))
+        }
+        return RuntimeMaterializedMappingSource(
+            source, listOf(out), null,
+            namedNamespaces = setOf("spigot")
+        )
+    }
+
     private fun parchmentSource(
         source: BuiltinMappingSource,
         ctx: MappingContext,
