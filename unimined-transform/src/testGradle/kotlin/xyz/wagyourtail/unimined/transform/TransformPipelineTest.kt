@@ -27,6 +27,8 @@ private class FakeArtifacts(private val project: Project) : MinecraftArtifacts {
     override val capabilities = project.provider {
         EnvironmentCapabilities(minecraftVersion = "1.0")
     }
+    override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
+        project.provider { emptyList() }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
     override val extraDependencies = project.objects.fileCollection()
     override val extraCompileSources = project.objects.fileCollection()

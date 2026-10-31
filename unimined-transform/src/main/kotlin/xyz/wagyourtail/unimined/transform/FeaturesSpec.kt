@@ -26,11 +26,18 @@ class FeaturesSpec(val registry: FeatureRegistry) {
     }
 
     /** Resolve all declared bindings — selection-time validation:
-     *  `applies(context)` false fails loudly. */
+     *  `applies(context)` is checked against a per-binding context
+     *  carrying the declared value (`bogus` in `nestedJars("bogus")`
+     *  must fail, not validate as `null`). */
     fun resolve(ctx: EnvironmentFeature.FeatureContext)
-            : List<EnvironmentFeature> = bindings.map { (key, _) ->
+            : List<EnvironmentFeature> = bindings.map { (key, value) ->
         val f = registry.require(key)
-        check(f.applies(ctx)) {
+        val bindingCtx = object : EnvironmentFeature.FeatureContext {
+            override val bindingValue = value
+            override val side = ctx.side
+            override val family = ctx.family
+        }
+        check(f.applies(bindingCtx)) {
             "feature '$key' does not apply to this environment " +
                     "(family=${ctx.family}, side=${ctx.side})"
         }
