@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.io.File
+import java.nio.file.Path
 import kotlin.reflect.KClass
 
 /**
@@ -35,25 +36,10 @@ class JstStep : RemapStepType<JstStepSpec> {
         val out = c.workDir.resolve("jst-out.jar")
         val javaBin = File(System.getProperty("java.home"), "bin/java").absolutePath
 
-        val args = buildList {
-            add(javaBin)
-            add("-cp")
-            add(toolCp.joinToString(File.pathSeparator) { it.absolutePath })
-            add("net.neoforged.jst.cli.Main")
-            addAll(listOf("--in-format", "ARCHIVE", "--out-format", "ARCHIVE"))
-            if (c.classpath.isNotEmpty()) {
-                addAll(
-                    listOf(
-                        "--classpath",
-                        c.classpath.joinToString(File.pathSeparator)
-                    )
-                )
-            }
-            spec.enable.get().forEach { addAll(listOf("--enable", it)) }
-            addAll(spec.extraArgs.get())
-            add(input.toString())
-            add(out.toString())
-        }
+        val args = buildJstArgs(
+            javaBin, toolCp.map { it.absolutePath }, c.classpath,
+            spec.enable.get(), spec.extraArgs.get(), input.toString(), out.toString()
+        )
         c.log.subLogger("jst").info(args.joinToString(" "))
 
         val proc = ProcessBuilder(args).redirectErrorStream(true).start()
@@ -63,6 +49,32 @@ class JstStep : RemapStepType<JstStepSpec> {
         }
         c.logger.debug(output)
         out
+    }
+
+    companion object {
+        /**
+         * Builds the jst-cli 2.x argv — extracted for unit-testing:
+         * `--in-format`/`--out-format` are the real flags (a
+         * `--input-format`/`--output-format` typo shipped once and
+         * only surfaced end-to-end).
+         */
+        internal fun buildJstArgs(
+            javaBin: String, toolCp: List<String>, classpath: List<Path>,
+            enable: List<String>, extraArgs: List<String>, input: String, out: String,
+        ) = buildList {
+            add(javaBin)
+            add("-cp")
+            add(toolCp.joinToString(File.pathSeparator))
+            add("net.neoforged.jst.cli.Main")
+            addAll(listOf("--in-format", "ARCHIVE", "--out-format", "ARCHIVE"))
+            if (classpath.isNotEmpty()) {
+                addAll(listOf("--classpath", classpath.joinToString(File.pathSeparator)))
+            }
+            enable.forEach { addAll(listOf("--enable", it)) }
+            addAll(extraArgs)
+            add(input)
+            add(out)
+        }
     }
 
 }
