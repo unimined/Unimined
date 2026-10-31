@@ -29,8 +29,11 @@ internal class PaperPatchProcessor(
     override val name = "paper-patch"
     override val preRemap = true
 
-    private val patchPattern: Pattern =
-        Pattern.compile("META-INF/.*/server-.*\\.patch")
+    private val patchPatterns = listOf(
+        Pattern.compile("META-INF/.*/server-.*\\.patch"),
+        // paperclip bundler (paper >=1.20.4): META-INF/versions/<ver>/paper-<ver>.patch
+        Pattern.compile("META-INF/versions/[^/]+/[^/]+\\.patch")
+    )
 
     class Spec(val patchBytes: ByteArray) :
         JarProcessor.JarProcessorSpec, Serializable
@@ -39,10 +42,12 @@ internal class PaperPatchProcessor(
         val jar = distJar()
         ZipFile(jar.toFile()).use { zip ->
             val entry = zip.entries().asSequence().firstOrNull {
-                it.name == "paperMC.patch" || patchPattern.matcher(it.name).matches()
+                it.name == "paperMC.patch" ||
+                    patchPatterns.any { p -> p.matcher(it.name).matches() }
             } ?: error(
                 "paper dist jar $jar carries no server patch " +
-                        "(expected paperMC.patch or META-INF/*/server-*.patch)"
+                        "(expected paperMC.patch, META-INF/*/server-*.patch, " +
+                        "or META-INF/versions/*/*.patch)"
             )
             return Spec(zip.getInputStream(entry).readBytes())
         }

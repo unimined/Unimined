@@ -55,7 +55,11 @@ class PaperPatchProcessorTest {
         val patched = "paper-patched-server-bytes-longer".toByteArray()
         val patch = jbsdiffPatch(vanilla, patched)
 
-        listOf("paperMC.patch", "META-INF/patches/server-1.19.4.patch")
+        listOf(
+            "paperMC.patch",
+            "META-INF/patches/server-1.19.4.patch",
+            "META-INF/versions/paper-1.20.4/paper-1.20.4.patch"
+        )
             .forEachIndexed { i, entry ->
             val jar = dir.resolve("server-$i.jar")
             Files.write(jar, vanilla)
