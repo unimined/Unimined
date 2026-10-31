@@ -21,7 +21,8 @@ import javax.inject.Inject
  */
 abstract class PipelineSpec @Inject constructor(
     val registry: StepTypeRegistry,
-    val objects: ObjectFactory
+    val objects: ObjectFactory,
+    val presets: PipelinePresetRegistry = PipelinePresetRegistry()
 ) {
 
     /** Steps in registration (build-script declaration) order. */
@@ -63,6 +64,17 @@ abstract class PipelineSpec @Inject constructor(
         action.execute(node)
     }
 
+    /**
+     * `era("name")` — expand a named [PipelinePreset]'s canonical
+     * step list inline at this declaration site. Presets are
+     * ServiceLoader-declared by transform modules; unknown names
+     * fail at declaration. Probe-driven selection composes with
+     * [select]: `select("era") { branch("userdev") { era("userdev") } }`.
+     */
+    fun era(name: String) {
+        presets.require(name).expand(this)
+    }
+
     /** Inline glue action at declaration order — no artifacts/markers. */
     fun execute(name: String, action: Action<in PipelineExecutionScope>) {
         inlineActions += NamedAction(name, declaredSteps.size, action)
@@ -101,7 +113,7 @@ abstract class PipelineSpec @Inject constructor(
          *  declared key vocabulary at registration. */
         fun branch(pin: String, action: Action<in PipelineSpec>) {
             val nested = objects.newInstance(PipelineSpec::class.java,
-                registry, objects)
+                registry, objects, presets)
             action.execute(nested)
             branches[pin] = nested.declaredSteps
         }

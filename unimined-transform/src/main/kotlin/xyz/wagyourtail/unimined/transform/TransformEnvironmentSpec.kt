@@ -29,7 +29,7 @@ class TransformEnvironmentSpec internal constructor(
     /** Declared step pipeline — `pipeline { binpatches { } … }`.
      *  Empty for environments driven by [transformers] (the monolith
      *  path still resolves while modules port to declared steps). */
-    val pipeline = objects.newInstance(PipelineSpec::class.java, StepTypeRegistry(), objects)
+    val pipeline = objects.newInstance(PipelineSpec::class.java, StepTypeRegistry(), objects, PipelinePresetRegistry())
 
     /** `pipeline { }` DSL verb. */
     fun pipeline(action: Action<in PipelineSpec>) {
@@ -259,13 +259,23 @@ class TransformEnvironmentSpec internal constructor(
     }
 
     /**
+     * Probe resolver for `select(key)` pipeline nodes — env wiring
+     * (forge's artifact probe picks the era; a declared pin provides
+     * `("era" -> "userdev")`-style results) installs a resolver that
+     * maps probe keys to results. Unresolved keys return null —
+     * selecting nothing, so a selector with no null-branch fails at
+     * realization per [PipelineSpec.SelectorNode.branch].
+     */
+    var probeResolver: ((String) -> String?)? = null
+
+    /**
      * Declared `pipeline { }` steps contributing jar processors via
      * [xyz.wagyourtail.unimined.transform.step.PipelineStepSpec], in
-     * topological/registration order. Selector probe keys resolve
-     * against the env probe — `null` selects nothing.
+     * topological/registration order. Selector keys resolve through
+     * [probeResolver].
      */
     private fun pipelineJarProcessors(): List<JarProcessor> =
-        pipeline.realize { null }
+        pipeline.realize { key -> probeResolver?.invoke(key) }
             .flatMap { (it.spec as? PipelineStepSpec)?.jarProcessors() ?: emptyList() }
 
     /**
