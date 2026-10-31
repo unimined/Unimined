@@ -7,6 +7,7 @@ import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
+import xyz.wagyourtail.unimined.api.Deprecations
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mod.ModExtension
 import xyz.wagyourtail.unimined.migrate.MigrateExtension
@@ -95,6 +96,27 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
     fun minecraft(action: Action<MinecraftExtension>) {
         action.execute(project.extensions.getByType(MinecraftExtension::class.java))
     }
+
+    // region 1.x deprecation bridge — moved DSL (plan §Phase 8)
+
+    @Deprecated("moved to top-level in 2.0", level = DeprecationLevel.ERROR)
+    fun runs(action: Action<Any>): Nothing =
+        Deprecations.movedDsl("unimined { runs { } }", "runs { } (top level)")
+
+    @Deprecated("moved to top-level in 2.0", level = DeprecationLevel.ERROR)
+    fun mods(action: Action<Any>): Nothing =
+        Deprecations.movedDsl("unimined { mods { } }", "mod { } (top level)")
+
+    @Deprecated("per-sourceSet envs became named envs in 2.0",
+        level = DeprecationLevel.ERROR)
+    fun minecraft(sourceSet: org.gradle.api.tasks.SourceSet,
+                  action: Action<Any>): Nothing =
+        Deprecations.movedDsl(
+            "unimined { minecraft(sourceSets.<ss>) { } }",
+            "per-environment config (multi-env layout is a follow-up)"
+        )
+
+    // endregion
 
     /** Groovy DSL overload; delegates the closure to the Minecraft extension. */
     fun minecraft(

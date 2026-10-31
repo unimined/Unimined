@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.Deprecations
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectContainer
@@ -567,6 +568,88 @@ abstract class MinecraftExtension @Inject constructor(
     fun loader(name: String, version: String) {
         main.loader(name, version)
     }
+
+    // region 1.x deprecation bridge — patcher blocks became
+    // loader("name", "version"); the deprecated overloads fail with
+    // the migration target in the message (plan §Phase 8)
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun fabric(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("fabric")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun quilt(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("quilt")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun forge(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("forge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun neoforge(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("neoforge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun legacyFabric(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("legacyFabric")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun babric(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("babric")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun ornithe(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("ornithe")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun modloader(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("modloader")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun risugami(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("risugami")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun jarmod(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("jarmod")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun nil(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("nil")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun flint(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("flint")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun foxLoader(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("foxLoader")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun bukkit(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("bukkit")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun spigot(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("spigot")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun paper(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("paper")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun folia(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("folia")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun arch(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("arch")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun bta(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("bta")
+
+    // endregion
 
     private val validatingCombinations = ThreadLocal<MutableSet<String>>()
 
