@@ -4,6 +4,7 @@ import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
+import xyz.wagyourtail.unimined.transform.feature.FeatureRegistry
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -30,6 +31,14 @@ class TransformEnvironmentSpec internal constructor(
     /** `pipeline { }` DSL verb. */
     fun pipeline(action: Action<in PipelineSpec>) {
         action.execute(pipeline)
+    }
+
+    /** Declared capability bindings — `features { nestedJars("jarjar") }`. */
+    val features = FeaturesSpec(FeatureRegistry())
+
+    /** `features { }` DSL verb. */
+    fun features(action: Action<in FeaturesSpec>) {
+        action.execute(features)
     }
 
     /** Declared transformers in execution order. */
