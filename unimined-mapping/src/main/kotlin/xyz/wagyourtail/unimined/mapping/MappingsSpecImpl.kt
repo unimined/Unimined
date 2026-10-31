@@ -180,6 +180,76 @@ class MappingsSpecImpl(
     )
 
     /**
+     * Declare Ornithe Calamus intermediary —
+     * `net.ornithemc:calamus-intermediary:<mcVersion>:v2` on the Ornithe
+     * maven; the `intermediary` column is relabeled `calamus` (1.x
+     * `provides("calamus" to false) + mapNamespace`).
+     */
+    fun calamus() = maven(
+        requireMcVersion("calamus").map { "net.ornithemc:calamus-intermediary:$it:v2" }
+    ) {
+        mapNamespace("intermediary" to "calamus")
+    }
+
+    /**
+     * Declare Legacy Fabric intermediary —
+     * `net.legacyfabric:intermediary:<mcVersion>:v2`; relabeled
+     * `legacyIntermediary` like [calamus].
+     */
+    fun legacyIntermediary() = maven(
+        requireMcVersion("legacyIntermediary").map { "net.legacyfabric:intermediary:$it:v2" }
+    ) {
+        mapNamespace("intermediary" to "legacyIntermediary")
+    }
+
+    /**
+     * Declare Babric upstream intermediary —
+     * `babric:intermediary-upstream:<mcVersion>:v2` on the Glass
+     * Launcher maven; the `barn`/`biny` hops ride this namespace.
+     */
+    fun babricIntermediary() = maven(
+        requireMcVersion("babricIntermediary").map { "babric:intermediary-upstream:$it:v2" }
+    ) {
+        mapNamespace("intermediary" to "babricIntermediary")
+    }
+
+    /**
+     * Declare Biny mappings — `biny("<commitName>")` ⇢
+     * `net.glasslauncher:biny:<mcVersion>+<commitName>:v2`; babric-
+     * family named layer on `babricIntermediary`.
+     */
+    fun biny(commitName: String) = maven(
+        requireMcVersion("biny").map { "net.glasslauncher:biny:$it+$commitName:v2" }
+    )
+
+    /** String-build overloads — build numbers accept non-numeric
+     *  forms (e.g. `"latest"` resolved by the maven side). */
+    fun yarn(build: String) = maven(
+        requireMcVersion("yarn").map { "net.fabricmc:yarn:$it+build.$build:v2" }
+    )
+    /** [String]-build overload of [feather]. */
+    fun feather(build: String) = maven(
+        requireMcVersion("feather").map { "net.ornithemc:feather:$it+build.$build:v2" }
+    )
+    /** [String]-build overload of [legacyYarn]. */
+    fun legacyYarn(build: String) = maven(
+        requireMcVersion("legacyYarn").map { "net.legacyfabric:yarn:$it+build.$build:v2" }
+    )
+    /** [String]-build overload of [barn]. */
+    fun barn(build: String) = maven(
+        requireMcVersion("barn").map { "babric:barn:$it+build.$build:v2" }
+    )
+    /** [String]-build overload of [quilt]. */
+    fun quilt(build: String) = maven(
+        requireMcVersion("quilt").map { "org.quiltmc:quilt-mappings:$it+build.$build:intermediary-v2" }
+    )
+
+    /** Declare RetroMCP at the environment's Minecraft version. */
+    fun retroMCP() = maven(
+        requireMcVersion("retroMCP").map { "io.github.mcphackers:mcp:$it@zip" }
+    ) { named("retroMCP") }
+
+    /**
      * Declare the Searge (MCPConfig) mappings channel — [version] is the
      * MCPConfig artifact version; it defaults to the environment's
      * Minecraft version.
