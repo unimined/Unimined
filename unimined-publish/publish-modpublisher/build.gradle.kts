@@ -9,6 +9,7 @@ dependencies {
     // build applies com.hypherionmc.modutils.modpublisher
     compileOnly("com.hypherionmc.modutils:modpublisher:2.2.4")
 
+    testImplementation(project(":unimined-mod-loader-merge"))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
