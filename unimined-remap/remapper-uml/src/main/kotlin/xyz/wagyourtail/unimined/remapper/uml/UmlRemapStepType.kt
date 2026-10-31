@@ -170,6 +170,10 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                 // checkPackageAccess+fixPackageAccess equivalent)
                 options = Options(
                     packageAccess = PackageAccess.FIX,
+                    // decompiler/obf synthetic param names ($$0, $$1…)
+                    // are valid identifiers — flag them via pattern so
+                    // renameInvalidLocals replaces them
+                    invalidLvNamePattern = Regex(".*\\$\\$.*"),
                     onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
                 )
             )
