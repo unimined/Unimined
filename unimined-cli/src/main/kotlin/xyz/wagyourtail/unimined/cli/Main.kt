@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.cli
 
 import xyz.wagyourtail.unimined.init.InitSpec
 import xyz.wagyourtail.unimined.init.ProjectGenerator
+import xyz.wagyourtail.unimined.init.VersionResolver
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -27,8 +28,9 @@ options:
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
-all versions must be pinned — `latest` resolution against real
-manifests lands with unimined-init's version resolver.
+`latest` resolves against real manifests (piston-meta, fabric-meta,
+loader maven-metadata.xml, wagyourtail maven) — pin explicitly to
+skip resolution.
 """
 
 fun main(args: Array<String>) {
@@ -75,12 +77,17 @@ private fun run(args: Array<String>) {
     fun need(flag: String): String =
         one(flag) ?: throw IllegalArgumentException("missing required $flag")
 
+    val resolver = VersionResolver()
+    val mc = need("--mc").let { if (it == "latest") resolver.latestMinecraft() else it }
+
     val loaders = flags["--loader"].orEmpty()
         .flatMap { it.split(',') }
         .map { entry ->
             val eq = entry.indexOf('=')
             require(eq > 0) { "--loader wants name=version, got '$entry'" }
-            entry.substring(0, eq).trim() to entry.substring(eq + 1).trim()
+            val l = entry.substring(0, eq).trim()
+            val v = entry.substring(eq + 1).trim()
+            l to if (v == "latest") resolver.latestLoader(l, mc) else v
         }
 
     val spec = InitSpec(
@@ -89,11 +96,12 @@ private fun run(args: Array<String>) {
         version = one("--mod-version") ?: "1.0.0",
         modid = one("--modid"),
         packageName = one("--package"),
-        mcVersion = need("--mc"),
+        mcVersion = mc,
         loaders = loaders,
         mappings = flags["--mappings"].orEmpty(),
         dsl = if (one("--dsl") == "groovy") InitSpec.Dsl.GROOVY else InitSpec.Dsl.KOTLIN,
-        pluginVersion = need("--plugin-version"),
+        pluginVersion = need("--plugin-version")
+            .let { if (it == "latest") resolver.latestPlugin() else it },
         gradleVersion = one("--gradle"),
     )
 
