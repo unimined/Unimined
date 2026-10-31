@@ -45,10 +45,12 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
 
     override fun supports(spec: RemapSpec) = true
 
-    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep =
-        ArtifactStep { input, c -> remap(input, c) }
+    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
+        val jsr308 = spec.jsr308ToJetbrains
+        return ArtifactStep { input, c -> remap(input, c, jsr308) }
+    }
 
-    private fun remap(input: Path, ctx: StepContext): Path {
+    private fun remap(input: Path, ctx: StepContext, jsr308: Boolean): Path {
         val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
                 "remap step 'uml' (sources) requires mapping data exposing a UML MappingTree view"
@@ -69,13 +71,13 @@ class UmlSourceRemapStepType : RemapStepType<RemapStepSpec> {
             Namespace(spec.targetNamespace),
             classpath = ctx.classpath.filter { it.exists() },
             options = SourceOptions(
-                extensions = listOf(
-                    JavadocExtension(),
-                    AccessSourceExtension(),
-                    ConstantGroupSourceExtension(),
-                    InterfaceInjectionExtension(),
-                    Jsr308Extension()
-                )
+                extensions = buildList {
+                    add(JavadocExtension())
+                    add(AccessSourceExtension())
+                    add(ConstantGroupSourceExtension())
+                    add(InterfaceInjectionExtension())
+                    if (jsr308) add(Jsr308Extension())
+                }
             )
         )
         return target

@@ -60,10 +60,12 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
      */
     override val priority: Int = 1
 
-    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep =
-        ArtifactStep { input, c -> remap(input, c) }
+    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
+        val jsr308 = spec.jsr308ToJetbrains
+        return ArtifactStep { input, c -> remap(input, c, jsr308) }
+    }
 
-    private fun remap(input: Path, ctx: StepContext): Path {
+    private fun remap(input: Path, ctx: StepContext, jsr308: Boolean): Path {
         val view = ctx.mappings?.view<MappingTree>()
             ?: throw GradleException(
                 "remap step 'uml' requires mapping data exposing a UML MappingTree view"
@@ -177,7 +179,8 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                     // renameInvalidLocals replaces them
                     invalidLvNamePattern = Regex(".*\\$\\$.*"),
                     // JSR-308/JSR-305 annotation descriptors -> JetBrains
-                    extensions = BuiltinAsmExtensions.defaults() + Jsr308AsmExtension.factory(),
+                    extensions = BuiltinAsmExtensions.defaults() +
+                        if (jsr308) listOf(Jsr308AsmExtension.factory()) else emptyList(),
                     onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
                 )
             )
