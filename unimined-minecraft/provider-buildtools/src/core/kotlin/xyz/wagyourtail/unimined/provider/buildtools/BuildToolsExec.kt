@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.provider.buildtools
 
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
@@ -42,7 +43,10 @@ internal class BuildToolsExec(
      * like `1.20.4`). Idempotent — skips when the output already
      * exists in the work dir.
      */
-    fun serverJar(target: String, rev: String): Path {
+    fun serverJar(
+        target: String, rev: String,
+        javaExecutable: () -> String = { "java" }
+    ): Path {
         val dir = workDir.resolve("$target-$rev")
         existingOutput(dir, target)?.let { return it }
         dir.createDirectories()
@@ -58,7 +62,7 @@ internal class BuildToolsExec(
                         // it may have produced the jar already
                         existingOutput(dir, target)?.let { return it }
                         javaExec(
-                            "java",
+                            javaExecutable(),
                             listOf(
                                 "-jar", buildTools().toAbsolutePath().toString(),
                                 "--rev", rev,
@@ -80,6 +84,12 @@ internal class BuildToolsExec(
             dir.listDirectoryEntries("$target-*.jar")
                 .firstOrNull { !it.fileName.toString().endsWith("-sources.jar") }
         } else null
+
+    private fun lockFile(dir: Path): FileLock =
+        FileChannel.open(
+            dir.resolve(".build.lock"),
+            StandardOpenOption.CREATE, StandardOpenOption.WRITE
+        ).use { it.lock() }
 
     companion object {
         private val LOCKS = ConcurrentHashMap<Path, ReentrantLock>()

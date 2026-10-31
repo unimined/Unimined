@@ -5,6 +5,8 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import java.time.Duration
@@ -20,6 +22,8 @@ class DefaultProviderContext(
     override val providers: ProviderFactory,
     override val exec: ExecOperations,
     override val logger: Logger,
+    override val javaToolchains: JavaToolchainService,
+    override val useToolchains: Provider<Boolean>,
     override val offline: Boolean,
     override val forceReload: Boolean,
     override val refreshDependencies: Boolean,

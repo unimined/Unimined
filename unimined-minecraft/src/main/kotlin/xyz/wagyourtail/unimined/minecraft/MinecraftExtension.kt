@@ -43,6 +43,7 @@ import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.minecraft.transform.MinecraftArtifactTransform
 import java.nio.file.Files
+import org.gradle.jvm.toolchain.JavaToolchainService
 import java.nio.file.Path
 import kotlin.io.path.readText
 import java.util.jar.JarOutputStream
@@ -660,6 +661,8 @@ abstract class MinecraftExtension @Inject constructor(
         DefaultProviderContext(
             project.layout, objects, dependencyFactory, providers, exec,
             Logging.getLogger(MinecraftExtension::class.java),
+            project.extensions.getByType(JavaToolchainService::class.java),
+            useToolchains,
             cacheSettings.offline,
             cacheSettings.forceReload,
             cacheSettings.refreshDependencies,

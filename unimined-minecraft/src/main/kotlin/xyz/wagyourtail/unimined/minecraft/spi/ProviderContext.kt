@@ -5,6 +5,8 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
 import java.time.Duration
 
@@ -29,6 +31,16 @@ interface ProviderContext {
     val exec: ExecOperations
 
     val logger: Logger
+
+    /** Java toolchain service for tool-exec launcher selection —
+     * BuildTools-style providers resolve a launcher whose version
+     * matches the target's declared `javaVersions` range. */
+    val javaToolchains: JavaToolchainService
+
+    /** Whether tool executions resolve Gradle java toolchains —
+     * the environment's `useToolchains` opt-out; when false tools
+     * run on the build JVM (providers validate its version). */
+    val useToolchains: Provider<Boolean>
 
     /** Whether Gradle was invoked with `--offline`. */
     val offline: Boolean
