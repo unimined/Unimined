@@ -53,3 +53,5 @@ kotlin-gradle-plugin-api = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin
 
 # UML logs through kotlin-logging -> slf4j; tests need a binding
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "1.7.36" }
+# Forgix loader-jar merger (plan §12) — library API Forgix.mergeLoaders
+forgix = { module = "io.github.pacifistmc.forgix:Forgix", version = "2.0.0" }

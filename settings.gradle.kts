@@ -24,6 +24,7 @@ dependencyResolutionManagement {
         maven("https://maven.neoforged.net/releases")
         maven("https://maven.minecraftforge.net/")
         maven("https://maven.fabricmc.net/")
+        gradlePluginPortal()
     }
 }
 
