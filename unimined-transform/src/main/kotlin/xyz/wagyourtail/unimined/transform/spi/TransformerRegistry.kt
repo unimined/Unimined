@@ -4,6 +4,7 @@ import java.util.ServiceLoader
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
+import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 
 /**
  * Selection layer over [MinecraftTransformer] impls — each declares
@@ -36,6 +37,11 @@ interface TransformerClaim {
         val project: Project
         val descriptor: LoaderDescriptor?
         val env: TransformEnvironmentSpec
+
+        /** The bound MinecraftEnvironment for env-level wiring —
+         *  null on rowless claims where no env binding exists. */
+        val minecraft: MinecraftEnvironment?
+            get() = null
     }
 
 }

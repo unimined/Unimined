@@ -135,13 +135,15 @@ class TransformEnvironmentSpec internal constructor(
      */
     fun installClaimContext(
         project: org.gradle.api.Project,
-        descriptor: () -> xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor?
+        descriptor: () -> xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor?,
+        minecraft: () -> xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment? = { null }
     ) {
         transformerClaimContext = {
             object : TransformerClaim.TransformerEnvContext {
                 override val project = project
                 override val descriptor = descriptor()
                 override val env = this@TransformEnvironmentSpec
+                override val minecraft = minecraft()
             }
         }
     }

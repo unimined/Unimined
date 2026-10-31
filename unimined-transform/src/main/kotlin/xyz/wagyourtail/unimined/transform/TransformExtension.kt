@@ -56,7 +56,7 @@ abstract class TransformExtension @Inject constructor(
                     // rowless default — loader plugin wiring replaces this
                     // with a descriptor-carrying context via
                     // installClaimContext(project) { descriptor }
-                    env.installClaimContext(project) { null }
+                    env.installClaimContext(project, descriptor = { null })
                 }
         }
 
