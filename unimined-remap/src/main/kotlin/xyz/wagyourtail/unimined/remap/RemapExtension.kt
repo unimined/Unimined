@@ -236,7 +236,11 @@ abstract class RemapExtension @Inject constructor(
             val environment = sourceSet(environmentId)
             environment.validate()
             val declared = environment.effectiveSteps(surface)
-            val core = if (declared.isEmpty() && surface == RemapSurface.JAR) {
+            val core = if (declared.isEmpty() &&
+                (surface == RemapSurface.JAR || surface == RemapSurface.SOURCES)
+            ) {
+                // SOURCES resolves to the uml source-remap step (remap +
+                // javadoc-from-mappings) when remapper-uml is applied
                 listOf<StepSpec>(RemapStepSpec())
             } else {
                 declared
