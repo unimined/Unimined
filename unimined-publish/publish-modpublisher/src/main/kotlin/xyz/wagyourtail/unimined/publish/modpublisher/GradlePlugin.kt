@@ -17,12 +17,28 @@ import org.gradle.api.Project
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        target.extensions.create(
+        val ext = target.extensions.create(
             "uniminedPublishModpublisher", ModpublisherExtension::class.java
         )
-        // TODO: when the ModPublisher plugin is on the classpath, feed
-        // ArtifactSelection.select(...) results into its upload task —
-        // tracked in Docs/progress.md
+
+        // mergedElements convention: when loader-merge produces a
+        // `merged` artifact it becomes the upload artifact by default
+        // (ArtifactSelection prefers merged over per-loader prod)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined.mod-loader-merge") {
+            val merged = target.configurations.findByName("mergedElements")
+                ?.outgoing?.artifacts?.firstOrNull()?.file
+            if (merged != null) {
+                ext.mergedArtifact.convention(
+                    target.layout.file(target.provider { merged })
+                )
+            }
+        }
+
+        // typed wiring lands only when the consuming build applies
+        // ModPublisher — the adapter never applies it itself
+        target.pluginManager.withPlugin("com.hypherionmc.modutils.modpublisher") {
+            ModpublisherWiring.wire(target, ext)
+        }
     }
 
 }
