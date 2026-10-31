@@ -27,7 +27,11 @@ import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.remapper.jst.JstStepSpec
 import xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec
 
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevInjectProcessor
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeProcessor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
@@ -47,7 +51,9 @@ import xyz.wagyourtail.unimined.transform.forge.internal.userdevAts
 /**
  * Dev-source and library wiring. `contributeDevSources` registers the
  * `forgeSources` task + the installer/atTool detached configurations;
- * `mcpconfigCleanJar` drives [McpConfigRunner] for the MCPConfig-era
+ * `mcpconfigCleanJar` runs the mcpconfig subpipeline
+ * ([McpConfigDescriptorFormat] + [SubpipelineExecutor]) for the
+ * MCPConfig-era
  * rename/merge pipeline; `contributeUserdevLibraries` attaches the
  * userdev-declared library set onto the environment classpath.
  */
@@ -245,32 +251,49 @@ internal fun mcpconfigCleanJar(
                     "/$side"
         )
 
-    val env = McpConfigRunner.Env(
-        clientJar = { aux("client_jar") },
-        serverJar = { aux("server_jar") },
-        clientMappings = { aux("client_mappings") },
-        serverMappings = { aux("server_mappings") },
-        libraries = {
-            project.configurations.getByName(
-                environment.minecraftLibrariesConfigurationName
+    val execPort = project.objects.newInstance(GradleExecPort::class.java).apply {
+        useToolchains = { environment.useToolchains.get() }
+        defaultJavaVersion = { environment.requiredJavaVersion.get() }
+    }
+    val pipeline = McpConfigDescriptorFormat().parse(
+        mcpZip.toFile(),
+        object : FormatContext {
+            override val side = side
+            override val bindingNames = setOf(
+                "client", "server", "clientMappings", "serverMappings"
             )
-                .files.map { it.toPath() }
-        },
-        toolClasspath = { coord ->
-            project.configurations.detachedConfiguration(
-                project.dependencies.create(coord)
-            )
-                .apply { isTransitive = true }
-                .files.map { it.toPath() }
-        },
-        exec = project.objects.newInstance(GradleExecPort::class.java).apply {
-            useToolchains = { environment.useToolchains.get() }
-            defaultJavaVersion = { environment.requiredJavaVersion.get() }
         }
     )
-    val runner = McpConfigRunner(mcpZip, cacheDir, side, env)
     val step = if (config.notchObf && side == "joined") "merge" else "rename"
-    return runner.resultFor(step).output?.toFile()
+    return SubpipelineExecutor(
+        pipeline,
+        McpConfigDescriptorFormat(),
+        McpConfigFunctionSource().functions().associateBy { it.name },
+        bindings = mapOf(
+            "client" to { aux("client_jar").toFile() },
+            "server" to { aux("server_jar").toFile() },
+            "clientMappings" to { aux("client_mappings").toFile() },
+            "serverMappings" to { aux("server_mappings").toFile() },
+        ),
+        toolResolver = { coord ->
+            project.configurations.detachedConfiguration(
+                project.dependencies.create(coord)
+            ).apply { isTransitive = true }.files.map { it.toPath() }
+        },
+        listBindings = mapOf(
+            "libraries" to {
+                project.configurations.getByName(
+                    environment.minecraftLibrariesConfigurationName
+                ).files.toList()
+            }
+        ),
+        toolExec = { tool, args, jvmArgs, classpath ->
+            execPort.exec(
+                tool.mainClass, classpath, args, jvmArgs, tool.javaVersion
+            )
+        }
+    ).execute(mcpZip.toFile(), side, null, cacheDir, untilStep = step)
+        ?.toFile()
 }
 
 /**
