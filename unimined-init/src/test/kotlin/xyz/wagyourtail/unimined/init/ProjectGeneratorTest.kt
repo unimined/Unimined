@@ -71,6 +71,22 @@ class ProjectGeneratorTest {
     }
 
     @Test
+    fun `multi-loader emits per-source-set layout`(@TempDir dir: Path) {
+        ProjectGenerator.generate(
+            spec(listOf("fabric" to "0.16.0", "forge" to "47.2.0")), dir
+        )
+        val build = Files.readString(dir.resolve("build.gradle.kts"))
+        assertTrue("sourceSet(\"fabric\")" in build)
+        assertTrue("sourceSet(\"forge\")" in build)
+        assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
+        assertTrue("loader(\"forge\", \"47.2.0\")" in build)
+        assertTrue(Files.exists(dir.resolve("src/fabric/resources/fabric.mod.json")))
+        assertTrue(Files.exists(dir.resolve("src/forge/resources/META-INF/mods.toml")))
+        assertTrue(Files.exists(dir.resolve("src/fabric/java/com/example/mymod/MyMod.java")))
+        assertTrue(Files.exists(dir.resolve("src/forge/java/com/example/mymod/MyMod.java")))
+    }
+
+    @Test
     fun `modid and package derive correctly`() {
         val s = InitSpec(
             group = "com.Example-Corp", name = "My Cool Mod",

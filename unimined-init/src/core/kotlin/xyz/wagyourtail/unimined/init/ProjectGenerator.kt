@@ -51,13 +51,16 @@ object ProjectGenerator {
             put("gradle/wrapper/gradle-wrapper.jar",
                 Render.Resource("/templates/gradle-wrapper.jar"))
 
+            // multi-loader emits the §10 per-source-set layout —
+            // src/<loader>/{java,resources} bound via sourceSet("<loader>")
             val pkg = spec.basePackage
-            val srcDir = "src/main/java/" + pkg.replace('.', '/')
+            val multi = spec.loaders.size > 1
             for ((loader, _) in spec.loaders) {
-                put("$srcDir/${Templates.mainClassName(spec)}.java",
+                val ss = if (multi) loader else "main"
+                put("src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
                     Render.Text(Templates.mainClass(spec, loader)))
                 for ((path, content) in Templates.metadata(spec, loader)) {
-                    put("src/main/resources/$path", Render.Text(content))
+                    put("src/$ss/resources/$path", Render.Text(content))
                 }
             }
         }

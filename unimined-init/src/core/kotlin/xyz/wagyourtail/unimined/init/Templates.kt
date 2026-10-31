@@ -67,16 +67,32 @@ internal object Templates {
         appendLine()
         appendLine("unimined {")
         appendLine("    minecraft {")
-        appendLine("        version = \"${spec.mcVersion}\"")
-        for ((loader, version) in spec.loaders) {
-            appendLine("        loader(\"$loader\", \"$version\")")
-        }
-        if (spec.mappings.isNotEmpty()) {
-            appendLine("        mappings {")
-            for (line in spec.mappings) {
-                appendLine("            $line")
+        if (spec.loaders.size > 1) {
+            for ((loader, version) in spec.loaders) {
+                appendLine("        sourceSet(\"$loader\") {")
+                appendLine("            version = \"${spec.mcVersion}\"")
+                appendLine("            loader(\"$loader\", \"$version\")")
+                if (spec.mappings.isNotEmpty()) {
+                    appendLine("            mappings {")
+                    for (line in spec.mappings) {
+                        appendLine("                $line")
+                    }
+                    appendLine("            }")
+                }
+                appendLine("        }")
             }
-            appendLine("        }")
+        } else {
+            appendLine("        version = \"${spec.mcVersion}\"")
+            for ((loader, version) in spec.loaders) {
+                appendLine("        loader(\"$loader\", \"$version\")")
+            }
+            if (spec.mappings.isNotEmpty()) {
+                appendLine("        mappings {")
+                for (line in spec.mappings) {
+                    appendLine("            $line")
+                }
+                appendLine("        }")
+            }
         }
         appendLine("    }")
         appendLine("}")
