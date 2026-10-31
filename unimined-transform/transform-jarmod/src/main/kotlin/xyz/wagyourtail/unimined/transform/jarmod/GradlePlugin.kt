@@ -49,7 +49,7 @@ class GradlePlugin : Plugin<Project> {
                     // loaderSpec populates during script eval, after the
                     // bound event fires — defer the loader check
                     target.afterEvaluate {
-                        if (environment.spec().loader?.name in setOf("jarmod", "fg1")) {
+                        if (environment.spec().loader?.name in setOf("jarmod", "fg1", "liteloader")) {
                             JarModEnvironmentWiring.wire(target, environment)
                         }
                     }
