@@ -128,6 +128,24 @@ class TransformEnvironmentSpec internal constructor(
     internal var transformerClaimContext:
             (() -> TransformerClaim.TransformerEnvContext)? = null
 
+    /**
+     * Install the claim context — called by environment wiring that
+     * knows the env's loader descriptor (resolved lazily at selection
+     * time, so `loader(...)` may be declared after this installs).
+     */
+    fun installClaimContext(
+        project: org.gradle.api.Project,
+        descriptor: () -> xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor?
+    ) {
+        transformerClaimContext = {
+            object : TransformerClaim.TransformerEnvContext {
+                override val project = project
+                override val descriptor = descriptor()
+                override val env = this@TransformEnvironmentSpec
+            }
+        }
+    }
+
     internal fun effectiveTransformers(
         visiting: MutableSet<String> = mutableSetOf()
     ): List<MinecraftTransformer> {

@@ -52,6 +52,12 @@ abstract class TransformExtension @Inject constructor(
     fun sourceSet(environmentId: String): TransformEnvironmentSpec =
         environments.getOrPut(environmentId) {
             TransformEnvironmentSpec(environmentId, project.path, project.objects)
+                .also { env ->
+                    // rowless default — loader plugin wiring replaces this
+                    // with a descriptor-carrying context via
+                    // installClaimContext(project) { descriptor }
+                    env.installClaimContext(project) { null }
+                }
         }
 
     /** Configure a source-set environment's transform pipeline. */
