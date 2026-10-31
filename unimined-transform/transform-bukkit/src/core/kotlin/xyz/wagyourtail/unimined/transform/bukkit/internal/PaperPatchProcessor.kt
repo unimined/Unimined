@@ -87,7 +87,7 @@ internal class PaperPatchProcessor(
      * the real patch base (paperclip resolves
      * `META-INF/<location>/<originalPath>` against the input jar's
      * own filesystem). */
-    private fun nestedServerJar(jar: Path): ByteArray? =
+    private fun nestedServerJar(jar: Path): ByteArray? = try {
         ZipFile(jar.toFile()).use { zip ->
             val entry = zip.entries().asSequence().firstOrNull {
                 Pattern.compile("META-INF/versions/[^/]+/server-[^/]+\\.jar")
@@ -95,5 +95,8 @@ internal class PaperPatchProcessor(
             }
             entry?.let { zip.getInputStream(it).readBytes() }
         }
+    } catch (e: java.util.zip.ZipException) {
+        null
+    }
 
 }
