@@ -17,8 +17,12 @@ import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import org.gradle.api.plugins.ExtensionAware
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
+import xyz.wagyourtail.unimined.transform.FunctionalStepSpec
+import xyz.wagyourtail.unimined.transform.forge.ForgeEnvExtension
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
@@ -95,6 +99,35 @@ internal object ForgeEnvironmentWiring {
                     ?.jar?.let { listOf(it) }
                     .orEmpty()
             }
+        // `forge:jsCoremodRemap` — default-on for FG3-era
+        // (userdev) envs: forge's universal ships coremod js that
+        // lands via the loader merge, and mod jars carry .js
+        // coremods; the csv naming service has no class channel,
+        // so resources are rewritten src->dst directly. FG1/FG2
+        // coremods are Java classes handled by the class remapper.
+        // Deferred so `env.forge { jsCoremodRemap = false }` opts
+        // out before realization.
+        project.extensions.getByType(RemapExtension::class.java)
+            .sourceSet(environment.environmentId)
+            .contributeDeferredSteps(
+                project.provider {
+                    val ext = (environment as ExtensionAware)
+                        .extensions
+                        .findByType(ForgeEnvExtension::class.java)
+                    if (resolved.orNull?.profile !is ForgeProfile.Userdev ||
+                        ext?.jsCoremodRemap == false) emptyList()
+                    else listOf(
+                        DeferredStepContribution(
+                            RemapSurface.JAR,
+                            FunctionalStepSpec(
+                                "forge:jsCoremodRemap",
+                                CoremodRemapTransformStep
+                            ),
+                            scope = StepScope.ALL_ARTIFACTS
+                        )
+                    )
+                }
+            )
         // FML's userdev launch handler probes the classpath for
         // `<artifact>-<version>` (FileUtils.matchFileName =
         // `contains`) — name the dev jar after the loader coords

@@ -33,4 +33,14 @@ class ForgeEnvExtension(private val spec: TransformEnvironmentSpec) {
             field = value
         }
 
+    /**
+     * JS coremod resource remap — default `true` for FG3-era
+     * (userdev) envs: `.js` coremod resources (the forge universal
+     * jar ships its own; mod jars carry them too) get srg-era names
+     * rewritten to the dev namespace, since FML's csv naming
+     * service has no class-name channel. Set `false` to opt out —
+     * `env.forge { jsCoremodRemap = false }`.
+     */
+    var jsCoremodRemap: Boolean = true
+
 }

@@ -128,6 +128,35 @@ object ForgeSrgRuntimeStepType : StepType {
  *  step is the signal. */
 abstract class ForgeSrgRuntimeStepSpec : PipelineStepSpec
 
+/**
+ * `forge:jsCoremodRemap` — rewrite source-namespace names inside
+ * coremod `.js` resources to the target namespace. FG3-era only:
+ * JS coremods are the userdev-era `ICoreMod` script-engine shape
+ * (FG1/FG2 coremods are Java classes remapped by the class
+ * remapper). Needed for class names under non-mcp dev namespaces
+ * (yarn): the csv naming service (1.16.5 `MCPNamingService`)
+ * reads methods/fields csvs only — no class channel — so
+ * `ASMAPI.mapType`/`mapClass` has nothing to resolve, and
+ * literal-embedded names break anyway.
+ */
+object ForgeJsCoremodRemapStepType : StepType {
+    override val id = "forge:jsCoremodRemap"
+    override val produces = listOf("forge:jsCoremodRemap")
+}
+
+/** Spec for [ForgeJsCoremodRemapStepType]. */
+abstract class ForgeJsCoremodRemapStepSpec : PipelineStepSpec {
+
+    override fun transformSteps() = listOf(
+        TransformStepContribution(
+            RemapSurface.JAR,
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .CoremodRemapTransformStep,
+        )
+    )
+
+}
+
 /** ServiceLoader source — forge's step-type feature pack. */
 class ForgeStepTypeSource : StepTypeSource {
 
@@ -136,6 +165,7 @@ class ForgeStepTypeSource : StepTypeSource {
         ForgeUserdevExecStepType,
         ForgeMergeInputsStepType,
         ForgeSrgRuntimeStepType,
+        ForgeJsCoremodRemapStepType,
     )
 
 }
