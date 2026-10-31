@@ -67,15 +67,33 @@ internal class PaperPatchProcessor(
         val patch = (spec as Spec).patchBytes
         val tmp = Files.createTempFile("unimined-paper-patch", ".jar")
         try {
+            // paperclip semantics: the patch input is the nested
+            // META-INF/versions/<ver>/server-<ver>.jar INSIDE the
+            // mojang jar (mojang ships a bundler too) — patching the
+            // outer jar yields corrupt output. Fall back to the
+            // whole jar when no nested entry exists (legacy layouts)
+            val base = nestedServerJar(jar) ?: jar.inputStream().use { it.readBytes() }
             tmp.outputStream().use { out ->
-                jar.inputStream().use { input ->
-                    Patch.patch(input.readBytes(), patch, out)
-                }
+                Patch.patch(base, patch, out)
             }
             Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
         } finally {
             Files.deleteIfExists(tmp)
         }
     }
+
+    /** The mojang server jar is itself a bundler —
+     * `META-INF/versions/<ver>/server-<ver>.jar` nested inside is
+     * the real patch base (paperclip resolves
+     * `META-INF/<location>/<originalPath>` against the input jar's
+     * own filesystem). */
+    private fun nestedServerJar(jar: Path): ByteArray? =
+        ZipFile(jar.toFile()).use { zip ->
+            val entry = zip.entries().asSequence().firstOrNull {
+                Pattern.compile("META-INF/versions/[^/]+/server-[^/]+\\.jar")
+                    .matcher(it.name).matches()
+            }
+            entry?.let { zip.getInputStream(it).readBytes() }
+        }
 
 }
