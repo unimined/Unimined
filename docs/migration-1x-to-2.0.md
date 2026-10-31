@@ -22,7 +22,7 @@ Loader declaration moves onto the environment:
 
 | 1.x | 2.0 |
 |---|---|
-| remap hooks inside `unimined { }` | `unimined.remap { }` — step verbs (`jst {}`, `unpick(...)`, `applyClassTweaker {}`, `sourceRemap {}`) per surface, both Groovy and Kotlin |
+| remap hooks inside `unimined { }` | `unimined.remap { }` — step verbs (`unpick(...)`, `applyClassTweaker {}`, `sourceRemap {}`) per surface, both Groovy and Kotlin. Source remapping runs through UML's source remapper by default; `jst {}` remains as an explicit engine opt-in (verification/alternate engine), not a peer default |
 | `unimined.migrateMappings(sourceSet) { }` | `unimined.migrateMappings("main") { }` (env id), or `unimined.migrate { }` |
 
 ## Repositories
@@ -45,3 +45,24 @@ anything custom. `modsRemapRepo` is likewise managed internally.
 
 Unknown or removed verbs raise a `GradleException` naming the
 replacement — read the message; it points here.
+
+## Declared-source provider (`legacydist`)
+
+New in 2.0: environments whose game jar has no manifest-backed
+provider declare the artifact directly instead of shipping a bespoke
+provider — BTA/ReIndev-style jars, pre-1.8 bukkit, offline/air-gapped
+artifacts:
+
+```kotlin
+unimined.minecraft.main.legacydist {
+    file("libs/bta-7.3-client.jar")      // or maven("g:a:v"),
+    // url("https://...", sha256 = "..."), producer("tool", "...")
+    namespace = "official"               // jar's production namespace
+    format = "obf"                       // optional — raw->dev remap view
+}
+```
+
+`legacydist {}` selects `provider("legacydist")` implicitly; the jar
+is cached by content hash and reported with the declared
+namespace/format. URLs are pinned by SHA-256 (warned-but-allowed when
+omitted); maven coordinates resolve at declaration time.
