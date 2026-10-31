@@ -36,6 +36,8 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeBinpatchStep
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeDevFixes
+import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.contributeLoaderResolution
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevSourcesChain
 
@@ -66,6 +68,22 @@ internal object ForgeEnvironmentWiring {
             }
         )
         val resolved = contributeLoaderResolution(project, environment)
+        // forge-era probe — `select("era")` pins resolve against the
+        // probed packaging profile (preset names: "forge-userdev",
+        // "forge-binpatches"); declared pins override per plan
+        project.extensions
+            .findByType(TransformExtension::class.java)
+            ?.sourceSet(environment.environmentId)
+            ?.probeResolver = { key ->
+            if (key == "era") resolved.get()?.profile?.let {
+                when (it) {
+                    is ForgeProfile.Userdev -> "forge-userdev"
+                    is ForgeProfile.Binpatches -> "forge-binpatches"
+                    is ForgeProfile.ZipPatches -> "forge-zipPatches"
+                    else -> null
+                }
+            } else null
+        }
         // FML's userdev launch handler probes the classpath for
         // `<artifact>-<version>` (FileUtils.matchFileName =
         // `contains`) — name the dev jar after the loader coords
