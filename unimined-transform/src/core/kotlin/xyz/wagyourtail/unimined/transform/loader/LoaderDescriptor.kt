@@ -68,6 +68,14 @@ data class LoaderDescriptor(
      *  with no transform plugin (handled by the core stack). */
     val transformPlugin: String? = null,
 
+    /** Variant the family wiring dispatches on when a product needs
+     *  its own env-wiring path — e.g. `"liteloader"` routes to
+     *  `LiteLoaderWiring` inside the jarmod family instead of the
+     *  jarMod merge/agent path. `null` = the family's default wiring.
+     *  (Function refs can't live here — env types would invert the
+     *  transform→minecraft dependency.) */
+    val wiringVariant: String? = null,
+
     )
 
 /** Loader-declared access-file (AW/CT/AT) discovery mechanisms. */

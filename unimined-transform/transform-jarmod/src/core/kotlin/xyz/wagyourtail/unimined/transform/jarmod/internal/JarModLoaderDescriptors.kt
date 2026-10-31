@@ -60,6 +60,7 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             ),
             loaderCoords = { _, v -> "com.mumfrey:liteloader:$v" },
             prodNamespace = "official",
+            wiringVariant = "liteloader",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         )
     )

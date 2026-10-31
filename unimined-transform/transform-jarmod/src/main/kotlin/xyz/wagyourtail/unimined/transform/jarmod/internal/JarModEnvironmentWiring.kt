@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.jarmod.internal
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 
 /**
  * Environment wiring for `loader("jarmod", ...)` environments —
@@ -39,9 +40,13 @@ internal object JarModEnvironmentWiring {
     }
 
     fun wire(project: Project, environment: MinecraftEnvironment) {
-        // liteloader envs don't ride the jarMod merge/agent — their
-        // artifact is a library dep + versions.json wiring, own path
-        if (environment.spec().loader?.name == "liteloader") {
+        // variant products (liteloader) don't ride the jarMod
+        // merge/agent — their artifact is a library dep +
+        // versions.json wiring, dispatched via the descriptor's
+        // wiringVariant rather than a loader-name check
+        val variant = environment.loaderSpec.orNull
+            ?.let { LoaderRegistry().resolve(it.name) }?.wiringVariant
+        if (variant == "liteloader") {
             LiteLoaderWiring.wire(project, environment)
             return
         }
