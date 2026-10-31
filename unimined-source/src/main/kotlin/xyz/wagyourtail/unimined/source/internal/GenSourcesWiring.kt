@@ -159,6 +159,11 @@ internal object GenSourcesWiring {
                 java.io.File(repoSlot.absolutePath
                     .replace("-sources.jar", "-linemapped.jar"))
             )
+            // the surface task produces repoSlot's sources jar when
+            // steps exist — the linemap reads its enriched extras
+            if (sourceSteps.isNotEmpty()) {
+                t.dependsOn("sourcesSurface${environmentId.cap()}")
+            }
         }
         // demand the classifier alongside sources
         task.configure { it.finalizedBy(linemapped) }
