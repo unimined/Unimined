@@ -40,6 +40,50 @@ internal object BukkitEnvironmentWiring {
             }
         )
         contributeServerProcessors(project, environment)
+        contributeRunConfig(project, environment)
+    }
+
+    /**
+     * Server-run surface for every bukkit env: the patched server
+     * jar's entry point is `org.bukkit.craftbukkit.Main`, and the
+     * ClasspathPluginLoader agent maps the env's source-set output
+     * onto the classpath as plugin groups (mirrors 1.x
+     * `applyServerRunTransform`). The CPL agent resolves through a
+     * `classpathPluginLoader<env>` configuration defaulting to
+     * `0.1.0-SNAPSHOT`; users may override the dependency.
+     */
+    private fun contributeRunConfig(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        if (!environment.loaderSpec.isPresent) return
+        val loader = environment.loaderSpec.get()
+        if (LoaderRegistry.resolveBuiltin(loader.name)?.family != "bukkit") return
+
+        val envId = environment.environmentId
+        val cplConfig = project.configurations.maybeCreate(
+            if (envId == "main") "classpathPluginLoader"
+            else "classpathPluginLoader${envId.replaceFirstChar { it.uppercaseChar() }}"
+        )
+        cplConfig.defaultDependencies { deps ->
+            deps.add(project.dependencies.create(
+                "xyz.wagyourtail.unimined:classpath-plugin-loader:0.1.0-SNAPSHOT:all"
+            ).also { (it as org.gradle.api.artifacts.ExternalDependency).isTransitive = false })
+        }
+
+        val transform = project.extensions.getByType(TransformExtension::class.java)
+        val envSpec = transform.sourceSet(envId)
+        val sourceSets = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java)
+        envSpec.runMutators += org.gradle.api.Action { config ->
+            config.mainClass = "org.bukkit.craftbukkit.Main"
+            val jar = cplConfig.resolve().first { it.extension == "jar" }
+            config.jvmArgs += "-javaagent:${jar.absolutePath}"
+            val out = sourceSets.getByName(envId).output
+            val paths = (out.classesDirs.files + listOfNotNull(out.resourcesDir))
+                .joinToString(java.io.File.pathSeparator) { it.absolutePath }
+            config.jvmArgs += "-Dcpl.pluginGroups=$paths"
+        }
     }
 
     /**
@@ -52,6 +96,7 @@ internal object BukkitEnvironmentWiring {
         project: Project,
         environment: MinecraftEnvironment
     ) {
+        if (!environment.loaderSpec.isPresent) return
         val loader = environment.loaderSpec.get()
         val descriptor = LoaderRegistry.resolveBuiltin(loader.name)
             ?.takeIf { it.family == "bukkit" } ?: return

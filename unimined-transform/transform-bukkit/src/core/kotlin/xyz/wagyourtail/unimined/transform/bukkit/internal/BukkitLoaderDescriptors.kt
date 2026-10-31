@@ -29,6 +29,11 @@ internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
     private val sonatypeSnapshots =
         "https://oss.sonatype.org/content/repositories/snapshots/"
 
+private val wagYourMaven = listOf(
+    "https://maven.wagyourtail.xyz/releases",
+    "https://maven.wagyourtail.xyz/snapshots"
+)
+
     override fun descriptors(): List<LoaderDescriptor> = listOf(
         LoaderDescriptor(
             id = "craftbukkit",
@@ -38,7 +43,7 @@ internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
                 spigotNexus,
                 sonatypeSnapshots,
                 "https://maven.minecraftforge.net/"
-            ),
+            ) + wagYourMaven,
             // server jar comes from a non-native provider; the maven
             // coordinate is the api/implementation surface users can
             // additionally compile against
@@ -57,7 +62,7 @@ internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
             id = "spigot",
             family = "bukkit",
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
-            mavens = listOf(spigotNexus, sonatypeSnapshots),
+            mavens = listOf(spigotNexus, sonatypeSnapshots) + wagYourMaven,
             loaderCoords = { _, v -> "org.spigotmc:spigot:$v" },
             prodNamespace = "spigot",
             capabilities = mapOf(
@@ -75,7 +80,7 @@ internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
             mavens = listOf(
                 "https://repo.papermc.io/repository/maven-public/"
-            ),
+            ) + wagYourMaven,
             // api-side maven surface — paper-api is published; the
             // server jar resolves through the dist endpoint, not maven
             loaderCoords = { _, v -> "io.papermc.paper:paper-api:$v" },
