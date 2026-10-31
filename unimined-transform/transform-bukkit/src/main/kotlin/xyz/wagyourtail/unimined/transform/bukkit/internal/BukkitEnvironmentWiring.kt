@@ -36,7 +36,7 @@ internal object BukkitEnvironmentWiring {
         // descriptor (spigot namespace for all bukkit products)
         environment.modSourceNamespaces.convention(
             descriptor.map { d ->
-                if (d != null) listOf(d.prodNamespace) else emptyList()
+                if (d != null) listOf("spigot", d.prodNamespace) else emptyList()
             }
         )
         contributeServerProcessors(project, environment)

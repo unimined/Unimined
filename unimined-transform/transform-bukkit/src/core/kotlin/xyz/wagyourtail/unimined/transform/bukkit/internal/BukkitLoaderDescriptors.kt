@@ -48,7 +48,7 @@ private val wagYourMaven = listOf(
             // coordinate is the api/implementation surface users can
             // additionally compile against
             loaderCoords = { _, v -> "org.bukkit:craftbukkit:$v" },
-            prodNamespace = "spigot",
+            prodNamespace = "spigotProd",
             capabilities = mapOf(
                 "serverArtifact" to "provider",
                 "apiArtifact" to "org.bukkit:craftbukkit"
@@ -64,7 +64,7 @@ private val wagYourMaven = listOf(
             transformPlugin = "xyz.wagyourtail.unimined.transform.bukkit",
             mavens = listOf(spigotNexus, sonatypeSnapshots) + wagYourMaven,
             loaderCoords = { _, v -> "org.spigotmc:spigot:$v" },
-            prodNamespace = "spigot",
+            prodNamespace = "spigotProd",
             capabilities = mapOf(
                 "serverArtifact" to "provider",
                 "apiArtifact" to "org.spigotmc:spigot-api"
@@ -84,7 +84,7 @@ private val wagYourMaven = listOf(
             // api-side maven surface — paper-api is published; the
             // server jar resolves through the dist endpoint, not maven
             loaderCoords = { _, v -> "io.papermc.paper:paper-api:$v" },
-            prodNamespace = "spigot",
+            prodNamespace = "spigotProd",
             capabilities = mapOf(
                 "serverArtifact" to "distPatch",
                 "apiArtifact" to "io.papermc.paper:paper-api",
