@@ -77,7 +77,11 @@ private fun run(args: Array<String>) {
     fun need(flag: String): String =
         one(flag) ?: throw IllegalArgumentException("missing required $flag")
 
-    val resolver = VersionResolver()
+    val resolver = VersionResolver(
+        cacheDir = Paths.get(
+            System.getProperty("user.home"), ".unimined", "cache"
+        )
+    )
     val mc = need("--mc").let { if (it == "latest") resolver.latestMinecraft() else it }
 
     val loaders = flags["--loader"].orEmpty()

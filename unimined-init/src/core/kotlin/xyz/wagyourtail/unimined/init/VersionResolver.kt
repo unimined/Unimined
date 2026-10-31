@@ -17,9 +17,43 @@ import java.time.Duration
  * quilt), wagyourtail maven (the unimined plugin marker).
  */
 class VersionResolver(
-    private val fetch: (URI) -> String = ::httpGet,
-    private val timeout: Duration = Duration.ofSeconds(15)
+    fetch: (URI) -> String = ::httpGet,
+    private val timeout: Duration = Duration.ofSeconds(15),
+    /**
+     * Offline cache dir — resolved payloads persist per-URI; on fetch
+     * failure a cached response is used while younger than [cacheTtl]
+     * (plan §13: offline → cached manifest).
+     */
+    cacheDir: java.nio.file.Path? = null,
+    private val cacheTtl: Duration = Duration.ofHours(24)
 ) {
+
+    private val cacheFile = cacheDir?.resolve("version-resolver.json")
+    private val cache: MutableMap<String, Pair<Long, String>> =
+        cacheFile?.takeIf { java.nio.file.Files.isRegularFile(it) }
+            ?.let { parseCache(it.toFile().readText()) } ?: mutableMapOf()
+
+    private fun fetch(uri: URI): String = try {
+        fetchBody(uri).also { body ->
+            cache[uri.toString()] = System.currentTimeMillis() to body
+            persistCache()
+        }
+    } catch (e: Exception) {
+        val (ts, body) = cache[uri.toString()]
+            ?: throw e
+        if (System.currentTimeMillis() - ts > cacheTtl.toMillis()) {
+            throw IllegalStateException("offline and cache for $uri is stale", e)
+        }
+        body
+    }
+
+    private val fetchBody = fetch
+
+    private fun persistCache() {
+        val f = cacheFile ?: return
+        f.parent?.let { java.nio.file.Files.createDirectories(it) }
+        f.toFile().writeText(serializeCache(cache))
+    }
 
     /** Latest MC release version (piston-meta `latest.release`). */
     fun latestMinecraft(): String {
@@ -97,6 +131,21 @@ class VersionResolver(
         internal fun jsonField(json: String, key: String): String? =
             Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"")
                 .find(json)?.groupValues?.get(1)
+
+        // TSV + base64 payload — no JSON lib in core
+        private val b64 = java.util.Base64.getEncoder()
+        private val b64d = java.util.Base64.getDecoder()
+
+        internal fun serializeCache(m: Map<String, Pair<Long, String>>) =
+            m.entries.joinToString("\n") { (u, v) ->
+                "$u\t${v.first}\t${b64.encodeToString(v.second.toByteArray())}"
+            }
+
+        internal fun parseCache(text: String) =
+            text.lineSequence().filter { it.isNotBlank() }.associate { l ->
+                val (u, ts, body) = l.split('\t', limit = 3)
+                u to (ts.toLong() to String(b64d.decode(body)))
+            }.toMutableMap()
     }
 
 }

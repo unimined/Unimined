@@ -15,6 +15,41 @@ class VersionResolverTest {
     )
 
     @Test
+    fun `offline falls back to fresh cache, stale cache errors`(
+        @org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path
+    ) {
+        val uri = VersionResolver.PISTON_META
+        val body = """{"latest":{"release":"1.21.4"}}"""
+        java.nio.file.Files.createDirectories(dir)
+        dir.resolve("version-resolver.json").toFile().writeText(
+            VersionResolver.serializeCache(
+                mapOf(uri.toString() to (System.currentTimeMillis() to body))
+            )
+        )
+        // offline: fetch throws, fresh cache serves
+        val offline = VersionResolver(
+            fetch = { throw java.io.IOException("offline") },
+            cacheDir = dir
+        )
+        assertEquals("1.21.4", offline.latestMinecraft())
+
+        // stale entry is refused
+        dir.resolve("version-resolver.json").toFile().writeText(
+            VersionResolver.serializeCache(
+                mapOf(uri.toString() to (0L to body))
+            )
+        )
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalStateException::class.java
+        ) {
+            VersionResolver(
+                fetch = { throw java.io.IOException("offline") },
+                cacheDir = dir
+            ).latestMinecraft()
+        }
+    }
+
+    @Test
     fun `latest minecraft from piston-meta`() {
         val r = resolver(mapOf(
             VersionResolver.PISTON_META.toString() to
