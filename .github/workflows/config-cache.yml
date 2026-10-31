@@ -1,0 +1,37 @@
+name: config-cache smoke
+
+# Phase 8 hardening job: every DSL surface must configure cleanly
+# under strict configuration-cache (problems fail the build).
+on:
+  push:
+    branches: [master, main, 'feature/**']
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [vanilla-mojmap, fabric-yarn, forge-fg2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: configure + build under strict config-cache
+        working-directory: unimined
+        run: |
+          ./gradlew :testing:${{ matrix.project }}:classes \
+            --configuration-cache \
+            --configuration-cache-problems=fail \
+            --stacktrace
+      - name: verify the cache entry was stored
+        working-directory: unimined
+        run: |
+          ./gradlew :testing:${{ matrix.project }}:help \
+            --configuration-cache \
+            --configuration-cache-problems=fail 2>&1 \
+            | grep -q "Configuration cache entry reused" \
+            && echo "CC entry reused — strict pass"
