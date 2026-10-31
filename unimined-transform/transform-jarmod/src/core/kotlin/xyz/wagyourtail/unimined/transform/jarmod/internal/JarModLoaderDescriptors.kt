@@ -35,6 +35,22 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             prodNamespace = "official",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
+        ),
+        // 1.x LiteLoaderMinecraftTransformer extended the jarmod
+        // transformer — jarmod-family wiring with its own artifact.
+        // dl.liteloader.com is an artifact-only repo; sponge for its
+        // mixin/lib deps.
+        LoaderDescriptor(
+            id = "liteloader",
+            family = "jarmod",
+            mavens = listOf(
+                "https://dl.liteloader.com/versions/",
+                "http://repo.liteloader.com/",
+                "https://repo.spongepowered.org/maven/"
+            ),
+            loaderCoords = { _, v -> "com.mumfrey:liteloader:$v" },
+            prodNamespace = "official",
+            transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         )
     )
 }
