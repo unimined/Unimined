@@ -24,7 +24,7 @@ internal object PublishWiring {
     ) {
         val env = environment.environmentId
         val componentName = if (env == "main") "uniminedMain" else "unimined${env.cap()}"
-        val envPub = ext.environmentsInternal.getOrPut(env) {
+        val envPub = ext.environments.getOrPut(env) {
             PublishExtension.EnvironmentPublication(env)
         }
 

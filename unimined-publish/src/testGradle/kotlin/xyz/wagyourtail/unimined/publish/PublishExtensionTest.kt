@@ -33,7 +33,7 @@ class PublishExtensionTest {
             it.artifactId = "my-mod"
             it.publishDev = false
         }
-        val env = ext.environmentsInternal["main"]
+        val env = ext.environments["main"]
         assertNotNull(env)
         env!!
         assertTrue(env.publishProduction)

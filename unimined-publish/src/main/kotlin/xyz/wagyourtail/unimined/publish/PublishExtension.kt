@@ -32,11 +32,12 @@ abstract class PublishExtension {
      * `afterEvaluate`/execution.
      */
     fun environment(name: String, action: Action<EnvironmentPublication>) {
-        environmentsInternal.getOrPut(name) { EnvironmentPublication(name) }
+        environments.getOrPut(name) { EnvironmentPublication(name) }
             .also { action.execute(it) }
     }
 
-    internal val environmentsInternal =
+    /** Per-environment publication settings, keyed by environment id. */
+    val environments =
         linkedMapOf<String, EnvironmentPublication>()
 
     /** Groovy DSL overload. */
