@@ -8,6 +8,7 @@ dependencies {
     "coreApi"(project(":unimined-minecraft:provider-native"))
     api(project(":unimined-transform"))
     api(project(":unimined-minecraft:provider-native"))
+    api(project(":unimined-minecraft:provider-buildtools"))
     api(project(":unimined-remap"))
     api(project(":unimined-minecraft"))
     "coreImplementation"(libs.jbsdiff)
