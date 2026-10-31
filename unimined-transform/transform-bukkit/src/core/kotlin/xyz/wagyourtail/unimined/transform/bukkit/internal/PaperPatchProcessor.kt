@@ -35,8 +35,11 @@ internal class PaperPatchProcessor(
         Pattern.compile("META-INF/versions/[^/]+/[^/]+\\.patch")
     )
 
-    class Spec(val patchBytes: ByteArray) :
-        JarProcessor.JarProcessorSpec, Serializable
+    class Spec(
+        val patchBytes: ByteArray,
+        val originalHash: ByteArray? = null,
+        val outputHash: ByteArray? = null
+    ) : JarProcessor.JarProcessorSpec, Serializable
 
     override fun buildSpec(context: JarProcessor.SpecContext): Spec {
         val jar = distJar()
@@ -49,9 +52,28 @@ internal class PaperPatchProcessor(
                         "(expected paperMC.patch, META-INF/*/server-*.patch, " +
                         "or META-INF/versions/*/*.patch)"
             )
-            return Spec(zip.getInputStream(entry).readBytes())
+            val patchBytes = zip.getInputStream(entry).readBytes()
+            // bundler jars carry patches.list with per-patch
+            // original/output sha256 — paperclip verifies both
+            val hashes = zip.getEntry("META-INF/patches.list")
+                ?.let { patchesList(zip, it) }
+            return Spec(patchBytes,
+                hashes?.first, hashes?.second)
         }
     }
+
+    private fun patchesList(zip: ZipFile, entry: java.util.zip.ZipEntry)
+            : Pair<ByteArray, ByteArray>? =
+        zip.getInputStream(entry).bufferedReader().useLines { lines ->
+            lines.map { it.split('\t') }
+                .firstOrNull { it.size >= 7 && it[0] == "versions" }
+                ?.let {
+                    it[1].toSha() to it[3].toSha()
+                }
+        }
+
+    private fun String.toSha(): ByteArray =
+        chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     override fun serializeSpec(spec: JarProcessor.JarProcessorSpec) =
         java.util.Base64.getEncoder().encodeToString((spec as Spec).patchBytes)
@@ -64,7 +86,7 @@ internal class PaperPatchProcessor(
         spec: JarProcessor.JarProcessorSpec,
         context: JarProcessor.ProcessorContext
     ) {
-        val patch = (spec as Spec).patchBytes
+
         val tmp = Files.createTempFile("unimined-paper-patch", ".jar")
         try {
             // paperclip semantics: the patch input is the nested
@@ -72,9 +94,25 @@ internal class PaperPatchProcessor(
             // mojang jar (mojang ships a bundler too) — patching the
             // outer jar yields corrupt output. Fall back to the
             // whole jar when no nested entry exists (legacy layouts)
+            val spec0 = spec as Spec
             val base = nestedServerJar(jar) ?: jar.inputStream().use { it.readBytes() }
+            if (spec0.originalHash != null) {
+                check(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(base).contentEquals(spec0.originalHash)) {
+                    "paper patch input hash mismatch — the jar is not " +
+                        "the expected bundled vanilla form"
+                }
+            }
             tmp.outputStream().use { out ->
-                Patch.patch(base, patch, out)
+                Patch.patch(base, spec0.patchBytes, out)
+            }
+            if (spec0.outputHash != null) {
+                check(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(Files.readAllBytes(tmp))
+                    .contentEquals(spec0.outputHash)) {
+                    "paper patch output hash mismatch — " +
+                        "patched jar does not match patches.list"
+                }
             }
             Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
         } finally {
