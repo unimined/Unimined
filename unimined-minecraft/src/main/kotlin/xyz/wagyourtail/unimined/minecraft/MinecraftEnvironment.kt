@@ -452,6 +452,31 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  realms` is flagged by the provider; this list adds others). */
     val obfuscatedLibraries = mutableListOf<String>()
 
+    /** Declared-source DSL state — populated by [legacydist]. */
+    val legacyDist = LegacyDistSpec()
+
+    /**
+     * Declare this environment's game jar as a user-declared source
+     * (file/maven/URL+sha256/producer) — selects
+     * `provider("legacydist")` implicitly. Works for jars with no
+     * manifest-backed provider: BTA/ReIndev, pre-1.8 bukkit,
+     * offline/air-gapped artifacts.
+     */
+    fun legacydist(action: org.gradle.api.Action<LegacyDistSpec>) {
+        provider.set("legacydist")
+        action.execute(legacyDist)
+    }
+
+    /** Groovy-DSL counterpart to [legacydist]. */
+    fun legacydist(
+        @DelegatesTo(value = LegacyDistSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        action.delegate = legacyDist
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        legacydist(Action<LegacyDistSpec> { action.call() })
+    }
+
     /** Build the provider-facing immutable spec for this environment. */
     fun spec(): MinecraftSpec {
         validateCombinations()
@@ -467,7 +492,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             librarySubstitutions = librarySubstitutions.toList(),
             manifestUrls = manifestUrls.toList(),
             libraryOverlays = libraryOverlays.toList(),
-            obfuscatedLibraries = obfuscatedLibraries.toList()
+            obfuscatedLibraries = obfuscatedLibraries.toList(),
+            declaredSource = legacyDist.declaration()
         )
     }
 

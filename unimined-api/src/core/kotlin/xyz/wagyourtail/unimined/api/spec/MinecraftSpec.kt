@@ -60,4 +60,11 @@ interface MinecraftSpec {
     val obfuscatedLibraries: List<String>
         get() = emptyList()
 
+    /** User-declared game-artifact source (env `legacydist {}`) —
+     *  non-null selects the declared-source provider instead of any
+     *  manifest-backed provider; works for non-MC-version jars
+     *  (BTA/ReIndev, pre-1.8 bukkit, offline/air-gapped). */
+    val declaredSource: DeclaredSourceSpec?
+        get() = null
+
 }

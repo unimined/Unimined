@@ -24,7 +24,8 @@ data class RuntimeMinecraftSpec(
     override val librarySubstitutions: List<Pair<String, String>> = emptyList(),
     override val manifestUrls: List<String> = emptyList(),
     override val libraryOverlays: List<String> = emptyList(),
-    override val obfuscatedLibraries: List<String> = emptyList()
+    override val obfuscatedLibraries: List<String> = emptyList(),
+    override val declaredSource: xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec? = null
 ) : MinecraftSpec
 
 class RuntimeVersionSpec(
