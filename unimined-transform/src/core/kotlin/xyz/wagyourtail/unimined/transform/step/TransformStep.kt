@@ -48,7 +48,7 @@ interface TransformStepContext {
      * second artifacts), resolved to files at wiring time. Empty for
      * single-artifact steps.
      */
-    val inputs: Map<String, File>
+    val inputs: Map<String, List<File>>
         get() = emptyMap()
 
 }
@@ -68,4 +68,13 @@ data class TransformStepContribution(
      *  the original-namespace input. */
     val pre: Boolean = false,
     val scope: StepScope = StepScope.ALL_ARTIFACTS,
+    /**
+     * Named inputs this step consumes, bound to
+     * `TransformEnvironmentSpec.envArtifactBindings` keys — the
+     * wiring resolves them inside the deferred provider (where
+     * binding lambdas legally evaluate) into
+     * [TransformStepContext.inputs]. E.g. `"server"` →
+     * `"server_jar"` for a merge step.
+     */
+    val inputBindings: Map<String, String> = emptyMap(),
 ) : Serializable

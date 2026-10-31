@@ -329,7 +329,16 @@ class TransformEnvironmentSpec internal constructor(
                         } + spec.transformSteps().map { c ->
                             DeferredStepContribution(
                                 c.surface,
-                                FunctionalStepSpec(step.id, c.step),
+                                FunctionalStepSpec(
+                                    step.id, c.step,
+                                    // named env inputs → resolved
+                                    // bindings (deferred eval point)
+                                    c.inputBindings.mapValues { (_, n) ->
+                                        envArtifactBindings[n]
+                                            ?.invoke().orEmpty()
+                                            .map { it.toFile() }
+                                    }
+                                ),
                                 c.pre, c.scope
                             )
                         }

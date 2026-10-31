@@ -25,6 +25,9 @@ import kotlin.reflect.KClass
 class FunctionalStepSpec(
     val stepId: String,
     val step: TransformStep,
+    /** Named aux inputs resolved at wiring from env-artifact
+     *  bindings — handed to [TransformStepContext.inputs]. */
+    val inputs: Map<String, List<File>> = emptyMap(),
 ) : StepSpec
 
 /**
@@ -58,9 +61,7 @@ class FunctionalStepType : RemapStepType<FunctionalStepSpec> {
             object : TransformStepContext {
                 override val workDir = c.workDir
                 override val stepContext = c
-                // multi-input wiring (env artifact map → named inputs)
-                // is the deferred mergeInputs piece
-                override val inputs: Map<String, File> = emptyMap()
+                override val inputs: Map<String, List<File>> = spec.inputs
             }
         )
     }
