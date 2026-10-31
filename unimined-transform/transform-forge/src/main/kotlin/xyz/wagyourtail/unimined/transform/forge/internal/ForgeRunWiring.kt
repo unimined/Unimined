@@ -69,6 +69,15 @@ internal fun contributeRunMutators(
     val devView = project.configurations.findByName(
         environment.minecraftDevViewName
     )
+    val modSourceView = project.configurations.findByName(
+        environment.minecraftModSourceViewName
+    )
+    // `forge:srgRuntime` — opt-in srg-namespace launch (mod-source
+    // view carries the searge artifact for FG2-era envs); read
+    // lazily so post-wiring step declarations still count
+    val srgRuntime = project.provider {
+        envSpec.pipeline.declaredSteps.any { it.id == "forge:srgRuntime" }
+    }
     // `{modules}` — userdev `modules` coords resolved as detached
     // non-transitive configs (1.x matched them against the mc
     // libraries list; same resolution, less bookkeeping)
@@ -88,7 +97,8 @@ internal fun contributeRunMutators(
     val classpathFile = project.provider {
         val file = cacheDir.resolve("classpath-${environment.environmentId}.txt")
         java.nio.file.Files.createDirectories(cacheDir)
-        val files = mcLibs.files + (devView?.files ?: emptySet())
+        val jarView = if (srgRuntime.get()) modSourceView else devView
+        val files = mcLibs.files + (jarView?.files ?: emptySet())
         java.nio.file.Files.write(
             file,
             files.joinToString("\n") { it.absolutePath }.toByteArray()
@@ -180,7 +190,12 @@ internal fun contributeRunMutators(
                         "-Dfml.ignoreInvalidMinecraftCertificates=true",
                         "-Dfml.deobfuscatedEnvironment=true",
                         "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
-                    )
+                    ) + if (srgRuntime.get()) listOf(
+                        // keep FML's deobf transformer registered —
+                        // DeobfTweakerTx's strip reads this flag at
+                        // launch; the modSource-view jar is srg-named
+                        "-Dunimined.fg2.runtimeDeobf"
+                    ) else emptyList()
                 )
                 run.environment["MOD_CLASSES"] =
                     UserdevRunConfigs.groupsString(groups)

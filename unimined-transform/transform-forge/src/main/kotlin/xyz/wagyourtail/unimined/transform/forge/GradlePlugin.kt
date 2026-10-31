@@ -67,6 +67,10 @@ class GradlePlugin : Plugin<Project> {
                         environment.loaderSpec.takeIf { it.isPresent }?.get()
                             ?.let { xyz.wagyourtail.unimined.transform.loader.LoaderRegistry().resolve(it.name) }
                     }, { environment })
+                        // per-env `forge` DSL object — `env.forge {
+                        // srgRuntime = true }` and friends
+                        (environment as org.gradle.api.plugins.ExtensionAware)
+                            .extensions.add("forge", ForgeEnvExtension(spec))
                         ForgeEnvironmentWiring.wire(target, environment)
                     }
                 }

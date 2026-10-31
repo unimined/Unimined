@@ -4,6 +4,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.transform.forge.internal.MergeInputsTransformStep
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepSpec
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevInjectProcessor
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeProcessor
@@ -12,6 +13,7 @@ import xyz.wagyourtail.unimined.transform.step.PipelineStepSpec
 import xyz.wagyourtail.unimined.transform.step.RemapStepContribution
 import xyz.wagyourtail.unimined.transform.step.StepType
 import xyz.wagyourtail.unimined.transform.step.StepTypeSource
+import xyz.wagyourtail.unimined.transform.step.TransformStepContribution
 import javax.inject.Inject
 
 /**
@@ -77,12 +79,63 @@ abstract class ForgeUserdevExecStepSpec : PipelineStepSpec {
 
 }
 
+/**
+ * `forge:mergeInputs` — merge named env-artifact inputs into the
+ * pipeline jar (declared-step form; `custom`-pipeline users
+ * assemble the canonical `mergeInputs` step directly).
+ */
+object ForgeMergeInputsStepType : StepType {
+    override val id = "forge:mergeInputs"
+    override val produces = listOf("forge:merged")
+}
+
+/**
+ * Spec for [ForgeMergeInputsStepType]. [inputs] maps a logical
+ * input name to an `envArtifactBindings` key — the wiring resolves
+ * it inside the deferred provider into
+ * `TransformStepContext.inputs` (e.g.
+ * `inputs.put("server", "server_jar")`).
+ */
+abstract class ForgeMergeInputsStepSpec : PipelineStepSpec {
+
+    /** name → `envArtifactBindings` key for each aux input. */
+    abstract val inputs: org.gradle.api.provider.MapProperty<String, String>
+
+    override fun transformSteps() = listOf(
+        TransformStepContribution(
+            RemapSurface.JAR,
+            MergeInputsTransformStep,
+            inputBindings = inputs.get(),
+        )
+    )
+
+}
+
+/**
+ * `forge:srgRuntime` — opt-in FG2 srg-namespace dev launch. A mode
+ * step: when declared, the run wiring swaps the launch MC artifact
+ * to the mod-source (searge) view and emits
+ * `-Dunimined.fg2.runtimeDeobf` so FML's runtime deobf transformer
+ * stays registered — [DeobfTweakerTx]'s strip is inert. Without it
+ * (default, 1.x behavior) the dev-mapped jar runs directly.
+ */
+object ForgeSrgRuntimeStepType : StepType {
+    override val id = "forge:srgRuntime"
+    override val produces = listOf("forge:srg")
+}
+
+/** Spec for [ForgeSrgRuntimeStepType] — no options; declaring the
+ *  step is the signal. */
+abstract class ForgeSrgRuntimeStepSpec : PipelineStepSpec
+
 /** ServiceLoader source — forge's step-type feature pack. */
 class ForgeStepTypeSource : StepTypeSource {
 
     override fun stepTypes(): List<StepType> = listOf(
         ForgeBinpatchesStepType,
         ForgeUserdevExecStepType,
+        ForgeMergeInputsStepType,
+        ForgeSrgRuntimeStepType,
     )
 
 }
