@@ -23,12 +23,13 @@ import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.Namespace
-import xyz.wagyourtail.unimined.mapping.readMappingFiles
+import xyz.wagyourtail.unimined.mapping.readMaterializedManifest
 import xyz.wagyourtail.unimined.mapping.remapper.source.SourceRemapper
 import xyz.wagyourtail.unimined.mapping.tree.graft
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
+import kotlinx.serialization.json.jsonArray
 import kotlin.io.path.createDirectories
 import kotlin.io.path.outputStream
 import kotlin.io.path.readBytes
@@ -71,12 +72,20 @@ abstract class MigrateMappingsTask @Inject constructor(
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val inputBundleFile: RegularFileProperty
 
-    /** The target spec's materialized mapping files — wiring feeds
-     *  this from `materializeSources(targetSpec)` inside a provider;
-     *  files serialize, the spec object never does. */
+    /** The target spec's materialized mapping files — wired from
+     *  `materializeSources(targetSpec)` flattened to files +
+     *  attachments inside a provider. */
     @get:InputFiles
     @get:Classpath
     abstract val targetMappingFiles: ConfigurableFileCollection
+
+    /** Serialized `MaterializedSourceSpec` manifest for
+     *  [targetMappingFiles] — carries each source's nsMap/env tags so
+     *  relabels (e.g. gen-2 `clientOfficial` -> `official:client`)
+     *  reach the tree; a bare file list would drop them. Same shape
+     *  as `ProduceMappingBundleTask.sourcesManifest`. */
+    @get:Input
+    abstract val targetSourcesManifest: Property<String>
 
     /** The namespace the input sources are written in (env dev ns). */
     @get:Input
@@ -165,8 +174,8 @@ abstract class MigrateMappingsTask @Inject constructor(
             inputBundleFile.get().asFile.toPath()
         ).view<MappingTree>()
             ?: error("input bundle contains no UML MappingTree view")
-        val targetTree = readMappingFiles(
-            targetMappingFiles.files.map { it.toPath() },
+        val targetTree = readMaterializedManifest(
+            targetSourcesManifest.get(),
             environmentId.get(), logger,
             globalCacheDir.orNull?.asFile?.toPath()
         ).view<MappingTree>()

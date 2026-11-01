@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.MappingTree
+import kotlinx.serialization.json.jsonArray
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 
 /**
@@ -31,6 +32,13 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
     @get:Classpath
     abstract val mappingFiles: ConfigurableFileCollection
 
+    /** JSON manifest of the materialized sources — per-source
+     *  `nsMap`/`formatHint`/`namedNamespaces` from the declarations,
+     *  so relabeled channels (calamus/feather…) compose the same here
+     *  as in the declared-source path. */
+    @get:Input
+    abstract val sourcesManifest: Property<String>
+
     /** Source namespace to serialize from. */
     @get:Input
     abstract val sourceNamespace: Property<String>
@@ -45,8 +53,14 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
 
     @TaskAction
     fun produce() {
-        val data = MappingResolver.readFiles(
-            mappingFiles.files.map { it.toPath() },
+        val mats = kotlinx.serialization.json.Json.parseToJsonElement(
+            sourcesManifest.get()
+        ).jsonArray.map {
+            xyz.wagyourtail.unimined.mapping.internal.MaterializedSourceSpec
+                .fromJson(it).materialize()
+        }
+        val data = MappingResolver.readMaterialized(
+            mats,
             MappingResolver.standaloneContext(environmentId.get(), uniminedLogger(logger))
         )
         val path = bundleFile.get().asFile.toPath()

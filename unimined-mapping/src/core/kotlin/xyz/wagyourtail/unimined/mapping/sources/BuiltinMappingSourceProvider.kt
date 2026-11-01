@@ -319,7 +319,13 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             }
             tree.emit(
                 UMFWriter.write(sb::append, false),
-                nsFilter = listOf(official, searge, forgeMCP)
+                // env-aware csv emit lands sided rows under `ns:env` —
+                // keep the env columns or those members lose their names
+                nsFilter = listOf(
+                    official, searge, forgeMCP,
+                    searge.forEnv("client"), searge.forEnv("server"),
+                    forgeMCP.forEnv("client"), forgeMCP.forEnv("server")
+                )
             )
         }
         return RuntimeMaterializedMappingSource(

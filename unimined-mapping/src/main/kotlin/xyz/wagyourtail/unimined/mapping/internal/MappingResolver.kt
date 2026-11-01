@@ -128,16 +128,54 @@ internal object MappingResolver {
         return data
     }
 
-    /** Materialize all effective sources in [spec] to local mapping files. */
+    /** Materialize all effective sources in [spec] — keeps each
+     *  declaration's `nsMap`/`formatHint`/`namedNamespaces` so consumers
+     *  (e.g. bundle tasks) can re-read the files with the same relabels
+     *  the declared pipeline applies. */
     fun materializeSources(
         spec: MappingsSpecImpl,
         ctx: MappingContext,
         sourceProviders: MappingSourceProviderRegistry = MappingSourceProviderRegistry()
-    ): List<Path> = spec.effectiveSources().flatMap { src ->
-        filterSideDocs(
-            sourceProviders.select(src).materialize(src, ctx).files,
-            ctx.envSide
-        )
+    ): List<MaterializedMappingSource> = spec.effectiveSources().mapNotNull { src ->
+        val m = sourceProviders.select(src).materialize(src, ctx)
+        val filtered = filterSideDocs(m.files, ctx.envSide)
+        if (filtered.isEmpty()) return@mapNotNull null
+        if (filtered !== m.files) RuntimeMaterializedMappingSource(
+            m.declaration, filtered, m.formatHint,
+            m.nsMap, m.namedNamespaces, m.attachments
+        ) else m
+    }
+
+    /**
+     * Read materialized sources (files + declaration metadata) through
+     * the provider + composer pipeline — the bundle-task path, where
+     * the original spec no longer exists but relabels still apply.
+     */
+    fun readMaterialized(
+        mats: List<MaterializedMappingSource>,
+        ctx: MappingContext,
+        providers: MappingProviderRegistry = MappingProviderRegistry(),
+        composers: MappingComposerRegistry = MappingComposerRegistry(),
+        postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
+    ): MappingData {
+        val named = LinkedHashSet<String>()
+        val parts = mats.mapNotNull { m ->
+            if (m.files.isEmpty()) return@mapNotNull null
+            named += m.namedNamespaces
+            providers.select(m).resolve(m, ctx)
+        }
+        val request = MappingComposeRequest(parts)
+        var data = composers.select(request).compose(request, ctx)
+        data.view<MappingTree>()?.namespaces
+            ?.filter { it.name == "named" }
+            ?.forEach { named += it.name }
+        if (named.isNotEmpty()) {
+            data = object : MappingData by data {
+                override val properties = data.properties +
+                        (NAMED_NAMESPACES_KEY to named.joinToString(","))
+            }
+        }
+        return postProcessors.process(data, ctx)
     }
 
     /**
@@ -218,7 +256,9 @@ internal object MappingResolver {
         // share. Unhashable (missing/lazy) files just disable the cache.
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-merged-v3")
+        put("unimined-merged-v4")
+        // v4: env-column fill exclusion (empty `ns:env` = absent on
+        // that side, not same-name) changes composed output
         for ((_, m) in mats) {
             put(m.formatHint ?: "")
             put(m.nsMap.toString())
@@ -266,7 +306,7 @@ internal object MappingResolver {
         })
 
     /** Synthetic declaration for files materialized outside the DSL. */
-    private class RawFileSource(private val file: Path) : MappingSource {
+    internal class RawFileSource(private val file: Path) : MappingSource {
         override fun toString() = "file:$file"
     }
 

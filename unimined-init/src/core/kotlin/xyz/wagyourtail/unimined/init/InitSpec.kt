@@ -64,7 +64,7 @@ data class InitSpec(
         get() = gradleVersion ?: DEFAULT_GRADLE_VERSION
 
     companion object {
-        const val DEFAULT_GRADLE_VERSION = "8.10.2"
+        const val DEFAULT_GRADLE_VERSION = "9.8.2"
     }
 
 }

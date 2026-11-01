@@ -3,9 +3,14 @@ package xyz.wagyourtail.unimined.mapping
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
+import xyz.wagyourtail.unimined.api.spec.Side
 
 /**
  * The `mappings { }` block state: the declared namespace chain plus the
@@ -14,11 +19,24 @@ import xyz.wagyourtail.unimined.api.spec.MappingsSpec
  * @param mcVersion the owning environment's Minecraft version — used by
  *  channel sugar such as [yarn] to default the artifact version; may be
  *  null on detached spec instances
+ * @param side the owning environment's side — Ornithe gen-1 artifacts
+ *  are published per game side (`-client`/`-server` suffixes); may be
+ *  null on detached spec instances
  */
 class MappingsSpecImpl(
     objects: ObjectFactory,
-    private val mcVersion: Provider<String>? = null
+    private val mcVersion: Provider<String>? = null,
+    envSide: Provider<Side>? = null
 ) : MappingsSpec {
+
+    /** The spec's side — the owning env's side, or [Side.MERGED]
+     *  when none applies (standalone specs). Exposed so migrate
+     *  `target { side.set(...) }` can constrain the target spec to
+     *  one env column — e.g. a gen1 target resolving only the client
+     *  artifact instead of both. */
+    val side: Property<Side> = objects.property(Side::class.java).apply {
+        if (envSide != null) convention(envSide) else convention(Side.MERGED)
+    }
 
     private val fileCollectionFactory = objects
 
@@ -40,6 +58,29 @@ class MappingsSpecImpl(
      * this spec resolves; held as instances, never serialized.
      */
     val postProcessors = mutableListOf<MappingPostProcessor>()
+
+    /**
+     * Runs [block] against this spec (channel DSL calls like [calamus]),
+     * then moves the appended [sources] entries out and returns them —
+     * lets transform wiring route channel-produced sources into
+     * [defaultSources] so loader-contributed hops still compose ahead
+     * of user declarations.
+     */
+    fun collectDeclared(block: MappingsSpecImpl.() -> Unit): List<Source> {
+        val start = sources.size
+        block()
+        return sources.drop(start).also { sources.subList(start, sources.size).clear() }
+    }
+
+    /**
+     * Lazily-evaluated default source contributions — transform wiring
+     * registers these at bound time, but the descriptor state they read
+     * (loader, version) isn't populated until the environment's DSL
+     * runs, so they're invoked per [effectiveSources] call. Each lambda
+     * typically wraps [collectDeclared].
+     */
+    val deferredDefaultSources =
+        mutableListOf<MappingsSpecImpl.() -> List<Source>>()
 
     private var inheritedSources: ((MutableSet<MappingsSpecImpl>) -> List<Source>)? = null
 
@@ -103,6 +144,87 @@ class MappingsSpecImpl(
         }
 
     /**
+     * Ornithe artifact side suffix — gen-1 coordinates are published
+     * per side (`-client`/`-server`), gen >= 2 publishes merged
+     * artifacts with no suffix. A merged environment on a gen-1 chain
+     * has no artifact to resolve (1.x fails the same case).
+     */
+    /**
+     * Ornithe artifact side suffixes — gen-1 coordinates are published
+     * per side (`-client`/`-server`); a merged environment emits ONE
+     * declaration per side so the composer unions both official
+     * columns into a single `official` namespace (per-side obf name
+     * sets are disjoint on split-era versions, 1.x parity). gen >= 2
+     * publishes merged artifacts — single suffix.
+     */
+    /**
+     * Whether this spec composed per-side official source columns —
+     * set when channels emit dual client+server declarations on a
+     * merged environment (split-era versions: client/server obf
+     * namespaces are disjoint). The environment artifact transform
+     * reads this to drive the remap-before-merge path: each side's
+     * jar remaps from [splitOfficialNamespaces]' column into the
+     * shared namespace before the member-level merge.
+     */
+    var splitOfficial: Boolean = false
+        private set
+
+    /** Per-side official column names on a split-official merged
+     *  environment — `[official:client, official:server]`. */
+    var splitOfficialNamespaces: List<String> = emptyList()
+        private set
+
+    /** The shared namespace both sides remap into before merging —
+     *  the column the per-side official columns map onto (e.g.
+     *  `calamus`). Set by [calamus] when it declares the merge hop. */
+    var splitMergeNamespace: String? = null
+        private set
+
+    /** Split-obfuscation era — Minecraft versions before 1.3
+     *  (incl. all beta/alpha) have distinct client/server obf
+     *  namespaces; 1.3+ merged the jars. Same test as 1.x
+     *  `splitUnmapped`. Unknown/blank versions default to true —
+     *  emitting both env columns is a superset non-split
+     *  consumers safely ignore, while omitting the server column
+     *  breaks split-era bridging. */
+    private fun isSplitEra(): Boolean {
+        val mc = mcVersion?.orNull?.substringBefore('-')
+            ?: return true
+        if (mc.isBlank()) return true
+        return try {
+            xyz.wagyourtail.unimined.mapping.internal
+                .MinecraftVersions.compare(mc, "1.3") < 0
+        } catch (e: IllegalStateException) {
+            // uncomparable scheme (beta/alpha ids like b1.7.3) —
+            // those eras are all pre-1.3, hence split
+            true
+        }
+    }
+
+    private fun ornitheSideSuffixes(
+        channel: String, gen: Int
+    ): List<Pair<Provider<String>, String>> {
+        if (gen >= 2) return listOf(const("") to "official")
+        val s = side.get()
+        val splitEra = isSplitEra()
+        if (s == Side.MERGED && splitEra) {
+            splitOfficial = true
+            splitOfficialNamespaces = listOf("official:client", "official:server")
+        }
+        return when {
+            s == Side.CLIENT -> listOf(const("-client") to "official")
+            s == Side.SERVER -> listOf(const("-server") to "official")
+            // non-split merged versions ship one merged artifact
+            s == Side.MERGED && !splitEra ->
+                listOf(const("") to "official")
+            else -> listOf(
+                const("-client") to "official:client",
+                const("-server") to "official:server"
+            )
+        }
+    }
+
+    /**
      * Declare Fabric's `intermediary` channel for the environment's
      * Minecraft version — `net.fabricmc:intermediary:<mcVersion>:v2`.
      * Fabric loaders contribute this hop implicitly; declare it
@@ -156,8 +278,14 @@ class MappingsSpecImpl(
      * namespace (the document's own `named` label is relabeled).
      */
     fun retroMCP(version: String) = maven(
-        "io.github.mcphackers:mcp:$version@zip"
-    ) { named("retroMCP") }
+        const(version).map {
+            "io.github.mcphackers:mcp:${retroMCPArtifactKey(it)}@zip"
+        }
+    ) {
+        mapNamespace("named" to "retroMCP")
+        named("retroMCP")
+        retroMCPOfficialRelabel()
+    }
 
     /**
      * Declare Ornithe Feather mappings for the environment's Minecraft
@@ -165,16 +293,72 @@ class MappingsSpecImpl(
      * on the Ornithe maven; rides the `intermediary` hop.
      */
     @JvmOverloads
-    fun feather(build: Int, gen: Int = ornitheGenVersion) = maven(
-        requireMcVersion("feather").map {
-            val artifact = if (gen < 2) "feather" else "feather-gen$gen"
-            "net.ornithemc:$artifact:$it+build.$build:v2"
+    fun feather(build: Int, gen: Int = ornitheGenVersion) {
+        for ((sfx, _) in ornitheSideSuffixes("feather", gen)) {
+            maven(
+                requireMcVersion("feather").zip(sfx) { mc, s ->
+                    val artifact = if (gen < 2) "feather" else "feather-gen$gen"
+                    "net.ornithemc:$artifact:$mc$s+build.$build:v2"
+                }
+            ) {
+                featherConfig(gen)
+            }
         }
-    ) {
-        if (gen >= 2) mapNamespace(
-            "intermediary" to "calamusGen$gen",
-            "named" to "featherGen$gen"
+    }
+
+    private fun Source.featherConfig(gen: Int) {
+        // the file's src column is labeled `intermediary` in every gen;
+        // relabel to the gen-keyed calamus namespace so the hop stitches
+        mapNamespace(
+            "intermediary" to if (gen < 2) "calamus" else "calamusGen$gen",
+            "named" to if (gen < 2) "feather" else "featherGen$gen"
         )
+        // the `named`-column convention only catches the literal name —
+        // flag the relabeled target so it wins dev-namespace selection
+        named(if (gen < 2) "feather" else "featherGen$gen")
+    }
+
+    /**
+     * Ornithe enricher source — `nests`/`sparrow`/`raven` artifacts
+     * carry metadata-only files (inner-class attributes, generic
+     * signatures, exception mappings) keyed by per-side official names.
+     * UML reads all three formats; the elements apply during remap
+     * (nests restore InnerClass attributes for decompilation).
+     */
+    @JvmOverloads
+    fun nests(build: Int) =
+        ornitheEnricher("nests", "nests", build)
+
+    /** Ornithe sparrow generic-signature enricher — see [nests]. */
+    @JvmOverloads
+    fun sparrow(build: Int) =
+        ornitheEnricher("signatures", "sparrow", build)
+
+    /** Ornithe raven exception-mapping enricher — see [nests]. */
+    @JvmOverloads
+    fun raven(build: Int) =
+        ornitheEnricher("exceptions", "raven", build)
+
+    private fun ornitheEnricher(
+        channel: String, artifact: String, build: Int
+    ) {
+        // enrichers publish a single series keyed on official names —
+        // always the sided-artifact path; they graft onto the env's
+        // official:<side> columns regardless of calamus/feather gen
+        val suffixes = ornitheSideSuffixes(channel, 1)
+        for ((sfx, officialNs) in suffixes) {
+            maven(
+                requireMcVersion(channel).zip(sfx) { mc, s ->
+                    "net.ornithemc:$artifact:$mc$s+build.$build"
+                }
+            ) {
+                // enricher files label their key namespace `source`;
+                // relabel to the side's official column — merged
+                // split-official envs keep per-side obf namespaces
+                // disjoint (1.x model)
+                mapNamespace("source" to officialNs)
+            }
+        }
     }
 
     /**
@@ -261,14 +445,70 @@ class MappingsSpecImpl(
      * `provides("calamus" to false) + mapNamespace`).
      */
     @JvmOverloads
-    fun calamus(gen: Int = ornitheGenVersion) = maven(
-        requireMcVersion("calamus").map {
-            val artifact =
-                if (gen < 2) "calamus-intermediary" else "calamus-intermediary-gen$gen"
-            "net.ornithemc:$artifact:$it:v2"
+    fun calamus(gen: Int = ornitheGenVersion) {
+        for ((sfx, officialNs) in ornitheSideSuffixes("calamus", gen)) {
+            maven(
+                requireMcVersion("calamus").zip(sfx) { mc, s ->
+                    val artifact =
+                        if (gen < 2) "calamus-intermediary" else "calamus-intermediary-gen$gen"
+                    "net.ornithemc:$artifact:$mc$s:v2"
+                }
+            ) {
+                mapNamespace("intermediary" to if (gen < 2) "calamus" else "calamusGen$gen")
+                // the calamus hop target is the shared merge
+                // namespace — both per-side officials map onto it
+                if (officialNs != "official") {
+                    splitMergeNamespace =
+                        if (gen < 2) "calamus" else "calamusGen$gen"
+                }
+                // gen-1 files label their src column `official` —
+                // on merged split-official envs each side's obf ns is
+                // distinct (same-named client/server classes differ),
+                // so relabel per side via the file-env tag, not into a
+                // union column
+                if (officialNs != "official") {
+                    env(officialNs.substringAfter(':'))
+                }
+                if (gen >= 2) {
+                    // gen>=2 files carry split clientOfficial/serverOfficial
+                    // dst columns; a sided env only needs its own side,
+                    // relabeled into its env column (`official:client`) —
+                    // envView(side) then sees it as plain `official` while
+                    // joined stays exactly `official`. MERGED needs the
+                    // same file declared twice (per-column union) —
+                    // not yet supported on gen >= 2
+                    val s = side.get()
+                    when {
+                        s == Side.CLIENT -> mapNamespace("clientOfficial" to "official:client")
+                        s == Side.SERVER -> mapNamespace("serverOfficial" to "official:server")
+                        // the one file carries both per-side official
+                        // columns — relabel both, and flag the
+                        // split-official merge the same as gen-1:
+                        // each side remaps through calamusGen2, then
+                        // the jar merge pairs by it
+                        s == Side.MERGED && isSplitEra() -> {
+                            mapNamespace("clientOfficial" to "official:client")
+                            mapNamespace("serverOfficial" to "official:server")
+                            splitOfficial = true
+                            splitOfficialNamespaces =
+                                listOf("official:client", "official:server")
+                            splitMergeNamespace = "calamusGen$gen"
+                        }
+                        // non-split merged env: one obf space —
+                        // official is just the client column
+                        s == Side.MERGED ->
+                            mapNamespace("clientOfficial" to "official")
+                        // no env (migration target, ad-hoc specs) —
+                        // relabel both so `official:client`/`official:server`
+                        // are available as graft/bridge columns
+                        else -> {
+                            mapNamespace("clientOfficial" to "official:client")
+                            mapNamespace("serverOfficial" to "official:server")
+                        }
+                    }
+                }
+            }
         }
-    ) {
-        mapNamespace("intermediary" to if (gen < 2) "calamus" else "calamusGen$gen")
     }
 
     /**
@@ -331,8 +571,38 @@ class MappingsSpecImpl(
 
     /** Declare RetroMCP at the environment's Minecraft version. */
     fun retroMCP() = maven(
-        requireMcVersion("retroMCP").map { "io.github.mcphackers:mcp:$it@zip" }
-    ) { named("retroMCP") }
+        requireMcVersion("retroMCP").map {
+            "io.github.mcphackers:mcp:${retroMCPArtifactKey(it)}@zip"
+        }
+    ) {
+        mapNamespace("named" to "retroMCP")
+        named("retroMCP")
+        retroMCPOfficialRelabel()
+    }
+
+    /**
+     * retroMCP files carry split `client`/`server` dst columns —
+     * per-side official names (same concept as gen-2
+     * `clientOfficial`/`serverOfficial`). Sided envs keep their own
+     * side's column relabeled into `official:<side>`; side-less specs
+     * (migration targets) and MERGED get both — the merged env's
+     * compose path unions the side columns client-wins.
+     */
+    private fun Source.retroMCPOfficialRelabel() {
+        when (side.get()) {
+            Side.CLIENT -> mapNamespace("client" to "official:client")
+            Side.SERVER -> mapNamespace("server" to "official:server")
+            else -> {
+                if (isSplitEra()) {
+                    mapNamespace("client" to "official:client")
+                    mapNamespace("server" to "official:server")
+                } else {
+                    // non-split merged env — one obf space
+                    mapNamespace("client" to "official")
+                }
+            }
+        }
+    }
 
     /**
      * Declare the Searge (MCPConfig) mappings channel — [version] is the
@@ -415,7 +685,7 @@ class MappingsSpecImpl(
                 visiting.remove(this)
             }
         }
-        return defaultSources + own
+        return defaultSources + deferredDefaultSources.flatMap { it(this) } + own
     }
 
     /** A declared mapping source before materialization. */
@@ -439,6 +709,19 @@ class MappingsSpecImpl(
         /** Relabel several document namespaces at once. */
         fun mapNamespace(vararg pairs: Pair<String, String>) {
             pairs.forEach { (from, to) -> mapNamespace(from, to) }
+        }
+
+        /**
+         * Tag this source's jar-side namespace [srcNs] as belonging to
+         * environment [env] — its rows land in the `srcNs:env` column
+         * (`envView(E) = ns ∪ ns:env`). For env-free formats (Ornithe
+         * gen-1 `-client`/`-server` artifacts, split SRG files) this is
+         * the file-level default; formats carrying per-row env (MCP v6)
+         * tag rows themselves. [srcNs] is the source's jar-native
+         * (obf) column — `official` by default.
+         */
+        fun env(env: String, srcNs: String = "official") {
+            mapNamespace(srcNs, "$srcNs:$env")
         }
 
         /** Flag emitted chain namespaces as *named* (developer-facing)
@@ -473,4 +756,32 @@ class MappingsSpecImpl(
         }
     }
 
+    /**
+     * mcphackers artifacts are keyed by the shared obf jar, not the
+     * release id — b1.7.3's mappings live at `versionsV2/b1.7.zip`.
+     * Resolve the version through the BetterJSONs manifest, falling
+     * back to the literal [version] so zip keys like `b1.7` pass
+     * through unchanged.
+     */
+    private fun retroMCPArtifactKey(version: String): String = try {
+        retroMCPManifest.firstOrNull {
+            it.jsonObject["id"]?.jsonPrimitive?.content == version
+        }?.jsonObject?.get("resources")?.jsonPrimitive?.content
+            ?.substringAfterLast('/')?.removeSuffix(".zip")
+            ?: version
+    } catch (e: Exception) {
+        version
+    }
+
+    companion object {
+        private val retroMCPManifest by lazy {
+            kotlinx.serialization.json.Json.parseToJsonElement(
+                java.net.URI("https://mcphackers.org/versionsV3/versions.json")
+                    .toURL().openConnection().apply {
+                        connectTimeout = 15_000; readTimeout = 15_000
+                    }.getInputStream().bufferedReader().readText()
+            ).jsonArray
+        }
+
+    }
 }

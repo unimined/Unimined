@@ -73,14 +73,34 @@ abstract class MigrateExtension @Inject constructor(
                 "unimined.migrateMappings: configure the target via `target { ... }`"
             )
             val mavenResolver = Function<String, Path> { notation ->
+                xyz.wagyourtail.unimined.mapping.UniminedRepos
+                    .ensureForNotation(notation, project)
                 project.configurations.detachedConfiguration(
                     project.dependencies.create(notation)
                 ).apply { isTransitive = false }.files.single().toPath()
             }
-            t.targetMappingFiles.from(project.providers.provider {
+            // feed files + manifest (same shape ProduceMappingBundleTask
+            // takes) — the manifest carries each source's nsMap/env
+            // tags so relabels (e.g. gen-2 clientOfficial ->
+            // official:client) reach the composed tree; bare files
+            // would drop them
+            val mats = project.providers.provider {
                 mapping.materializeSources(
                     spec, "$environmentId-migrate", mavenResolver
                 )
+            }
+            t.targetMappingFiles.from(mats.map { list ->
+                list.flatMap { m ->
+                    m.files.map { it.toFile() } + m.attachments.values.map { it.toFile() }
+                }
+            })
+            t.targetSourcesManifest.set(mats.map { list ->
+                kotlinx.serialization.json.JsonArray(
+                    list.map {
+                        xyz.wagyourtail.unimined.mapping.internal
+                            .MaterializedSourceSpec.of(it).toJson()
+                    }
+                ).toString()
             })
             t.targetClasspath.from(project.providers.provider {
                 t.classpathNotations.get().map(mavenResolver::apply)

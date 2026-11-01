@@ -8,6 +8,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
 import xyz.wagyourtail.unimined.mapping.internal.RuntimeMappingContext
@@ -74,7 +75,7 @@ abstract class MappingExtension @Inject constructor(
         resolveMaven: Function<String, Path>,
         resolveChannel: BiFunction<String, Map<String, String>, List<Path>>? = null,
         envSide: xyz.wagyourtail.unimined.api.spec.Side? = null
-    ): List<Path> = MappingResolver.materializeSources(
+    ): List<MaterializedMappingSource> = MappingResolver.materializeSources(
         spec, ctx(environmentId, resolveMaven, resolveChannel, envSide), sourceProviders
     )
 

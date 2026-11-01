@@ -15,7 +15,7 @@ import java.util.zip.ZipException
 object MappingArchive {
 
     private val MAPPING_ENTRY =
-        Regex(""".*\.(tiny|tsrg|srg|csrg|xsrg|pro|mappings?|map|csv)(\.gz)?$""")
+        Regex(""".*\.(tiny|tsrg|srg|csrg|xsrg|pro|mappings?|map|csv|nest|excs|sigs)(\.gz)?$""")
 
     /**
      * Extracted [archive] contents — the mapping documents plus
