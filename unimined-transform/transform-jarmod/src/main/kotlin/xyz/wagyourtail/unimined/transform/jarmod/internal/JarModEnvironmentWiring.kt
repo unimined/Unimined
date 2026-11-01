@@ -108,7 +108,9 @@ internal object JarModEnvironmentWiring {
         // fg1: forge zips merge into the jar too; its ATs come out
         // and ride apply-class-tweaker; FML's dynamic libraries are
         // resolved into `forgeDeps` and land in runDir/lib
-        val isFg1 = environment.spec().loader?.name == "fg1"
+        // loaderSpec is populated at bound time; spec() would eagerly
+        // query version, which the DSL may not have set yet
+        val isFg1 = environment.loaderSpec.orNull?.name == "fg1"
         if (forge != null) {
             // must run after the forge merge — it normalizes the era
             // `*_at.cfg` entries the merge just injected (and strips
@@ -126,7 +128,7 @@ internal object JarModEnvironmentWiring {
                                 target.parentFile.mkdirs()
                                 target.bufferedWriter().use { w ->
                                     z.getInputStream(e).bufferedReader().forEachLine { line ->
-                                        w.write(normalizeEraAtEntry(line))
+                                        w.write(line)
                                         w.newLine()
                                     }
                                 }
@@ -186,7 +188,7 @@ internal object JarModEnvironmentWiring {
         // loader envs only — fg1/modloader reuse this wiring as a
         // substrate but run their own transform systems (FML/CoreMod);
         // an attached agent would suppress their transformers.
-        if (environment.spec().loader?.name == "jarmod") {
+        if (environment.loaderSpec.orNull?.name == "jarmod") {
             envSpec.runMutators += org.gradle.api.Action { config ->
             val jmaFile = jarModAgent.resolve().first { it.extension == "jar" }
             config.jvmArgs += "-javaagent:${jmaFile.absolutePath}"
@@ -361,35 +363,6 @@ internal object JarModEnvironmentWiring {
             }
         }
         return out
-    }
-
-    /**
-     * FML-era AT entries join class and member with `.`
-     * (`als.a(Lals;)I`, `baz.u`); the UML reader expects whitespace
-     * separation. Rewrites member entries to the modern form; class-
-     * only entries (last segment Capitalized) pass through.
-     */
-    private fun normalizeEraAtEntry(line: String): String {
-        val t = line.trim()
-        if (t.isEmpty() || t.startsWith('#')) return line
-        val tokens = t.split(Regex("\\s+")).toMutableList()
-        if (tokens.size < 2) return line
-        val target = tokens[1]
-        if ('(' in target) {
-            val paren = target.indexOf('(')
-            val dot = target.lastIndexOf('.', paren)
-            if (dot < 0) return line
-            tokens[1] = target.substring(0, dot)
-            tokens.add(2, target.substring(dot + 1))
-            return tokens.joinToString(" ")
-        }
-        val dot = target.lastIndexOf('.')
-        if (dot >= 0 && (target[dot + 1].isLowerCase() || target.substring(dot + 1) == "*")) {
-            tokens[1] = target.substring(0, dot)
-            tokens.add(2, target.substring(dot + 1))
-            return tokens.joinToString(" ")
-        }
-        return line
     }
 
 }

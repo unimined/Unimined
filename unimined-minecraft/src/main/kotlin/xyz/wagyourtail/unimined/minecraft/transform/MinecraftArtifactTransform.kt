@@ -107,6 +107,27 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
         @get:Input
         val stripBundledServerLibraries: Property<Boolean>
 
+        /** Shared namespace both sides are remapped into before
+         *  merging — set only on split-side merged environments
+         *  (`official` is a union of disjoint client/server obf
+         *  namespaces). */
+        @get:Optional
+        @get:Input
+        val mergeNamespace: Property<String>
+
+        /** Per-side official namespaces each side is remapped *from*
+         *  before merging — `[client, server]` order (split-era obf
+         *  namespaces are disjoint; same-named classes differ). */
+        @get:Optional
+        @get:Input
+        val mergeFromNamespaces: ListProperty<String>
+
+        /** z64-serialized mapping payload for the pre-merge remaps
+         *  (same encoding `RemapDependencyTransform` decodes). */
+        @get:Optional
+        @get:Input
+        val mergeMappings: Property<String>
+
     }
 
     @get:InputArtifact
@@ -135,6 +156,7 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
             mergeIncludeGlobs = p.mergeIncludeGlobs.get(),
             mergeExcludeGlobs = p.mergeExcludeGlobs.get(),
             stripBundledServerLibraries = p.stripBundledServerLibraries.get(),
+            preMerge = preMergeHook(p),
             logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(MinecraftArtifactTransform::class.java))
         )
         val produced = producer.produce(spec, request)
@@ -143,6 +165,49 @@ abstract class MinecraftArtifactTransform : TransformAction<MinecraftArtifactTra
                     p.artifactKey.get().lowercase() + ".jar"
         ).toPath()
         AtomicIo.copyAtomic(produced, output)
+    }
+
+    /**
+     * Build the pre-merge hook for split-side merged environments —
+     * both side jars are remapped from the union `official` namespace
+     * into the shared namespace, so the member-level merge sees the
+     * same logical classes. `null` when the env didn't declare a
+     * merge namespace (post-1.3 merges stay official-space).
+     */
+    private fun preMergeHook(p: Params): ((Path, Path) -> Pair<Path, Path>)? {
+        val mergeNs = p.mergeNamespace.orNull ?: return null
+        val z64 = p.mergeMappings.orNull
+            ?: error("mergeNamespace set without mergeMappings")
+        require(z64.startsWith("z64:")) {
+            "mergeMappings must be a z64 SerializedMappingData payload"
+        }
+        val tmp = Files.createTempFile("unimined-merge-mappings", ".zip")
+        Files.write(tmp, java.util.Base64.getDecoder().decode(z64.removePrefix("z64:")))
+        val mappings = xyz.wagyourtail.unimined.api.mapping
+            .SerializedMappingData.readEither(tmp)
+        val remapper = java.util.ServiceLoader.load(
+            xyz.wagyourtail.unimined.api.spi.JarRemapper::class.java,
+            xyz.wagyourtail.unimined.api.spi.JarRemapper::class.java.classLoader
+        ).firstOrNull()
+            ?: error("no JarRemapper SPI implementation on the classpath")
+        val fns = p.mergeFromNamespaces.get()
+        require(fns.size == 2) {
+            "mergeFromNamespaces must hold [client, server] columns"
+        }
+        // env-qualified columns split to (base ns, env) — the
+        // env-selected view `base ∪ base:env` resolves sided rows
+        // first, then joined rows in `base`
+        val (clientNs, clientEnv) = xyz.wagyourtail.unimined.mapping
+            .Namespace(fns[0]).splitEnv()
+        val (serverNs, serverEnv) = xyz.wagyourtail.unimined.mapping
+            .Namespace(fns[1]).splitEnv()
+        return { client, server ->
+            val c = Files.createTempFile("unimined-merge-client", ".jar")
+            val s = Files.createTempFile("unimined-merge-server", ".jar")
+            remapper.remap(client, c, mappings, clientNs.name, mergeNs, clientEnv)
+            remapper.remap(server, s, mappings, serverNs.name, mergeNs, serverEnv)
+            c to s
+        }
     }
 
 }

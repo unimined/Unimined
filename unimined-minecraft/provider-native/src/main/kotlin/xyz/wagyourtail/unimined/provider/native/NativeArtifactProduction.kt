@@ -15,6 +15,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import xyz.wagyourtail.unimined.provider.native.internal.io.AtomicIo
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
@@ -109,7 +110,8 @@ internal object NativeArtifactProduction {
         downloader: Downloader,
         resolver: ManifestResolver,
         rebuild: Boolean,
-        mergeOptions: JarMerger.Options = JarMerger.Options()
+        mergeOptions: JarMerger.Options = JarMerger.Options(),
+        preMerge: ((client: Path, server: Path) -> Pair<Path, Path>)? = null
     ): Path {
         return when (key) {
             ArtifactKey.CLIENT ->
@@ -124,20 +126,38 @@ internal object NativeArtifactProduction {
                 val versionMetadata = metadata(versionId, resolver)
                 val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
                     ?: throw GradleException("Minecraft $versionId has no client jar download")
+                // pre-1.6 metadata carries no server download —
+                // downloadReference falls back to the betacraft
+                // archive; only the sha1 (for merge caching) is absent
                 val serverRef = versionMetadata.downloads[ArtifactKey.SERVER]
-                    ?: throw GradleException("Minecraft $versionId has no server jar download")
-                val client = downloadReference(
+                var client = downloadReference(
                     ArtifactKey.CLIENT, versionMetadata, versionId, downloader
                 )
-                val server = unbundleServer(
+                var server = unbundleServer(
                     downloadReference(
                         ArtifactKey.SERVER, versionMetadata, versionId, downloader
                     ),
                     versionId, downloader.cacheDir, rebuild
                 )
+                // split-era versions (no manifest server download) have
+                // disjoint client/server obf namespaces — the caller's
+                // hook remaps both sides into a shared namespace before
+                // the member-level merge
+                var clientTag = clientRef.sha1
+                var serverTag = serverRef?.sha1
+                preMerge?.let { hook ->
+                    if (serverRef == null) {
+                        val (c, s) = hook(client, server)
+                        client = c; server = s
+                        // hook outputs replace the merge inputs — key
+                        // the cache on their content, not the raw jars
+                        clientTag = contentSha1(client)
+                        serverTag = contentSha1(server)
+                    }
+                }
                 mergePath(
                     downloader.cacheDir, versionId, client, server,
-                    clientRef.sha1, serverRef.sha1, rebuild, mergeOptions
+                    clientTag, serverTag, rebuild, mergeOptions
                 )
             }
 
@@ -240,5 +260,17 @@ internal object NativeArtifactProduction {
 
     private fun safeHashTag(sha1: String?): String =
         sha1?.takeIf { it.matches(Regex("[a-fA-F0-9]{40}")) } ?: "unverified"
+
+    private fun contentSha1(path: Path): String = Files.newInputStream(path).use { input ->
+        MessageDigest.getInstance("SHA-1").run {
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                update(buffer, 0, count)
+            }
+            digest().joinToString("") { "%02x".format(it) }
+        }
+    }
 
 }

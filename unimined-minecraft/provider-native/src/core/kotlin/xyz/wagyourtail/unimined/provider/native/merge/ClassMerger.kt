@@ -33,8 +33,12 @@ class ClassMerger(
                 return client
             }
         }
-        if (!areClassMetadataEqual(client, server)) {
-            throw IllegalArgumentException("Class metadata is not equal!")
+        val metadataDiffs = classMetadataDiffs(client, server)
+        if (metadataDiffs.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "Class metadata is not equal: " +
+                    metadataDiffs.joinToString("; ")
+            )
         }
         // weaker access
         val merged = ClassNode()
@@ -115,7 +119,7 @@ class ClassMerger(
         val fields = client.fields.map { it to EnvType.CLIENT }.toMutableList()
         outer@ for (field in server.fields) {
             for (f in fields) {
-                if (areFieldNodesEqual(f.first, field)) {
+                if (f.first.name == field.name && f.first.desc == field.desc) {
                     fields.remove(f)
                     field.access = selectWeakerAccess(f.first.access, field.access)
                     fields.add(field to EnvType.JOINED)
@@ -130,11 +134,14 @@ class ClassMerger(
             merged.fields.add(f.first)
         }
 
-        // merge methods
+        // merge methods — same name+desc is the same method slot:
+        // divergent impls are legitimate on split-era versions
+        // (client code carries rendering calls the server lacks);
+        // server wins conflicts, client fills server-absent slots
         val methods = client.methods.map { it to EnvType.CLIENT }.toMutableList()
         outer@ for (method in server.methods) {
             for (m in methods) {
-                if (areMethodNodesEqual(m.first, method)) {
+                if (m.first.name == method.name && m.first.desc == method.desc) {
                     methods.remove(m)
                     method.access = selectWeakerAccess(m.first.access, method.access)
                     methods.add(method to EnvType.JOINED)
@@ -369,24 +376,43 @@ class ClassMerger(
             access = access and (Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
             access = access or Access.max(aAccess, bAccess).value
 
-            // all other flags must be the same
+            // all other flags must be the same — divergent member
+            // flags (e.g. static on one side only) mean the merged
+            // node keeps the server's flags, matching the kept node
             val other = (Opcodes.ACC_FINAL or Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
             if ((a and other) != (b and other)) {
-                throw IllegalStateException("Other access is not the same: ${a.toString(16)} != ${b.toString(16)}")
+                return b
             }
             return access
         }
 
-        fun areClassMetadataEqual(a: ClassNode, b: ClassNode): Boolean {
-            // require equal static
-            if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
-            if (a.name != b.name) return false
-            if (a.superName != b.superName) return false
-            if (a.outerClass != b.outerClass) return false
-            if (a.outerMethod != b.outerMethod) return false
-            if (a.outerMethodDesc != b.outerMethodDesc) return false
-            if (a.nestHostClass != b.nestHostClass) return false
-            return true
+        fun areClassMetadataEqual(a: ClassNode, b: ClassNode): Boolean =
+            classMetadataDiffs(a, b).isEmpty()
+
+        /** Field-level metadata diffs between a client/server class
+         *  pair — surfaced in the merge error so a mismatch names
+         *  the field and both values. */
+        fun classMetadataDiffs(a: ClassNode, b: ClassNode): List<String> {
+            val diffs = mutableListOf<String>()
+            fun <T> field(name: String, x: T, y: T) {
+                if (x != y) diffs.add("$name: client=$x server=$y")
+            }
+            if (a.access and Opcodes.ACC_STATIC !=
+                b.access and Opcodes.ACC_STATIC
+            ) diffs.add(
+                "static flag: client=${
+                    (a.access and Opcodes.ACC_STATIC) != 0
+                } server=${
+                    (b.access and Opcodes.ACC_STATIC) != 0
+                }"
+            )
+            field("name", a.name, b.name)
+            field("superName", a.superName, b.superName)
+            field("outerClass", a.outerClass, b.outerClass)
+            field("outerMethod", a.outerMethod, b.outerMethod)
+            field("outerMethodDesc", a.outerMethodDesc, b.outerMethodDesc)
+            field("nestHostClass", a.nestHostClass, b.nestHostClass)
+            return diffs
         }
 
         fun areInnerClassNodesEqual(a: InnerClassNode, b: InnerClassNode): Boolean {

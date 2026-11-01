@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
@@ -118,7 +119,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             parameters.classpath.files.map { it.toPath() }
         )
         val mappings = parameters.mappingBundleJson.orNull
-            ?.let { json -> BundleMappingData(bundleCache.computeIfAbsent(json, MappingBundle::fromJson)) }
+            ?.let { json -> dataCache.computeIfAbsent(json, ::decodeMappingData) }
             ?: parameters.mappingFile.orNull
                 ?.let { SerializedMappingData.readEither(it.asFile.toPath()) }
 
@@ -161,12 +162,33 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
     private companion object {
 
         /**
-         * Daemon-lifetime parse-once cache for [MappingBundle] content:
+         * Decode the [Params.mappingBundleJson] input — `z64:` marks a
+         * base64 [SerializedMappingData] zip (rich views incl. mapping
+         * element metadata); anything else is a legacy row-only
+         * [MappingBundle] JSON.
+         */
+        private fun decodeMappingData(json: String): MappingData =
+            if (json.startsWith("z64:")) {
+                val tmp = Files.createTempFile("unimined-mappings", ".zip")
+                try {
+                    Files.write(tmp, java.util.Base64.getDecoder().decode(json.substring(4)))
+                    SerializedMappingData.readEither(tmp)
+                } finally {
+                    Files.deleteIfExists(tmp)
+                }
+            } else {
+                BundleMappingData(MappingBundle.fromJson(json))
+            }
+
+        /**
+         * Daemon-lifetime parse-once cache for decoded mapping data —
+         * replaces the row-only [MappingBundle] cache; the z64 payload
+         * decodes to the full serialized view set.
          * a remap view fires this transform once per dependency artifact,
          * and every invocation would otherwise re-parse the same
          * serialized tree (hundreds of MB live) concurrently.
          */
-        val bundleCache = ConcurrentHashMap<String, MappingBundle>()
+        val dataCache = ConcurrentHashMap<String, MappingData>()
 
     }
 

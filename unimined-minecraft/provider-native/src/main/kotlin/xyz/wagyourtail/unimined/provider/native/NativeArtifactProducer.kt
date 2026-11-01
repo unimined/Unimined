@@ -51,7 +51,8 @@ class NativeArtifactProducer : MinecraftArtifactProducer {
                 includeGlobs = request.mergeIncludeGlobs,
                 excludeGlobs = request.mergeExcludeGlobs,
                 stripBundledServerLibraries = request.stripBundledServerLibraries
-            )
+            ),
+            preMerge = request.preMerge
         )
     }
 

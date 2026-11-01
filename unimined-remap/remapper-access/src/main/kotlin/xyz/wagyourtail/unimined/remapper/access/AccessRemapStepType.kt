@@ -7,6 +7,7 @@ import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.ATFormat
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
@@ -169,7 +170,8 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         legacy: Boolean
     ): ByteArray {
         val out = StringBuilder()
-        val useLegacy = legacy || looksLegacyAt(bytes)
+        val useLegacy = legacy ||
+            ATFormat.detect(String(bytes, Charsets.UTF_8)) == ATFormat.Kind.LEGACY
         val remapped = ATWriter.remapMappings(
             if (useLegacy)
                 LegacyATReader.readData(
@@ -184,28 +186,6 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         return out.toString().toByteArray()
     }
 
-    /**
-     * Forge 1.3–1.6.4-era ATs join the member onto the class token
-     * (`cls.member` / `cls.member(desc)`); modern files separate them
-     * by whitespace. Detected from the first content line: a `(` in
-     * the second token, or a dotted token whose trailing segment is
-     * lowercase/`*` with no whitespace-separated member following.
-     */
-    private fun looksLegacyAt(bytes: ByteArray): Boolean {
-        for (l in bytes.toString(Charsets.UTF_8).lineSequence()) {
-            val t = l.trim()
-            if (t.isEmpty() || t.startsWith("#")) continue
-            val toks = t.split(Regex("\\s+"))
-            if (toks.size < 2) return false
-            val c = toks[1]
-            if ('(' in c) return true
-            val last = c.substringAfterLast('.')
-            return '.' in c &&
-                    (last == "*" || last.firstOrNull()?.isLowerCase() == true) &&
-                    (toks.size == 2 || toks[2].startsWith("#"))
-        }
-        return false
-    }
 
     private fun remapCt(bytes: ByteArray, tree: MappingTree, targetNs: Namespace): ByteArray {
         val out = StringBuilder()

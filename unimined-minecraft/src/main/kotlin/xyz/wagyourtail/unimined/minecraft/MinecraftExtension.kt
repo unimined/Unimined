@@ -24,6 +24,7 @@ import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.namedNamespaces
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
@@ -425,6 +426,33 @@ abstract class MinecraftExtension @Inject constructor(
                 p.mergeIncludeGlobs.set(environment.mergeIncludeGlobs)
                 p.mergeExcludeGlobs.set(environment.mergeExcludeGlobs)
                 p.stripBundledServerLibraries.set(environment.stripBundledServerLibraries)
+                // split-side merged env: remap each side into the
+                // shared (mod-source) namespace before merging — the
+                // raw merge can't pair disjoint obf namespaces.
+                // splitOfficial resolves lazily — channel declarations
+                // may run after this registration
+                p.mergeNamespace.set(providers.provider {
+                    if (environment.mappingsSpec.splitOfficial) {
+                        modSourceNamespaces(environmentId).get().single()
+                    } else null
+                })
+                p.mergeFromNamespaces.set(providers.provider {
+                    if (environment.mappingsSpec.splitOfficial) {
+                        environment.mappingsSpec.splitOfficialNamespaces
+                    } else null
+                })
+                p.mergeMappings.set(providers.provider {
+                    if (environment.mappingsSpec.splitOfficial) {
+                        mappingBundleJson(
+                            environmentId,
+                            artifacts(environmentId).map {
+                                it.mappings.get().namespaces.first().name
+                            },
+                            modSourceNamespaces(environmentId)
+                                .map { it.single() }
+                        ).get()
+                    } else null
+                })
             }
         }
     }
@@ -460,7 +488,17 @@ abstract class MinecraftExtension @Inject constructor(
     /** The raw artifact's namespace for [environmentId] — the resolved
      *  mapping tree's first namespace. Evaluated lazily. */
     fun sourceNamespace(environmentId: String): Provider<String> =
-        artifacts(environmentId).map { it.mappings.get().namespaces.first().name }
+        providers.provider {
+            // split-side merged env: the produced artifact lives in the
+            // shared merge namespace (each side was remapped into it
+            // pre-merge), not the union official namespace
+            if (sourceSet(environmentId).mappingsSpec.splitOfficial) {
+                modSourceNamespaces(environmentId).get().single()
+            } else {
+                artifacts(environmentId).get().mappings.get()
+                    .namespaces.first().name
+            }
+        }
 
     /** Effective mod-dependency source namespaces — the environment's
      *  explicit list, else the loader's contributed default, else the
@@ -471,9 +509,17 @@ abstract class MinecraftExtension @Inject constructor(
             val environment = sourceSet(environmentId)
             environment.modSourceNamespaces.getOrElse(emptyList()).ifEmpty {
                 loaderModSourceNamespaces[environment.loaderSpec.orNull?.name]
-                    ?: listOf(
-                        artifacts(environmentId).get().mappings.get().namespaces.first().name
-                    )
+                    ?: run {
+                        // split-official merged envs merge in the spec's
+                        // shared namespace — the side-official columns
+                        // are per-side obf spaces, not mod sources
+                        environment.mappingsSpec.splitMergeNamespace
+                            ?.let { listOf(it) }
+                            ?: listOf(
+                                artifacts(environmentId).get().mappings
+                                    .get().namespaces.first().name
+                            )
+                    }
             }
         }
 
@@ -836,7 +882,7 @@ abstract class MinecraftExtension @Inject constructor(
                                     "mapping archive via maven() or file() instead"
                         )
                     }
-                    ensureRepo("Minecraft Forge", "https://maven.minecraftforge.net/")
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Minecraft Forge", project)
                     listOf(
                         resolveMavenNotation("de.oceanlabs.mcp:mcp_config:$version@zip")
                     )
@@ -850,7 +896,7 @@ abstract class MinecraftExtension @Inject constructor(
                         // their three-part form in forge coordinates
                         if (it == "1.4") "1.4.0" else if (it == "1.0") "1.0.0" else it
                     }
-                    ensureRepo("Minecraft Forge", "https://maven.minecraftforge.net/")
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Minecraft Forge", project)
                     listOf(
                         resolveMavenNotation(
                             "net.minecraftforge:forge:$mcVersion-$version:src@zip"
@@ -877,7 +923,7 @@ abstract class MinecraftExtension @Inject constructor(
                         ?: throw GradleException("parchment() requires a version")
                     val classifier =
                         if (params["checked"].toBoolean()) ":checked" else ""
-                    ensureRepo("Parchment", "https://maven.parchmentmc.org/")
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Parchment", project)
                     listOf(
                         resolveMavenNotation(
                             "org.parchmentmc.data:parchment-$mcVersion:$version$classifier@zip"
@@ -891,20 +937,6 @@ abstract class MinecraftExtension @Inject constructor(
             }
         }
 
-    private fun ensureRepo(name: String, url: String) {
-        if (project.repositories.none { it.name == name }) {
-            project.repositories.maven { repo ->
-                repo.name = name
-                repo.setUrl(url)
-                // pre-maven forge artifacts have no POMs — allow
-                // direct artifact resolution alongside POM metadata
-                repo.metadataSources {
-                    it.mavenPom()
-                    it.artifact()
-                }
-            }
-        }
-    }
 
     /** Configure mappings for the default `main` environment. */
     fun mappings(action: Action<MappingsSpecImpl>) = main.mappings(action)
@@ -983,11 +1015,14 @@ abstract class MinecraftExtension @Inject constructor(
 
     /** Resolve a `maven("g:a:v[:classifier]")` source lazily via a
      *  non-transitive detached configuration. */
-    private fun resolveMavenNotation(notation: String) =
-        project.configurations.detachedConfiguration(
+    private fun resolveMavenNotation(notation: String): Path {
+        xyz.wagyourtail.unimined.mapping.UniminedRepos
+            .ensureForNotation(notation, project)
+        return project.configurations.detachedConfiguration(
             project.dependencies.create(notation)
         ).apply { isTransitive = false }
             .files.single().toPath()
+    }
 
     /**
      * Register a task producing the serialized `MappingBundle` for
@@ -1013,13 +1048,23 @@ abstract class MinecraftExtension @Inject constructor(
             ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
-            t.mappingFiles.from(providers.provider {
+            val mats = providers.provider {
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
                     mavenResolver, channelResolver(environment),
                     environment.side.get()
                 )
+            }
+            t.mappingFiles.from(mats.map { list ->
+                list.flatMap { m -> m.files.map { it.toFile() } + m.attachments.values.map { it.toFile() } }
+            })
+            t.sourcesManifest.set(mats.map { list ->
+                kotlinx.serialization.json.JsonArray(
+                    list.map {
+                        xyz.wagyourtail.unimined.mapping.internal.MaterializedSourceSpec.of(it).toJson()
+                    }
+                ).toString()
             })
             t.sourceNamespace.set(from)
             t.targetNamespace.set(to)
@@ -1050,13 +1095,23 @@ abstract class MinecraftExtension @Inject constructor(
             ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
-            t.mappingFiles.from(providers.provider {
+            val mats = providers.provider {
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
                     environmentId,
                     mavenResolver, channelResolver(environment),
                     environment.side.get()
                 )
+            }
+            t.mappingFiles.from(mats.map { list ->
+                list.flatMap { m -> m.files.map { it.toFile() } + m.attachments.values.map { it.toFile() } }
+            })
+            t.sourcesManifest.set(mats.map { list ->
+                kotlinx.serialization.json.JsonArray(
+                    list.map {
+                        xyz.wagyourtail.unimined.mapping.internal.MaterializedSourceSpec.of(it).toJson()
+                    }
+                ).toString()
             })
             t.sourceNamespace.set(from)
             t.targetNamespace.set(to)
@@ -1098,10 +1153,19 @@ abstract class MinecraftExtension @Inject constructor(
             val bundleJson = mappingBundleJsonCache.computeIfAbsent(
                 "$environmentId:${from.get()}:${to.get()}"
             ) {
-                val tree = resolvedMappingData(environment).view<MappingTree>() ?: error(
-                    "mapping provider did not expose a UML MappingTree view"
-                )
-                MappingBundle.capture(from.get(), to.get(), tree).toJson()
+                // the rich serialized form — row-only MappingBundle
+                // drops mapping-element metadata (inner-class, generic
+                // signature, exception enrichers) that the remapper's
+                // metadata pass applies; "z64:" marks a base64 zip so
+                // the transform can distinguish it from legacy bundles
+                val tmp = java.nio.file.Files.createTempFile("unimined-mappings", ".zip")
+                try {
+                    SerializedMappingData.write(resolvedMappingData(environment), tmp)
+                    "z64:" + java.util.Base64.getEncoder()
+                        .encodeToString(java.nio.file.Files.readAllBytes(tmp))
+                } finally {
+                    java.nio.file.Files.deleteIfExists(tmp)
+                }
             }
             bundleJson
         }

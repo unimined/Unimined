@@ -45,6 +45,14 @@ data class LoaderDescriptor(
      *  another way (forge userdev / mcp-config). */
     val intermediaryCoords: ((String) -> String)? = null,
 
+    /** Named upstream-mapping channel the environment contributes
+     *  through its own `mappings {}` channel API instead of a bare
+     *  coord — for products whose intermediary artifact is gen- or
+     *  side-shaped and needs the channel's namespace relabels
+     *  (e.g. `"calamus"` → `MappingsSpecImpl.calamus()`). Supersedes
+     *  [intermediaryCoords] when present. */
+    val upstreamMappingChannel: String? = null,
+
     /** Mod-metadata conventions (metadata file name, where AT/CT files
      *  and injected-interface/nested-jar declarations live). */
     val metadata: LoaderMetadataSpec = LoaderMetadataSpec(),

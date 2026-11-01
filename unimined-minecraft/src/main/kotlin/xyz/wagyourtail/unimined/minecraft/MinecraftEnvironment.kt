@@ -285,7 +285,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * [mappings] configures. Exposed so transform plugins can contribute
      * `defaultSources` (e.g. fabric's intermediary hop).
      */
-    val mappingsSpec = MappingsSpecImpl(objects, version)
+    val mappingsSpec = MappingsSpecImpl(objects, version, side)
 
     /** Configure this environment's modloader and version. */
     fun loader(name: String, version: String) {

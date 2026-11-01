@@ -264,6 +264,10 @@ object JarMerger {
                 zout.closeEntry()
             }
             for (name in resourceOrder) {
+                // an entry that parsed as a class on one side but
+                // fell back to a resource on the other is already
+                // written from mergedClasses — the class wins
+                if (name in mergedClasses) continue
                 zout.putNextEntry(java.util.zip.ZipEntry(name))
                 zout.write(resources.getValue(name))
                 zout.closeEntry()

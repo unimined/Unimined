@@ -40,6 +40,18 @@ class ArtifactProductionRequest(
     /** Master switch for the server-bundled-library strip. */
     val stripBundledServerLibraries: Boolean = true,
 
+    /**
+     * Pre-merge hook for split-side environments — applied to
+     * (client, server) jar paths before [ArtifactKey.MERGED] merges,
+     * e.g. remapping each side into a shared namespace so the merger
+     * sees the same logical classes (pre-1.3 client/server obf
+     * namespaces are disjoint). The producer applies it only when
+     * the version actually needs it (no manifest server download);
+     * `null` keeps the raw merge. Supplied by the artifact transform,
+     * which owns the mapping payload.
+     */
+    val preMerge: ((client: Path, server: Path) -> Pair<Path, Path>)? = null,
+
     val logger: Logger
 )
 
