@@ -45,7 +45,12 @@ internal object FabricEnvironmentWiring {
                 if (LoaderRegistry.resolveBuiltin(it.name)?.family == "fabric") "native" else null
             }
         )
-        contributeLibrarySubstitutions(project, environment)
+        // loaderSpec is only set once the build script's loader(...)
+        // runs — the substitution decision must happen after the DSL
+        // has evaluated but before spec() snapshots librarySubstitutions
+        project.afterEvaluate {
+            contributeLibrarySubstitutions(it, environment)
+        }
         contributeIntermediaryMappings(project, environment)
         contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)
@@ -116,18 +121,38 @@ internal object FabricEnvironmentWiring {
         val version = environment.version
         val dependencies = project.dependencies
 
+        // bound fires before the environment's DSL populates
+        // loaderSpec, so the channel check runs lazily inside
+        // effectiveSources — descriptor rows with
+        // upstreamMappingChannel route through the env's own
+        // mapping DSL, captured as defaultSources
+        environment.mappingsSpec.deferredDefaultSources += {
+            val spec = environment.loaderSpec.orNull
+            val descriptor = spec?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+                ?.takeIf { it.family == "fabric" }
+            when (val channel = descriptor?.upstreamMappingChannel) {
+                null -> emptyList()
+                "calamus" -> collectDeclared { calamus() }
+                else -> throw org.gradle.api.GradleException(
+                    "unknown upstreamMappingChannel '$channel'"
+                )
+            }
+        }
         val intermediary = project.configurations.create(
             "fabricIntermediary${environment.environmentId.capitalized()}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
-                val spec = loaderSpec.orNull
-                val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+                val descriptor = loaderSpec.orNull?.name
+                    ?.let { LoaderRegistry.resolveBuiltin(it) }
                     ?.takeIf { it.family == "fabric" }
-                val coord = descriptor?.intermediaryCoords?.invoke(version.get())
-                if (coord != null) {
-                    deps.add(dependencies.create(coord))
+                if (descriptor?.upstreamMappingChannel == null) {
+                    val coord = descriptor?.intermediaryCoords?.invoke(version.get())
+                    if (coord != null) {
+                        deps.add(dependencies.create(coord))
+                    }
                 }
             }
         }
@@ -135,7 +160,10 @@ internal object FabricEnvironmentWiring {
 
         val files = project.files(project.provider {
             val spec = loaderSpec.orNull
-            if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric") {
+            val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+            if (descriptor?.family != "fabric" || descriptor.upstreamMappingChannel != null) {
+                // upstreamMappingChannel rows contribute Maven sources via
+                // defaultSources instead — no coord jar to resolve here
                 emptyList()
             } else {
                 listOf(intermediaryJar.singleFile)

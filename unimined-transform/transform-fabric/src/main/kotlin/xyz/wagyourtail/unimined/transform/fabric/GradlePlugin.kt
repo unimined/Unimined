@@ -23,6 +23,18 @@ class GradlePlugin : Plugin<Project> {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             minecraft.loaderModSourceNamespaces["fabric"] = listOf("intermediary")
             target.repositories.maven { it.url = URI.create(FabricModAnalysis.FABRIC_MAVEN) }
+            // loader repos for loaders actually selected — registering
+            // the whole family's repos eagerly would add unrelated (and
+            // potentially unreachable) mavens to every resolution
+            target.afterEvaluate {
+                val registry = xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
+                minecraft.environments.forEach { env ->
+                    val loader = env.loaderSpec.orNull ?: return@forEach
+                    registry.resolve(loader.name)?.repos?.forEach { repo ->
+                        repo.registerOn(it.repositories)
+                    }
+                }
+            }
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                     minecraft.onEnvironmentBound { environment, _ ->

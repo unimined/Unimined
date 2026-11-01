@@ -227,6 +227,16 @@ internal object RunsWiring {
      * document at resolution time (execution), so no metadata is fetched
      * during configuration.
      */
+    /** Apply `prefix -> version` rules to a `g:n:v[:classifier]` coord —
+     *  same semantics as provider-native's library substitution. */
+    private fun substituteCoord(coord: String, rules: List<Pair<String, String>>): String {
+        val parts = coord.split(':')
+        if (parts.size < 3) return coord
+        val version = rules.firstOrNull { "${parts[0]}:${parts[1]}".startsWith(it.first) }?.second
+            ?: return coord
+        return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
+    }
+
     private fun nativesConfiguration(
         project: Project,
         environment: MinecraftEnvironment,
@@ -253,8 +263,13 @@ internal object RunsWiring {
                         metadata::versionJson
                     )
                 )
+                // version-JSON natives coords are raw — run them through
+                // the environment's library substitutions (e.g. ornithe's
+                // org.lwjgl:* -> 2.9.4+legacyfabric.8) so natives match the
+                // substituted library jars, mirroring 1.x's libraryFilter
+                val rules = environment.spec().librarySubstitutions
                 Natives.coordinates(document, OperatingSystem.current()).forEach {
-                    deps.add(dependencies.create(it))
+                    deps.add(dependencies.create(substituteCoord(it, rules)))
                 }
             }
         }

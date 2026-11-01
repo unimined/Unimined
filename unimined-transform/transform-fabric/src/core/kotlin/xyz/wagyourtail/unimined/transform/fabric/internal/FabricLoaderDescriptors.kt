@@ -89,13 +89,21 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "ornithe",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            repos = listOf(LoaderRepo.Maven("https://maven.ornithemc.net/releases")),
+            repos = listOf(
+                LoaderRepo.Maven("https://maven.ornithemc.net/releases"),
+                // ornithe reuses legacyfabric's patched lwjgl GAV
+                // (org.lwjgl:* -> 2.9.4+legacyfabric.8), which ornithe's
+                // own maven does not host
+                LoaderRepo.Maven("https://maven.legacyfabric.net"),
+            ),
             // 1.x OrnitheFabricMinecraftTransformer inherits legacyfabric's
             // loader() — upstream fabric-loader, not an ornithe artifact
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "calamus",
-            // 1.x ornitheGenRevisionTransform: generation-keyed artifact
-            intermediaryCoords = { mc -> "net.ornithemc:calamus-intermediary-gen2:$mc:v2" },
+            // gen/side-aware: the environment's own calamus() channel
+            // resolves calamus-intermediary(-genN) with the right
+            // -client/-server suffix and namespace relabels
+            upstreamMappingChannel = "calamus",
             // ornithe runs on Java 17
             javaVersion = 17,
             metadata = LoaderMetadataSpec(

@@ -219,10 +219,22 @@ abstract class MinecraftRunTask @Inject constructor(
             }
         }
 
+        // monolithic legacy ASM (launchwrapper-era `asm-all` /
+        // `asm-debug-all`) conflicts with the modular `asm` artifact
+        // on loader-managed classpaths (fabric knot rejects duplicate
+        // ASM packages); drop it only when a modern `asm-<v>.jar` is
+        // present so launchwrapper-only envs keep their ASM
+        val runtimeFiles = runtimeClasspath.files.toList()
+        val dedupedClasspath = if (runtimeFiles.any { it.name.matches(Regex("""asm-\d.*\.jar""")) })
+            runtimeFiles.filterNot {
+                it.name.startsWith("asm-all-") || it.name.startsWith("asm-debug-all-")
+            }
+        else runtimeFiles
+
         val plan = LaunchResolver.resolve(
             document,
             LaunchEnvironment(
-                classpath = runtimeClasspath.files.map { it.toPath() },
+                classpath = dedupedClasspath.map { it.toPath() },
                 gameDir = runDirectory.get().asFile.toPath(),
                 assetsDir = assetsRoot,
                 assetIndexId = assetIndexId.orNull,
@@ -272,7 +284,7 @@ abstract class MinecraftRunTask @Inject constructor(
             exec.workingDir = runDirectory.get().asFile
             javaExecutable.orNull?.let { exec.executable = it }
             exec.mainClass.set(resolvedMainClass)
-            exec.classpath = runtimeClasspath
+            exec.classpath = project.files(dedupedClasspath)
             exec.jvmArgs(
                 subst.resolveLaunchArgs(
                     plan.jvmArgs +
