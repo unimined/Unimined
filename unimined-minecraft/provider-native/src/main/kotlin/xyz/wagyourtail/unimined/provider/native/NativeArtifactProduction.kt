@@ -4,6 +4,7 @@ import org.gradle.api.GradleException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.provider.native.download.Downloader
 import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
@@ -269,7 +270,7 @@ internal object NativeArtifactProduction {
                 if (count < 0) break
                 update(buffer, 0, count)
             }
-            digest().joinToString("") { "%02x".format(it) }
+            digest().toHex()
         }
     }
 

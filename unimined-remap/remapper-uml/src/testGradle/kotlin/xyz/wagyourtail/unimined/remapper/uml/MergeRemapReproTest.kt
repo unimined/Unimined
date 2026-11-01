@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.remapper.uml
 
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.commonskt.reader.StringCharReader
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -278,7 +279,7 @@ class MergeRemapReproTest {
                 fromNs, "calamus", null)
             val sha1 = java.security.MessageDigest.getInstance("SHA-1")
                 .digest(java.nio.file.Files.readAllBytes(out))
-                .joinToString("") { "%02x".format(it) }
+                .toHex()
             println("[$side] output sha1: $sha1")
             JarFile(out.toFile()).use { jar ->
                 // calamus renames World → C_5553933

@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.transform.fabric.processor
 import kotlinx.coroutines.runBlocking
 import okio.buffer
 import okio.source
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
 import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
 import xyz.wagyourtail.unimined.mapping.processors.MetadataOverlayPostProcessor
@@ -54,7 +55,7 @@ class ModJavadocJarProcessor : JarProcessor {
             Entry(
                 mod.id, mod.jar.fileName.toString(), path,
                 MessageDigest.getInstance("SHA-256")
-                    .digest(bytes).joinToString("") { "%02x".format(it) }
+                    .digest(bytes).toHex()
             )
         }.sortedWith(compareBy({ it.modId }, { it.jarName }))
         return if (entries.isEmpty()) null else Spec(entries)

@@ -11,6 +11,7 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.MinecraftVersionSpec
@@ -48,7 +49,7 @@ class NativeProviderTest {
     }
 
     private fun sha1(bytes: ByteArray) = MessageDigest.getInstance("SHA-1")
-        .digest(bytes).joinToString("") { "%02x".format(it) }
+        .digest(bytes).toHex()
 
     private fun project(): Project = ProjectBuilder.builder()
         .withProjectDir(dir.toFile())

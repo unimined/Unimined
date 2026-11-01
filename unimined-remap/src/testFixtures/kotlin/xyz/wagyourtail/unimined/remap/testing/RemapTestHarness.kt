@@ -6,6 +6,7 @@ import xyz.wagyourtail.commons.core.logger.JavaLogWrapper
 import xyz.wagyourtail.commons.core.logger.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
@@ -90,7 +91,7 @@ object RemapTestHarness {
     }
 
     fun sha1(p: Path): String = MessageDigest.getInstance("SHA-1")
-        .digest(p.readBytes()).joinToString("") { "%02x".format(it) }
+        .digest(p.readBytes()).toHex()
 
     /** mcp_legacy zip -> tree for [side]'s srg (the pipeline's
      *  filterSideDocs picks one side's docs — never both). `source`/

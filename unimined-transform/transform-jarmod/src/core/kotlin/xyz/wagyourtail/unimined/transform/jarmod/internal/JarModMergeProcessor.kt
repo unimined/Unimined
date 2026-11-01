@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.jarmod.internal
 
 import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.File
 import java.nio.file.Files
@@ -126,7 +127,7 @@ internal class JarModMergeProcessor(
                 read = input.read(buffer)
             }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        return digest.digest().toHex()
     }
 
 }

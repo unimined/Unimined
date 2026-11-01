@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.jarmod.internal.fg1
 
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.transform.internal.classtransform.ClassTransformJarFix
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.File
@@ -76,6 +77,6 @@ internal class FMLChecksumPatchProcessor(
                 md.update(buf, 0, n)
             }
         }
-        return md.digest().joinToString("") { "%02x".format(it) }
+        return md.digest().toHex()
     }
 }

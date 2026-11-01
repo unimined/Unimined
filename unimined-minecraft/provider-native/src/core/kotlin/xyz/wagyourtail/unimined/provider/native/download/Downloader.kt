@@ -14,6 +14,7 @@ import java.time.Duration
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
+import xyz.wagyourtail.commonskt.utils.toHex
 
 /**
  * Downloads immutable artifacts and mutable metadata into a shared cache.
@@ -157,7 +158,5 @@ class Downloader(
 
     private fun sha1(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-1").digest(bytes).toHex()
-
-    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
 }

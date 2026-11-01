@@ -13,6 +13,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FMLChecksumPatchProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -96,7 +97,7 @@ class FMLChecksumPatchProcessorTest {
             ).readBytes().decodeToString()
             val expect = java.security.MessageDigest.getInstance("SHA-1")
                 .digest("fake asm 5.2 content".toByteArray())
-                .joinToString("") { "%02x".format(it) }
+                .toHex()
             assertTrue(
                 "asm-all-4.0.jar=$expect" in sumsText.split("\n"),
                 "sums resource wrong: $sumsText"

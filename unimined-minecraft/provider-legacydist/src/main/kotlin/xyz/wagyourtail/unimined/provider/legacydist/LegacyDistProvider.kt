@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.provider.legacydist
 
 import org.gradle.api.GradleException
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.spec.DeclaredSource
 import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
 import xyz.wagyourtail.unimined.api.spec.Side
@@ -133,7 +134,7 @@ class LegacyDistProvider : MinecraftProvider {
 
     private fun sha256Hex(data: ByteArray): String =
         MessageDigest.getInstance("SHA-256")
-            .digest(data).joinToString("") { "%02x".format(it) }
+            .digest(data).toHex()
 
 }
 

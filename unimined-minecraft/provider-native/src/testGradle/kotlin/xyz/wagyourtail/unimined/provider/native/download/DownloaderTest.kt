@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Duration
+import xyz.wagyourtail.commonskt.utils.toHex
 
 class DownloaderTest {
 
@@ -17,7 +18,7 @@ class DownloaderTest {
     fun `download verifies sha1 and reuses cache`() {
         val data = "payload".toByteArray()
         val sha1 = MessageDigest.getInstance("SHA-1")
-            .digest(data).joinToString("") { "%02x".format(it) }
+            .digest(data).toHex()
         var calls = 0
         val d = Downloader(dir, fetch = { calls++; data })
 

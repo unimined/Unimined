@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.mapping.internal
 
 import xyz.wagyourtail.commons.core.logger.Logger
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.*
@@ -271,7 +272,7 @@ internal object MappingResolver {
             }
         }
         return root.resolve("mappings-merged").resolve(
-            md.digest().joinToString("") { "%02x".format(it) } + ".json"
+            md.digest().toHex() + ".json"
         )
     }
 
@@ -290,7 +291,7 @@ internal object MappingResolver {
             md.update(bytes)
         }
         return root.resolve("mappings-merged").resolve(
-            md.digest().joinToString("") { "%02x".format(it) } + ".json"
+            md.digest().toHex() + ".json"
         )
     }
 

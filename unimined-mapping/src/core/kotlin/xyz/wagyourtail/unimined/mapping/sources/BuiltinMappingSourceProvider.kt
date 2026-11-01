@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.mapping.sources
 
 import kotlinx.coroutines.runBlocking
+import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -92,7 +93,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                 digest.update(buffer, 0, read)
             }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }.take(12)
+        return digest.digest().toHex().take(12)
     }
 
     /** `official()` — the identity channel: an empty document whose only
