@@ -1,0 +1,9 @@
+{
+    "schemaVersion": 1,
+    "id": "testmod",
+    "version": "1.0.0",
+    "name": "TestMod",
+    "environment": "client",
+    "entrypoints": {},
+    "depends": {}
+}
