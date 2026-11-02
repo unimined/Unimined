@@ -30,8 +30,30 @@ class GradlePlugin : Plugin<Project> {
                 // `onEnvironmentBound` replays bound environments.
                 target.afterEvaluate {
                     for (environment in minecraft.environments) {
-                        environment.loaderSpec.orNull
-                            ?.let { LoaderRegistry.resolveBuiltin(it.name)?.transformPlugin }
+                        val spec = environment.loaderSpec.orNull ?: continue
+                        val descriptor = LoaderRegistry.resolveBuiltin(spec.name) ?: continue
+                        val product = environment.product.get()
+                        val supported = descriptor.supportedProducts
+                            ?.any {
+                                it == "*" || it == product ||
+                                        product.startsWith("$it:")
+                            }
+                            ?: (product ==
+                                    xyz.wagyourtail.unimined.api.spec
+                                        .ProductSpec.PRODUCT_NATIVE)
+                        if (!supported) {
+                            throw org.gradle.api.GradleException(
+                                "unimined: loader '${spec.name}' does not " +
+                                        "support product '$product' " +
+                                        "(env '${environment.environmentId}') — " +
+                                        "supported: " +
+                                        (descriptor.supportedProducts
+                                            ?.joinToString(", ")
+                                            ?: xyz.wagyourtail.unimined.api.spec
+                                                .ProductSpec.PRODUCT_NATIVE)
+                            )
+                        }
+                        descriptor.transformPlugin
                             ?.let { target.pluginManager.apply(it) }
                     }
                 }

@@ -73,7 +73,7 @@ abstract class MigrateExtension @Inject constructor(
                 "unimined.migrateMappings: configure the target via `target { ... }`"
             )
             val mavenResolver = Function<String, Path> { notation ->
-                xyz.wagyourtail.unimined.mapping.UniminedRepos
+                xyz.wagyourtail.unimined.mapping.UniminedRepos(project)
                     .ensureForNotation(notation, project)
                 project.configurations.detachedConfiguration(
                     project.dependencies.create(notation)

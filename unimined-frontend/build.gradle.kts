@@ -12,6 +12,7 @@ dependencies {
     api(project(":unimined-source"))
     api(project(":unimined-migrate"))
     api(project(":unimined-minecraft:provider-native"))
+    api(project(":unimined-minecraft:provider-conversion"))
     api(project(":unimined-remap:remapper-tiny"))
     api(project(":unimined-remap:remapper-uml"))
     api(project(":unimined-remap:remapper-access"))
@@ -21,6 +22,7 @@ dependencies {
     api(project(":unimined-transform:transform-jarmod"))
     api(project(":unimined-transform:transform-bukkit"))
     api(project(":unimined-transform:transform-misc"))
+    api(project(":unimined-transform:transform-conversion"))
     api(project(":unimined-mod"))
 
     testImplementation(libs.junit.jupiter)

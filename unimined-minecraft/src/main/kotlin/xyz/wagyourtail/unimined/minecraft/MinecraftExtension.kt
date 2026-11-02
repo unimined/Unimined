@@ -28,7 +28,7 @@ import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.namedNamespaces
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingExtension
 import xyz.wagyourtail.unimined.mapping.MappingTree
@@ -36,14 +36,14 @@ import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
 import xyz.wagyourtail.unimined.minecraft.internal.DefaultProviderContext
 import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
-import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
-import xyz.wagyourtail.unimined.minecraft.transform.MinecraftArtifactTransform
+import xyz.wagyourtail.unimined.minecraft.transform.ProductArtifactTransform
 import java.nio.file.Files
 import org.gradle.jvm.toolchain.JavaToolchainService
 import java.nio.file.Path
@@ -75,7 +75,7 @@ abstract class MinecraftExtension @Inject constructor(
 ) {
 
     /** Provider impls; populated via `META-INF/services` + engine plugins. */
-    val registry = MinecraftProviderRegistry()
+    val registry = ProductProviderRegistry()
 
     /** Environments keyed by source-set name (`main`, `test`, `fabric`, ...). */
     val environments: NamedDomainObjectContainer<MinecraftEnvironment> =
@@ -163,6 +163,11 @@ abstract class MinecraftExtension @Inject constructor(
     val provider: Property<String>
         get() = main.provider
 
+    /** Default source-set product id (`minecraft:native` unless a
+     *  dist preset or override declares otherwise). */
+    val product: Property<String>
+        get() = main.product
+
     /**
      * Default source-set java floor — raises the environment's
      * effective java requirement above the version-json
@@ -229,7 +234,7 @@ abstract class MinecraftExtension @Inject constructor(
      * `unimined.generated` module dep on [MinecraftEnvironment.minecraftConfigurationName]
      * resolves through the per-environment resolvable view
      * ([minecraftRawViewName]), whose `artifactType` request triggers
-     * [MinecraftArtifactTransform] — the real jar materializes at
+     * [ProductArtifactTransform] — the real jar materializes at
      * resolution time, cacheably, including during IDE sync. The transform
      * host may additionally wire a dev-namespace view
      * ([devViewConfigurations]); the classpath contribution picks it up
@@ -379,7 +384,7 @@ abstract class MinecraftExtension @Inject constructor(
         // model); project-stamped artifacts stay under .gradle
         val cacheDir = UniminedCache.global(project).resolve("native-cache")
 
-        project.dependencies.registerTransform(MinecraftArtifactTransform::class.java) { t ->
+        project.dependencies.registerTransform(ProductArtifactTransform::class.java) { t ->
             t.from.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
                 ArtifactTypeDefinition.JAR_TYPE
@@ -395,19 +400,26 @@ abstract class MinecraftExtension @Inject constructor(
                 p.artifactKey.set(environment.side.map { sideKey(it).name })
                 p.artifactBaseName.set(environment.artifactBaseName)
                 environment.provider.orNull?.let { p.producerName.set(it) }
+                p.loaderName.set(environment.loaderSpec.map { it.name })
+                p.loaderVersion.set(environment.loaderSpec.map { it.version })
+                p.product.set(environment.product)
+                p.declaredSource.set(providers.provider {
+                    environment.legacyDist.declaration()?.source
+                })
                 p.cacheDir.set(cacheDir.toString())
                 p.offline.set(cacheSettings.offline)
                 p.refreshUniminedDownloads.set(cacheSettings.refreshUniminedDownloads)
                 p.rebuildUniminedArtifacts.set(cacheSettings.rebuildUniminedArtifacts)
                 p.artifactFormatVersion.set(providers.provider {
-                    val spec = RuntimeMinecraftSpec(
+                    val spec = RuntimeProductSpec(
                         environmentId = environmentId,
                         sourceSetName = environmentId,
                         version = RuntimeVersionSpec(environment.version.get()),
                         side = environment.side.get(),
-                        loader = null
+                        loader = null,
+                        product = environment.product.get()
                     )
-                    MinecraftArtifactProducerRegistry()
+                    ProductArtifactProducerRegistry()
                         .select(spec, environment.provider.orNull)
                         .artifactFormatVersion
                 })
@@ -476,12 +488,15 @@ abstract class MinecraftExtension @Inject constructor(
             } else {
                 val data = mappingDataProvider(environment).get()
                 val tree = data.view<MappingTree>()
-                    ?: throw IllegalStateException(
-                        "configured mappings do not expose a UML MappingTree view"
-                    )
-                val present = tree.namespaces.map { it.name }.toSet()
-                data.namedNamespaces().firstOrNull { it in present }
-                    ?: tree.namespaces.last().name
+                if (tree == null) {
+                    // declared-but-empty sources compose no tree —
+                    // defer to the provider's mapping tree
+                    artifacts(environmentId).get().mappings.get().namespaces.last().name
+                } else {
+                    val present = tree.namespaces.map { it.name }.toSet()
+                    data.namedNamespaces().firstOrNull { it in present }
+                        ?: tree.namespaces.last().name
+                }
             }
         })
 
@@ -615,6 +630,39 @@ abstract class MinecraftExtension @Inject constructor(
         main.loader(name, version)
     }
 
+    /** Configure `main` as a Better Than Adventure dist —
+     *  `provider("conversion")` + `product("minecraft:bta")` preset. */
+    fun bta(action: Action<DistSpec>) = main.bta(action)
+
+    /** Groovy-DSL counterpart to [bta]. */
+    fun bta(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        main.bta(action)
+
+    /** Configure `main` as a ReIndev dist —
+     *  `provider("conversion")` + `product("minecraft:reindev")` preset. */
+    fun reindev(action: Action<DistSpec>) = main.reindev(action)
+
+    /** Groovy-DSL counterpart to [reindev]. */
+    fun reindev(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        main.reindev(action)
+
+    /** Configure `main` as an NSSS dist —
+     *  `provider("conversion")` + `product("minecraft:nsss")` preset;
+     *  no upstream index, declare `file()`/`url()` inside. */
+    fun nsss(action: Action<DistSpec>) = main.nsss(action)
+
+    /** Groovy-DSL counterpart to [nsss]. */
+    fun nsss(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        main.nsss(action)
+
+    /** Configure `main` against a user-supplied dist jar —
+     *  declared-source seam; `product` conventions to `custom:<name>`. */
+    fun custom(name: String, action: Action<DistSpec>) = main.custom(name, action)
+
+    /** Groovy-DSL counterpart to [custom]. */
+    fun custom(name: String, @DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        main.custom(name, action)
+
     // region 1.x deprecation bridge — patcher blocks became
     // loader("name", "version"); the deprecated overloads fail with
     // the migration target in the message (plan §Phase 8)
@@ -690,10 +738,6 @@ abstract class MinecraftExtension @Inject constructor(
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun arch(action: Action<Any>): Nothing =
         Deprecations.loaderBlock("arch")
-
-    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
-    fun bta(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("bta")
 
     // endregion
 
@@ -780,10 +824,10 @@ abstract class MinecraftExtension @Inject constructor(
     }
 
     /** Build the provider-facing spec for the default `main` environment. */
-    fun spec(): MinecraftSpec = main.spec()
+    fun spec(): ProductSpec = main.spec()
 
     /** Build the provider-facing spec for a named source-set environment. */
-    fun spec(environmentId: String): MinecraftSpec = sourceSet(environmentId).spec()
+    fun spec(environmentId: String): ProductSpec = sourceSet(environmentId).spec()
 
     private val ctx: ProviderContext by lazy {
         val cacheSettings = ProviderCacheSettings.from(project)
@@ -882,7 +926,7 @@ abstract class MinecraftExtension @Inject constructor(
                                     "mapping archive via maven() or file() instead"
                         )
                     }
-                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Minecraft Forge", project)
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos(project).minecraftForge.ensure()
                     listOf(
                         resolveMavenNotation("de.oceanlabs.mcp:mcp_config:$version@zip")
                     )
@@ -896,7 +940,7 @@ abstract class MinecraftExtension @Inject constructor(
                         // their three-part form in forge coordinates
                         if (it == "1.4") "1.4.0" else if (it == "1.0") "1.0.0" else it
                     }
-                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Minecraft Forge", project)
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos(project).minecraftForge.ensure()
                     listOf(
                         resolveMavenNotation(
                             "net.minecraftforge:forge:$mcVersion-$version:src@zip"
@@ -923,7 +967,7 @@ abstract class MinecraftExtension @Inject constructor(
                         ?: throw GradleException("parchment() requires a version")
                     val classifier =
                         if (params["checked"].toBoolean()) ":checked" else ""
-                    xyz.wagyourtail.unimined.mapping.UniminedRepos.ensure("Parchment", project)
+                    xyz.wagyourtail.unimined.mapping.UniminedRepos(project).parchment.ensure()
                     listOf(
                         resolveMavenNotation(
                             "org.parchmentmc.data:parchment-$mcVersion:$version$classifier@zip"
@@ -967,30 +1011,49 @@ abstract class MinecraftExtension @Inject constructor(
     private val resolvedMappingData =
         java.util.concurrent.ConcurrentHashMap<String, xyz.wagyourtail.unimined.api.mapping.MappingData>()
 
+    /** Envs whose mapping resolution is in-flight — a spec source can
+     *  consult `artifacts().mappings` mid-resolve, which loops back
+     *  here; re-entry must not recurse (CHM "Recursive update"). The
+     *  view-less return is the same identity fallback the consumers
+     *  already use: no `MappingTree` view → they take the provider's
+     *  tree. */
+    private val resolvingMappingData =
+        java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
     private fun resolvedMappingData(
         environment: MinecraftEnvironment
-    ): xyz.wagyourtail.unimined.api.mapping.MappingData =
-        resolvedMappingData.computeIfAbsent(environment.environmentId) {
+    ): xyz.wagyourtail.unimined.api.mapping.MappingData {
+        resolvedMappingData[environment.environmentId]?.let { return it }
+        if (!resolvingMappingData.add(environment.environmentId)) {
+            return xyz.wagyourtail.unimined.api.mapping.ViewMapMappingData(
+                emptyMap()
+            )
+        }
+        try {
             val t0 = System.nanoTime()
             environment.validateCombinations()
-            mappingExtension.resolve(
+            val data = mappingExtension.resolve(
                 environment.mappingsSpec, environment.environmentId,
                 mavenResolver, channelResolver(environment),
                 environment.side.get()
-            ).also {
-                uniminedLogger(environment.environmentId, project.logger)
-                    .subLogger("mappings").lifecycle(
-                        "resolved in ${(System.nanoTime() - t0) / 1_000_000}ms"
-                    )
-            }
+            )
+            uniminedLogger(environment.environmentId, project.logger)
+                .subLogger("mappings").lifecycle(
+                    "resolved in ${(System.nanoTime() - t0) / 1_000_000}ms"
+                )
+            resolvedMappingData[environment.environmentId] = data
+            return data
+        } finally {
+            resolvingMappingData.remove(environment.environmentId)
         }
+    }
 
     private fun mappingDataProvider(environment: MinecraftEnvironment): Provider<xyz.wagyourtail.unimined.api.mapping.MappingData> =
         providers.provider { resolvedMappingData(environment) }
 
-    private val resolvedEnvironments = mutableMapOf<String, MinecraftArtifacts>()
+    private val resolvedEnvironments = mutableMapOf<String, ProductArtifacts>()
 
-    private fun resolved(environment: MinecraftEnvironment): MinecraftArtifacts =
+    private fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
         synchronized(resolvedEnvironments) {
             resolvedEnvironments.getOrPut(environment.environmentId) {
                 val spec = environment.spec()
@@ -998,7 +1061,7 @@ abstract class MinecraftExtension @Inject constructor(
                 // provider exists; loader transforms wrap the artifact
                 // downstream (1.x semantics)
                 registry.select(
-                    (spec as? RuntimeMinecraftSpec)?.copy(loader = null)
+                    (spec as? RuntimeProductSpec)?.copy(loader = null)
                         ?: spec,
                     environment.provider.orNull
                 ).resolve(spec, ctx)
@@ -1016,7 +1079,7 @@ abstract class MinecraftExtension @Inject constructor(
     /** Resolve a `maven("g:a:v[:classifier]")` source lazily via a
      *  non-transitive detached configuration. */
     private fun resolveMavenNotation(notation: String): Path {
-        xyz.wagyourtail.unimined.mapping.UniminedRepos
+        xyz.wagyourtail.unimined.mapping.UniminedRepos(project)
             .ensureForNotation(notation, project)
         return project.configurations.detachedConfiguration(
             project.dependencies.create(notation)
@@ -1160,9 +1223,25 @@ abstract class MinecraftExtension @Inject constructor(
                 // the transform can distinguish it from legacy bundles
                 val tmp = java.nio.file.Files.createTempFile("unimined-mappings", ".zip")
                 try {
-                    SerializedMappingData.write(resolvedMappingData(environment), tmp)
-                    "z64:" + java.util.Base64.getEncoder()
-                        .encodeToString(java.nio.file.Files.readAllBytes(tmp))
+                    val data = resolvedMappingData(environment)
+                    if (SerializedMappingData.write(data, tmp).isNotEmpty()) {
+                        "z64:" + java.util.Base64.getEncoder()
+                            .encodeToString(java.nio.file.Files.readAllBytes(tmp))
+                    } else {
+                        // no serializer covered the data's views —
+                        // SerializedMappingData.write's contract says fall
+                        // back to a row bundle: capture real rows when a
+                        // MappingTree view exists, else emit a bare
+                        // identity bundle — a view-less MappingData has
+                        // nothing to rename (conversion envs' view-less
+                        // official->official resolve)
+                        val f = from.get(); val t = to.get()
+                        data.view(MappingTree::class.java)?.let {
+                            MappingBundle.capture(f, t, it).toJson()
+                        } ?: MappingBundle(
+                            listOf(f, t).distinct(), f, t,
+                            emptyList()).toJson()
+                    }
                 } finally {
                     java.nio.file.Files.deleteIfExists(tmp)
                 }
@@ -1179,23 +1258,25 @@ abstract class MinecraftExtension @Inject constructor(
      * to first query and memoized; downstream plugins wire the returned
      * providers, never raw files.
      */
-    fun artifacts(): Provider<MinecraftArtifacts> = artifacts("main")
+    fun artifacts(): Provider<ProductArtifacts> = artifacts("main")
 
     /** Resolve artifacts for a named source-set environment. */
-    fun artifacts(environmentId: String): Provider<MinecraftArtifacts> =
+    fun artifacts(environmentId: String): Provider<ProductArtifacts> =
         providers.provider {
             val environment = sourceSet(environmentId)
             val providerArtifacts = resolved(environment)
             val environmentMappingData = mappingDataProvider(environment)
-            object : MinecraftArtifacts by providerArtifacts {
+            object : ProductArtifacts by providerArtifacts {
                 override val mappings: Provider<MappingTree> = providers.provider {
                     if (environment.mappingsSpec.effectiveSources().isEmpty()) {
                         providerArtifacts.mappings.get()
                     } else {
+                        // declared-but-empty sources (e.g. a loader hop
+                        // gated on another family) compose zero parts —
+                        // fall back to the provider's tree rather than
+                        // demanding a UML view of an empty composition
                         environmentMappingData.get().view<MappingTree>()
-                            ?: throw IllegalStateException(
-                                "configured mappings do not expose a UML MappingTree view"
-                            )
+                            ?: providerArtifacts.mappings.get()
                     }
                 }
             }

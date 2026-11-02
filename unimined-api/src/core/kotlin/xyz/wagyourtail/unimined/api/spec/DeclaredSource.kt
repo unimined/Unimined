@@ -35,7 +35,7 @@ sealed interface DeclaredSource : Serializable {
 
 /**
  * The declared-source spec stamped onto an environment's
- * [MinecraftSpec] — the artifact's source plus the user-authored
+ * [ProductSpec] — the artifact's source plus the user-authored
  * `namespace`/`format` the resolved artifact reports (the state-log
  * contract real providers report — plan §1140; no real provider ran,
  * so the declaration *is* the report).

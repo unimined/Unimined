@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.transform.bukkit.internal
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.time.Duration

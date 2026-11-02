@@ -71,12 +71,15 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
             )
             return
         }
-        val tree = data.view<MappingTree>() ?: error(
-            "mapping provider exposed no serializable views and no UML MappingTree view"
-        )
-        MappingBundle.capture(
-            sourceNamespace.get(), targetNamespace.get(), tree
-        ).write(path)
+        // no serializer payload — fall back to a row bundle per
+        // SerializedMappingData.write's contract: capture real rows
+        // from the MappingTree when present, else emit a bare identity
+        // bundle — a view-less MappingData has nothing to rename
+        // (conversion envs' view-less official->official resolve)
+        val s = sourceNamespace.get(); val t = targetNamespace.get()
+        data.view<MappingTree>()?.let {
+            MappingBundle.capture(s, t, it).write(path)
+        } ?: MappingBundle(listOf(s, t).distinct(), s, t, emptyList()).write(path)
     }
 
 }

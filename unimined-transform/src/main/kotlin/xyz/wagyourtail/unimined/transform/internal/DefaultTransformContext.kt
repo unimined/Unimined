@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.transform.internal
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.transform.spi.TransformContext
 import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
 import xyz.wagyourtail.unimined.transform.spi.TransformOutput
@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.transform.spi.TransformOutput
  */
 internal class DefaultTransformContext(
     override val environmentId: String,
-    override val minecraft: MinecraftArtifacts,
+    override val minecraft: ProductArtifacts,
     override val mappings: MappingsSpec,
     override val inputs: List<TransformOutput>,
     override val decorators: List<TransformDecorator>

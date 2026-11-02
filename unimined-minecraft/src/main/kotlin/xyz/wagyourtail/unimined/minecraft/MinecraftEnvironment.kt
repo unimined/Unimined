@@ -25,11 +25,11 @@ import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeLoaderSpec
-import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import javax.inject.Inject
 
@@ -82,6 +82,17 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Optional provider override for this source set. */
     val provider: Property<String> = objects.property(String::class.java)
+
+    /**
+     * Product this environment produces, scoped by game family —
+     * `minecraft:native` (vanilla, the default), `minecraft:bta`,
+     * `minecraft:reindev`, `custom:<name>` for user-supplied dists.
+     * Providers key their product tables on this; env binding
+     * validates it against the declared loader's `supportedProducts`.
+     */
+    val product: Property<String> =
+        objects.property(String::class.java)
+            .convention(ProductSpec.PRODUCT_NATIVE)
 
     /** API-only mode — transforms that ship a full server artifact
      *  (bukkit family) may read this to compile against the loader's
@@ -477,15 +488,65 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         legacydist(Action<LegacyDistSpec> { action.call() })
     }
 
+    private fun conversionDist(productId: String, action: Action<DistSpec>) {
+        provider.set("conversion")
+        product.set("minecraft:$productId")
+        action.execute(DistSpec(this))
+    }
+
+    /** Configure this environment as a Better Than Adventure dist —
+     *  `provider("conversion")` + `product("minecraft:bta")` preset;
+     *  `version`/`side`/`loader` remain user-configured. */
+    fun bta(action: Action<DistSpec>) = conversionDist("bta", action)
+
+    /** Groovy-DSL counterpart to [bta]. */
+    fun bta(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        conversionDist("bta", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+
+    /** Configure this environment as a ReIndev dist —
+     *  `provider("conversion")` + `product("minecraft:reindev")` preset. */
+    fun reindev(action: Action<DistSpec>) = conversionDist("reindev", action)
+
+    /** Groovy-DSL counterpart to [reindev]. */
+    fun reindev(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        conversionDist("reindev", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+
+    /** Configure this environment as an NSSS dist —
+     *  `provider("conversion")` + `product("minecraft:nsss")` preset;
+     *  no upstream index, so declare `file()`/`url()` inside. */
+    fun nsss(action: Action<DistSpec>) = conversionDist("nsss", action)
+
+    /** Groovy-DSL counterpart to [nsss]. */
+    fun nsss(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        conversionDist("nsss", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+
+    /**
+     * Configure this environment against a user-supplied dist jar —
+     * the declared-source seam (provider is NOT forced; it negotiates
+     * from the declared source). [name] conventions `product` to
+     * `custom:<name>` so loaders declaring `custom`/` * ` compat bind;
+     * override `product` inside when the jar is vanilla-compatible
+     * (`minecraft:native`) or a known product.
+     */
+    fun custom(name: String, action: Action<DistSpec>) {
+        product.convention("custom:$name")
+        action.execute(DistSpec(this))
+    }
+
+    /** Groovy-DSL counterpart to [custom]. */
+    fun custom(name: String, @DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        custom(name, Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+
     /** Build the provider-facing immutable spec for this environment. */
-    fun spec(): MinecraftSpec {
+    fun spec(): ProductSpec {
         validateCombinations()
-        return RuntimeMinecraftSpec(
+        return RuntimeProductSpec(
             environmentId = environmentId,
             sourceSetName = environmentId,
             version = RuntimeVersionSpec(version.get()),
             side = side.get(),
             loader = loaderSpec.orNull,
+            product = product.get(),
             mergeIncludeGlobs = mergeIncludeGlobs.getOrElse(emptyList()),
             mergeExcludeGlobs = mergeExcludeGlobs.getOrElse(emptyList()),
             stripBundledServerLibraries = stripBundledServerLibraries.get(),

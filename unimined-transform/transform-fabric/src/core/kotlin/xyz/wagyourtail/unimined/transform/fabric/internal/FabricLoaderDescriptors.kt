@@ -79,6 +79,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "babric:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
+            capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
@@ -104,6 +105,10 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // resolves calamus-intermediary(-genN) with the right
             // -client/-server suffix and namespace relabels
             upstreamMappingChannel = "calamus",
+            capabilities = mapOf(
+                "replaceLwjgl" to "2.9.4+legacyfabric.8",
+                "libraryOverlayMeta" to "https://meta.ornithemc.net",
+            ),
             // ornithe runs on Java 17
             javaVersion = 17,
             metadata = LoaderMetadataSpec(
@@ -121,6 +126,12 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "intermediary",
             // flint rides fabric intermediary
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
+            capabilities = mapOf(
+                "replaceLwjgl" to "2.9.4+legacyfabric.10",
+                // flint substitutes only the lwjgl artifact, not the
+                // whole org.lwjgl group
+                "replaceLwjglMatch" to "org.lwjgl.lwjgl",
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),

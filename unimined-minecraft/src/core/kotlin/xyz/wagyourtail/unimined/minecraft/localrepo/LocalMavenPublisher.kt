@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft.localrepo
 
+import xyz.wagyourtail.commonskt.jvm.copyAtomicTo
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -64,8 +65,7 @@ object LocalMavenPublisher {
                 if (classifier.isNotEmpty()) append("-$classifier")
                 append(".jar")
             }
-            xyz.wagyourtail.unimined.minecraft.internal.io.AtomicIo
-                .copyAtomic(file, moduleDir.resolve(name))
+            file.copyAtomicTo(moduleDir.resolve(name))
         }
         return moduleDir
     }

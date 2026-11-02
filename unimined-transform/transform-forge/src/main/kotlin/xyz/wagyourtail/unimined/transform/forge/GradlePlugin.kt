@@ -2,10 +2,10 @@ package xyz.wagyourtail.unimined.transform.forge
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.mapping.UniminedRepos
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeEnvironmentWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
-import java.net.URI
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.transform.forge`.
@@ -34,22 +34,12 @@ class GradlePlugin : Plugin<Project> {
             // intellij-repository hosts `com.jetbrains.intellij.*`
             // platform modules, intellij-dependencies the republished
             // third-party `-jb`/`intellij-*` variants
-            target.repositories.maven { repo ->
-                repo.url = URI.create("https://cache-redirector.jetbrains.com/intellij-repository")
-                repo.content { content ->
-                    content.includeGroupByRegex(
-                        "com\\.jetbrains\\..*|com\\.intellij\\..*|org\\.jetbrains\\..*|com\\.github\\.weisj"
-                    )
-                }
-            }
-            target.repositories.maven { repo ->
-                repo.url = URI.create("https://cache-redirector.jetbrains.com/intellij-dependencies")
-                repo.content { content ->
-                    content.includeGroupByRegex(
-                        "com\\.jetbrains\\..*|com\\.intellij\\..*|org\\.jetbrains\\..*|com\\.github\\.weisj"
-                    )
-                }
-            }
+            // both JetBrains mavens get the same group filter —
+            // intellij-repository hosts `com.jetbrains.intellij.*`
+            // platform modules, intellij-dependencies the republished
+            // third-party `-jb`/`intellij-*` variants
+            UniminedRepos(target).jetbrainsIntellijRepository.ensure()
+            UniminedRepos(target).jetbrainsIntellijDependencies.ensure()
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.transform") {
                 target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                     minecraft.onEnvironmentBound { environment, _ ->

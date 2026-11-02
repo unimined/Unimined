@@ -19,7 +19,7 @@ import xyz.wagyourtail.unimined.transform.spi.TransformDecorator
 import xyz.wagyourtail.unimined.transform.task.TransformMinecraftTask
 import java.nio.file.Path
 
-private class FakeArtifacts(private val project: Project) : MinecraftArtifacts {
+private class FakeArtifacts(private val project: Project) : ProductArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val mappings: Provider<MappingTree> = project.provider { null }
     override val namespaceMode: Provider<NamespaceMode> =

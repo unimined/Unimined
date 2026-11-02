@@ -3,13 +3,13 @@ package xyz.wagyourtail.unimined.minecraft.fakes
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.mappingTree
 import xyz.wagyourtail.unimined.minecraft.spi.*
 
-/** Test-only MinecraftArtifacts over fixed providers. */
-class FakeArtifacts(private val ctx: ProviderContext) : MinecraftArtifacts {
+/** Test-only ProductArtifacts over fixed providers. */
+class FakeArtifacts(private val ctx: ProviderContext) : ProductArtifacts {
 
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
         ctx.providers.provider { emptyList() }
@@ -37,13 +37,13 @@ class FakeArtifacts(private val ctx: ProviderContext) : MinecraftArtifacts {
  * test classpath. Supports only version `1.0` to exercise capability
  * negotiation.
  */
-class FakeProvider : MinecraftProvider {
+class FakeProvider : ProductProvider {
 
     override val name = "fake"
 
-    override fun supports(spec: MinecraftSpec) = spec.version.version == "1.0"
+    override fun supports(spec: ProductSpec) = spec.version.version == "1.0"
 
-    override fun resolve(spec: MinecraftSpec, ctx: ProviderContext): MinecraftArtifacts {
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         calls.add(spec.version.version)
         environments.add(spec.environmentId)
         return FakeArtifacts(ctx)

@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.transform.spi
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 
 /**
  * Everything a [MinecraftTransformer] sees at configure time: provider
@@ -17,7 +17,7 @@ interface TransformContext {
         get() = "main"
 
     /** Provider output — the resolved environment artifacts. */
-    val minecraft: MinecraftArtifacts
+    val minecraft: ProductArtifacts
 
     val mappings: MappingsSpec
 

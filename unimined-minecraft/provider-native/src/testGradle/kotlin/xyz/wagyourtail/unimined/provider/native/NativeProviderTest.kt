@@ -5,7 +5,9 @@ import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
@@ -13,13 +15,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftVersionSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
+import xyz.wagyourtail.unimined.api.spec.ProductVersionSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
+import xyz.wagyourtail.unimined.minecraft.spi.ProductProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
@@ -70,6 +72,13 @@ class NativeProviderTest {
             arrayOf(ExecOperations::class.java)
         ) { _, method, _ -> throw UnsupportedOperationException("ExecOperations.${method.name}") }
                 as ExecOperations
+        // native never resolves toolchains — that's BuildTools-style
+        // providers' job; a throwing proxy fails loudly if it starts to
+        val toolchains = Proxy.newProxyInstance(
+            JavaToolchainService::class.java.classLoader,
+            arrayOf(JavaToolchainService::class.java)
+        ) { _, method, _ -> throw UnsupportedOperationException("JavaToolchainService.${method.name}") }
+                as JavaToolchainService
         return object : ProviderContext {
             override val layout: ProjectLayout = project.layout
             override val objects: ObjectFactory = project.objects
@@ -77,6 +86,8 @@ class NativeProviderTest {
             override val providers: ProviderFactory = project.providers
             override val exec: ExecOperations = exec
             override val logger = Logging.getLogger(NativeProviderTest::class.java)
+            override val javaToolchains: JavaToolchainService = toolchains
+            override val useToolchains: Provider<Boolean> = project.provider { true }
         }
     }
 
@@ -111,8 +122,8 @@ class NativeProviderTest {
         }
     """.trimIndent()
 
-    private fun spec(side: Side, loader: LoaderSpec? = null) = object : MinecraftSpec {
-        override val version: MinecraftVersionSpec = object : MinecraftVersionSpec {
+    private fun spec(side: Side, loader: LoaderSpec? = null) = object : ProductSpec {
+        override val version: ProductVersionSpec = object : ProductVersionSpec {
             override val version = "1.20.1"
         }
         override val side = side
@@ -133,8 +144,8 @@ class NativeProviderTest {
     @Test
     fun `provider is service discoverable`() {
         val providers = java.util.ServiceLoader.load(
-            MinecraftProvider::class.java,
-            MinecraftProvider::class.java.classLoader
+            ProductProvider::class.java,
+            ProductProvider::class.java.classLoader
         ).toList()
         assertTrue(providers.any { it.name == "native" })
     }

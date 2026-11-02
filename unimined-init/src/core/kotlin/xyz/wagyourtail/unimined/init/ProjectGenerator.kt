@@ -78,8 +78,14 @@ object ProjectGenerator {
     private fun extractTemplate(
         spec: InitSpec, outDir: Path, overwrite: Boolean
     ): List<Path> {
-        val zip = spec.templatesZip
-            ?: error("templateName set but no templatesZip")
+        val zip = spec.templatesZip ?: spec.templatesUrl?.let { url ->
+            val tmp = Files.createTempFile("unimined-templates", ".zip")
+            URI.create(url).toURL().openStream().use {
+                Files.copy(it, tmp,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            tmp
+        } ?: error("templateName set but no templatesZip/templatesUrl")
         val prefix = "testing/${spec.templateName}/"
         val written = mutableListOf<Path>()
         java.util.zip.ZipFile(zip.toFile()).use { zf ->
@@ -138,8 +144,18 @@ object ProjectGenerator {
                 Files.copy(it, target,
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING)
             }
+            if (rel.endsWith(".bat")) ensureCrlf(target)
         }
         outDir.resolve("gradlew").toFile().setExecutable(true)
+    }
+
+    /** Rewrite [file] with CRLF line endings — Windows cmd mis-parses
+     *  LF-only batch files (labels/`goto`), and raw.githubusercontent
+     *  serves LF-stored blobs. */
+    private fun ensureCrlf(file: Path) {
+        val text = Files.readString(file)
+            .replace("\r\n", "\n").replace("\r", "\n")
+        Files.writeString(file, text.replace("\n", "\r\n"))
     }
 
     fun generate(spec: InitSpec, outDir: Path, overwrite: Boolean = false): List<Path> {
@@ -173,6 +189,7 @@ object ProjectGenerator {
                     ?.use { Files.copy(it, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
                     ?: error("missing template resource ${render.resourcePath}")
             }
+            if (rel.endsWith(".bat")) ensureCrlf(target)
             if (render.executable) {
                 target.toFile().setExecutable(true)
             }

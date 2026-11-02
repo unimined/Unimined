@@ -53,7 +53,7 @@ class TransformerRegistryTest {
     private fun descriptor(family: String) = LoaderDescriptor(
         id = "${family}Loader",
         family = family,
-        mavens = emptyList(),
+        repos = emptyList(),
         loaderCoords = { g, v -> "$g:$v" },
         prodNamespace = "official",
     )

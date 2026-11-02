@@ -1,12 +1,12 @@
 package xyz.wagyourtail.unimined.provider.native
 
 import org.gradle.api.logging.Logging
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactProductionRequest
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifactProducer
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
-import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
-import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifactProducer
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.manifest.ManifestResolver
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
 import java.nio.file.Path
 import java.time.Duration
 
@@ -15,16 +15,16 @@ import java.time.Duration
  * inside artifact-transform execution — the [NativeProvider] download and
  * merge machinery without Gradle services.
  */
-class NativeArtifactProducer : MinecraftArtifactProducer {
+class NativeArtifactProducer : ProductArtifactProducer {
 
     override val name: String = "native"
 
     /** 2 = merge strips server-bundled `minecraftLibraries` entries. */
     override val artifactFormatVersion: Int = 2
 
-    override fun supports(spec: MinecraftSpec): Boolean = true
+    override fun supports(spec: ProductSpec): Boolean = true
 
-    override fun produce(spec: MinecraftSpec, request: ArtifactProductionRequest): Path {
+    override fun produce(spec: ProductSpec, request: ArtifactProductionRequest): Path {
         val logger = Logging.getLogger(NativeArtifactProducer::class.java)
         val downloader = Downloader(
             cacheDir = request.cacheDir,

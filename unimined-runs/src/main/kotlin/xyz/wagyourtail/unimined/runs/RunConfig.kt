@@ -29,6 +29,14 @@ abstract class RunConfig @Inject constructor(
 
     abstract val side: Property<RunSide>
 
+    /**
+     * Launch against the production-namespace classpath (the
+     * compiled/remapped mod jar + `*Remapped` mod views + the raw
+     * MC artifact) instead of the dev classpath — 1.x
+     * `runObfClient`/`runObfServer` parity. Default false.
+     */
+    abstract val prod: Property<Boolean>
+
     /** Working directory — defaults to `run/<environment>-<name>`. */
     abstract val workingDirectory: Property<String>
 
@@ -79,6 +87,7 @@ abstract class RunConfig @Inject constructor(
             if (defaultSide == RunSide.SERVER) listOf("nogui") else emptyList()
         )
         environmentVariables.convention(emptyMap())
+        prod.convention(false)
         username.convention("Dev")
         features.convention(emptySet())
         downloadAssets.convention(true)

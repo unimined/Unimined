@@ -30,9 +30,13 @@ class LegacyDistSpec(
      *  must ride the raw→dev remap view. */
     var format: String? = null
 
-    /** A local jar/distribution file (project-relative or absolute). */
+    /** A local jar/distribution file (project-relative or absolute).
+     *  Absolutized at declaration — transform workers have no project
+     *  cwd to resolve a relative path against. */
     fun file(path: Any) {
-        source = DeclaredSource.LocalFile(path.toString())
+        source = DeclaredSource.LocalFile(
+            project.file(path).absolutePath
+        )
     }
 
     /** A Maven coordinate resolved from declared repositories. */

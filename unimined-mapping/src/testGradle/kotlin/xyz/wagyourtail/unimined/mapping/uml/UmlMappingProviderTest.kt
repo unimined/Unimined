@@ -154,7 +154,9 @@ class UmlMappingProviderTest {
         val output = dir.resolve("bundle.json")
 
         task.environmentId.set("main")
-        task.mappingFiles.from(tinyFile())
+        val file = tinyFile()
+        task.mappingFiles.from(file)
+        task.sourcesManifest.set("""[{"files":["$file"]}]""")
         task.sourceNamespace.set("official")
         task.targetNamespace.set("named")
         task.bundleFile.set(output.toFile())
@@ -177,9 +179,13 @@ class UmlMappingProviderTest {
         val output = dir.resolve("bundle.json")
 
         task.environmentId.set("main")
-        task.mappingFiles.from(
+        val files = listOf(
             tinyFile(),
             tinyFile("tiny\t2\t0\tnamed\textra\nc\tb/B\tc/C\n")
+        )
+        task.mappingFiles.from(files)
+        task.sourcesManifest.set(
+            files.joinToString(",", "[", "]") { """{"files":["$it"]}""" }
         )
         task.sourceNamespace.set("official")
         task.targetNamespace.set("extra")

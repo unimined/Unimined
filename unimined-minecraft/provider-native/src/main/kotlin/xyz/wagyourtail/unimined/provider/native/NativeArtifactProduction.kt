@@ -6,15 +6,16 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
-import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
-import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
-import xyz.wagyourtail.unimined.provider.native.metadata.MinecraftMetadataAssembler
-import xyz.wagyourtail.unimined.provider.native.metadata.PlatformInfo
-import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.manifest.ManifestResolver
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
+import xyz.wagyourtail.unimined.minecraft.metadata.MinecraftMetadataAssembler
+import xyz.wagyourtail.unimined.minecraft.metadata.PlatformInfo
+import xyz.wagyourtail.unimined.minecraft.metadata.ResolvedMinecraftMetadata
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
-import xyz.wagyourtail.unimined.provider.native.internal.io.AtomicIo
+import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
+import xyz.wagyourtail.commonskt.jvm.tempSibling
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.nio.file.StandardCopyOption
@@ -188,12 +189,12 @@ internal object NativeArtifactProduction {
             val entry = zip.getEntry(entryName) ?: return serverJar
             if (Files.exists(out) && !rebuild) return out
             Files.createDirectories(out.parent)
-            val tmp = AtomicIo.tempSibling(out)
+            val tmp = out.tempSibling()
             try {
                 zip.getInputStream(entry).use { input ->
                     Files.copy(input, tmp, StandardCopyOption.REPLACE_EXISTING)
                 }
-                AtomicIo.moveAtomic(tmp, out)
+                tmp.moveAtomicTo(out)
             } finally {
                 Files.deleteIfExists(tmp)
             }
@@ -251,9 +252,9 @@ internal object NativeArtifactProduction {
         val path = cacheDir.resolve("assets/index-empty.json")
         if (!Files.exists(path)) {
             Files.createDirectories(path.parent)
-            AtomicIo.tempSibling(path).also {
+            path.tempSibling().also {
                 Files.writeString(it, "{}")
-                AtomicIo.moveAtomic(it, path)
+                it.moveAtomicTo(path)
             }
         }
         return path

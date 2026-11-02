@@ -71,6 +71,9 @@ class ProjectGeneratorTest {
             assertTrue(required in written, "missing $required")
         }
         assertTrue(dir.resolve("gradlew").toFile().canExecute(), "gradlew executable")
+        // bundled .bat normalizes to CRLF — LF-only batch files break cmd
+        assertTrue("\r\n" in Files.readString(dir.resolve("gradlew.bat")),
+            "gradlew.bat not CRLF-normalized")
         val build = Files.readString(dir.resolve("build.gradle.kts"))
         assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
         assertTrue("yarn(10)" in build)

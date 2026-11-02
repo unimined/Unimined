@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.spi
 
 /**
- * Keys into [MinecraftArtifacts.artifacts].
+ * Keys into [ProductArtifacts.artifacts].
  */
 enum class ArtifactKey {
     CLIENT,

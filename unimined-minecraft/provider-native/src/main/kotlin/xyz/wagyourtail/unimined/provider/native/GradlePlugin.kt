@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.provider.native
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import java.net.URI
+import xyz.wagyourtail.unimined.mapping.UniminedRepos
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.provider.native`.
@@ -13,10 +13,7 @@ class GradlePlugin : Plugin<Project> {
         // Mojang-only library artifacts (authlib, brigadier, blocklist,
         // datafixerupper, ...) live on the official libraries repo, not
         // Maven Central — required by every native-provided environment
-        target.repositories.maven { repo ->
-            repo.name = "Mojang Libraries"
-            repo.url = URI.create("https://libraries.minecraft.net")
-        }
+        UniminedRepos(target).mojangLibraries.ensure()
     }
 
 }

@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.provider.buildtools
 
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Path

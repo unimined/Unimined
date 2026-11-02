@@ -3,17 +3,17 @@ package xyz.wagyourtail.unimined.provider.native
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
-import xyz.wagyourtail.unimined.minecraft.internal.RuntimeMinecraftSpec
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.spi.*
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
-import xyz.wagyourtail.unimined.provider.native.manifest.ManifestResolver
-import xyz.wagyourtail.unimined.provider.native.merge.JarMerger
-import xyz.wagyourtail.unimined.provider.native.metadata.NativeLaunchMetadata
-import xyz.wagyourtail.unimined.provider.native.metadata.ResolvedMinecraftMetadata
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.manifest.ManifestResolver
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
+import xyz.wagyourtail.unimined.minecraft.metadata.NativeLaunchMetadata
+import xyz.wagyourtail.unimined.minecraft.metadata.ResolvedMinecraftMetadata
 import java.nio.file.Path
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -41,13 +41,13 @@ class NativeProvider(
             }
         )
     }
-) : MinecraftProvider {
+) : ProductProvider {
 
     override val name: String = "native"
 
-    override fun supports(spec: MinecraftSpec): Boolean = spec.loader == null
+    override fun supports(spec: ProductSpec): Boolean = spec.loader == null
 
-    override fun resolve(spec: MinecraftSpec, ctx: ProviderContext): MinecraftArtifacts {
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         // `supports` gates *default* selection to bare Minecraft, but a
         // loader transform may explicitly select this provider for the
         // environment's vanilla-side artifact (e.g. fabric) — resolve
@@ -75,7 +75,7 @@ class NativeProvider(
         // minecraftLibraries membership strip — the artifact-transform
         // path carries the resolved library set and is the production
         // merge consumers actually resolve.
-        val mergeOptions = (spec as? RuntimeMinecraftSpec)?.let { rs ->
+        val mergeOptions = (spec as? RuntimeProductSpec)?.let { rs ->
             JarMerger.Options(
                 includeGlobs = rs.mergeIncludeGlobs,
                 excludeGlobs = rs.mergeExcludeGlobs,
@@ -179,7 +179,7 @@ class NativeProvider(
                 }
             }
 
-        return NativeMinecraftArtifacts(
+        return NativeProductArtifacts(
             artifacts = artifacts,
             auxiliaryArtifacts = auxiliary,
             mappings = ctx.providers.provider { OfficialIdentityMappingTree },
@@ -196,7 +196,7 @@ class NativeProvider(
 
 }
 
-private class NativeMinecraftArtifacts(
+private class NativeProductArtifacts(
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>>,
     override val auxiliaryArtifacts: Map<String, Provider<RegularFile>>,
     override val mappings: Provider<MappingTree>,
@@ -208,7 +208,7 @@ private class NativeMinecraftArtifacts(
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>>,
     override val assets: Provider<AssetIndex>,
     override val launch: LaunchMetadata
-) : MinecraftArtifacts
+) : ProductArtifacts
 
 private class NativeAssetIndex(
     override val id: String,
@@ -225,14 +225,18 @@ private const val OBF_AUX_PREFIXES = "com.mojang:realms"
 
 /** Apply the spec's typed library-version substitutions
  *  (1.x `replaceLibraryVersion`): a coord `group:name:version[:classifier]`
- *  whose `group:name` matches a rule's prefix gets its version component
- *  replaced; first matching rule wins. */
+ *  whose `group:name` matches a rule gets its version component
+ *  replaced; first matching rule wins. A `group:name` rule targets one
+ *  artifact exactly (1.x's group+name args); a group-only rule is a
+ *  prefix covering every artifact in the group. */
 internal fun substitute(coord: String, rules: List<Pair<String, String>>): String {
     val parts = coord.split(':')
     if (parts.size < 3) return coord
     val groupName = "${parts[0]}:${parts[1]}"
-    val version = rules.firstOrNull { groupName.startsWith(it.first) }?.second
-        ?: return coord
+    val version = rules.firstOrNull { rule ->
+        if (':' in rule.first) groupName == rule.first
+        else groupName.startsWith(rule.first)
+    }?.second ?: return coord
     return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
 }
 

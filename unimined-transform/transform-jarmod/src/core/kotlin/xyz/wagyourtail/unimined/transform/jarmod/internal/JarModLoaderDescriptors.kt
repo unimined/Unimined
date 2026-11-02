@@ -23,6 +23,8 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
                 LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/")
             ),
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
+            // baseline loader — jars into any product
+            supportedProducts = setOf("*"),
             prodNamespace = "official",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         ),

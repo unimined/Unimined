@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.transform.bukkit.internal
 
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.nio.file.Path
 import kotlin.io.path.readText
 

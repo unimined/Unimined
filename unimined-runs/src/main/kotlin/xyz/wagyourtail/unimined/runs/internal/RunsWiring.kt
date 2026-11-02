@@ -51,6 +51,25 @@ internal object RunsWiring {
         if (extension.runs.findByName(serverName) == null) {
             extension.runs.register(serverName) { it.environment.convention(environmentId) }
         }
+        // prod-namespace variants — runProdClient/runProdServer launch
+        // the compiled/remapped mod jar against the raw (production-
+        // namespace) MC artifact, 1.x runObfClient/runObfServer parity
+        val prodClientName =
+            if (environmentId == "main") "prodClient" else "${environmentId}ProdClient"
+        val prodServerName =
+            if (environmentId == "main") "prodServer" else "${environmentId}ProdServer"
+        if (extension.runs.findByName(prodClientName) == null) {
+            extension.runs.register(prodClientName) {
+                it.environment.convention(environmentId)
+                it.prod.convention(true)
+            }
+        }
+        if (extension.runs.findByName(prodServerName) == null) {
+            extension.runs.register(prodServerName) {
+                it.environment.convention(environmentId)
+                it.prod.convention(true)
+            }
+        }
 
         val natives = nativesConfiguration(project, environment, minecraft)
 
@@ -107,6 +126,44 @@ internal object RunsWiring {
                     run.workingDirectory.orElse("run/$environmentId-${run.name}").get()
                 )
             )
+            // mod jars staged into `stageInto` when a loader opts in —
+            // dev: the compiled jar + dev-namespace mod buckets;
+            // prod: the remapped jar + prod-namespace `*Remapped` views
+            if (run.prod.get()) {
+                // prod: the remapped (mod-source-namespace) jar + shipped
+                // mod jars via `*Direct` — `*Remapped` views are
+                // dev-namespace and wrong here
+                t.modFiles.from(
+                    project.provider {
+                        val jarTask = project.tasks.findByName(
+                            if (environmentId == "main") "remapJar"
+                            else "remap${environmentId.replaceFirstChar(Char::uppercase)}Jar")
+                        project.files(jarTask?.outputs?.files ?: project.files())
+                    },
+                    listOfNotNull(
+                        project.configurations.findByName(
+                            "${environment.modImplementationConfigurationName}Direct"),
+                        project.configurations.findByName(
+                            "${environment.modRuntimeOnlyConfigurationName}Direct")
+                    )
+                )
+            } else {
+                t.modFiles.from(
+                    project.tasks.named(
+                        if (environmentId == "main") "jar"
+                        else "${environmentId}Jar"),
+                    // `*Direct` views — the buckets themselves are
+                    // declarable-only; direct = mod-source-namespace
+                    // pass-through (matches dev classpath for identity-
+                    // namespace envs like the conversion products)
+                    listOfNotNull(
+                        project.configurations.findByName(
+                            "${environment.modImplementationConfigurationName}Direct"),
+                        project.configurations.findByName(
+                            "${environment.modRuntimeOnlyConfigurationName}Direct")
+                    )
+                )
+            }
             transformSpec.effectivePrepareTaskMutators().forEach { it.execute(t) }
         }
 
@@ -117,11 +174,43 @@ internal object RunsWiring {
                     (environment.version.orNull ?: "<unset>") +
                     " (${run.name}, env '$environmentId')"
             task.launchMetadata.set(launchMetadata)
-            // SourceSet.runtimeClasspath — includes the dev MC artifact,
-            // remapped mod views, and provider extras added as file
-            // collections, none of which exist on the bare
-            // `runtimeClasspath` configuration
-            task.runtimeClasspath.from(sourceSet.runtimeClasspath)
+            if (run.prod.get()) {
+                // prod-namespace classpath (1.x runObf parity): the raw
+                // MC artifact (production ships at source namespace),
+                // the project's remapped (mod-source-namespace) jar,
+                // shipped mod jars via `*Direct` pass-through views,
+                // and the env's declared libraries. `*Remapped` views
+                // are dev-namespace — wrong here; and no
+                // sourceSet.output (dev classes don't belong on a prod
+                // classpath).
+                task.runtimeClasspath.from(
+                    project.configurations.named(environment.minecraftRawViewName),
+                    project.configurations.named(
+                        environment.minecraftLibrariesConfigurationName),
+                    project.provider {
+                        project.files(
+                            listOfNotNull(
+                                project.configurations.findByName(
+                                    "${environment.modImplementationConfigurationName}Direct"),
+                                project.configurations.findByName(
+                                    "${environment.modRuntimeOnlyConfigurationName}Direct")
+                            )
+                        )
+                    },
+                    project.provider {
+                        val jarTask = project.tasks.findByName(
+                            if (environmentId == "main") "remapJar"
+                            else "remap${environmentId.replaceFirstChar(Char::uppercase)}Jar")
+                        project.files(jarTask?.outputs?.files ?: project.files())
+                    }
+                )
+            } else {
+                // SourceSet.runtimeClasspath — includes the dev MC artifact,
+                // remapped mod views, and provider extras added as file
+                // collections, none of which exist on the bare
+                // `runtimeClasspath` configuration
+                task.runtimeClasspath.from(sourceSet.runtimeClasspath)
+            }
             task.nativesClasspath.from(natives)
             task.assetIndexFile.set(artifacts.flatMap { it.assets }.flatMap { it.file })
             task.assetIndexId.set(artifacts.flatMap { it.assets }.map { it.id })
@@ -172,6 +261,13 @@ internal object RunsWiring {
             task.launchProperties.put("assets_index", task.assetIndexId)
             task.launchProperties.put("assets_index_name", task.assetIndexId)
             task.launchProperties.put("asset_index", task.assetIndexId)
+            // `${game_assets}` in pre-1.6-era minecraftArguments —
+            // the resources dir the index gets materialized into
+            task.launchProperties.put(
+                "game_assets",
+                task.runDirectory.map {
+                    it.dir("resources").asFile.absolutePath
+                })
             task.launchProperties.put(
                 "game_dir",
                 task.runDirectory.map { it.asFile.absolutePath })
@@ -232,8 +328,11 @@ internal object RunsWiring {
     private fun substituteCoord(coord: String, rules: List<Pair<String, String>>): String {
         val parts = coord.split(':')
         if (parts.size < 3) return coord
-        val version = rules.firstOrNull { "${parts[0]}:${parts[1]}".startsWith(it.first) }?.second
-            ?: return coord
+        val groupName = "${parts[0]}:${parts[1]}"
+        val version = rules.firstOrNull { rule ->
+            if (':' in rule.first) groupName == rule.first
+            else groupName.startsWith(rule.first)
+        }?.second ?: return coord
         return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
     }
 

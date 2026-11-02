@@ -32,8 +32,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
      */
     private val removed1xVerbs: Map<String, String> = buildMap {
         // env blocks moved inside unimined.minecraft { sourceSet(name) {} }
-        this["reIndev"] = "configure the environment inside `unimined.minecraft { }` (loader/infra helpers live on the env now)"
-        this["bta"] = "configure the environment inside `unimined.minecraft { }` (loader/infra helpers live on the env now)"
+        this["reIndev"] = "the ReIndev preset is `reindev { }` in 2.0 — `unimined { reindev { ... } }` or per-env `minecraft { sourceSet(\"x\") { reindev { } } }`"
         this["modsRemapRepo"] = "mod dependencies resolve through unimined's managed repositories automatically — remove this call"
         // repo helpers: maven repos are auto-registered per loader
         val repos = "maven repositories are auto-registered per loader environment in 2.0 — remove this call (custom repos can be added via `repositories {}`)"
@@ -96,6 +95,50 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
     fun minecraft(action: Action<MinecraftExtension>) {
         action.execute(project.extensions.getByType(MinecraftExtension::class.java))
     }
+
+    private fun minecraftExt(): MinecraftExtension =
+        project.extensions.getByType(MinecraftExtension::class.java)
+
+    /** `unimined.bta { }` — Better Than Adventure dist preset on `main`
+     *  (`provider("conversion")` + `product("minecraft:bta")`). */
+    fun bta(action: Action<xyz.wagyourtail.unimined.minecraft.DistSpec>) =
+        minecraftExt().bta(action)
+
+    /** Groovy-DSL counterpart to [bta]. */
+    fun bta(@DelegatesTo(value = xyz.wagyourtail.unimined.minecraft.DistSpec::class,
+        strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        minecraftExt().bta(action)
+
+    /** `unimined.reindev { }` — ReIndev dist preset on `main`. */
+    fun reindev(action: Action<xyz.wagyourtail.unimined.minecraft.DistSpec>) =
+        minecraftExt().reindev(action)
+
+    /** Groovy-DSL counterpart to [reindev]. */
+    fun reindev(@DelegatesTo(value = xyz.wagyourtail.unimined.minecraft.DistSpec::class,
+        strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        minecraftExt().reindev(action)
+
+    /** `unimined.nsss { }` — NSSS dist preset on `main`; declare
+     *  `file()`/`url()` inside (no upstream index). */
+    fun nsss(action: Action<xyz.wagyourtail.unimined.minecraft.DistSpec>) =
+        minecraftExt().nsss(action)
+
+    /** Groovy-DSL counterpart to [nsss]. */
+    fun nsss(@DelegatesTo(value = xyz.wagyourtail.unimined.minecraft.DistSpec::class,
+        strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        minecraftExt().nsss(action)
+
+    /** `unimined.custom("name") { }` — user-supplied dist jar on
+     *  `main`; `product` conventions to `custom:<name>`. */
+    fun custom(name: String,
+               action: Action<xyz.wagyourtail.unimined.minecraft.DistSpec>) =
+        minecraftExt().custom(name, action)
+
+    /** Groovy-DSL counterpart to [custom]. */
+    fun custom(name: String,
+               @DelegatesTo(value = xyz.wagyourtail.unimined.minecraft.DistSpec::class,
+                   strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        minecraftExt().custom(name, action)
 
     // region 1.x deprecation bridge — moved DSL (plan §Phase 8)
 

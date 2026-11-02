@@ -1,19 +1,20 @@
 package xyz.wagyourtail.unimined.minecraft.internal
 
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftVersionSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
+import xyz.wagyourtail.unimined.api.spec.ProductVersionSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 
-/** Execution-time [MinecraftSpec] assembled from extension DSL state.
+/** Execution-time [ProductSpec] assembled from extension DSL state.
  *  Public-but-`internal`-packaged so provider submodules can read the
  *  runtime-only fields (merge controls) — not part of the spec SPI. */
-data class RuntimeMinecraftSpec(
+data class RuntimeProductSpec(
     override val environmentId: String,
     override val sourceSetName: String?,
-    override val version: MinecraftVersionSpec,
+    override val version: ProductVersionSpec,
     override val side: Side,
     override val loader: LoaderSpec?,
+    override val product: String = ProductSpec.PRODUCT_NATIVE,
     /** Merge strip controls mirrored from the environment's DSL —
      *  the eager (`Provider`) merge path honors glob/flag state even
      *  though it cannot resolve `minecraftLibraries` (ProviderContext
@@ -26,11 +27,11 @@ data class RuntimeMinecraftSpec(
     override val libraryOverlays: List<String> = emptyList(),
     override val obfuscatedLibraries: List<String> = emptyList(),
     override val declaredSource: xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec? = null
-) : MinecraftSpec
+) : ProductSpec
 
 class RuntimeVersionSpec(
     override val version: String
-) : MinecraftVersionSpec
+) : ProductVersionSpec
 
 class RuntimeLoaderSpec(
     override val name: String,

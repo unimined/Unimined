@@ -21,6 +21,15 @@ data class LoaderDescriptor(
      *  on this, never on [id]. */
     val family: String,
 
+    /** Game-family-scoped products this loader supports
+     *  (`minecraft:native`, `minecraft:reindev`, `minecraft:bta`,
+     *  or `custom` for user-supplied dists). `null` = native vanilla
+     *  only — most loaders never declare it. `*` opts into any
+     *  product (jarmod); a scope prefix (`minecraft`, `custom`)
+     *  accepts any product in that family. Env binding validates
+     *  the env's product against this set. */
+    val supportedProducts: Set<String>? = null,
+
     /** Repositories this product's artifacts resolve from — products
      *  can need several (cleanroom adds arcseekers + forge mavens) and
      *  of mixed shape (ivy pattern-layout feeds like liteloader's

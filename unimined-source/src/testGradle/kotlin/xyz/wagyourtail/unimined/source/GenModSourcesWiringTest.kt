@@ -53,13 +53,15 @@ class GenModSourcesWiringTest {
         assertTrue(
             project.tasks.getByName("genModSources") is GenModSourcesTask
         )
-        // without SOURCES-surface steps the decompiled type is final
+        // a declared SOURCES pipeline follows the decompile — views
+        // carry the post-pipeline final type, not the intermediate
+        // decompiled type
         assertEquals(
-            "unimined-modsrc-decompiled-main-modImplementation",
+            "unimined-modsrc-main-modImplementation",
             viewArtifactType(project, "modImplementationModSources")
         )
         assertEquals(
-            "unimined-modsrc-decompiled-main-modRuntimeOnly",
+            "unimined-modsrc-main-modRuntimeOnly",
             viewArtifactType(project, "modRuntimeOnlyModSources")
         )
     }

@@ -43,13 +43,14 @@ class GenSourcesWiringTest {
 
         val genSources = project.tasks.getByName("genSources")
         assertTrue(genSources is VineflowerDecompileTask)
-        // lands in the stub module's sources slot so IDEs attach it on
-        // sync without triggering a decompile
+        // with a declared SOURCES pipeline, decompile emits the
+        // intermediate in build/ and the sources-surface fork fills
+        // the stub module's sources slot (IDEs attach it on sync
+        // without triggering a decompile)
         assertEquals(
-            LocalMavenPublisher.moduleDir(
-                ext.localRepoDir, "unimined.generated",
-                "minecraft-main", "1.20.1"
-            ).resolve("minecraft-main-1.20.1-sources.jar").toFile(),
+            project.layout.buildDirectory.file(
+                "unimined/sources/minecraft-main-decompiled.jar"
+            ).get().asFile,
             (genSources as VineflowerDecompileTask).outputJar.get().asFile
         )
     }

@@ -17,8 +17,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.spec.DeclaredSource
 import xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftVersionSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
+import xyz.wagyourtail.unimined.api.spec.ProductVersionSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
@@ -63,9 +63,9 @@ class LegacyDistProviderTest {
     }
 
     private fun spec(source: DeclaredSource, format: String? = null) =
-        object : MinecraftSpec {
+        object : ProductSpec {
             override val environmentId = "main"
-            override val version: MinecraftVersionSpec =
+            override val version: ProductVersionSpec =
                 RuntimeVersionSpec("bta-7.3")
             override val side = Side.MERGED
             override val loader = null
@@ -77,7 +77,7 @@ class LegacyDistProviderTest {
     fun `supports only declared-source specs`() {
         val provider = LegacyDistProvider()
         assertTrue(provider.supports(spec(DeclaredSource.LocalFile("x.jar"))))
-        assertFalse(provider.supports(object : MinecraftSpec {
+        assertFalse(provider.supports(object : ProductSpec {
             override val version = RuntimeVersionSpec("1.0")
             override val side = Side.CLIENT
             override val loader = null

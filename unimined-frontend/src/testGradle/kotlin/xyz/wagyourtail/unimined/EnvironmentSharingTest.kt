@@ -27,7 +27,7 @@ import xyz.wagyourtail.unimined.minecraft.GradlePlugin as MinecraftPlugin
 import xyz.wagyourtail.unimined.remap.GradlePlugin as RemapPlugin
 import xyz.wagyourtail.unimined.transform.GradlePlugin as TransformPlugin
 
-private class TestArtifacts(private val project: Project) : MinecraftArtifacts {
+private class TestArtifacts(private val project: Project) : ProductArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val mappings: Provider<MappingTree> = project.provider { null }
     override val namespaceMode: Provider<NamespaceMode> =

@@ -5,13 +5,13 @@ import org.gradle.api.file.RegularFile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.provider.native.NativeProvider
-import xyz.wagyourtail.unimined.provider.native.download.Downloader
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.time.Duration
 import kotlin.io.path.readText
 
@@ -26,20 +26,20 @@ import kotlin.io.path.readText
  * binds `loader("craftbukkit", "<mc>")` selects this provider through
  * the normal registry path.
  */
-class BuildToolsProvider : MinecraftProvider {
+class BuildToolsProvider : ProductProvider {
 
     private val delegate = NativeProvider()
 
     override val name = "buildtools"
 
-    override fun supports(spec: MinecraftSpec): Boolean =
+    override fun supports(spec: ProductSpec): Boolean =
         spec.loader?.name in setOf("craftbukkit", "spigot")
 
-    override fun resolve(spec: MinecraftSpec, ctx: ProviderContext): MinecraftArtifacts {
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         val target = spec.loader!!.name
         val rev = spec.version.version
         // vanilla metadata from the native pipeline — strip the loader
-        val stripped = object : MinecraftSpec by spec {
+        val stripped = object : ProductSpec by spec {
             override val loader: LoaderSpec? = null
         }
         val base = delegate.resolve(stripped, ctx)
@@ -103,7 +103,7 @@ class BuildToolsProvider : MinecraftProvider {
             )
         }
 
-        return object : MinecraftArtifacts by base {
+        return object : ProductArtifacts by base {
             override val artifacts = base.artifacts + mapOf(
                 ArtifactKey.SERVER to serverFile,
                 ArtifactKey.MERGED to serverFile

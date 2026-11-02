@@ -59,7 +59,6 @@ internal object FabricEnvironmentWiring {
     }
 
 
-    private const val ORNITHE_META = "https://meta.ornithemc.net"
 
     /**
      * Prepend `official -> intermediary` to the environment's mapping
@@ -79,29 +78,33 @@ internal object FabricEnvironmentWiring {
         project: Project,
         environment: MinecraftEnvironment
     ) {
-        when (environment.loaderSpec.orNull?.name) {
-            "legacyfabric", "babric", "ornithe" ->
-                environment.librarySubstitutions += "org.lwjgl" to "2.9.4+legacyfabric.8"
-            "flint" ->
-                environment.librarySubstitutions += "org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"
+        val descriptor = environment.loaderSpec.orNull?.name
+            ?.let { LoaderRegistry.resolveBuiltin(it) }
+            ?.takeIf { it.family == "fabric" }
+        descriptor?.capabilities?.get("replaceLwjgl")?.let { target ->
+            val match = descriptor.capabilities["replaceLwjglMatch"] ?: "org.lwjgl"
+            environment.librarySubstitutions += match to target
         }
-        if (environment.loaderSpec.orNull?.name == "ornithe") {
-            contributeOrnitheLibraryOverlay(project, environment)
+        descriptor?.capabilities?.get("libraryOverlayMeta")?.let { meta ->
+            contributeLibraryOverlay(project, environment, meta)
         }
     }
 
-    /** Ornithe backports slf4j/log4j + modernized deps onto pre-1.7
-     *  versions via a per-generation overlay — fetch meta's versions
+    /** Ornithe-era loaders backport slf4j/log4j + modernized deps onto
+     *  old MC via a per-generation overlay — fetch the meta's versions
      *  index for the stable intermediary generation, then register the
      *  `gen{n}/libraries` overlay URL with the environment (1.x never
-     *  hard-coded dep lists; the plan keeps the same shape). */
-    private fun contributeOrnitheLibraryOverlay(
+     *  hard-coded dep lists; the plan keeps the same shape). Drives off
+     *  the descriptor's `libraryOverlayMeta` capability, not the
+     *  loader name. */
+    private fun contributeLibraryOverlay(
         project: Project,
-        environment: MinecraftEnvironment
+        environment: MinecraftEnvironment,
+        meta: String
     ) {
         val gen = try {
             val index = Json.parseToJsonElement(
-                java.net.URI("$ORNITHE_META/v3/versions").toURL()
+                java.net.URI("$meta/v3/versions").toURL()
                     .openStream().use { it.readBytes().decodeToString() }
             ).jsonObject
             index["intermediaryGenerations"]?.jsonObject
@@ -113,7 +116,7 @@ internal object FabricEnvironmentWiring {
             )
             2
         }
-        environment.libraryOverlays += "$ORNITHE_META/v3/versions/gen$gen/libraries"
+        environment.libraryOverlays += "$meta/v3/versions/gen$gen/libraries"
     }
 
     private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {

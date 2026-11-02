@@ -6,7 +6,6 @@ dependencies {
     api(project(":unimined-minecraft"))
     api(project(":unimined-minecraft:provider-native"))
     "coreApi"(project(":unimined-minecraft"))
-    "coreApi"(project(":unimined-minecraft:provider-native"))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

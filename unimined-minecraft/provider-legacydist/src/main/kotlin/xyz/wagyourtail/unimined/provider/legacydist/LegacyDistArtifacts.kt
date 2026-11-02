@@ -4,14 +4,14 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.mapping.mappingTree
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactStateLog
 import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
 import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import java.io.File
@@ -23,11 +23,11 @@ import java.io.File
  * provider ran; the declaration *is* the state-log contract).
  */
 internal class LegacyDistArtifacts(
-    spec: MinecraftSpec,
+    spec: ProductSpec,
     declared: DeclaredSourceSpec,
     jar: Provider<File>,
     ctx: ProviderContext
-) : MinecraftArtifacts {
+) : ProductArtifacts {
 
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = mapOf(
         spec.side.artifactKey() to ctx.layout.file(jar)

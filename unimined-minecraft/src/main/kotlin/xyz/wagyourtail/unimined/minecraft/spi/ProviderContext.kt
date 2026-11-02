@@ -11,7 +11,7 @@ import org.gradle.process.ExecOperations
 import java.time.Duration
 
 /**
- * Services made available to a [MinecraftProvider] at resolve time.
+ * Services made available to a [ProductProvider] at resolve time.
  * Carries no `Project`/`Task` — only the config-cache-safe service
  * surface providers need.
  */

@@ -3,10 +3,10 @@ package xyz.wagyourtail.unimined.provider.legacydist
 import org.gradle.api.GradleException
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.spec.DeclaredSource
-import xyz.wagyourtail.unimined.api.spec.MinecraftSpec
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftProvider
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import java.io.File
 import java.net.HttpURLConnection
@@ -25,14 +25,14 @@ import java.security.MessageDigest
  * Maven-coordinate sources are not yet resolvable — providers have
  * no configuration access; declare `file`/`url` instead.
  */
-class LegacyDistProvider : MinecraftProvider {
+class LegacyDistProvider : ProductProvider {
 
     override val name: String = "legacydist"
 
-    override fun supports(spec: MinecraftSpec): Boolean =
+    override fun supports(spec: ProductSpec): Boolean =
         spec.declaredSource != null
 
-    override fun resolve(spec: MinecraftSpec, ctx: ProviderContext): MinecraftArtifacts {
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         val declared = spec.declaredSource
             ?: throw GradleException("legacydist selected without a declaredSource")
         val cacheDir = ctx.layout.projectDirectory
@@ -44,7 +44,7 @@ class LegacyDistProvider : MinecraftProvider {
     }
 
     private fun materialize(
-        spec: MinecraftSpec,
+        spec: ProductSpec,
         source: DeclaredSource,
         cacheDir: File,
         ctx: ProviderContext

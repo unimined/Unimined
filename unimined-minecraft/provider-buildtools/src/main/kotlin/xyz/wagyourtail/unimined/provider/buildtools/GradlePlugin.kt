@@ -5,7 +5,7 @@ import org.gradle.api.Project
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.provider.buildtools` —
- * contributes [BuildToolsProvider] through the `MinecraftProvider`
+ * contributes [BuildToolsProvider] through the `ProductProvider`
  * ServiceLoader; nothing to wire at apply time.
  */
 class GradlePlugin : Plugin<Project> {

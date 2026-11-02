@@ -36,6 +36,9 @@ data class InitSpec(
     val templateName: String? = null,
     /** Local path to a `unimined-templates` zip. */
     val templatesZip: java.nio.file.Path? = null,
+    /** Remote `unimined-templates` zip URL — downloaded to a temp
+     *  file when [templatesZip] is unset. */
+    val templatesUrl: String? = null,
     /**
      * When true, emit a `mod { }` block in build.gradle — metadata is
      * generated per env by `generate<Env>ModMetadata` — instead of

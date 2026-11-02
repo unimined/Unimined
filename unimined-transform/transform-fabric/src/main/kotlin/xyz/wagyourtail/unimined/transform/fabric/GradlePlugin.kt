@@ -2,10 +2,9 @@ package xyz.wagyourtail.unimined.transform.fabric
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.mapping.UniminedRepos
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.fabric.internal.FabricEnvironmentWiring
-import xyz.wagyourtail.unimined.transform.fabric.internal.FabricModAnalysis
-import java.net.URI
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.transform.fabric`.
@@ -22,7 +21,7 @@ class GradlePlugin : Plugin<Project> {
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             minecraft.loaderModSourceNamespaces["fabric"] = listOf("intermediary")
-            target.repositories.maven { it.url = URI.create(FabricModAnalysis.FABRIC_MAVEN) }
+            UniminedRepos(target).fabric.ensure()
             // loader repos for loaders actually selected — registering
             // the whole family's repos eagerly would add unrelated (and
             // potentially unreachable) mavens to every resolution

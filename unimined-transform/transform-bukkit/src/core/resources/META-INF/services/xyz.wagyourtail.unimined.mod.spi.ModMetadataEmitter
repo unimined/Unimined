@@ -1,0 +1,3 @@
+xyz.wagyourtail.unimined.transform.bukkit.internal.CraftBukkitModMetadataEmitter
+xyz.wagyourtail.unimined.transform.bukkit.internal.SpigotModMetadataEmitter
+xyz.wagyourtail.unimined.transform.bukkit.internal.PaperModMetadataEmitter

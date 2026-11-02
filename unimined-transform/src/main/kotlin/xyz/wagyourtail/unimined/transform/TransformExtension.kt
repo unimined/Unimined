@@ -9,7 +9,7 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
-import xyz.wagyourtail.unimined.minecraft.spi.MinecraftArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.transform.internal.DefaultTransformContext
 import xyz.wagyourtail.unimined.transform.internal.RuntimeTransformOutput
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
@@ -109,7 +109,7 @@ abstract class TransformExtension @Inject constructor(
      *  provider's side-appropriate jar
      */
     fun build(
-        artifacts: MinecraftArtifacts,
+        artifacts: ProductArtifacts,
         mappings: MappingsSpec,
         input: Provider<RegularFile>
     ): TransformPipeline = build("main", artifacts, mappings, input)
@@ -117,7 +117,7 @@ abstract class TransformExtension @Inject constructor(
     /** Build a pipeline using the transforms declared for [environmentId]. */
     fun build(
         environmentId: String,
-        artifacts: MinecraftArtifacts,
+        artifacts: ProductArtifacts,
         mappings: MappingsSpec,
         input: Provider<RegularFile>
     ): TransformPipeline {
