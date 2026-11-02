@@ -62,6 +62,11 @@ class DistSpec internal constructor(
     /** Declare the modloader layered on this dist. */
     fun loader(name: String, version: String) = env.loader(name, version)
 
+    /** Declare the modloader, letting the descriptor resolve the
+     *  version (`foxloader` picks the newest release pairing with the
+     *  dist via the FoxLoader version map). */
+    fun loader(name: String) = env.loader(name)
+
     /** Groovy-DSL declared-source overload — `legacydist { file(...) }`
      *  is equally valid inside a dist block. */
     fun legacydist(action: Action<LegacyDistSpec>) =

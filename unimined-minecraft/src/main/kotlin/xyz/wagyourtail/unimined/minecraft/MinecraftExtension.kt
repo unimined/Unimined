@@ -625,6 +625,13 @@ abstract class MinecraftExtension @Inject constructor(
         return extension.sourceSet(reference.environmentId)
     }
 
+    /** Configure the modloader layer on the default `main`
+     *  environment, letting the descriptor resolve the version
+     *  (`foxloader` picks the newest release pairing with the dist). */
+    fun loader(name: String) {
+        main.loader(name)
+    }
+
     /** Configure the modloader layer on the default `main` environment. */
     fun loader(name: String, version: String) {
         main.loader(name, version)

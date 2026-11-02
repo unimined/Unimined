@@ -29,7 +29,8 @@ import java.time.Duration
  * and rides the standard client/server merge machinery.
  *
  * Artifact + launch sources per product:
- *  - `reindev`: `cdn.fox2code.com/files/reindev-{ver}-{client,server}.jar`;
+ *  - `reindev`: `cdn.fox2code.com/files/reindev-{client,server}-{ver}.jar` (2.8.1_5+)
+ *    or `reindev-{ver}-{client,server}.jar` (≤2.4.x) — both patterns tried;
  *    launch doc is Mojang's `b1.7.3` version JSON (1.x `baseVersion`)
  *  - `bta`: `downloads.betterthanadventure.net/bta-{client,server}/
  *    release/v{ver}/` — the per-version `manifest.json` IS a complete
@@ -113,8 +114,12 @@ class ConversionProvider : ProductProvider {
         /** Version-document URL — the doc's `downloads` block carries
          *  the sided jars (`bta`). */
         val manifestUrl: ((String) -> String)? = null,
-        val clientUrl: ((String) -> String)? = null,
-        val serverUrl: ((String) -> String)? = null,
+        /** Sided dist-jar URL templates, tried in order — dists
+         *  renamed their artifact scheme mid-line (`reindev-v-side`
+         *  → `reindev-side-v`), so a product lists each pattern its
+         *  versions may live under. */
+        val clientUrls: List<(String) -> String> = emptyList(),
+        val serverUrls: List<(String) -> String> = emptyList(),
         /** Whether the sided dists survive JarMerger's member-merge —
          *  an empirical property (ConversionMergeProbeTest): total-
          *  conversion dists are independently-built forks, some merge
@@ -145,12 +150,17 @@ class ConversionProvider : ProductProvider {
         internal val PRODUCTS = mapOf(
             "reindev" to ConversionProduct(
                 baseVersion = "b1.7.3",
-                clientUrl = { v ->
-                    "https://cdn.fox2code.com/files/reindev-$v-client.jar"
-                },
-                serverUrl = { v ->
-                    "https://cdn.fox2code.com/files/reindev-$v-server.jar"
-                },
+                clientUrls = listOf(
+                    // 2.8.1_5+/2.9-era naming — the FoxLoader-compatible
+                    // line (see transform-conversion's version map)
+                    { v -> "https://cdn.fox2code.com/files/reindev-client-$v.jar" },
+                    // 2.4.x-era naming
+                    { v -> "https://cdn.fox2code.com/files/reindev-$v-client.jar" },
+                ),
+                serverUrls = listOf(
+                    { v -> "https://cdn.fox2code.com/files/reindev-server-$v.jar" },
+                    { v -> "https://cdn.fox2code.com/files/reindev-$v-server.jar" },
+                ),
             ),
             "bta" to ConversionProduct(
                 baseVersion = "b1.7.3",
@@ -212,7 +222,7 @@ class ConversionProvider : ProductProvider {
             }.toMap()
         }
 
-        if (product.clientUrl == null) {
+        if (product.clientUrls.isEmpty()) {
             // nsss (or a future declared-source dist): the env must
             // carry a declaredSource
             val declared = spec.declaredSource?.source
@@ -259,13 +269,15 @@ class ConversionProvider : ProductProvider {
             setOf(Side.CLIENT, Side.SERVER)
         } else setOf(spec.side)
         return needed.associateWith { side ->
-            val url = (if (side == Side.CLIENT) product.clientUrl
-            else product.serverUrl)?.invoke(version)
-                ?: throw GradleException(
-                    "conversion '$loader' has no $side artifact for $version"
-                )
-            downloader.fetch(
-                url, "$loader/$version/${side.name.lowercase()}.jar"
+            val templates = if (side == Side.CLIENT) product.clientUrls
+            else product.serverUrls
+            if (templates.isEmpty()) throw GradleException(
+                "conversion '$loader' has no $side artifact for $version"
+            )
+            fetchFirstOf(
+                downloader,
+                templates.map { it(version) },
+                "$loader/$version/${side.name.lowercase()}.jar"
             ).toFile()
         }
     }

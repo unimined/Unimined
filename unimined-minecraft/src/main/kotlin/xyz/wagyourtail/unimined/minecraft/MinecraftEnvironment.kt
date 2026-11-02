@@ -298,6 +298,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      */
     val mappingsSpec = MappingsSpecImpl(objects, version, side)
 
+    /**
+     * Configure this environment's modloader, letting the loader
+     * descriptor resolve the version — currently only `foxloader`,
+     * which picks the newest release pairing with the dist via the
+     * FoxLoader version map.
+     */
+    fun loader(name: String) {
+        loaderSpec.set(RuntimeLoaderSpec(name, ""))
+    }
+
     /** Configure this environment's modloader and version. */
     fun loader(name: String, version: String) {
         loaderSpec.set(RuntimeLoaderSpec(name, version))

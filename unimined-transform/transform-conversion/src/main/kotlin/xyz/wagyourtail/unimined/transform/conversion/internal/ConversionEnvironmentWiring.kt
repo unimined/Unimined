@@ -3,13 +3,16 @@ package xyz.wagyourtail.unimined.transform.conversion.internal
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
+import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.provider.conversion.ConversionProvider
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.transform.BundledLibraryStripStepSpec
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import java.time.Duration
 
 /**
  * Env wiring for conversion-family products. The dist jar is a
@@ -82,7 +85,6 @@ object ConversionEnvironmentWiring {
         // a resolution hook re-enter resolution ("Recursive update")
         val mc = environment.version.get()
         val joined = environment.side.orNull == Side.MERGED
-        val joinedCapable = atLeast2_9(spec.version)
         val loader = project.configurations.create(
             "conversionLoader${environment.environmentId.replaceFirstChar(Char::uppercase)}"
         ) { conf ->
@@ -92,28 +94,45 @@ object ConversionEnvironmentWiring {
             conf.withDependencies { deps ->
                 var addPrimary = true
                 if (descriptor.id == "foxloader") {
+                    addPrimary = false
+                    // version-pair check rides the CDN map — fetched
+                    // here, at resolution time, never during config;
+                    // blank version picks the newest compatible pair
+                    val version = FoxLoaderVersionMap.resolve(
+                        fetchFoxLoaderPairs(project), mc, spec.version
+                    )
+                    val joinedCapable = atLeast2_9(version)
                     if (joined && !joinedCapable)
                         throw GradleException(
-                            "foxloader ${spec.version} predates 2.9 and " +
+                            "foxloader $version predates 2.9 and " +
                             "cannot run in a merged (joined) env"
                         )
                     descriptor.capabilities["invoker"]?.let {
                         deps.add(project.dependencies.create(it))
                     }
-                    if (!joinedCapable) {
+                    if (joinedCapable) {
+                        deps.add(project.dependencies.create(
+                            descriptor.loaderCoords(mc, version)
+                        ))
+                    } else {
                         // pre-2.9 has no `loader` artifact — the dep
                         // set is common + <side> instead
-                        addPrimary = false
                         val side = environment.side.orNull!!.name.lowercase()
                         descriptor.capabilities["sidedArtifacts"]
                             ?.split(',')?.forEach { coord ->
                                 deps.add(project.dependencies.create(
-                                    coord.replace("<side>", side) + ":" + spec.version
+                                    coord.replace("<side>", side) + ":" + version
                                 ))
                             }
                     }
                 }
                 if (addPrimary) {
+                    if (spec.version.isBlank())
+                        throw GradleException(
+                            "loader '${spec.name}' requires an explicit " +
+                            "version — only foxloader resolves one from " +
+                            "its version map"
+                        )
                     deps.add(
                         project.dependencies.create(
                             descriptor.loaderCoords(mc, spec.version)
@@ -144,6 +163,36 @@ object ConversionEnvironmentWiring {
                (parts.getOrElse(0) { 0 } == 2 &&
                 parts.getOrElse(1) { 0 } >= 9)
     }
+
+    /**
+     * Fetch the FoxLoader↔ReIndev version map once through the cached
+     * [Downloader] (TTL + offline fallback, same as manifests).
+     * Called from `withDependencies` — resolution time, never during
+     * configuration. Honors `--offline`, `--refresh-dependencies`,
+     * `unimined.forceReload`, `unimined.refreshDownloads`, and
+     * `unimined.metadataCacheTtl`, mirroring ProviderCacheSettings.
+     */
+    private fun fetchFoxLoaderPairs(project: Project): Map<String, String> {
+        val downloader = Downloader(
+            cacheDir = UniminedCache.global(project)
+                .resolve("transform-conversion"),
+            offline = project.gradle.startParameter.isOffline,
+            refreshCache = project.gradle.startParameter.isRefreshDependencies ||
+                    flag(project, "unimined.forceReload") ||
+                    flag(project, "unimined.refreshDownloads"),
+            metadataTtl = project.providers
+                .gradleProperty("unimined.metadataCacheTtl").orNull
+                ?.let(Duration::parse) ?: Duration.ofHours(24),
+        )
+        return FoxLoaderVersionMap.parse(
+            downloader
+                .fetchMetadata(FoxLoaderVersionMap.MAP_URL, "foxloader-version-map.json")
+                .toFile().readText()
+        )
+    }
+
+    private fun flag(project: Project, name: String): Boolean =
+        project.providers.gradleProperty(name).orNull?.toBoolean() == true
 
     /**
      * Products declaring `extraLibraries` shade copies of those deps

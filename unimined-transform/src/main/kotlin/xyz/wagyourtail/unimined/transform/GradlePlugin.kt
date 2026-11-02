@@ -33,15 +33,7 @@ class GradlePlugin : Plugin<Project> {
                         val spec = environment.loaderSpec.orNull ?: continue
                         val descriptor = LoaderRegistry.resolveBuiltin(spec.name) ?: continue
                         val product = environment.product.get()
-                        val supported = descriptor.supportedProducts
-                            ?.any {
-                                it == "*" || it == product ||
-                                        product.startsWith("$it:")
-                            }
-                            ?: (product ==
-                                    xyz.wagyourtail.unimined.api.spec
-                                        .ProductSpec.PRODUCT_NATIVE)
-                        if (!supported) {
+                        if (!descriptor.supportsProduct(product)) {
                             throw org.gradle.api.GradleException(
                                 "unimined: loader '${spec.name}' does not " +
                                         "support product '$product' " +

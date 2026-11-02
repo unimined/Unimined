@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform.loader
 
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
+
 /**
  * A modloader product, as data — replaces 1.x's product-subclass
  * hierarchy (`FabricLike`/`Quilt`/`Babric`; `ForgeLike`/`NeoForged`/
@@ -93,7 +95,24 @@ data class LoaderDescriptor(
      *  transform→minecraft dependency.) */
     val wiringVariant: String? = null,
 
-    )
+    ) {
+
+    /**
+     * Whether this loader supports [product] — the env-binding check
+     * 2.0 runs once per environment. Match order:
+     * `*` (any product) → exact product id → scope prefix (`custom`
+     * accepts `custom:<name>`, `minecraft` accepts `minecraft:*`).
+     * A `null` [supportedProducts] accepts only the native product.
+     */
+    fun supportsProduct(product: String): Boolean =
+        supportedProducts
+            ?.any {
+                it == "*" || it == product ||
+                        product.startsWith("$it:")
+            }
+            ?: (product == ProductSpec.PRODUCT_NATIVE)
+
+}
 
 /** Loader-declared access-file (AW/CT/AT) discovery mechanisms. */
 enum class AccessDiscovery {

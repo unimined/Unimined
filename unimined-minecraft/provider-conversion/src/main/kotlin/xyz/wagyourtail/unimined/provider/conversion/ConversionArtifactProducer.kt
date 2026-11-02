@@ -105,12 +105,16 @@ class ConversionArtifactProducer : ProductArtifactProducer {
                     ref.sha1?.lowercase()
                 )
             }
-            val url = (if (side == Side.CLIENT) product.clientUrl
-            else product.serverUrl)?.invoke(version)
-                ?: throw IllegalStateException(
-                    "conversion '${loader}' has no $key artifact for $version"
-                )
-            return downloader.fetch(url, "${loader}/$version/$key.jar")
+            val templates = if (side == Side.CLIENT) product.clientUrls
+            else product.serverUrls
+            if (templates.isEmpty()) throw IllegalStateException(
+                "conversion '${loader}' has no $key artifact for $version"
+            )
+            return fetchFirstOf(
+                downloader,
+                templates.map { it(version) },
+                "${loader}/$version/$key.jar"
+            )
         }
 
         // declared extraLibraries mean "replace the shaded copies" —
@@ -199,4 +203,34 @@ internal fun verifySha256(
                     "expected $sha256, got $actual"
         )
     }
+}
+
+/**
+ * Fetch the first candidate URL that resolves — dist products can
+ * list multiple URL templates (`reindev` renamed its artifact scheme
+ * mid-line). Cache key is shared: the first hit pins the artifact.
+ * Interrupts propagate; other failures fall through to the next
+ * candidate, and an all-miss failure names every URL tried.
+ */
+internal fun fetchFirstOf(
+    downloader: Downloader,
+    urls: List<String>,
+    cacheName: String
+): Path {
+    var last: Exception? = null
+    for (url in urls) {
+        try {
+            return downloader.fetch(url, cacheName)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw e
+        } catch (e: Exception) {
+            last = e
+        }
+    }
+    throw IllegalStateException(
+        "no candidate resolved for $cacheName — tried: " +
+                urls.joinToString(),
+        last
+    )
 }
