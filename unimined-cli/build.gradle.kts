@@ -12,6 +12,10 @@ kotlin {
             }
         }
     }
+    js {
+        nodejs()
+        binaries.executable()
+    }
 
     sourceSets {
         commonMain.dependencies {

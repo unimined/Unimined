@@ -51,4 +51,4 @@ actual fun userHome(): String = System.getProperty("user.home")
 actual fun cwd(): String =
     NioPath.of("").toAbsolutePath().toString()
 
-
+internal actual val fileSystem: FileSystem get() = FileSystem.SYSTEM

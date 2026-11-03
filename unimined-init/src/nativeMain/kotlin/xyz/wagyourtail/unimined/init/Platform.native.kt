@@ -43,3 +43,5 @@ actual fun userHome(): String =
 
 actual fun cwd(): String =
     FileSystem.SYSTEM.canonicalize(".".toPath()).toString()
+
+internal actual val fileSystem: FileSystem get() = FileSystem.SYSTEM

@@ -56,6 +56,9 @@ val genTemplateFiles by tasks.registering {
 kotlin {
     jvm()
     linuxX64()
+    js {
+        nodejs()
+    }
 
     compilerOptions {
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
@@ -76,6 +79,9 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-java:3.0.3")
+        }
+        jsMain.dependencies {
+            implementation("com.squareup.okio:okio-nodefilesystem:3.10.2")
         }
         linuxX64Main.dependencies {
             implementation("io.ktor:ktor-client-curl:3.0.3")

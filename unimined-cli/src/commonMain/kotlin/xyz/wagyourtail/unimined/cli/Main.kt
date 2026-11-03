@@ -151,7 +151,7 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
 
         val o = out ?: defaultOut
         val written = ProjectGenerator.generate(spec, o, overwrite)
-        echo("generated ${'$'}{written.size} files in ${'$'}{Io.resolve(o)}")
+        echo("generated ${written.size} files in ${Io.resolve(o)}")
     }
 }
 
@@ -170,5 +170,5 @@ class Init : Generate("init") {
     override val overwrite get() = true
 }
 
-fun main(args: Array<String>) =
+fun cliMain(args: Array<String>) =
     Cli().subcommands(New(), Init()).main(args)
