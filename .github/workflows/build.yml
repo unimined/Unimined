@@ -30,14 +30,10 @@ jobs:
       - name: Package templates
         run: ./gradlew packageTemplates
 
-      - uses: JasonEtco/upload-to-release@v0.1.1
-        with:
-          args: ./build/distributions/unimined-templates.zip application/zip
+      - name: Attach release artifacts
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            ./build/distributions/unimined-templates.zip \
+            "./unimined-cli/build/libs/unimined-cli-${{ github.event.release.tag_name }}-fat.jar"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: JasonEtco/upload-to-release@v0.1.1
-        with:
-          args: ./unimined-cli/build/libs/unimined-cli-${{ github.event.release.tag_name }}-fat.jar application/java-archive
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
