@@ -118,8 +118,8 @@ class VersionResolver(
 
     /** Latest published unimined plugin version. */
     fun latestPlugin(): String = runCatching {
-        mavenVersions(UNIMINED_PLUGIN_METADATA, null).firstOrNull()
-            ?: error("no versions in $UNIMINED_PLUGIN_METADATA")
+        VersionProbe.mavenVersions(fetchBody, PLUGIN_META, null).firstOrNull()
+            ?: error("no versions in $PLUGIN_META")
     }.getOrElse { baked("@plugin") ?: throw it }
 
     /** All `<key>.version` entries — fabric-meta order (newest-first). */
@@ -156,27 +156,8 @@ class VersionResolver(
         private fun httpGetString(url: String): String =
             httpGet(url).decodeToString()
 
-        val PISTON_META =
-            "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-        val BABRIC_MAVEN =
-            "https://maven.glass-launcher.net/releases/babric/fabric-loader/maven-metadata.xml"
-        val FOXLOADER_MAVEN =
-            "https://cdn.fox2code.com/maven/com/fox2code/FoxLoader/loader/maven-metadata.xml"
-        val STATION_MAVEN =
-            "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml"
-        val OSL_MAVEN =
-            "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml"
-        val BTA_MAVEN =
-            "https://maven.glass-launcher.net/releases/com/github/bta/bta/maven-metadata.xml"
-        val REINDEV_MAVEN =
-            "https://maven.glass-launcher.net/releases/com/github/reindev/reindev/maven-metadata.xml"
-        val FORGE_MAVEN =
-            "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"
-        val NEOFORGE_MAVEN =
-            "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
-        val QUILT_MAVEN =
-            "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/maven-metadata.xml"
-        val UNIMINED_PLUGIN_METADATA =
+        val PISTON_META = VersionProbe.PISTON_META
+        val PLUGIN_META =
             "https://maven.wagyourtail.xyz/releases/xyz/wagyourtail/unimined/unimined/xyz.wagyourtail.unimined.gradle.plugin/maven-metadata.xml"
 
         /** `{"release": "x.y.z"}`-style field extraction. */
