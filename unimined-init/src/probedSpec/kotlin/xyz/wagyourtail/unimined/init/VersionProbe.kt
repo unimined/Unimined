@@ -79,7 +79,7 @@ sealed interface VersionProbe {
     class Const(val key: String, vararg val vs: String) : VersionProbe {
         override fun run(fetch: (String) -> String,
                          p: MutableMap<String, List<String>>) {
-            p.putIfAbsent(key, vs.toList())
+            if (key !in p) p[key] = vs.toList()
         }
     }
 
