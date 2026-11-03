@@ -1,3 +1,0 @@
-version = "@@MC_VERSION@@"
-@@LOADER_LINES@@
-@@MAPPINGS@@
