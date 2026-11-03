@@ -1,104 +1,28 @@
-> **1.x docs** — this page predates the 2.0 modular rewrite;
-> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
-> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
-
 # Modloaders
 
-## Unimined supports many modloaders
+Unimined supports many modloaders — declared per-environment with
+`loader("<name>", "<version>")` inside a `minecraft { }` env:
 
-this list may not always be up-to-date.
-for the most up-to-date list,
-see [the api code](https://unimined.wagyourtail.xyz/unimined/{{ plugin_version }}/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft/-patch-providers/index.html).
-
-- minecraftForge
-- neoForged
-- cleanroom
-- flint
-- fabric
-- quilt
-- rift
-- foxloader
-- liteloader
-- craftbukkit
-- spigot
-- paper
-
-### it also supports several *pseudo* modloaders:
-
-- jarmod
-- accessTransformer
-- accessWidener
-
-## Usage
-
-Modloaders are used in their own block of the `unimined.minecraft` block in your `build.gradle` file.
-=== "Groovy"
-
-    ```groovy
-
-    unimined.minecraft {
-        ...
-        minecraftForge {
-            loader project.forgeVersion
-        }
-        ...
+```kotlin
+unimined {
+    minecraft {
+        loader("fabric", "0.16.0")
+        loader("forge", "47.2.0") // repeat = multiloader env
     }
-    ```
+}
+```
 
-=== "Kotlin"
+Names come from the loader registry: `fabric`, `quilt`, `forge`,
+`neoforge`, `cleanroom`, `flint`, `rift`, `foxloader`, `liteloader`,
+`craftbukkit`, `spigot`, `paper`, plus era loaders like `fg1` and
+pseudo-loaders `jarmod`, `accessTransformer`, `accessWidener`.
 
-    ```kotlin
+Non-native products nest their loader inside the product env —
+`unimined { bta { loader("bta-babric", "…") } }`,
+`reindev { loader("foxloader", "…") }`.
 
-    val forgeVersion: String by extra
+Loader "api" artifacts resolve via `unimined.loaderApi(name, v)` /
+`loaderApiModule(name, module, v)` — fabric-api, qsl, stationapi, osl —
+which also records the api modid into `mod { depends }`.
 
-    unimined.minecraft {
-        ...
-        minecraftForge {
-            loader(forgeVersion)
-        }
-        ...
-    }
-    ```
-
-
-for legacy reasons, the version number is almost always provided in a field named "loader".
-
-### AccessTransformer/AccessWidener
-
-you can provide an access transformer or access widener to be applied to the minecraft jar if the selected
-
-=== "Groovy"
-
-    ```groovy
-    unimined.minecraft {
-        ...
-        fabric {
-            ...
-            accessWidener "src/main/resources/modid.accesswidener"
-        }
-        ...
-    }
-    ```
-
-=== "Kotlin"
-
-    ```kotlin
-
-    unimined.minecraft {
-        ...
-        fabric {
-            ...
-            accessWidener("src/main/resources/modid.accesswidener")
-        }
-        ...
-    }
-    ```
-
-
-## Custom Modloaders
-
-you can create a custom modloader by implementing
-the [MinecraftPatcher](https://unimined.wagyourtail.xyz/unimined/{{ plugin_version }}/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch/-minecraft-patcher/index.html)
-interface.
-For example, this is done
-by [Prcraft](https://github.com/prcraft-minecraft/PrcraftExampleMod/blob/main/buildSrc/src/main/kotlin/xyz/wagyourtail/unimined/minecraft/patch/prcraft/PrcraftMinecraftTransformer.kt)
+For the most up-to-date registry, see the loader spec source.

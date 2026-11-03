@@ -1,52 +1,22 @@
-> **1.x docs** — this page predates the 2.0 modular rewrite;
-> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
-> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
+# Run configurations
 
-# Run Config
+`runs { }` is a top-level block in 2.0 (it moved out of
+`unimined { }`). Each registered run gets a Gradle task + an IDE run
+config:
 
-unimined provides a runServer and runClient task for each sourceSet by default.
-they extend the [`JavaExec`](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.JavaExec.html) gradle task type.
-
-you can configure/disable these as follows:
-
-=== "Groovy"
-
-    ```groovy
-
-    unimined.minecraft {
-        ...
-        runs {
-            off = true // disable all run configurations
-            config("client") {
-               disabled = true // disable the runClient task
-
-                javaVersion = JavaVersion.VERSION_1_8 // change the java version
-                args += "--my-arg" // add an argument to the runClient task
-            }
-        }
+```kotlin
+runs {
+    create("client") {
+        mainClass = "net.minecraft.client.main.Main"
+        jvmArgs += "-Xmx2G"
+        programArgs += "--accessToken=0"
     }
-
-    ```
-
-=== "Kotlin"
-
-    ```kotlin
-
-    unimined.minecraft {
-        ...
-        runs {
-            off = true // disable all run configurations
-            config("client") {
-               disabled = true // disable the runClient task
-
-                javaVersion = JavaVersion.VERSION_1_8 // change the java version
-                args.add("--my-arg") // add an argument to the runClient task
-            }
-        }
+    create("server") {
+        mainClass = "net.minecraft.server.Main"
     }
+}
+```
 
-    ```
-
-
-for more details on what can be changed in the run configurations,
-see [RunConfig](https://unimined.wagyourtail.xyz/unimined/{{ plugin_version }}/api-docs/unimined/xyz.wagyourtail.unimined.api.runs/-run-config/index.html)
+Envs produce run tasks automatically from their loader's defaults;
+`create(name) { }` adds custom ones. `autoStop` and other boot-time
+options live on the run config.
