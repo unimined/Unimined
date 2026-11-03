@@ -73,7 +73,7 @@ class VersionResolverTest {
             <version>1.20.1-47.1.0</version>
             <version>1.20.1-47.2.0</version>
             </versions><latest>1.20.1-47.2.0</latest></versioning></metadata>"""
-        val r = resolver(mapOf(VersionResolver.FORGE_MAVEN.toString() to xml))
+        val r = resolver(mapOf(VersionProbe.FORGE_MAVEN.toString() to xml))
         assertEquals("1.20.1-47.2.0", r.latestLoader("forge", "1.20.1"))
     }
 
@@ -82,7 +82,7 @@ class VersionResolverTest {
         val xml = """<metadata><versioning><versions>
             <version>20.4.1-beta</version><version>21.0.0-beta</version>
             </versions><latest>21.0.0-beta</latest></versioning></metadata>"""
-        val r = resolver(mapOf(VersionResolver.NEOFORGE_MAVEN.toString() to xml))
+        val r = resolver(mapOf(VersionProbe.NEOFORGE_MAVEN.toString() to xml))
         assertEquals("21.0.0-beta", r.latestLoader("neoforge", "x"))
     }
 

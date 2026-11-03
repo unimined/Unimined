@@ -86,6 +86,10 @@ sealed interface VersionProbe {
     companion object {
         const val PISTON_META =
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+        const val FORGE_MAVEN =
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"
+        const val NEOFORGE_MAVEN =
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
 
         /** maven-metadata newest-first versions ([prefix] scopes e.g. forge mc). */
         fun mavenVersions(fetch: (String) -> String, url: String,
@@ -160,10 +164,8 @@ val PROBES: List<VersionProbe> = listOf(
 val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = mapOf(
     "fabric" to { f, mc -> VersionProbe.fabricMetaVersions(f, "loader", mc, "loader") },
     "yarn" to { f, mc -> VersionProbe.fabricMetaFlat(f, "yarn", mc) },
-    "forge" to { f, mc -> VersionProbe.mavenVersions(f,
-        "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml", mc) },
-    "neoforge" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml", null) },
+    "forge" to { f, mc -> VersionProbe.mavenVersions(f, VersionProbe.FORGE_MAVEN, mc) },
+    "neoforge" to { f, _ -> VersionProbe.mavenVersions(f, VersionProbe.NEOFORGE_MAVEN, null) },
     "quilt" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/maven-metadata.xml", null) },
     "quilt-mappings" to { f, _ -> VersionProbe.mavenVersions(f,
