@@ -114,7 +114,9 @@ tasks.register<JavaExec>("genDocSnippets") {
  *  task action so there's no cycle on the project classpath; every
  *  rebuild re-probes, so dead mappings still pick up updates. */
 val probedDir = layout.buildDirectory.dir("generated/probed")
+val probedOutFile = probedDir.get().asFile
 tasks.register("genProbedVersions") {
+    notCompatibleWithConfigurationCache("live network probe + script-closure locals")
     outputs.dir(probedDir)
     doLast {
         fun http(u: String) = URI(u).toURL().openConnection().run {
@@ -136,8 +138,9 @@ tasks.register("genProbedVersions") {
                 .findAll(http("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"))
                 .map { it.groupValues[1] }.toList()
         }.getOrDefault(emptyList())
-        p["@plugin"] = mavenVers(
-            "https://maven.wagyourtail.xyz/snapshots/xyz/wagyourtail/unimined/unimined/xyz.wagyourtail.unimined.gradle.plugin/maven-metadata.xml")
+        p["@plugin"] = runCatching {
+            mavenVers("https://maven.wagyourtail.xyz/releases/xyz/wagyourtail/unimined/unimined/xyz.wagyourtail.unimined.gradle.plugin/maven-metadata.xml")
+        }.getOrDefault(emptyList())
         for ((kind, key) in listOf("yarn" to "yarn", "loader" to "fabric"))
             runCatching { fabricAll(kind) }.getOrDefault(emptyMap())
                 .forEach { (mc, vs) -> p["$key:$mc"] = vs }
@@ -152,7 +155,7 @@ tasks.register("genProbedVersions") {
         }.getOrDefault(emptyList())
         p["mcp:1.7.10"] = listOf("stable_12")
         p["mcp:1.12.2"] = listOf("stable_39")
-        val f = probedDir.get().asFile.resolve("ProbedVersions.kt")
+        val f = probedOutFile.resolve("ProbedVersions.kt")
         f.parentFile.mkdirs()
         f.writeText(buildString {
             appendLine("package xyz.wagyourtail.unimined.init")
