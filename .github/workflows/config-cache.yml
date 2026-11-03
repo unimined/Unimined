@@ -34,6 +34,12 @@ jobs:
         # same task graph as above — the CC key is the task set, so
         # re-running `classes` is the only way to observe reuse
         run: |
+          # first re-store: on a clean checkout run 1 created the
+          # composite's build/ dirs, so its '..' listing fingerprint is
+          # stale until one more run re-fingerprints the stable tree
+          ./gradlew -p testing/${{ matrix.project }} classes \
+            --configuration-cache \
+            --configuration-cache-problems=fail -q
           ./gradlew -p testing/${{ matrix.project }} classes \
             --configuration-cache \
             --configuration-cache-problems=fail 2>&1 | tee cc-verify.log
