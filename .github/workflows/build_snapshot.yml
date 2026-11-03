@@ -21,10 +21,19 @@ jobs:
       - name: Publish
         run: ./gradlew publish :unimined-cli:linkReleaseExecutableLinuxX64 -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
 
+      - name: Package node cli dist
+        run: |
+          ./gradlew :unimined-cli:jsProductionExecutableCompileSync
+          cd unimined-cli/build/compileSync/js/main/productionExecutable/kotlin
+          zip -qr "$GITHUB_WORKSPACE/unimined-cli-node.zip" .
+
       - uses: actions/upload-artifact@v4
         with:
           name: unimined-snapshot-artifacts
-          path: '**/build/libs/'
+          path: |
+            '**/build/libs/'
+            unimined-cli-node.zip
+            unimined-cli/build/bin/linuxX64/releaseExecutable/
 
       - uses: actions/upload-artifact@v4
         with:

@@ -30,10 +30,17 @@ jobs:
       - name: Package templates
         run: ./gradlew packageTemplates
 
+      - name: Package node cli dist
+        run: |
+          ./gradlew :unimined-cli:jsProductionExecutableCompileSync
+          cd unimined-cli/build/compileSync/js/main/productionExecutable/kotlin
+          zip -qr "$GITHUB_WORKSPACE/unimined-cli-node.zip" .
+
       - name: Attach release artifacts
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            "./unimined-cli/build/bin/linuxX64/releaseExecutable/unimined-cli.kexe"
+            "./unimined-cli/build/bin/linuxX64/releaseExecutable/unimined-cli.kexe" \
+            "./unimined-cli-node.zip"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
