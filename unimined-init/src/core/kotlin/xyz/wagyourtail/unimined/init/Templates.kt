@@ -54,8 +54,30 @@ internal object Templates {
                 }
             }.distinct()
 
+    /** `includeBuild` line for composite resolution (empty when absent). */
+    private fun inclBuild(spec: InitSpec): String =
+        spec.includeBuild?.let { "    includeBuild(\"$it\")\n" } ?: ""
+
+    /** Plugin declaration — versionless when a composite supplies it. */
+    private fun pluginDecl(spec: InitSpec): String {
+        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
+        val base = if (kts) "id(\"xyz.wagyourtail.unimined\")"
+            else "id 'xyz.wagyourtail.unimined'"
+        return if (spec.includeBuild != null) base
+            else base + (if (kts) " version \"${spec.pluginVersion}\""
+                else " version '${spec.pluginVersion}'")
+    }
+
+    /** `java { toolchain }` pin (empty when unset). */
+    private fun toolchainBlock(spec: InitSpec): String =
+        spec.toolchain?.let { """java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of($it))
+}
+""" } ?: ""
+
     /** `settings.gradle(.kts)` — plugin + dependency repositories. */
     fun settings(spec: InitSpec): String = render("settings.gradle", mapOf(
+        "INCL_BUILD" to inclBuild(spec),
         "DEP_REPOS" to loaderRepos(spec).joinToString("\n") {
             "        maven(\"$it\")"
         },
@@ -108,11 +130,8 @@ internal object Templates {
     fun build(spec: InitSpec): String {
         val kts = spec.dsl == InitSpec.Dsl.KOTLIN
         return render("build.gradle", mapOf(
-            "PLUGIN_DECL" to if (kts) {
-                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
-            } else {
-                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
-            },
+            "PLUGIN_DECL" to pluginDecl(spec),
+            "TOOLCHAIN" to toolchainBlock(spec),
             "REPOS" to loaderRepos(spec).joinToString("\n") {
                 "    maven(\"$it\")"
             },
@@ -143,6 +162,7 @@ internal object Templates {
     /** Root `settings.gradle` for MULTILOADER — `include()`s every module. */
     fun multiloaderSettings(spec: InitSpec): String =
         render("multiloader/settings.gradle", mapOf(
+            "INCL_BUILD" to inclBuild(spec),
             "DEP_REPOS" to loaderRepos(spec).joinToString("\n") {
                 "        maven(\"$it\")"
             },
@@ -158,13 +178,9 @@ internal object Templates {
      * their env plus a dependency on `:common`.
      */
     fun multiloaderModule(spec: InitSpec, loader: String?): String {
-        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
         return render("multiloader/module.gradle", mapOf(
-            "PLUGIN_DECL" to if (kts) {
-                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
-            } else {
-                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
-            },
+            "PLUGIN_DECL" to pluginDecl(spec),
+            "TOOLCHAIN" to toolchainBlock(spec),
             "REPOS" to loaderRepos(spec).joinToString("\n") {
                 "    maven(\"$it\")"
             },
@@ -222,16 +238,12 @@ internal object Templates {
     /** `build.gradle` for CUSTOM_PRODUCT — product env instead of
      *  the minecraft block. */
     fun buildProduct(spec: InitSpec): String {
-        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
         return render("build-product.gradle", mapOf(
-            "PLUGIN_DECL" to if (kts) {
-                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
-            } else {
-                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
-            },
+            "PLUGIN_DECL" to pluginDecl(spec),
             "REPOS" to loaderRepos(spec).joinToString("\n") {
                 "    maven(\"$it\")"
             },
+            "TOOLCHAIN" to toolchainBlock(spec),
             "ENV" to productEnv(spec).indented("    "),
             "MOD_BLOCK" to modBlock(spec),
             "EXTRAS" to extras(spec),

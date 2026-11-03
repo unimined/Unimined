@@ -13,7 +13,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [vanilla-mojmap, fabric-yarn, forge-fg2]
+        include:
+          # generated via unimined-cli — checked-in fixtures only
+          # remain for shapes the generator can't emit yet (FG2)
+          - { project: fabric-yarn, gen: '--version 1.20.1 --loader fabric=0.16.0 --mappings "yarn(10)" --toolchain 17' }
+          - { project: vanilla-mojmap, gen: '--version 1.20.1 --mappings "mojmap()" --toolchain 17' }
+          - { project: forge-fg2, gen: '' }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -24,6 +29,14 @@ jobs:
           java-version: |
             8
             17
+      - name: build CLI jar + generate fixture
+        if: matrix.gen != ''
+        run: |
+          ./gradlew :unimined-cli:fatJar -q
+          java -jar unimined-cli/build/libs/unimined-cli-*-fat.jar \
+            new ${{ matrix.project }} --group com.example ${{ matrix.gen }} \
+            --include-build ../.. --no-wrapper \
+            --out testing/${{ matrix.project }}
       - name: configure + build under strict config-cache
         run: |
           ./gradlew -p testing/${{ matrix.project }} classes \

@@ -67,6 +67,19 @@ data class InitSpec(
      * produce one jar per side when [jarmod] is set and this is true.
      */
     val splitJars: Boolean = true,
+    /** Skip emitting gradlew/wrapper files entirely (generated
+     *  fixtures that run under a parent build's wrapper). */
+    val noWrapper: Boolean = false,
+    /**
+     * `includeBuild("...")` path emitted in `pluginManagement` —
+     * the project resolves the plugin from a composite build, so
+     * the plugin declaration drops its version.
+     */
+    val includeBuild: String? = null,
+    /** Java toolchain pin emitted as `java { toolchain }` — fixture
+     *  builds pin the toolchain to keep bytecode parseable by old
+     *  loader ASM versions. */
+    val toolchain: Int? = null,
 ) {
 
     enum class Dsl(val scriptSuffix: String) {

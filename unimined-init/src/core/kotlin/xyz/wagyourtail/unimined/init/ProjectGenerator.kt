@@ -67,12 +67,14 @@ object ProjectGenerator {
             }
             put("gradle.properties", Render.Text(Templates.gradleProperties(spec)))
             put(".gitignore", Render.Text(Templates.gitignore))
-            put("gradlew", Render.Resource("/templates/gradlew", executable = true))
-            put("gradlew.bat", Render.Resource("/templates/gradlew.bat"))
-            put("gradle/wrapper/gradle-wrapper.properties",
-                Render.Text(Templates.wrapperProperties(spec)))
-            put("gradle/wrapper/gradle-wrapper.jar",
-                Render.Resource("/templates/gradle-wrapper.jar"))
+            if (!spec.noWrapper) {
+                put("gradlew", Render.Resource("/templates/gradlew", executable = true))
+                put("gradlew.bat", Render.Resource("/templates/gradlew.bat"))
+                put("gradle/wrapper/gradle-wrapper.properties",
+                    Render.Text(Templates.wrapperProperties(spec)))
+                put("gradle/wrapper/gradle-wrapper.jar",
+                    Render.Resource("/templates/gradle-wrapper.jar"))
+            }
 
             // multi-loader emits the §10 per-source-set layout —
             // src/<loader>/{java,resources} bound via sourceSet("<loader>")
@@ -216,7 +218,7 @@ object ProjectGenerator {
         }
         // wrapper: download the real files for the target version,
         // bundled resources are the offline fallback
-        val downloaded = try {
+        val downloaded = !spec.noWrapper && try {
             wrapperDownloader(spec.wrapperGradleVersion, outDir); true
         } catch (e: Exception) {
             false

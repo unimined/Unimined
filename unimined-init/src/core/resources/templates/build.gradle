@@ -3,6 +3,7 @@ plugins {
     @@PLUGIN_DECL@@
 }
 
+@@TOOLCHAIN@@
 repositories {
     mavenCentral()
 @@REPOS@@

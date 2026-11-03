@@ -35,6 +35,12 @@ options:
   --jarmod               JarModAgent transforms: client/server source
                          sets + per-side jars (modloadermp shape)
   --jars <split|merged>  jarmod jar sides (split default)
+  --no-wrapper           don't emit gradlew/wrapper (fixtures run
+                         under a parent build's wrapper)
+  --include-build <p>    emit includeBuild(p) in pluginManagement —
+                         plugin resolved from a composite (drops
+                         the plugin version)
+  --toolchain <n>        pin java { toolchain } to JDK n
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
@@ -50,7 +56,7 @@ unused).
 by unimined-mod's emitters — instead of static files (default).
 """
 
-private val BOOLS = setOf("--modules", "--jarmod")
+private val BOOLS = setOf("--modules", "--jarmod", "--no-wrapper")
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
@@ -131,7 +137,9 @@ private fun run(args: Array<String>) {
         loaders = loaders,
         mappings = flags["--mappings"].orEmpty(),
         dsl = if (one("--dsl") == "groovy") InitSpec.Dsl.GROOVY else InitSpec.Dsl.KOTLIN,
-        pluginVersion = (if (template != null) "" else need("--plugin-version"))
+        pluginVersion = (if (template != null) "" else
+            (one("--plugin-version") ?: if (one("--include-build") != null) ""
+                else need("--plugin-version")))
             .let { if (it == "latest") resolver.latestPlugin() else it },
         gradleVersion = one("--gradle"),
         templateName = template,
@@ -147,6 +155,9 @@ private fun run(args: Array<String>) {
         distFile = one("--dist"),
         jarmod = "--jarmod" in flags,
         splitJars = one("--jars") != "merged",
+        noWrapper = "--no-wrapper" in flags,
+        includeBuild = one("--include-build"),
+        toolchain = one("--toolchain")?.toInt(),
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

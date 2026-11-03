@@ -47,3 +47,7 @@ testing/**/.vscode
 testing/**/launch
 testing/**/remappedSrc
 !unimined-init/src/core/resources/templates/gradle-wrapper.jar
+
+# generated config-cache fixtures (regen via unimined-cli in CI)
+testing/fabric-yarn/
+testing/vanilla-mojmap/
