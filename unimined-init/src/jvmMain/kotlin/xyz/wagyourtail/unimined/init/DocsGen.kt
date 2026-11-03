@@ -1,8 +1,8 @@
 package xyz.wagyourtail.unimined.init
 
-/** Emits canonical 2.0 build snippets into `docs/generated/` — docs
- *  pages include them via `--8<--` so examples track the generator.
- *  `java DocsGen <outDir>` (Gradle task `genDocSnippets`). */
+/** Emits canonical 2.0 build snippets + registry tables into
+ *  `docs/generated/` — pages `--8<--` them in so docs track the
+ *  generator. `java DocsGen <outDir>` (task `genDocSnippets`). */
 fun main(args: Array<String>) {
     val out = args[0]
     fun put(name: String, s: String) =
@@ -17,17 +17,71 @@ fun main(args: Array<String>) {
     put("flat-fabric.gradle.kts", Templates.build(base))
     put("settings.gradle.kts", Templates.settings(base.copy(dsl = InitSpec.Dsl.KOTLIN)))
 
-    val multi = base.copy(loaders = listOf(
-        "fabric" to "0.16.0", "forge" to "47.2.0"),
+    // forge eras — same flag, different env shapes
+    for ((tag, mc) in listOf("170" to "1.7.10", "112" to "1.12.2", "modern" to "1.20.1")) {
+        put("flat-forge-$tag.gradle.kts", Templates.build(base.copy(
+            mcVersion = mc, loaders = listOf("forge" to if (mc == "1.7.10") "10.13.4.1614"
+            else if (mc == "1.12.2") "14.23.5.2860" else "47.2.0"),
+            mappings = listOf("official()"))))
+    }
+
+    val multi = base.copy(loaders = listOf("fabric" to "0.16.0", "forge" to "47.2.0"),
         layout = InitSpec.Layout.MULTILOADER)
     put("multiloader-settings.gradle.kts", Templates.settings(multi))
-    put("multiloader-fabric.gradle.kts",
-        Templates.multiloaderModule(multi, "fabric"))
+    put("multiloader-common.gradle.kts", Templates.multiloaderModule(multi, null))
+    put("multiloader-fabric.gradle.kts", Templates.multiloaderModule(multi, "fabric"))
+    put("multiloader-forge.gradle.kts", Templates.multiloaderModule(multi, "forge"))
 
     put("product-bta.gradle.kts", Templates.buildProduct(base.copy(
         mcVersion = "b1.7.3", loaders = listOf("bta-babric" to "1.7.6"),
         layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "bta")))
+    put("product-custom.gradle.kts", Templates.buildProduct(base.copy(
+        loaders = listOf("fabric" to "0.16.0"),
+        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "custom:mymodpack")))
+
+    put("side-server.gradle.kts", Templates.build(base.copy(
+        loaders = listOf("forge" to "47.2.0"), side = "server")))
+    put("jarmod.gradle.kts", Templates.build(base.copy(
+        mcVersion = "b1.7.3", loaders = emptyList(), jarmod = true)))
+    put("jars-split.gradle.kts", Templates.build(base.copy(splitJars = true)))
+    put("jars-merged.gradle.kts", Templates.build(base.copy(splitJars = false)))
 
     put("mod-metadata.gradle.kts", Templates.build(base.copy(
         metadataFromDsl = true)).substringAfter("unimined {"))
+
+    // registry tables — curated here (unimined-init can't see the
+    // frontend registries); flag drift in code review.
+    put("tables/loaders.md", """
+        |## Loader registry
+        |
+        || Loader | Notes |
+        ||---|---|
+        || `fabric` | Fabric Loader |
+        || `quilt` | Quilt loader |
+        || `forge` | era-aware — FG1-era ≤1.7.10, 1.8–1.12, modern ≥1.13 |
+        || `neoforge` | |
+        || `cleanroom` | CleanroomMC |
+        || `flint` | |
+        || `rift` | |
+        || `foxloader` | ReIndev's loader |
+        || `liteloader` | |
+        || `craftbukkit`, `spigot`, `paper` | server-side |
+        || `fg1` | ForgeGradle 1 |
+        || `jarmod` | pseudo-loader — jar-injected mods |
+        || `accessTransformer`, `accessWidener` | transform-only |
+        |""")
+
+    put("tables/api-providers.md", """
+        |## `loaderApi` providers
+        |
+        || Name | Artifact | depends modid |
+        ||---|---|---|
+        || `fabric` | `net.fabricmc.fabric-api:fabric-api` | `fabric-api` |
+        || `quilt` | `org.quiltmc.quilted-fabric-api:quilted-fabric-api` | `qfab` |
+        || `qsl` | `org.quiltmc:qsl` | `qsl` |
+        || `legacyfabric` | `net.legacyfabric.legacy-fabric-api:legacy-fabric-api` | `legacy-fabric-api` |
+        || `stationapi` | `net.modificationstation:StationAPI` (releases) | `stationapi` |
+        || `stationapi-snapshots` | `net.modificationstation:StationAPI` (snapshots) | `stationapi` |
+        || `osl` | `net.ornithemc:osl` — per-MC modules via meta.ornithemc.net | `osl` |
+        |""")
 }

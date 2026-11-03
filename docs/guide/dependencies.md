@@ -1,20 +1,27 @@
-# Standard Libraries
+# Dependencies
 
-Loader "api" artifacts resolve through `unimined.loaderApi(...)` —
-the 2.0 port of 1.x's `FabricLikeApiExtension` (`unimined.fabricApi`,
-`quiltFabric`, `station`, `osl`, …):
+## Mod dependencies (artifacts)
+
+Each env exposes `mod*` configurations scoped to its source set —
+mod jars land remapped onto your mappings:
 
 ```kotlin
 dependencies {
-    // whole api bundle → dependency coordinates
-    modImplementation(unimined.loaderApi("fabric", "0.92.2+1.20.1"))
-    // one sub-module
-    modImplementation(unimined.loaderApiModule(
-        "fabric", "fabric-api-base", "0.92.2+1.20.1"))
+    modImplementation("maven:coord")
+    modCompileOnly("maven:coord")
+    modLocalRuntime("maven:coord")
 }
 ```
 
-Registered providers: `fabric`, `quilt`, `qsl`, `legacyfabric`,
-`stationapi`/`stationapi-snapshots`, `osl` (Ornithe resolves
-per-MC-version modules via meta.ornithemc.net). Calling either helper
-also records the api's modid into `mod { depends }` automatically.
+## Loader apis
+
+`unimined.loaderApi(name, version)` resolves a loader's api artifact
+bundle; `loaderApiModule(name, module, version)` resolves one
+sub-module. Both also record the api modid into `mod { depends }`.
+
+--8<-- "generated/tables/api-providers.md"
+
+## Metadata-only dependencies
+
+`mod { depend("modid", "versionRange") }` declares runtime deps in the
+emitted mod metadata without touching the classpath.

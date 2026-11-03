@@ -1,18 +1,19 @@
-# Remapping
+# Remap Pipeline
 
-Mods you depend on are remapped onto your environment's mappings.
-Each `minecraft { }` env exposes `mod*` configurations scoped to its
-source set — `modImplementation`, `modCompileOnly`, `modLocalRuntime`:
+`unimined { remap { } }` configures the remapping steps — the verbs are
+ordered pipeline steps applied to the MC jar and remapped mod deps:
 
 ```kotlin
-dependencies {
-    modImplementation("maven:coord")
-    // loader api helpers resolve the coordinate for you:
-    // modImplementation(unimined.loaderApi("fabric", "0.92.2+1.20.1"))
+unimined {
+    remap {
+        unpick("path/to.unpick")
+        applyClassTweaker { /* custom bytecode transform */ }
+        sourceRemap { /* UML source remapper — the default engine */ }
+        jst { /* explicit opt-in: Java Source Transform */ }
+    }
 }
 ```
 
-The remap pipeline itself is configured in `unimined { remap { } }` —
-step verbs like `unpick(...)`, `applyClassTweaker { }`, and
-`sourceRemap { }` (UML source remapper by default; `jst { }` is the
-explicit opt-in).
+Source remapping runs through UML's source remapper by default;
+`jst { }` remains as an explicit engine opt-in for verification or
+alternate-engine use.

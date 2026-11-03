@@ -1,28 +1,26 @@
-# Modloaders
+# Loaders
 
-Unimined supports many modloaders — declared per-environment with
-`loader("<name>", "<version>")` inside a `minecraft { }` env:
+Declare loaders per environment — `loader("<name>", "<version>")`,
+repeat for multiloader:
 
 ```kotlin
-unimined {
-    minecraft {
-        loader("fabric", "0.16.0")
-        loader("forge", "47.2.0") // repeat = multiloader env
-    }
+minecraft {
+    loader("fabric", "0.16.0")
+    loader("forge", "47.2.0")
 }
 ```
 
-Names come from the loader registry: `fabric`, `quilt`, `forge`,
-`neoforge`, `cleanroom`, `flint`, `rift`, `foxloader`, `liteloader`,
-`craftbukkit`, `spigot`, `paper`, plus era loaders like `fg1` and
-pseudo-loaders `jarmod`, `accessTransformer`, `accessWidener`.
+Loader names resolve through the loader registry:
 
-Non-native products nest their loader inside the product env —
-`unimined { bta { loader("bta-babric", "…") } }`,
-`reindev { loader("foxloader", "…") }`.
+--8<-- "generated/tables/loaders.md"
 
-Loader "api" artifacts resolve via `unimined.loaderApi(name, v)` /
-`loaderApiModule(name, module, v)` — fabric-api, qsl, stationapi, osl —
-which also records the api modid into `mod { depends }`.
+- **Forge is era-aware** — `loader("forge", …)` emits FG1-era wiring on
+  ≤1.7.10, FML-style on 1.8–1.12, and modern Forge ≥1.13
+  ([era examples](../generated/flat-forge-170.gradle.kts)).
+- **Pseudo-loaders** — `jarmod` injects into the MC jar itself
+  (see `--jarmod`/`--jars split|merged`); `accessTransformer`/
+  `accessWidener` are transform-only.
+- **Products nest loaders** — `bta { loader("bta-babric", …) }`.
 
-For the most up-to-date registry, see the loader spec source.
+Loader "api" artifacts resolve via `loaderApi` —
+see [Dependencies](dependencies.md).
