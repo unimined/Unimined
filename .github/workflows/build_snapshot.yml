@@ -19,7 +19,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Publish
-        run: ./gradlew publish :unimined-cli:fatJar -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
+        run: ./gradlew publish :unimined-cli:linkReleaseExecutableLinuxX64 -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
 
       - uses: actions/upload-artifact@v4
         with:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: unimined-cli-snapshot
-          path: 'unimined-cli/build/libs/*-fat.jar'
+          path: 'unimined-cli/build/bin/linuxX64/releaseExecutable/unimined-cli.kexe'
 
   templates:
     needs: [build]
@@ -60,7 +60,7 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - name: build the CLI jar
-        run: ./gradlew :unimined-cli:fatJar -q
+        run: ./gradlew :unimined-cli:linkReleaseExecutableLinuxX64 -q
       - name: materialize deploy key
         run: |
           printf '%s\n' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
@@ -79,7 +79,7 @@ jobs:
           GIT_SSH_COMMAND: ssh -i $RUNNER_TEMP/tmpl-key -o IdentitiesOnly=yes
       - name: generate
         run: |
-          java -jar unimined-cli/build/libs/unimined-cli-*-fat.jar init \
+          ./unimined-cli/build/bin/linuxX64/releaseExecutable/unimined-cli.kexe init \
             --group com.example --mc latest --plugin-version 2.0.0-SNAPSHOT \
             ${{ matrix.args }} --out tmpl --metadata dsl
       - name: push on diff

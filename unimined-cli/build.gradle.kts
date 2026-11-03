@@ -1,17 +1,26 @@
 plugins {
-    kotlin("jvm")
-    application
+    kotlin("multiplatform")
 }
 
-application {
-    mainClass.set("xyz.wagyourtail.unimined.cli.MainKt")
+kotlin {
+    jvm()
+    linuxX64 {
+        binaries {
+            executable {
+                baseName = "unimined-cli"
+                entryPoint = "xyz.wagyourtail.unimined.cli.main"
+            }
+        }
+    }
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":unimined-init"))
+        }
+    }
 }
 
-dependencies {
-    implementation(project(":unimined-init"))
-}
-
-// fat jar so `java -jar unimined-cli.jar new ...` works without Gradle
+// fat jar retained for JVM consumers (`java -jar unimined-cli.jar`)
 tasks.register<Jar>("fatJar") {
     archiveBaseName.set("unimined-cli")
     archiveClassifier.set("fat")
@@ -19,7 +28,8 @@ tasks.register<Jar>("fatJar") {
     manifest { attributes("Main-Class" to "xyz.wagyourtail.unimined.cli.MainKt") }
     // lazy provider loses the builtBy edge — depend on the configuration
     // so project-dep jars (unimined-init) build first
-    dependsOn(configurations.runtimeClasspath)
-    from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
-    from(sourceSets.main.get().output)
+    dependsOn(configurations.named("jvmRuntimeClasspath"))
+    from({ configurations.named("jvmRuntimeClasspath").get()
+        .map { if (it.isDirectory) it else zipTree(it) } })
+    from(kotlin.targets["jvm"].compilations["main"].output.allOutputs)
 }

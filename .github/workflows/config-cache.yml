@@ -32,8 +32,8 @@ jobs:
       - name: build CLI jar + generate fixture
         if: matrix.gen != ''
         run: |
-          ./gradlew :unimined-cli:fatJar -q
-          java -jar unimined-cli/build/libs/unimined-cli-*-fat.jar \
+          ./gradlew :unimined-cli:linkReleaseExecutableLinuxX64 -q
+          ./unimined-cli/build/bin/linuxX64/releaseExecutable/unimined-cli.kexe \
             new ${{ matrix.project }} --group com.example ${{ matrix.gen }} \
             --include-build ../.. --no-wrapper \
             --out testing/${{ matrix.project }}

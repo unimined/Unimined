@@ -11,7 +11,9 @@ plugins {
 subprojects {
     // mc-launcher is a Gradle-free KMP library — exempt from the
     // kotlin-jvm/java/commons conventions; it sets its own coords
-    if (name == "mc-launcher") return@subprojects
+    // unimined-init/-cli are KMP (jvm+native) — same exemption
+    if (name in setOf("mc-launcher", "unimined-init", "unimined-cli"))
+        return@subprojects
 
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "maven-publish")
