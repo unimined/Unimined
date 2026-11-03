@@ -40,7 +40,17 @@ jobs:
           - { mode: multiloader, args: "--modules --loader fabric=latest --loader forge=latest" }
           - { mode: forge,       args: "--loader forge=latest" }
           - { mode: fabric,      args: "--loader fabric=latest" }
-          - { mode: bta,         args: "--product bta" }
+          - { mode: bta-gen,     args: "--product bta" }
+          - { mode: bta,             args: '--product bta --version 7.3_04 --side MERGED --loader bta-babric=0.18.4-bta.11' }
+          - { mode: reindev,         args: '--product reindev --version 2.9_03 --side SERVER --loader foxloader=' }
+          - { mode: nsss,            args: '--product nsss --version 1.0 --side CLIENT --dist dist.jar' }
+          - { mode: jarmod,          args: '--version 1.20.1 --loader jarmod=0.1.5 --mappings "yarn(10)"' }
+          - { mode: fg1,             args: '--version 1.4.7 --loader fg1=0.1.5' }
+          - { mode: forge-125,       args: '--version 1.2.5 --side CLIENT --loader fg1=0.1.5 --mappings "mcp(\"legacy\", \"6.2-1.2.5\")"' }
+          - { mode: forge-mojmap,    args: '--version 1.20.1 --loader forge=47.3.0 --mappings "mojmap()"' }
+          - { mode: forge-yarn,      args: '--version 1.20.1 --loader forge=47.3.0 --mappings "intermediary()" --mappings "yarn(10)"' }
+          - { mode: fabric-mojmap,   args: '--version 1.20.1 --loader fabric=0.16.0 --mappings "mojmap()" --toolchain 17' }
+          - { mode: ornithe-b173,    args: '--version b1.7.3 --side MERGED --loader ornithe=0.19.5 --mappings "feather(2,2)" --mappings "nests(1)" --mappings "sparrow(2)" --var ornitheGenVersion=2' }
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

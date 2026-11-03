@@ -52,3 +52,14 @@ testing/**/remappedSrc
 testing/fabric-yarn/
 testing/vanilla-mojmap/
 testing/forge-fg2/
+testing/bta/
+testing/fabric-mojmap/
+testing/fg1/
+testing/forge-125/
+testing/forge-mojmap/
+testing/forge-yarn/
+testing/jarmod/
+testing/modloader/
+testing/nsss/
+testing/ornithe-b173/
+testing/reindev/
