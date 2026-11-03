@@ -1,0 +1,306 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>ProductArtifacts</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-minecraft/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-minecraft/main" data-filter=":unimined-minecraft/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-minecraft::xyz.wagyourtail.unimined.minecraft.spi/ProductArtifacts///PointingToDeclaration//-1355253599">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-minecraft</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.minecraft.spi</a><span class="delimiter">/</span><span class="current">ProductArtifacts</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Product</span><wbr><span><span>Artifacts</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">ProductArtifacts</a></div><p class="paragraph">The provider output contract — deliberately the <i>only</i> seam between <code class="lang-kotlin">unimined-minecraft</code> and provider internals. Everything downstream plugins consume arrives here as <code class="lang-kotlin">Provider</code>s, never raw files.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-143286069%2FProperties%2F-1355253599" anchor-label="artifacts" id="-143286069%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="artifacts.html"><span><span>artifacts</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-143286069%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="artifacts.html">artifacts</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-artifact-key/index.html">ArtifactKey</a><span class="token punctuation">, </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api.file/RegularFile///PointingToDeclaration/">RegularFile</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Resolved jars by role — client/server/merged, sources.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="453017899%2FProperties%2F-1355253599" anchor-label="assets" id="453017899%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="assets.html"><span><span>assets</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="453017899%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="assets.html">assets</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="../-asset-index/index.html">AssetIndex</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-755421325%2FProperties%2F-1355253599" anchor-label="auxiliaryArtifacts" id="-755421325%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="auxiliary-artifacts.html"><span>auxiliary</span><wbr><span><span>Artifacts</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-755421325%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="auxiliary-artifacts.html">auxiliaryArtifacts</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api.file/RegularFile///PointingToDeclaration/">RegularFile</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Provider/tool-specific named auxiliary outputs (e.g. NFRT result names).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-932363368%2FProperties%2F-1355253599" anchor-label="capabilities" id="-932363368%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="capabilities.html"><span><span>capabilities</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-932363368%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="capabilities.html">capabilities</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-environment-capabilities/index.html">EnvironmentCapabilities</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Effective environment feature data (versions, platform, toolchain).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1251827692%2FProperties%2F-1355253599" anchor-label="completedStages" id="1251827692%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="completed-stages.html"><span>completed</span><wbr><span><span>Stages</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1251827692%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="completed-stages.html">completedStages</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-artifact-key/index.html">ArtifactKey</a><span class="token punctuation">, </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-artifact-state-log/index.html">ArtifactStateLog</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Per-artifact ordered pipeline-state log — the pipeline prefix the provider already produced (e.g. a paperclip-patched server reports <code class="lang-kotlin">paperclip:binpatch</code> + <code class="lang-kotlin">paperclip:libraryExtract</code>). Steps gate on positional queries, never raw list membership. Empty when the provider emits raw unprocessed artifacts.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1661024055%2FProperties%2F-1355253599" anchor-label="extraCompileSources" id="1661024055%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="extra-compile-sources.html"><span>extra</span><wbr><span>Compile</span><wbr><span><span>Sources</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1661024055%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="extra-compile-sources.html">extraCompileSources</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/FileCollection///PointingToDeclaration/">FileCollection</span></div><div class="brief "><p class="paragraph">Provider-generated sources to add to the environment's compile inputs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="399884371%2FProperties%2F-1355253599" anchor-label="extraDependencies" id="399884371%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="extra-dependencies.html"><span>extra</span><wbr><span><span>Dependencies</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="399884371%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="extra-dependencies.html">extraDependencies</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/FileCollection///PointingToDeclaration/">FileCollection</span></div><div class="brief "><p class="paragraph">Replacement/runtime classpath deps contributed outside <a href="libraries.html">libraries</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-602052869%2FProperties%2F-1355253599" anchor-label="launch" id="-602052869%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="launch.html"><span><span>launch</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-602052869%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="launch.html">launch</a><span class="token operator">: </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-launch-metadata/index.html">LaunchMetadata</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Launch metadata for <code class="lang-kotlin">unimined-runs</code>, or <code class="lang-kotlin">null</code> if the provider cannot describe a launch for this environment.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1478296083%2FProperties%2F-1355253599" anchor-label="libraries" id="1478296083%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="libraries.html"><span><span>libraries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1478296083%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="libraries.html">libraries</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">MC runtime dependencies (libraries).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-110996151%2FProperties%2F-1355253599" anchor-label="mappings" id="-110996151%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mappings.html"><span><span>mappings</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-110996151%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="mappings.html">mappings</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="../../../unimined-mapping/xyz.wagyourtail.unimined.mapping/-mapping-tree/index.html">MappingTree</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Resolved mapping tree for remap specs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1678780626%2FProperties%2F-1355253599" anchor-label="namespaceMode" id="-1678780626%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="namespace-mode.html"><span>namespace</span><wbr><span><span>Mode</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1678780626%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="namespace-mode.html">namespaceMode</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-namespace-mode/index.html">NamespaceMode</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether the provider's source artifact requires a namespace-changing remap to serve the dev classpath. Combined with the resolved mapping tree's first/last namespaces this drives dev/prod view collapse.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1210737933%2FProperties%2F-1355253599" anchor-label="obfuscatedAuxArtifacts" id="1210737933%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="obfuscated-aux-artifacts.html"><span>obfuscated</span><wbr><span>Aux</span><wbr><span><span>Artifacts</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1210737933%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="obfuscated-aux-artifacts.html">obfuscatedAuxArtifacts</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api.file/RegularFile///PointingToDeclaration/">RegularFile</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Obfuscated Mojang artifact libraries flagged for the raw→dev artifact view — they remap alongside the MC jar instead of landing on the classpath in production namespace (issue #27, e.g. the Realms jar). The environment adds them to the raw artifact bucket so the artifact-transform chain carries them.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

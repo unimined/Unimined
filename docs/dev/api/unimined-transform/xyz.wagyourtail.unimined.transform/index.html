@@ -1,0 +1,381 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>xyz.wagyourtail.unimined.transform</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-transform/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-transform/main" data-filter=":unimined-transform/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="unimined-transform::xyz.wagyourtail.unimined.transform////PointingToDeclaration//-1569051040">
+  <div class="breadcrumbs"><a href="../index.html">unimined-transform</a><span class="delimiter">/</span><span class="current">xyz.wagyourtail.unimined.transform</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="256590552%2FClasslikes%2F-1569051040" anchor-label="BundledLibraryStripStepSpec" id="256590552%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-bundled-library-strip-step-spec/index.html"><span>Bundled</span><wbr><span>Library</span><wbr><span>Strip</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="256590552%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-bundled-library-strip-step-spec/index.html">BundledLibraryStripStepSpec</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/DevArtifactOnlyStepSpec///PointingToDeclaration/">DevArtifactOnlyStepSpec</span></div><div class="brief "><p class="paragraph">Spec for the <code class="lang-kotlin">strip-bundled-libraries</code> step: drops jar entries whose paths exist inside a resolved library jar — the membership strip <span data-unresolved-link="xyz.wagyourtail.unimined.minecraft.merge/BundledLibraryStrip///PointingToDeclaration/">BundledLibraryStrip</span> shares with xyz.wagyourtail.unimined.minecraft
+.merge.JarMerger's server-side rule, as a pipeline step on the environment's Minecraft artifact.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="706922553%2FClasslikes%2F-1569051040" anchor-label="BundledLibraryStripStepType" id="706922553%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-bundled-library-strip-step-type/index.html"><span>Bundled</span><wbr><span>Library</span><wbr><span>Strip</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="706922553%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-bundled-library-strip-step-type/index.html">BundledLibraryStripStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-bundled-library-strip-step-spec/index.html">BundledLibraryStripStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">unimined:strip-bundled-libraries</code> — applies <span data-unresolved-link="xyz.wagyourtail.unimined.minecraft.merge/BundledLibraryStrip///PointingToDeclaration/">BundledLibraryStrip</span> to the environment artifact. Namespace-agnostic (entry-name membership, not class content), so it needs no mappings, classpath, or access model.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1345237654%2FClasslikes%2F-1569051040" anchor-label="CustomTransformer" id="1345237654%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-custom-transformer/index.html"><span>Custom</span><wbr><span><span>Transformer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1345237654%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-custom-transformer/index.html">CustomTransformer</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../xyz.wagyourtail.unimined.transform.spi/-transformer-claim/-transformer-env-context/index.html">TransformerClaim.TransformerEnvContext</a></span></span><span class="token punctuation">)</span> : <a href="../xyz.wagyourtail.unimined.transform.spi/-minecraft-transformer/index.html">MinecraftTransformer</a></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">custom</code> — the declared-capabilities fallback transform. Claims an environment only when no bundled transform claims its loader <code class="lang-kotlin">family</code> (CustomTransformerClaim.fallbackClaim); its own task is a passthrough — all real work is the env's declared <code class="lang-kotlin">pipeline { }</code> steps (which ride the jar-processors channel) and <code class="lang-kotlin">features { }</code> bindings resolved through the env's FeatureRegistry.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="269261612%2FClasslikes%2F-1569051040" anchor-label="FeaturesSpec" id="269261612%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-features-spec/index.html"><span>Features</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="269261612%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-features-spec/index.html">FeaturesSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>registry<span class="token operator">: </span><a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">FeatureRegistry</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Declared capability bindings for an environment — <code class="lang-kotlin">features { }</code>. Typed values, not bare flags: <code class="lang-kotlin">nestedJars("jarjar")</code>, <code class="lang-kotlin">modDiscovery("dli")</code>, <code class="lang-kotlin">mixin</code> resolve through <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">FeatureRegistry</a>; unresolvable keys fail at selection, not silently.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="219119354%2FClasslikes%2F-1569051040" anchor-label="FunctionalStepSpec" id="219119354%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-functional-step-spec/index.html"><span>Functional</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="219119354%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-functional-step-spec/index.html">FunctionalStepSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>stepId<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>step<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.transform.step/TransformStep///PointingToDeclaration/">TransformStep</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>inputs<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/File.html">File</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyMap()</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span></div><div class="brief "><p class="paragraph">Spec for <a href="-functional-step-type/index.html">FunctionalStepType</a> — a declared pipeline step's functional jar-in/jar-out contribution. Built programmatically by the host wiring when bridging <span data-unresolved-link="xyz.wagyourtail.unimined.transform.step/PipelineStepSpec/transformSteps/#/PointingToDeclaration/">xyz.wagyourtail.unimined.transform.step.PipelineStepSpec.transformSteps</span> contributions onto <code class="lang-kotlin">contributeStep</code> — never via the <code class="lang-kotlin">step()</code> DSL, so it needs no <code class="lang-kotlin">objects.newInstance</code> shape.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="669451355%2FClasslikes%2F-1569051040" anchor-label="FunctionalStepType" id="669451355%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-functional-step-type/index.html"><span>Functional</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="669451355%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-functional-step-type/index.html">FunctionalStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-functional-step-spec/index.html">FunctionalStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">unimined:functional</code> — executes a <span data-unresolved-link="xyz.wagyourtail.unimined.transform.step/TransformStep///PointingToDeclaration/">TransformStep</span> contributed by a declared pipeline step inside the artifact pipeline. The generic escape hatch for work with no dedicated <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span>: merges, launchwrapper weaving, runtime remap-table generation.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="619838634%2FClasslikes%2F-1569051040" anchor-label="GradlePlugin" id="619838634%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-gradle-plugin/index.html"><span>Gradle</span><wbr><span><span>Plugin</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="619838634%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-gradle-plugin/index.html">GradlePlugin</a> : <span data-unresolved-link="org.gradle.api/Plugin///PointingToDeclaration/">Plugin</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Plugin id <code class="lang-kotlin">xyz.wagyourtail.unimined.transform</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1977954811%2FClasslikes%2F-1569051040" anchor-label="JarProcessorsStepSpec" id="1977954811%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jar-processors-step-spec/index.html"><span>Jar</span><wbr><span>Processors</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1977954811%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-jar-processors-step-spec/index.html">JarProcessorsStepSpec</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/DevArtifactOnlyStepSpec///PointingToDeclaration/">DevArtifactOnlyStepSpec</span></div><div class="brief "><p class="paragraph">Spec for the <code class="lang-kotlin">jar-processors</code> step — runs every environment-declared <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/index.html">xyz.wagyourtail.unimined.transform.processor.JarProcessor</a> spec over the dev-Minecraft artifact, in declaration order (Loom's <code class="lang-kotlin">MinecraftJarProcessorManager</code> stage).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1866680484%2FClasslikes%2F-1569051040" anchor-label="JarProcessorsStepType" id="-1866680484%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jar-processors-step-type/index.html"><span>Jar</span><wbr><span>Processors</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1866680484%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jar-processors-step-type/index.html">JarProcessorsStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-jar-processors-step-spec/index.html">JarProcessorsStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">jar-processors</code> implementation — copies the artifact into the work dir, then invokes each declared processor's <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/process-jar.html">JarProcessor.processJar</a> in spec order (Loom's <code class="lang-kotlin">MinecraftJarProcessorManager</code> jar stage).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1437166087%2FClasslikes%2F-1569051040" anchor-label="PassthroughTransformTask" id="1437166087%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-passthrough-transform-task/index.html"><span>Passthrough</span><wbr><span>Transform</span><wbr><span><span>Task</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1437166087%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-passthrough-transform-task/index.html">PassthroughTransformTask</a> : <a href="../xyz.wagyourtail.unimined.transform.task/-transform-minecraft-task/index.html">TransformMinecraftTask</a></div><div class="brief "><p class="paragraph">Passthrough transform task — the declared steps' work lives in the jar-processors artifact step; this task only carries the input to the emitted dev output so the pipeline has a <code class="lang-kotlin">jar</code> edge.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1079947267%2FClasslikes%2F-1569051040" anchor-label="PipelinePreset" id="1079947267%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-pipeline-preset/index.html"><span>Pipeline</span><wbr><span><span>Preset</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1079947267%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-pipeline-preset/index.html">PipelinePreset</a></div><div class="brief "><p class="paragraph">A named pipeline preset — a canonical declared step list a loader ships for <code class="lang-kotlin">pipeline { era("userdev") }</code> expansion. Presets are declared by transform modules via <a href="-pipeline-preset-source/index.html">PipelinePresetSource</a> ServiceLoader (forge's <code class="lang-kotlin">"userdev"</code> expands to its <code class="lang-kotlin">userdevExec</code> step; <code class="lang-kotlin">"binpatches"</code> to the merge/binpatch/AT chain).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-987505594%2FClasslikes%2F-1569051040" anchor-label="PipelinePresetRegistry" id="-987505594%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-pipeline-preset-registry/index.html"><span>Pipeline</span><wbr><span>Preset</span><wbr><span><span>Registry</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-987505594%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-pipeline-preset-registry/index.html">PipelinePresetRegistry</a></div><div class="brief "><p class="paragraph">Registry of pipeline presets — ServiceLoader builtins plus manual registration (mirrors <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">xyz.wagyourtail.unimined.transform.feature.FeatureRegistry</a>). Unknown preset names fail at <code class="lang-kotlin">era("name")</code> declaration time.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="517725864%2FClasslikes%2F-1569051040" anchor-label="PipelinePresetSource" id="517725864%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-pipeline-preset-source/index.html"><span>Pipeline</span><wbr><span>Preset</span><wbr><span><span>Source</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="517725864%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-pipeline-preset-source/index.html">PipelinePresetSource</a></div><div class="brief "><p class="paragraph">ServiceLoader source for <a href="-pipeline-preset/index.html">PipelinePreset</a>s.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1813755161%2FClasslikes%2F-1569051040" anchor-label="PipelineSpec" id="-1813755161%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-pipeline-spec/index.html"><span>Pipeline</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1813755161%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-pipeline-spec/index.html">PipelineSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>registry<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.transform.step/StepTypeRegistry///PointingToDeclaration/">StepTypeRegistry</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>presets<span class="token operator">: </span><a href="-pipeline-preset-registry/index.html">PipelinePresetRegistry</a><span class="token operator"> = </span>PipelinePresetRegistry()</span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Declared transform-pipeline scope for one environment — the <code class="lang-kotlin">pipeline { }</code> DSL object. Step types register as named extensions (<code class="lang-kotlin">extensions.add("binpatches", spec)</code>): Groovy gets extension dispatch free, Kotlin uses per-type extension fns as shipped sugar.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="144872482%2FClasslikes%2F-1569051040" anchor-label="TransformEnvironmentSpec" id="144872482%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-transform-environment-spec/index.html"><span>Transform</span><wbr><span>Environment</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="144872482%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-transform-environment-spec/index.html">TransformEnvironmentSpec</a></div><div class="brief "><p class="paragraph">The ordered transformer and decorator registrations for one Minecraft source-set environment.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1785940815%2FClasslikes%2F-1569051040" anchor-label="TransformExtension" id="-1785940815%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-transform-extension/index.html"><span>Transform</span><wbr><span><span>Extension</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1785940815%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-transform-extension/index.html">TransformExtension</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">transform { }</code> DSL + pipeline host.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1469925392%2FClasslikes%2F-1569051040" anchor-label="TransformPipeline" id="1469925392%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-transform-pipeline/index.html"><span>Transform</span><wbr><span><span>Pipeline</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1469925392%2FClasslikes%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-transform-pipeline/index.html">TransformPipeline</a></div><div class="brief "><p class="paragraph">The result of running the declared transformer pipeline: all emitted named artifacts plus the final dev artifact.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
