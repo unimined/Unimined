@@ -88,3 +88,15 @@ kotlin {
 }
 
 tasks.withType<Test>().configureEach { useJUnitPlatform() }
+
+/** Emits canonical 2.0 build snippets into ../docs/snippets/ — the
+ *  mkdocs pages --8<-- them in, so docs track the generator. */
+tasks.register<JavaExec>("genDocSnippets") {
+    group = "documentation"
+    mainClass.set("xyz.wagyourtail.unimined.init.DocsGenKt")
+    classpath = files(
+        kotlin.targets["jvm"].compilations["main"].output.allOutputs,
+        configurations.named("jvmRuntimeClasspath")
+    )
+    args(layout.projectDirectory.dir("../docs/snippets").asFile.absolutePath)
+}

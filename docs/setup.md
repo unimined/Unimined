@@ -66,14 +66,16 @@ And the following to `build.gradle`:
 
 ## Adding Minecraft
 
-to add minecraft to the main sourceSet, add the following:
+to add minecraft to the main sourceSet, add the following (a full
+generated project looks like `--8<--` `snippets/flat-fabric.gradle.kts`):
 
 === "Groovy"
 
     ```groovy
 
-    unimined.minecraft {
-        version project.minecraftVersion
+    unimined {
+        minecraft {
+            version project.minecraftVersion
         side "combined" // default value
 
         mappings {
@@ -93,8 +95,10 @@ to add minecraft to the main sourceSet, add the following:
     val minecraftVersion: String by extra
     val fabricLoaderVersion: String by extra
 
-    unimined.minecraft {
-        version minecraftVersion
+    unimined {
+        minecraft {
+            version minecraftVersion
+            loader("fabric", "0.16.0")
         side("combined") // default value
 
         mappings {

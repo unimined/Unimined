@@ -1,3 +1,7 @@
+> **1.x docs** — this page predates the 2.0 modular rewrite;
+> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
+> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
+
 # Auth
 
 Unimined provides a way to authenticate in your run configs.
