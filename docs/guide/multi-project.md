@@ -20,14 +20,13 @@ environment — its own product, loader, mappings, runs. Envs with no
 ```kotlin
 unimined {
     minecraft {
-        sourceSet("main")
-        loader("fabric", "0.16.0")
-    }
-
-    minecraft {
-        sourceSet("server")
-        loader("forge", "47.2.0")
-        side = Side.SERVER
+        sourceSet("main") {
+            loader("fabric", "0.16.0")
+        }
+        sourceSet("server") {
+            loader("forge", "47.2.0")
+            side = Side.SERVER
+        }
     }
 }
 ```

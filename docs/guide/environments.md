@@ -10,8 +10,7 @@ unimined {
         // bound to main by default
         version = "1.20.1"
         loader("fabric", "0.16.0")
-    }
-    minecraft {
+        // or a named source-set env:
         sourceSet("server") {
             loader("forge", "47.2.0")
             side = Side.SERVER
