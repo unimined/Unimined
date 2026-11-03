@@ -41,8 +41,30 @@ object ProjectGenerator {
             val kts = spec.dsl == InitSpec.Dsl.KOTLIN
             val sfx = spec.dsl.scriptSuffix
             val scriptSuffix = if (kts) ".kts" else ""
-            put("settings.gradle$scriptSuffix", Render.Text(Templates.settings(spec)))
-            put("build.gradle$scriptSuffix", Render.Text(Templates.build(spec)))
+            when (spec.layout) {
+                InitSpec.Layout.MULTILOADER -> {
+                    put("settings.gradle$scriptSuffix",
+                        Render.Text(Templates.multiloaderSettings(spec)))
+                    put("common/build.gradle$scriptSuffix",
+                        Render.Text(Templates.multiloaderModule(spec, null)))
+                    for ((loader, _) in spec.loaders) {
+                        put("$loader/build.gradle$scriptSuffix",
+                            Render.Text(Templates.multiloaderModule(spec, loader)))
+                    }
+                }
+                InitSpec.Layout.CUSTOM_PRODUCT -> {
+                    put("settings.gradle$scriptSuffix",
+                        Render.Text(Templates.settings(spec)))
+                    put("build.gradle$scriptSuffix",
+                        Render.Text(Templates.buildProduct(spec)))
+                }
+                else -> {
+                    put("settings.gradle$scriptSuffix",
+                        Render.Text(Templates.settings(spec)))
+                    put("build.gradle$scriptSuffix",
+                        Render.Text(Templates.build(spec)))
+                }
+            }
             put("gradle.properties", Render.Text(Templates.gradleProperties(spec)))
             put(".gitignore", Render.Text(Templates.gitignore))
             put("gradlew", Render.Resource("/templates/gradlew", executable = true))
@@ -54,16 +76,23 @@ object ProjectGenerator {
 
             // multi-loader emits the §10 per-source-set layout —
             // src/<loader>/{java,resources} bound via sourceSet("<loader>")
+            // MULTILOADER places entrypoints inside each module dir
             val pkg = spec.basePackage
-            val multi = spec.loaders.size > 1
+            val multi = spec.loaders.size > 1 &&
+                    spec.layout != InitSpec.Layout.MULTILOADER
             for ((loader, _) in spec.loaders) {
+                // a MULTILOADER module has a single env — it lives on
+                // main inside the module dir; FLAT multi-loader uses
+                // per-loader source sets instead
+                val dir = if (spec.layout == InitSpec.Layout.MULTILOADER)
+                    "$loader/" else ""
                 val ss = if (multi) loader else "main"
-                put("src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
+                put("${dir}src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
                     Render.Text(Templates.mainClass(spec, loader)))
                 // static files only when metadata isn't DSL-generated
                 if (!spec.metadataFromDsl) {
                     for ((path, content) in Templates.metadata(spec, loader)) {
-                        put("src/$ss/resources/$path", Render.Text(content))
+                        put("${dir}src/$ss/resources/$path", Render.Text(content))
                     }
                 }
             }

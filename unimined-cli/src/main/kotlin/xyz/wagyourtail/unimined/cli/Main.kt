@@ -27,6 +27,12 @@ options:
   --package <pkg>        base package (group.modid default)
   --mod-version <v>      mod version (1.0.0 default)
   --dsl <kotlin|groovy>  build-script DSL (kotlin default)
+  --layout <flat|multiloader>
+                         project layout (flat default); multiloader
+                         emits common + per-loader modules
+  --product <id>         non-native product env instead of minecraft:
+                         bta, reindev, nsss, custom:<name>
+  --dist <path>          dist jar for custom:/nsss product envs
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
@@ -125,6 +131,13 @@ private fun run(args: Array<String>) {
         // --metadata dsl: generate metadata via `mod { }` instead of
         // static resource files (unimined-mod's emitters)
         metadataFromDsl = one("--metadata") == "dsl",
+        layout = when {
+            one("--product") != null -> InitSpec.Layout.CUSTOM_PRODUCT
+            one("--layout") == "multiloader" -> InitSpec.Layout.MULTILOADER
+            else -> InitSpec.Layout.FLAT
+        },
+        product = one("--product"),
+        distFile = one("--dist"),
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

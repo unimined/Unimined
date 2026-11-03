@@ -45,10 +45,31 @@ data class InitSpec(
      * static `src/<ss>/resources/` metadata files.
      */
     val metadataFromDsl: Boolean = false,
+    /** Project structure — see [Layout]. */
+    val layout: Layout = Layout.FLAT,
+    /**
+     * Non-native product environment for [Layout.CUSTOM_PRODUCT]:
+     * `bta`, `reindev`, `nsss`, or `custom:<name>`. Presets emit the
+     * extension DSL (`bta { }`); `custom:` emits `custom("name") { }`.
+     */
+    val product: String? = null,
+    /** Distribution jar path for `custom:` products / `nsss` —
+     *  emitted as `file("...")` inside the env block. */
+    val distFile: String? = null,
 ) {
 
     enum class Dsl(val scriptSuffix: String) {
         KOTLIN("kts"), GROOVY("")
+    }
+
+    /** Project structure the generator emits. */
+    enum class Layout {
+        /** One module; all envs in a single `minecraft { }` block. */
+        FLAT,
+        /** `common` + one subproject per loader (multi-loader). */
+        MULTILOADER,
+        /** One module; a non-native product env (`bta`/`custom:`). */
+        CUSTOM_PRODUCT,
     }
 
     /** Effective modid: explicit, or `name` normalized to lower_snake. */

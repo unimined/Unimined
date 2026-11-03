@@ -30,3 +30,58 @@ jobs:
         with:
           name: unimined-cli-snapshot
           path: 'unimined-cli/build/libs/*-fat.jar'
+
+  templates:
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { mode: multiloader, args: "--layout multiloader --loader fabric=latest --loader forge=latest" }
+          - { mode: forge,       args: "--loader forge=latest" }
+          - { mode: fabric,      args: "--loader fabric=latest" }
+          - { mode: bta,         args: "--product bta" }
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: build the CLI jar
+        run: ./gradlew :unimined-cli:fatJar -q
+      - name: materialize deploy key
+        run: |
+          printf '%s' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
+          chmod 600 $RUNNER_TEMP/tmpl-key
+      - name: checkout target example branch
+        uses: actions/checkout@v4
+        with:
+          repository: unimined/Unimined-Templates
+          ref: snapshot/${{ matrix.mode }}
+          path: tmpl
+          ssh-key: ${{ secrets.TEMPLATES_DEPLOY_KEY }}
+          continue-on-error: true
+      - name: create orphan branch when absent
+        run: |
+          if [ ! -d tmpl/.git ]; then
+            mkdir -p tmpl && cd tmpl
+            git init && git checkout --orphan snapshot/${{ matrix.mode }}
+            git remote add origin git@github.com:unimined/Unimined-Templates.git
+          fi
+      - name: generate
+        run: |
+          java -jar unimined-cli/build/libs/unimined-cli-*-fat.jar init \
+            --group com.example --mc latest --plugin-version 2.0.0-SNAPSHOT \
+            ${{ matrix.args }} --out tmpl --metadata dsl
+      - name: push on diff
+        run: |
+          cd tmpl
+          git add -A
+          git diff --cached --quiet && exit 0
+          git -c user.name="unimined-ci" -c user.email="ci@unimined.dev" \
+            commit -m "regen: ${{ matrix.mode }} @ snapshot ${{ github.sha }}"
+          git push origin snapshot/${{ matrix.mode }}
+        env:
+          GIT_SSH_COMMAND: ssh -i $RUNNER_TEMP/tmpl-key -o IdentitiesOnly=yes

@@ -1,0 +1,14 @@
+plugins {
+    java
+    @@PLUGIN_DECL@@
+}
+
+repositories {
+    mavenCentral()
+@@REPOS@@
+}
+
+unimined {
+@@ENV@@
+}
+@@MOD_BLOCK@@

@@ -121,6 +121,109 @@ internal object Templates {
         ))
     }
 
+    // ---- multiloader layout ----
+
+    /** Modules a MULTILOADER project emits — `common` + one per loader. */
+    fun modules(spec: InitSpec): List<String> =
+        listOf("common") + spec.loaders.map { it.first }
+
+    /** Root `settings.gradle` for MULTILOADER — `include()`s every module. */
+    fun multiloaderSettings(spec: InitSpec): String =
+        render("multiloader/settings.gradle", mapOf(
+            "DEP_REPOS" to loaderRepos(spec).joinToString("\n") {
+                "        maven(\"$it\")"
+            },
+            "NAME" to spec.name,
+            "INCLUDES" to modules(spec).joinToString("\n") {
+                "include(\"$it\")"
+            },
+        ))
+
+    /**
+     * A MULTILOADER module's `build.gradle` — `common` ([loader] null)
+     * gets a loader-less env for the MC classpath; loader modules get
+     * their env plus a dependency on `:common`.
+     */
+    fun multiloaderModule(spec: InitSpec, loader: String?): String {
+        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
+        return render("multiloader/module.gradle", mapOf(
+            "PLUGIN_DECL" to if (kts) {
+                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
+            } else {
+                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
+            },
+            "REPOS" to loaderRepos(spec).joinToString("\n") {
+                "    maven(\"$it\")"
+            },
+            "MINECRAFT_BODY" to if (loader == null) {
+                render("partials/minecraft-env.gradle", mapOf(
+                    "MC_VERSION" to spec.mcVersion,
+                    "LOADER_LINES" to "",
+                    "MAPPINGS" to mappingsBlock(spec, ""),
+                ))
+            } else {
+                render("partials/minecraft-env.gradle", mapOf(
+                    "MC_VERSION" to spec.mcVersion,
+                    "LOADER_LINES" to render("partials/loader-line.gradle",
+                        mapOf("LOADER" to loader,
+                            "LOADER_VERSION" to spec.loaders.first {
+                                it.first == loader }.second)),
+                    "MAPPINGS" to mappingsBlock(spec, ""),
+                ))
+            }.indented("        "),
+            "DEPENDENCIES" to if (loader == null) "" else """
+                |
+                |dependencies {
+                |    implementation(project(":common"))
+                |}
+                """.trimMargin(),
+        ))
+    }
+
+    // ---- custom-product layout ----
+
+    /**
+     * The `unimined { }` body for CUSTOM_PRODUCT — preset DSL for
+     * bta/reindev/nsss, `custom("name")` otherwise; `nsss` and
+     * `custom:` take a `file("...")` from [InitSpec.distFile].
+     */
+    fun productEnv(spec: InitSpec): String {
+        val p = spec.product ?: error("CUSTOM_PRODUCT requires product")
+        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
+        val fileCall = spec.distFile?.let {
+            if (kts) "\n    file(\"$it\")" else "\n    file('$it')"
+        } ?: ""
+        val versionLine = spec.mcVersion.let {
+            if (kts) "    version = \"$it\"" else "    version = '$it'"
+        }
+        return when {
+            p == "bta" || p == "reindev" -> "$p {\n$versionLine\n}"
+            p == "nsss" -> "nsss {\n$fileCall\n}"
+            p.startsWith("custom:") ->
+                "custom(\"${p.removePrefix("custom:")}\") {\n$fileCall\n}"
+            else -> error("unknown product '$p' — expected bta, reindev, " +
+                    "nsss, or custom:<name>")
+        }
+    }
+
+    /** `build.gradle` for CUSTOM_PRODUCT — product env instead of
+     *  the minecraft block. */
+    fun buildProduct(spec: InitSpec): String {
+        val kts = spec.dsl == InitSpec.Dsl.KOTLIN
+        return render("build-product.gradle", mapOf(
+            "PLUGIN_DECL" to if (kts) {
+                "id(\"xyz.wagyourtail.unimined\") version \"${spec.pluginVersion}\""
+            } else {
+                "id 'xyz.wagyourtail.unimined' version '${spec.pluginVersion}'"
+            },
+            "REPOS" to loaderRepos(spec).joinToString("\n") {
+                "    maven(\"$it\")"
+            },
+            "ENV" to productEnv(spec).indented("    "),
+            "MOD_BLOCK" to modBlock(spec),
+        ))
+    }
+
     /** `gradle.properties` — Maven coordinates + mod metadata. */
     fun gradleProperties(spec: InitSpec): String = render("gradle.properties", mapOf(
         "GROUP" to spec.group,

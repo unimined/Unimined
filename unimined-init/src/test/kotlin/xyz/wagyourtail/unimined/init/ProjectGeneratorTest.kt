@@ -162,4 +162,50 @@ class ProjectGeneratorTest {
         assertEquals("MyCoolMod", Templates.mainClassName(s))
     }
 
+
+    @Test
+    fun `multiloader emits common + per-loader modules`(@TempDir tmp: Path) {
+        val spec = spec(listOf("fabric" to "0.16.0", "forge" to "47.2.0"))
+            .copy(layout = InitSpec.Layout.MULTILOADER)
+        val files = ProjectGenerator.files(spec)
+        assertTrue("common/build.gradle.kts" in files)
+        assertTrue("fabric/build.gradle.kts" in files)
+        assertTrue("forge/build.gradle.kts" in files)
+        assertTrue("build.gradle.kts" !in files)
+        val settings = (files["settings.gradle.kts"] as ProjectGenerator.Render.Text).content
+        assertTrue("\"common\"" in settings && "\"fabric\"" in settings &&
+                "\"forge\"" in settings)
+        val forgeBuild = (files["forge/build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("loader(\"forge\", \"47.2.0\")" in forgeBuild)
+        assertTrue("project(\":common\")" in forgeBuild)
+        assertTrue("fabric/src/main/java/com/example/mymod/MyMod.java" in files)
+    }
+
+    @Test
+    fun `custom-product emits preset env block`(@TempDir tmp: Path) {
+        val spec = spec().copy(
+            layout = InitSpec.Layout.CUSTOM_PRODUCT,
+            product = "bta",
+        )
+        val files = ProjectGenerator.files(spec)
+        val build = (files["build.gradle.kts"] as ProjectGenerator.Render.Text)
+            .content
+        assertTrue("bta {" in build)
+        assertTrue("version = \"1.20.1\"" in build)
+        assertTrue("minecraft" !in build)
+    }
+
+    @Test
+    fun `custom file-based product emits custom() with file`() {
+        val spec = spec().copy(
+            layout = InitSpec.Layout.CUSTOM_PRODUCT,
+            product = "custom:prcraft",
+            distFile = "dist/prcraft.jar",
+        )
+        val build = (ProjectGenerator.files(spec)["build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("custom(\"prcraft\")" in build)
+        assertTrue("file(\"dist/prcraft.jar\")" in build)
+    }
 }
