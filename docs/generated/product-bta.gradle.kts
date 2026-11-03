@@ -11,7 +11,7 @@ repositories {
 
 unimined {
     bta {
-        version = "b1.7.3"
+        version = "1.7.7.0_02"
         loader("bta-babric", "1.7.6")
     }
 }

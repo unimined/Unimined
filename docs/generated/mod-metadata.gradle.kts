@@ -3,7 +3,7 @@ minecraft {
 
         loader("fabric", "0.16.0")
         mappings {
-            yarn(10)
+            yarn("1.20.1+build.10")
         }
     }
 

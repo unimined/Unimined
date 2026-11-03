@@ -66,6 +66,12 @@ class VersionResolver(
         "forge" -> latestMaven(FORGE_MAVEN, mc)
         "neoforge" -> latestMaven(NEOFORGE_MAVEN, null)
         "quilt" -> latestMaven(QUILT_MAVEN, null)
+        "babric" -> latestMaven(BABRIC_MAVEN, null)
+        "foxloader" -> latestMaven(FOXLOADER_MAVEN, null)
+        "stationapi" -> latestMaven(STATION_MAVEN, null)
+        "osl" -> latestMaven(OSL_MAVEN, null)
+        "bta" -> latestMaven(BTA_MAVEN, null)
+        "reindev" -> latestMaven(REINDEV_MAVEN, null)
         else -> error("no version endpoint known for loader '$loader'")
     }
 
@@ -106,6 +112,18 @@ class VersionResolver(
 
         val PISTON_META =
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+        val BABRIC_MAVEN =
+            "https://maven.glass-launcher.net/releases/babric/fabric-loader/maven-metadata.xml"
+        val FOXLOADER_MAVEN =
+            "https://maven.glass-launcher.net/releases/com/github/thefox580/FoxLoader/maven-metadata.xml"
+        val STATION_MAVEN =
+            "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml"
+        val OSL_MAVEN =
+            "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml"
+        val BTA_MAVEN =
+            "https://maven.glass-launcher.net/releases/com/github/bta/bta/maven-metadata.xml"
+        val REINDEV_MAVEN =
+            "https://maven.glass-launcher.net/releases/com/github/reindev/reindev/maven-metadata.xml"
         val FORGE_MAVEN =
             "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"
         val NEOFORGE_MAVEN =

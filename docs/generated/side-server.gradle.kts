@@ -15,7 +15,7 @@ unimined {
         side = server
         loader("forge", "47.2.0")
         mappings {
-            yarn(10)
+            yarn("1.20.1+build.10")
         }
     }
 

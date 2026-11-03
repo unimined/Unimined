@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.init
 
+import okio.FileSystem
+
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path as NioPath

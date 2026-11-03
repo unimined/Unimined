@@ -11,7 +11,9 @@ fun main(args: Array<String>) {
     val base = InitSpec(
         group = "com.example", name = "examplemod", mcVersion = "1.20.1",
         loaders = listOf("fabric" to "0.16.0"), pluginVersion = "2.0.0-SNAPSHOT",
-        mappings = listOf("yarn(10)"),
+        mappings = listOf("yarn(\"${runCatching {
+            VersionResolver().latestLoader("yarn", "1.20.1")
+        }.getOrDefault("1.20.1+build.10")}\")"),
     )
 
     put("flat-fabric.gradle.kts", Templates.build(base))
@@ -33,7 +35,7 @@ fun main(args: Array<String>) {
     put("multiloader-forge.gradle.kts", Templates.multiloaderModule(multi, "forge"))
 
     put("product-bta.gradle.kts", Templates.buildProduct(base.copy(
-        mcVersion = "b1.7.3", loaders = listOf("bta-babric" to "1.7.6"),
+        mcVersion = runCatching { VersionResolver().latestLoader("bta", "") }.getOrDefault("1.7.7.0_02"), loaders = listOf("bta-babric" to "1.7.6"),
         layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "bta")))
     put("product-custom.gradle.kts", Templates.buildProduct(base.copy(
         loaders = listOf("fabric" to "0.16.0"),
