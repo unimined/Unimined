@@ -1,271 +1,217 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import java.io.ByteArrayOutputStream
-import java.io.File
+import xyz.wagyourtail.commons.gradle.GradleProjectExtension
 
 plugins {
-    kotlin("jvm") version libs.versions.kotlin.get()
-    alias(libs.plugins.dokka)
-    `java-gradle-plugin`
-    `maven-publish`
+    id("xyz.wagyourtail.commons-gradle") version "1.0.5-SNAPSHOT"
+    id("org.jetbrains.kotlin.jvm") version "2.4.21" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21" apply false
+    id("org.jetbrains.dokka") version "2.2.0"
 }
 
-version = if (project.hasProperty("version_snapshot")) project.properties["version"] as String + "-SNAPSHOT" else project.properties["version"] as String
-group = project.properties["maven_group"] as String
+subprojects {
+    // mc-launcher is a Gradle-free KMP library — exempt from the
+    // kotlin-jvm/java/commons conventions; it sets its own coords
+    if (name == "mc-launcher") return@subprojects
 
-base {
-    archivesName.set(project.properties["archives_base_name"] as String)
-}
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "maven-publish")
+    apply(plugin = "xyz.wagyourtail.commons-gradle")
+    apply(plugin = "org.jetbrains.dokka")
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+    extensions.configure<GradleProjectExtension>("commons") {
+        autoGroup()
+        autoVersion()
     }
 
-    withSourcesJar()
-}
+    val publishedName = if (name.startsWith("${rootProject.name}-")) name else "${rootProject.name}-$name"
 
-kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
-}
+    extensions.configure<BasePluginExtension>("base") {
+        archivesName.set(publishedName)
+    }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven("https://maven.wagyourtail.xyz/releases")
-    maven("https://maven.wagyourtail.xyz/snapshots")
-    maven("https://maven.neoforged.net/releases")
-    maven("https://maven.minecraftforge.net/")
-    maven("https://maven.fabricmc.net/")
-    gradlePluginPortal()
-}
+    val javaVersion = 17
 
-fun SourceSet.inputOf(vararg sourceSets: SourceSet) {
-    for (sourceSet in sourceSets) {
-        compileClasspath += sourceSet.compileClasspath
-        runtimeClasspath += sourceSet.runtimeClasspath
+    extensions.configure<JavaPluginExtension>("java") {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaVersion))
+        }
+        withSourcesJar()
+    }
+
+    extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>("kotlin") {
+        jvmToolchain(javaVersion)
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        testLogging {
+            events.addAll(listOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED))
+        }
+    }
+
+    // core/gradle split: `core` = Gradle-free pipeline code, `main`
+    // = Gradle adapters. `test` retargeted to core-only (enforced
+    // pure); `testGradle` = adapter/TestKit tests. See
+    // Docs/progress-gradle-split.md.
+    extensions.configure<JavaPluginExtension>("java") {
+        val core = sourceSets.create("core")
+        sourceSets.named("main") {
+            compileClasspath += core.output
+            runtimeClasspath += core.output
+            // expose core classes as part of main's output — jar,
+            // apiElements/runtimeElements, and project consumers
+            // see one artifact
+            output.dir(mapOf("builtBy" to "compileCoreKotlin"), "build/classes/kotlin/core")
+            output.dir(mapOf("builtBy" to "compileCoreJava"), "build/classes/java/core")
+            output.dir(mapOf("builtBy" to "processCoreResources"), "build/resources/core")
+        }
+        val testPureCompile = configurations.create("testPureCompileClasspath") {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+            extendsFrom(configurations["testImplementation"], configurations["testCompileOnly"])
+        }
+        val testPureRuntime = configurations.create("testPureRuntimeClasspath") {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+            extendsFrom(configurations["testImplementation"], configurations["testRuntimeOnly"])
+        }
+        sourceSets.named("test") {
+            compileClasspath = files(core.output) + testPureCompile
+            runtimeClasspath = files(core.output, output) + testPureRuntime
+        }
+        val testGradleSS = sourceSets.create("testGradle") {
+            compileClasspath += core.output +
+                    sourceSets["main"].output + sourceSets["test"].output
+            runtimeClasspath += core.output +
+                    sourceSets["main"].output + sourceSets["test"].output
+        }
+        configurations.named("implementation") {
+            extendsFrom(configurations["coreImplementation"])
+        }
+        configurations.named("api") {
+            extendsFrom(configurations["coreApi"])
+        }
+        // testGradle inherits test's dependencies
+        configurations.named("testGradleImplementation") {
+            extendsFrom(configurations["testImplementation"])
+        }
+        configurations.named("testGradleRuntimeOnly") {
+            extendsFrom(configurations["testRuntimeOnly"])
+        }
+        configurations.named("testGradleCompileOnly") {
+            extendsFrom(configurations["testCompileOnly"])
+        }
+        // project consumers resolve apiElements/runtimeElements'
+        // "classes" secondary variant, which snapshots main's dirs
+        // before output.dir registers — publish core dirs explicitly
+        listOf("apiElements", "runtimeElements").forEach { conf ->
+            configurations.matching { it.name == conf }.all {
+                outgoing.variants.matching { it.name == "classes" }.all {
+                    // explicit artifact() calls REPLACE the variant's
+                    // auto-derived list — main dirs must be re-registered
+                    // or downstream project deps stop seeing main classes
+                    artifact(layout.buildDirectory.dir("classes/kotlin/main")) {
+                        type = "java-classes-directory"
+                        builtBy("compileKotlin")
+                    }
+                    artifact(layout.buildDirectory.dir("classes/java/main")) {
+                        type = "java-classes-directory"
+                        builtBy("compileJava")
+                    }
+                    artifact(layout.buildDirectory.dir("classes/kotlin/core")) {
+                        type = "java-classes-directory"
+                        builtBy("compileCoreKotlin")
+                    }
+                    artifact(layout.buildDirectory.dir("classes/java/core")) {
+                        type = "java-classes-directory"
+                        builtBy("compileCoreJava")
+                    }
+                }
+            }
+        }
+        val testGradleTask = tasks.register<Test>("testGradle") {
+            testClassesDirs = testGradleSS.output.classesDirs
+            classpath = testGradleSS.runtimeClasspath
+            tasks.findByName("pluginUnderTestMetadata")?.let { metadata ->
+                classpath += files({
+                    (metadata as org.gradle.plugin.devel.tasks.PluginUnderTestMetadata)
+                        .outputDirectory
+                })
+                dependsOn(metadata)
+            }
+            useJUnitPlatform()
+        }
+        tasks.named("check") {
+            dependsOn(testGradleTask)
+        }
+        // testGradle sees main's internals (same-module tests);
+        // test sees core's internals
+        // main sees core's internals — they're one published module
+        tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileKotlin") {
+            friendPaths.from(tasks.named("compileCoreKotlin").map { it.outputs.files })
+        }
+        tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestGradleKotlin") {
+            // testGradle friends BOTH core and main — friend access to
+            // internals is not transitive through main
+            friendPaths.from(tasks.named("compileKotlin").map { it.outputs.files })
+            friendPaths.from(tasks.named("compileCoreKotlin").map { it.outputs.files })
+            libraries.from(core.output, sourceSets["main"].output, sourceSets["test"].output)
+        }
+        tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlin") {
+            friendPaths.from(tasks.named("compileCoreKotlin").map { it.outputs.files })
+            libraries.from(core.output)
+        }
+    }
+    dependencies.add("testGradleImplementation", dependencies.gradleApi())
+
+    extensions.configure<PublishingExtension>("publishing") {
+        publications.withType<MavenPublication>().configureEach {
+            if (artifactId == project.name) {
+                artifactId = publishedName
+            }
+        }
+        repositories {
+            maven {
+                name = "WagYourMaven"
+                url = uri(
+                    "https://maven.wagyourtail.xyz/" +
+                            if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/"
+                )
+                credentials {
+                    username = (findProperty("mvn.user") as String?)
+                        ?: providers.environmentVariable("USERNAME").orNull
+                    password = (findProperty("mvn.key") as String?)
+                        ?: providers.environmentVariable("TOKEN").orNull
+                }
+            }
+        }
     }
 }
 
-fun SourceSet.outputOf(vararg sourceSets: SourceSet) {
-    for (sourceSet in sourceSets) {
-        compileClasspath += sourceSet.output
-        runtimeClasspath += sourceSet.output
-    }
-}
-
-val api by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-}
-
-val mapping by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api)
-}
-
-val source by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(mapping, api)
-}
-
-val mods by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, source)
-}
-
-val runs by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api)
-}
-
-val minecraft by sourceSets.creating {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, mods, runs, source)
-}
-
-val main by sourceSets.getting {
-    outputOf(api, mapping, source, mods, runs, minecraft)
-}
-
-val test by sourceSets.getting {
-    inputOf(sourceSets.main.get())
-    outputOf(api, mapping, source, mods, runs, minecraft)
+// aggregated API docs — `:dokkaGenerate` at the root produces
+// build/dokka/ (copied into docs/api/ by the docs workflow)
+dokka {
+    moduleName.set("unimined")
 }
 
 dependencies {
-    runtimeOnly(gradleApi())
-    implementation(kotlin("metadata-jvm"))
-    implementation(libs.jb.annotations)
-
-    implementation(libs.guava)
-    implementation(libs.gson)
-
-    implementation(libs.asm)
-    implementation(libs.asm.commons)
-    implementation(libs.asm.tree)
-    implementation(libs.asm.analysis)
-    implementation(libs.asm.util)
-
-    implementation(libs.unimined.mapping.library.jvm)
-    implementation(libs.tiny.remapper) {
-        exclude(group = "org.ow2.asm")
-    }
-
-    implementation(libs.binarypatcher) {
-        exclude(mapOf("group" to "commons-io"))
-    }
-    implementation(libs.jbsdiff)
-
-    implementation(libs.access.widener)
-
-    implementation(libs.commons.io)
-    implementation(libs.commons.compress)
-
-    implementation(libs.jgit)
-
-    implementation(libs.java.keyring)
-    implementation(libs.minecraftauth)
-
-    testImplementation(kotlin("test"))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-tasks.jar {
-    from(
-        sourceSets["api"].output,
-        sourceSets["mapping"].output,
-        sourceSets["source"].output,
-        sourceSets["mods"].output,
-        sourceSets["runs"].output,
-        sourceSets["minecraft"].output,
-        sourceSets["main"].output
-    )
-
-    manifest {
-        attributes(
-            "Implementation-Version" to if (project.hasProperty("version_snapshot")) {
-                val stdout = ByteArrayOutputStream()
-                exec {
-                    commandLine("git", "rev-parse", "--short", "HEAD")
-                    standardOutput = stdout
-                }.assertNormalExitValue()
-                buildString {
-                    append(project.version.toString().removeSuffix("-SNAPSHOT"))
-                    append("-")
-                    append(stdout.toString().trim())
-                    append("-SNAPSHOT")
-                }
-            } else project.version
-        )
+    subprojects.forEach {
+        // mc-launcher doesn't apply the dokka plugin (see subprojects block)
+        if (it.name != "mc-launcher") dokka(project(it.path))
     }
 }
 
-val sourcesJar by tasks.getting(Jar::class) {
-    from(
-        api.allSource,
-        minecraft.allSource,
-        mapping.allSource,
-        sourceSets["source"].allSource,
-        mods.allSource,
-        runs.allSource,
-        main.allSource
-    )
-}
-
-tasks.build {
-    dependsOn(sourcesJar)
-}
-
-tasks.test {
-    useJUnitPlatform()
-
-    testLogging {
-        events.add(TestLogEvent.PASSED)
-        events.add(TestLogEvent.SKIPPED)
-        events.add(TestLogEvent.FAILED)
+// `unimined-templates` artifact (plan §13) — packaged testing/
+// projects CI attaches to releases; init frontends consume richer
+// templates from the zip than the built-in minimal emit
+tasks.register<Zip>("packageTemplates") {
+    group = "unimined"
+    description = "Packages testing/ projects as the unimined-templates artifact"
+    archiveFileName.set("unimined-templates.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    from("testing") {
+        exclude("**/build/**", "**/run/**", "**/.gradle/**",
+                "**/remappedSrc/**", "**/.idea/**")
+        into("testing")
     }
 }
-
-tasks.dokkaHtml {
-    outputDirectory.set(projectDir.resolve("docs/api-docs/"))
-    dokkaSourceSets {
-        named("main") {
-            suppress = true
-        }
-        named("api") {
-            suppress = false
-        }
-    }
-    doFirst {
-        file("Writerside/v.list").writeText(
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
-                <vars>
-                    <var name="version" value="${project.version}"/>
-                </vars>
-            """.trimIndent()
-        )
-    }
-}
-
-gradlePlugin {
-    plugins {
-        create("simplePlugin") {
-            id = "xyz.wagyourtail.unimined"
-            implementationClass = "xyz.wagyourtail.unimined.UniminedPlugin"
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "WagYourMaven"
-            url = uri("https://maven.wagyourtail.xyz/" + if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/")
-            credentials {
-                username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
-                password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
-            }
-        }
-    }
-}
-
-// A task to output a json file with a list of all the test to run
-val writeActionsTestMatrix by tasks.registering {
-    doLast {
-        val testMatrix = arrayListOf<String>()
-
-        file("src/test/kotlin/xyz/wagyourtail/unimined/test/integration").listFiles()?.forEach {
-            if (it.name.endsWith("Test.kt")) {
-
-                val className = it.name.replace(".kt", "")
-                testMatrix.add("xyz.wagyourtail.unimined.test.integration.${className}")
-            }
-        }
-
-        testMatrix.add("xyz.wagyourtail.unimined.util.*")
-
-        val json = groovy.json.JsonOutput.toJson(testMatrix)
-        val output = file("build/test_matrix.json")
-        output.parentFile.mkdir()
-        output.writeText(json)
-    }
-}
-
-/**
- * Replaces invalid characters in test names for GitHub Actions artifacts.
- */
-abstract class PrintActionsTestName : DefaultTask() {
-    @get:Input
-    @get:Option(option = "name", description = "The test name")
-    abstract val testName: Property<String>;
-
-    @TaskAction
-    fun run() {
-        val sanitised = testName.get().replace('*', '_')
-        File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
-    }
-}
-
-tasks.register<PrintActionsTestName>("printActionsTestName") {}

@@ -20,6 +20,7 @@
 *.rar
 
 build
+bin
 .gradle
 !gradle/wrapper/gradle-wrapper.jar
 .idea
@@ -35,4 +36,13 @@ testing/**/.idea
 testing/**/run
 
 Writerside/v.list
-docs/
+*.hprof
+
+# mkdocs/mike build output + generated API docs (populated by CI)
+site/
+site-web/
+docs/api/
+.gh-pages/
+testing/**/.vscode
+testing/**/launch
+testing/**/remappedSrc

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "testmod",
+  "version": "1.0.0",
+  "name": "Test Mod",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.example.TestMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.20.1"
+  }
+}

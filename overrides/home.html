@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Gradle plugin toolchain</p>
+    <h1 class="hero-title">Unimined</h1>
+    <p class="hero-tagline">
+      A unified Minecraft modding environment — one toolchain for modern
+      and legacy modding, from Fabric/NeoForge on the latest release all
+      the way down to alpha-era jar mods.
+    </p>
+    <div class="hero-actions">
+      <a href="docs/latest/" class="hero-btn hero-btn-primary">Get started</a>
+      <a href="docs/latest/api/" class="hero-btn">API reference</a>
+      <a href="{{ config.repo_url or 'https://github.com/wagyourtail/unimined' }}" class="hero-btn">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h2>One plugin, every loader</h2>
+      <p>Fabric, Quilt, Forge, NeoForge, Cleanroom, Rift, LiteLoader, the
+      Bukkit family, and plain jar-modding — all through the same DSL.</p>
+    </div>
+    <div class="feature-card">
+      <h2>Legacy-first</h2>
+      <p>First-class support for environments other toolchains can't
+      touch: alpha/beta-era versions, BetaCraft and ReIndev sources,
+      FG1-era Forge, jarmods via JarModAgent.</p>
+    </div>
+    <div class="feature-card">
+      <h2>Remap anything</h2>
+      <p>Arbitrary source&rarr;target namespace remapped views — not just
+      intermediary&rarr;named. SRG/TSRG/Tiny/Proguard/Feather via
+      UniminedMappingLibrary.</p>
+    </div>
+    <div class="feature-card">
+      <h2>Multi-version, multi-loader</h2>
+      <p>Per-source-set environments and <code>combineWith</code> for
+      cross-version and cross-loader mods in a single project.</p>
+    </div>
+  </div>
+</section>
+
+<section class="loaders">
+  <h2>Runs everywhere Minecraft does</h2>
+  <div class="loader-chips">
+    <span class="chip">Fabric</span>
+    <span class="chip">Quilt</span>
+    <span class="chip">Forge</span>
+    <span class="chip">NeoForge</span>
+    <span class="chip">Cleanroom</span>
+    <span class="chip">Flint</span>
+    <span class="chip">Rift</span>
+    <span class="chip">LiteLoader</span>
+    <span class="chip">Bukkit/Spigot/Paper</span>
+    <span class="chip">ModLoader</span>
+    <span class="chip">JarMods</span>
+  </div>
+  <p class="loaders-more">
+    <a href="loaders/">Full loader &amp; game list &rarr;</a>
+    &nbsp;&middot;&nbsp;
+    <a href="docs/latest/modloaders/">Loader setup docs &rarr;</a>
+  </p>
+</section>
+
+<section class="cta">
+  <h2>Ready to build?</h2>
+  <p>Versioned docs — <code>latest</code>, <code>dev</code>, and every
+  released version — plus generated API docs under each version.</p>
+  <div class="hero-actions">
+    <a href="docs/latest/" class="hero-btn hero-btn-primary">Read the docs</a>
+  </div>
+</section>
+{% endblock %}

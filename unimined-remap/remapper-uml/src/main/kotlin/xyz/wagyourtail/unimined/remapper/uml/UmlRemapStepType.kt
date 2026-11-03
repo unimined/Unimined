@@ -1,0 +1,223 @@
+package xyz.wagyourtail.unimined.remapper.uml
+
+import kotlinx.coroutines.runBlocking
+import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.api.util.ProgressGate
+import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.inheritance.ASMInheritanceTree
+import xyz.wagyourtail.unimined.mapping.inheritance.LazyASMInheritanceTree
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
+import xyz.wagyourtail.unimined.mapping.remapper.asm.BuiltinAsmExtensions
+import xyz.wagyourtail.unimined.mapping.remapper.asm.Jsr305AsmExtension
+import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
+import xyz.wagyourtail.unimined.mapping.remapper.asm.PackageAccess
+import xyz.wagyourtail.unimined.remap.RemapStepSpec
+import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
+import xyz.wagyourtail.unimined.remap.spi.RemapStepType
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepContext
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.collections.getOrPut
+import kotlin.io.path.exists
+import kotlin.reflect.KClass
+
+/**
+ * The `remap` step backed by `UniminedMappingLibrary`'s [AsmRemapper] —
+ * binary surfaces ([RemapSurface.JAR] and the decompile fork
+ * [RemapSurface.DECOMPILE]).
+ *
+ * Consumes mappings through the [UML MappingTree view] typed view, so it gets
+ * the full UML tree — including constant-group unpicking
+ * ([AsmRemapper.Options.unpickConstants]) and BytecodeTransform metadata —
+ * which a row-only bundle cannot carry.
+ *
+ * Classpath entries feed the inheritance pass ([AsmRemapper.remap]'s
+ * `libraries`), so member mappings propagate into subclasses the tree does
+ * not list explicitly.
+ */
+class UmlRemapStepType : RemapStepType<RemapStepSpec> {
+
+    override val name = "uml"
+    override val stepName = "remap"
+    override val specType: KClass<RemapStepSpec> = RemapStepSpec::class
+    override val surfaces: Set<RemapSurface> = setOf(RemapSurface.JAR, RemapSurface.DECOMPILE)
+
+    override val needsMappingTree = true
+    override val needsClasspath = true
+    override val needsAccessModel = true
+
+    override fun supports(spec: RemapSpec) = true
+
+    /**
+     * UML's [AsmRemapper] is the default binary remap engine — the
+     * `tiny` engine remains reachable via an explicit `engine = "tiny"`
+     * override and stays for engine-vs-engine output verification.
+     */
+    override val priority: Int = 1
+
+    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
+        val jsr305 = spec.jsr305ToJetbrains
+        return ArtifactStep { input, c -> remap(input, c, jsr305) }
+    }
+
+    private fun remap(input: Path, ctx: StepContext, jsr305: Boolean): Path {
+        val view = ctx.mappings?.view<MappingTree>()
+            ?: throw GradleException(
+                "remap step 'uml' requires mapping data exposing a UML MappingTree view"
+            )
+        val spec = ctx.spec
+        val target = Files.createTempDirectory(ctx.workDir, "uml")
+            .resolve(input.fileName.toString())
+
+        val slog = ctx.log.subLogger("uml:remap")
+        slog.info(
+            "remapping ${input.fileName} ${spec.sourceNamespace} -> ${spec.targetNamespace}"
+        )
+
+        // the jar's live namespace — remap steps publish their output ns
+        // onto state.currentNamespace, so a chained pipeline validates
+        // against the post-remap truth, not the stale declared source
+        val fns = Namespace(ctx.state.currentNamespace)
+        val tns = Namespace(spec.targetNamespace)
+        val referenceTree = ctx.mappings?.view<MappingTree>()
+        // remap-analysis overlay: AW/AT/CT rules declared by the batch
+        // ride the trees list as a synthetic AccessElement-bearing layer,
+        // folded into the inheritance scan before propagation
+        val overlay = ctx.accessModel
+            ?.entries(spec.sourceNamespace, referenceTree)
+            ?.takeUnless { it.isEmpty() }
+            ?.let { accessModelOverlay(it, fns, referenceTree) }
+
+        // fail loudly when the input jar isn't actually in the declared
+        // source namespace — a mismatched/sparse tree layer would
+        // otherwise "remap" to an identity copy (obf bytes in a
+        // dev-namespace-named artifact)
+        val probe = java.util.zip.ZipFile(input.toFile()).use { z ->
+            val names = z.entries().asSequence()
+                .filter { !it.isDirectory && it.name.endsWith(".class") }
+                .map { it.name.removeSuffix(".class") }
+                .toList()
+            // stride-sample — merged/unmapped classes legitimately
+            // absent from the tree cluster at the front of the jar
+            val stride = (names.size / 64).coerceAtLeast(1)
+            names.filterIndexed { i, _ -> i % stride == 0 }
+        }
+        // skip when the fns layer carries no classes at all (nothing to
+        // validate against) or the jar is too small to infer a mismatch
+        // — a handful of legitimately-unmapped classes looks identical
+        // to a mislabeled layer; ~64-sample jars can't all be unmapped
+        val fnsPopulated = view.classes.any { it.names.containsKey(fns) }
+        if (fnsPopulated && probe.size >= 8 &&
+            probe.none { view.getClass(fns, InternalName.unchecked(it)) != null }
+        ) {
+            throw GradleException(
+                "uml:remap ${input.fileName}: none of ${probe.size} sampled " +
+                    "classes exist in namespace " +
+                    "'${ctx.state.currentNamespace}' — the input jar is in a " +
+                    "different namespace"
+            )
+        }
+        // classes the tree says SHOULD be renamed — used by the output
+        // verification below; identity rows legitimately produce none
+        val expectedRenames = probe.mapNotNull { name ->
+            view.getClass(fns, InternalName.unchecked(name))
+                ?.names?.get(tns)?.value?.takeIf { it != name }
+        }.toSet()
+
+        // the mod-view classpath is identical across a batch's transforms
+        // (sibling mod jars + the source-ns MC artifact) — its class→jar
+        // index is immutable data, so it is cached per jar-set fingerprint
+        // daemon-wide; the lazy tree only parses classpath classes that
+        // hierarchy-resolution actually touches (unrelated libs — most of
+        // the classpath — are never opened); propagation mutates ClassInfo,
+        // so each remap gets a fresh tree over the shared index + this
+        // input's own eager scan
+        val classpathJars = ctx.classpath.filter { it.exists() }
+        val classpathKey = classpathJars
+            .map { Triple(it, Files.size(it), Files.getLastModifiedTime(it).toMillis()) }
+            .sortedBy { it.first }
+        val index = scanCache.getOrPut(classpathKey) {
+            slog.lifecycle(
+                "indexing classpath (${classpathJars.size} jars) for lazy inheritance"
+            )
+            LazyASMInheritanceTree.index(classpathJars.toSet())
+        }
+        val inputScan = ASMInheritanceTree.scan(setOf(input))
+
+        // inline progress — the callback fires per class from UML's parallel
+        // workers; the gate turns it into a throttled lifecycle line so the
+        // log shows movement instead of a multi-second stall
+        var phase = "remap"
+        var total = 0
+        val gate = ProgressGate { elapsed, done ->
+            slog.info {
+                "${input.fileName} ${spec.sourceNamespace}->${spec.targetNamespace}: " +
+                        "$phase $done/$total classes " +
+                        "(${done * 100 / total.coerceAtLeast(1)}%) in ${elapsed}ms"
+            }
+        }
+        runBlocking {
+            AsmRemapper.remap(
+                input,
+                target,
+                listOf(view) + listOfNotNull(overlay),
+                fns,
+                tns,
+                LazyASMInheritanceTree(fns, inputScan, index),
+                // FIX — package-private members of classes whose package
+                // the mappings relocate get widened (tiny's
+                // checkPackageAccess+fixPackageAccess equivalent)
+                options = Options(
+                    packageAccess = PackageAccess.FIX,
+                    // decompiler/obf synthetic param names ($$0, $$1…)
+                    // are valid identifiers — flag them via pattern so
+                    // renameInvalidLocals replaces them
+                    invalidLvNamePattern = Regex(".*\\$\\$.*"),
+                    // JSR-305 annotation descriptors -> JetBrains
+                    extensions = BuiltinAsmExtensions.defaults() +
+                        if (jsr305) listOf(Jsr305AsmExtension.factory()) else emptyList(),
+                    onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
+                )
+            )
+        }
+        // output verification — expected renames that never appear mean
+        // the dst layer produced an identity copy (the forge-1.2.5
+        // official->mcp bug: an exists-but-empty layer "remapped" nothing)
+        if (expectedRenames.isNotEmpty()) {
+            val produced = java.util.zip.ZipFile(target.toFile()).use { z ->
+                z.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.endsWith(".class") }
+                    .map { it.name.removeSuffix(".class") }
+                    .toHashSet()
+            }
+            if (produced.none { it in expectedRenames }) {
+                throw GradleException(
+                    "uml:remap ${input.fileName}: none of the " +
+                        "${expectedRenames.size} expected class renames " +
+                        "appear in the output — the " +
+                        "'${spec.targetNamespace}' layer produced an " +
+                        "identity remap"
+                )
+            }
+        }
+        // publish the artifact's new namespace so downstream steps
+        // validate against the post-remap truth
+        ctx.state.currentNamespace = spec.targetNamespace
+        return target
+    }
+
+    private companion object {
+        /** Daemon-lifetime classpath-index cache — keyed on the ordered
+         *  jar-path set (with size+mtime so same-path rebuilds still
+         *  re-index), so all transforms sharing a view classpath share
+         *  one listing. */
+        val scanCache = java.util.concurrent.ConcurrentHashMap<
+                List<Triple<Path, Long, Long>>, Map<InternalName, Path>>()
+    }
+
+}

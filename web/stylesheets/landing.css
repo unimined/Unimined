@@ -1,0 +1,153 @@
+/* landing page (overrides/home.html) */
+
+.hero {
+  padding: 4rem 1rem 3rem;
+  text-align: center;
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent), transparent 70%);
+}
+
+.hero-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--md-primary-fg-color);
+  margin: 0 0 .5rem;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 3.4rem;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  background: linear-gradient(120deg, var(--md-primary-fg-color), color-mix(in srgb, var(--md-accent-fg-color, var(--md-primary-fg-color)) 80%, var(--md-primary-fg-color)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-tagline {
+  max-width: 42rem;
+  margin: 1rem auto 0;
+  font-size: 1.05rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.hero-actions {
+  display: flex;
+  gap: .7rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.8rem;
+}
+
+.hero-btn {
+  display: inline-block;
+  padding: .6rem 1.4rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: .9rem;
+  border: .1rem solid var(--md-primary-fg-color);
+  color: var(--md-primary-fg-color);
+  transition: background .15s, color .15s;
+}
+
+.hero-btn:hover {
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+.hero-btn-primary {
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+.hero-btn-primary:hover {
+  filter: brightness(1.15);
+}
+
+.features {
+  padding: 2.5rem 1rem 1rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.2rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.feature-card {
+  padding: 1.4rem 1.5rem;
+  border-radius: .6rem;
+  border: .05rem solid var(--md-default-fg-color--lightest);
+  background: var(--md-default-bg-color);
+  box-shadow: 0 .1rem .4rem rgba(0, 0, 0, .08);
+}
+
+.feature-card h2 {
+  margin: 0 0 .5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--md-primary-fg-color);
+}
+
+.feature-card p {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.loaders {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.loaders h2,
+.cta h2 {
+  margin: 0 0 1.2rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.loader-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  justify-content: center;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.chip {
+  padding: .3rem .9rem;
+  border-radius: 2rem;
+  font-size: .78rem;
+  font-weight: 600;
+  border: .05rem solid color-mix(in srgb, var(--md-primary-fg-color) 45%, transparent);
+  color: var(--md-default-fg-color);
+  background: color-mix(in srgb, var(--md-primary-fg-color) 8%, transparent);
+}
+
+.loaders-more {
+  margin-top: 1.4rem;
+  font-size: .85rem;
+}
+
+.cta {
+  padding: 2.5rem 1rem 4rem;
+  text-align: center;
+}
+
+.cta p {
+  max-width: 34rem;
+  margin: 0 auto;
+  color: var(--md-default-fg-color--light);
+  font-size: .9rem;
+}
+
+@media screen and (max-width: 44.9375em) {
+  .hero-title { font-size: 2.4rem; }
+}

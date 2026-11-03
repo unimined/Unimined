@@ -1,0 +1,56 @@
+package xyz.wagyourtail.unimined.api.mapping
+
+import xyz.wagyourtail.commons.core.logger.Logger
+import xyz.wagyourtail.unimined.api.spec.Side
+import java.nio.file.Path
+
+/**
+ * Environment-scoped services handed to mapping SPI participants —
+ * source providers, readers, and composers.
+ */
+interface MappingContext : xyz.wagyourtail.unimined.api.util.DependencyResolver {
+
+    /** The environment this resolution serves, normally the source-set name. */
+    val environmentId: String
+
+    /**
+     * The environment's side, when known — used to drop side-specific
+     * documents (era `mcp_legacy` zips ship both `client.srg` and
+     * `server.srg` whose obf names are independent namespaces that
+     * must not be composed together). `null`/`MERGED` keeps all docs.
+     */
+    val envSide: Side?
+        get() = null
+
+    val logger: Logger
+
+    /** Shared cache dir a participant may materialize into, when provided. */
+    val cacheDir: Path?
+
+    /** Global merged-mapping cache root — `null` disables the cache. */
+    val globalCacheDir: Path?
+        get() = null
+
+    /**
+     * Resolve a Maven coordinate (`group:artifact:version[:classifier]`)
+     * to a local file — injected by the host; participants that never see
+     * remote sources may leave it unimplemented.
+     */
+    fun resolveMaven(notation: String): Path
+
+    /** Single-artifact convenience view of the shared resolver seam. */
+    override fun resolve(notation: String): List<Path> = listOf(resolveMaven(notation))
+
+    /**
+     * Resolve a builtin/provider mapping channel to local files — e.g.
+     * Mojang's `client_mappings` for `mojmap`, or a channel's Maven
+     * artifact when repository wiring is involved. Injected by the
+     * environment host; the default throws because detached/file-only
+     * contexts have no channel machinery.
+     */
+    fun resolveChannel(channel: String, params: Map<String, String>): List<Path> =
+        throw UnsupportedOperationException(
+            "builtin channel '$channel' is not supported in this context"
+        )
+
+}

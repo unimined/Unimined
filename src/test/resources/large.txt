@@ -1,4 +1,0 @@
-# The tests in this file may be disabled by some implementations
-
-# Too large for a 64-bit integer or double, checks if codepoint-wise or integer-parse is being used
-36893488147419103232 < 36893488147419103233
