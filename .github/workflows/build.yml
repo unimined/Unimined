@@ -18,7 +18,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Publish
-        run: ./gradlew publish -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }}
+        run: ./gradlew publish :unimined-cli:fatJar -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -33,5 +33,11 @@ jobs:
       - uses: JasonEtco/upload-to-release@v0.1.1
         with:
           args: ./build/distributions/unimined-templates.zip application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: JasonEtco/upload-to-release@v0.1.1
+        with:
+          args: ./unimined-cli/build/libs/unimined-cli-${{ github.event.release.tag_name }}-fat.jar application/java-archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

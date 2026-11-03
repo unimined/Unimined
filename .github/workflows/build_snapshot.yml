@@ -19,9 +19,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Publish
-        run: ./gradlew publish -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
+        run: ./gradlew publish :unimined-cli:fatJar -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
 
       - uses: actions/upload-artifact@v4
         with:
           name: unimined-snapshot-artifacts
           path: '**/build/libs/'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unimined-cli-snapshot
+          path: 'unimined-cli/build/libs/*-fat.jar'

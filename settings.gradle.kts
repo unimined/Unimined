@@ -10,7 +10,7 @@ pluginManagement {
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-    id("xyz.wagyourtail.commons-gradle") version "1.0.5-SNAPSHOT"
+    id("xyz.wagyourtail.commons-gradle") version "1.1.1"
 }
 
 rootProject.name = "unimined"
