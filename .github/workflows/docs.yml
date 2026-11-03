@@ -86,11 +86,14 @@ jobs:
             git -C .gh-pages checkout --orphan gh-pages
             git -C .gh-pages rm -rf . || true
           fi
-          rsync -a --delete --exclude='docs/' site-web/ .gh-pages/
+          # --exclude .git keeps the worktree gitfile — rsync --delete
+          # otherwise removes it and `git -C .gh-pages` walks up to the
+          # main repo, pushing the WRONG tree to gh-pages
+          rsync -a --delete --exclude='docs/' --exclude='.git' site-web/ .gh-pages/
           git -C .gh-pages add -A
           git -C .gh-pages commit -m "Deploy landing site" || true
           git -C .gh-pages push origin HEAD:gh-pages
-          git worktree remove .gh-pages --force
+          git worktree remove .gh-pages --force || rm -rf .gh-pages
 
       - name: Deploy versioned docs (mike)
         env:
