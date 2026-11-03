@@ -145,9 +145,13 @@ internal object Templates {
      * Optional extras appended to `build.gradle` — JarModAgent
      * client/server jar tasks when [InitSpec.jarmod].
      */
-    fun extras(spec: InitSpec): String =
-        if (!spec.jarmod) "" else "\n" + render(
+    fun extras(spec: InitSpec): String {
+        val jarmodBlock = if (!spec.jarmod) "" else "\n" + render(
             "partials/jarmod.gradle", mapOf("MODID" to spec.modId))
+        val extra = if (spec.extraLines.isEmpty()) ""
+            else "\n" + spec.extraLines.joinToString("\n")
+        return jarmodBlock + extra
+    }
 
     /** Jar sides for jarmod emits — client+server when split. */
     fun jarSides(spec: InitSpec): List<String> =

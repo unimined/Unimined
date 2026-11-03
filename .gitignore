@@ -51,3 +51,4 @@ testing/**/remappedSrc
 # generated config-cache fixtures (regen via unimined-cli in CI)
 testing/fabric-yarn/
 testing/vanilla-mojmap/
+testing/forge-fg2/

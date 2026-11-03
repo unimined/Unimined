@@ -80,6 +80,9 @@ data class InitSpec(
      *  builds pin the toolchain to keep bytecode parseable by old
      *  loader ASM versions. */
     val toolchain: Int? = null,
+    /** Raw DSL lines appended to `build.gradle` — one-off fixture
+     *  wiring the generator doesn't model (runs blocks, etc.). */
+    val extraLines: List<String> = emptyList(),
 ) {
 
     enum class Dsl(val scriptSuffix: String) {

@@ -41,6 +41,8 @@ options:
                          plugin resolved from a composite (drops
                          the plugin version)
   --toolchain <n>        pin java { toolchain } to JDK n
+  --extra <dsl>          raw build.gradle line(s), repeatable —
+                         one-off fixture wiring (runs blocks, etc.)
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
@@ -158,6 +160,7 @@ private fun run(args: Array<String>) {
         noWrapper = "--no-wrapper" in flags,
         includeBuild = one("--include-build"),
         toolchain = one("--toolchain")?.toInt(),
+        extraLines = flags["--extra"].orEmpty(),
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

@@ -18,7 +18,7 @@ jobs:
           # remain for shapes the generator can't emit yet (FG2)
           - { project: fabric-yarn, gen: '--version 1.20.1 --loader fabric=0.16.0 --mappings "yarn(10)" --toolchain 17' }
           - { project: vanilla-mojmap, gen: '--version 1.20.1 --mappings "mojmap()" --toolchain 17' }
-          - { project: forge-fg2, gen: '' }
+          - { project: forge-fg2, gen: '--version 1.12.2 --loader forge=14.23.5.2860 --mappings "searge()" --mappings "mcp(\"stable\", \"39-1.12\")" --extra "runs { named(\"server\") { if (providers.gradleProperty(\"autoStop\").isPresent) stdin.set(\"stop\\n\") } }"' }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
