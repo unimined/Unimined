@@ -18,6 +18,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.MappingTree
@@ -56,6 +57,7 @@ import kotlin.io.path.writeText
  * dev-ns -> mojmap (`official` bridge), cross-MC-version where
  * intermediary ids line up between releases.
  */
+@DisableCachingByDefault(because = "migrates + rewrites files in-place — destructive, never cacheable")
 abstract class MigrateMappingsTask @Inject constructor(
     private val objects: ObjectFactory
 ) : DefaultTask() {

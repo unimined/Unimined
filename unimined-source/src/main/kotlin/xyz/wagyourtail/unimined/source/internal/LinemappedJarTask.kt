@@ -5,6 +5,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
@@ -21,6 +22,7 @@ import java.util.zip.ZipOutputStream
  * `-linemapped` classifier whose `LineNumberTable`s track the
  * decompiled/enriched source lines for debugging.
  */
+@DisableCachingByDefault(because = "reads live env state at execution — inputs aren't fully declared")
 abstract class LinemappedJarTask : DefaultTask() {
 
     @get:InputFile

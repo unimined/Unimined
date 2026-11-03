@@ -8,6 +8,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Prunes unimined-owned cache directories.
@@ -22,6 +23,7 @@ import org.gradle.api.tasks.options.Option
  *
  * Gradle's own `transforms-*` cache is GC'd by Gradle and untouched.
  */
+@DisableCachingByDefault(because = "deletes cache entries — destructive, never cacheable")
 abstract class PruneUniminedCacheTask : DefaultTask() {
 
     /** Global unimined cache root ([xyz.wagyourtail.unimined.api.util.UniminedCache.global]). */

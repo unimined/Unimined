@@ -8,6 +8,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.unimined.ide.IdeRunModel
 import xyz.wagyourtail.unimined.ide.eclipse.EclipseLaunchXml
 import xyz.wagyourtail.unimined.ide.idea.IdeaRunXml
@@ -21,6 +22,8 @@ import java.io.File
  * run mutators), so nothing touches env providers during
  * configuration.
  */
+@DisableCachingByDefault(because = "models resolve live" +
+        " configurations at execution — nothing cacheable to hash")
 abstract class GenerateIdeRunsTask : DefaultTask() {
 
     /** Which IDE format to emit. */
