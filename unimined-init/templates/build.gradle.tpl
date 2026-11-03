@@ -12,7 +12,8 @@ repositories {
 unimined {
     minecraft {
 @@MINECRAFT_BODY@@
+@@MOD_BLOCK@@
     }
 }
-@@MOD_BLOCK@@
+
 @@EXTRAS@@

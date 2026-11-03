@@ -122,13 +122,14 @@ internal object Templates {
 
     /** `mod { }` block — metadata generated per env instead of files. */
     private fun modBlock(spec: InitSpec): String =
+        // scoped under minecraft { } — per-env metadata
         if (!spec.metadataFromDsl) "" else "\n" + render(
             "partials/mod-block.gradle", mapOf(
                 "MODID" to spec.modId,
                 "NAME" to spec.name,
                 "VERSION" to spec.version,
                 "LOADER_SECTIONS" to spec.loaders.joinToString("\n") { (l, _) ->
-                    render("partials/mod-loader-section.gradle", mapOf(
+                    "    " + render("partials/mod-loader-section.gradle", mapOf(
                         "LOADER" to l
                     ))
                 },
@@ -301,16 +302,35 @@ internal object Templates {
      * Entrypoint class for [loader] — a minimal Java skeleton with the
      * loader's init method stubbed.
      */
+    /**
+     * Entrypoint class for [loader] — a minimal Java skeleton with the
+     * loader's init method stubbed. Forge picks the era-appropriate
+     * `@Mod` annotation (cpw ≤1.7.10, fml 1.8–1.12, modern ≥1.13).
+     */
     fun mainClass(spec: InitSpec, loader: String): String {
         val file = when (loader.lowercase()) {
-            "fabric", "quilt", "neoforge", "forge" -> loader.lowercase()
+            "forge", "fg1" -> forgeEra(spec.mcVersion)
+            "fabric", "quilt", "neoforge" -> loader.lowercase()
             else -> "generic"
         }
         return render("entrypoint/$file.java", mapOf(
             "PACKAGE" to spec.basePackage,
             "CLASS" to mainClassName(spec),
             "MODID" to spec.modId,
+            "NAME" to spec.name,
+            "VERSION" to spec.version,
         ))
+    }
+
+    /** `@Mod` annotation family for [mc]: cpw.mods ≤1.7.10, fml ≤1.12. */
+    private fun forgeEra(mc: String): String {
+        val m = Regex("^(?:b)?1\\.(\\d+)").find(mc) ?: return "forge"
+        val minor = m.groupValues[1].toIntOrNull() ?: return "forge"
+        return when {
+            mc.startsWith("b") || minor <= 7 -> "forge-cpw"
+            minor <= 12 -> "forge-fml"
+            else -> "forge"
+        }
     }
 
     /**

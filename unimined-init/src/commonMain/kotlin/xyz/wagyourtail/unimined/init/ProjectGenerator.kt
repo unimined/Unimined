@@ -79,10 +79,9 @@ object ProjectGenerator {
             val pkg = spec.basePackage
             val multi = spec.loaders.size > 1 &&
                     spec.layout != InitSpec.Layout.MULTILOADER
-            // no loaders (bare product env / vanilla): still emit one
-            // generic source unit so src/ isn't empty
-            val emitUnits = spec.loaders.ifEmpty { listOf("generic" to "") }
-            for ((loader, _) in emitUnits) {
+            // no loaders (bare product env / vanilla): no entrypoint —
+            // there is no loader API to implement
+            for ((loader, _) in spec.loaders) {
                 // a MULTILOADER module has a single env — it lives on
                 // main inside the module dir; FLAT multi-loader uses
                 // per-loader source sets instead

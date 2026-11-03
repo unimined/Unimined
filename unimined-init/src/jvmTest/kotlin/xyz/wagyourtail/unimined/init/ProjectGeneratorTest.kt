@@ -95,7 +95,7 @@ class ProjectGeneratorTest {
         val modsToml = Files.readString(dir.resolve("src/main/resources/META-INF/mods.toml"))
         assertTrue("my_mod" in modsToml)
         val main = Files.readString(dir.resolve("src/main/java/com/example/mymod/MyMod.java"))
-        assertTrue("@net.minecraftforge.fml.common.Mod(\"my_mod\")" in main)
+        assertTrue("@Mod(\"my_mod\")" in main && "import net.minecraftforge.fml.common.Mod;" in main)
     }
 
     @Test

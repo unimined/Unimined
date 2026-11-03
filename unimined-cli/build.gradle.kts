@@ -16,6 +16,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":unimined-init"))
+            implementation("com.github.ajalt.clikt:clikt:5.0.3")
         }
     }
 }
