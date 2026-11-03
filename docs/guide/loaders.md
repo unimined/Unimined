@@ -1,14 +1,22 @@
 # Loaders
 
-Declare loaders per environment — `loader("<name>", "<version>")`,
-repeat for multiloader:
+Declare the loader per environment — `loader("<name>", "<version>")`.
+One loader per env; multiloader means one env per loader —
+`unimined new --loader fabric=0.16.0 --loader forge=47.2.0` (without
+`--modules`) emits:
 
 ```kotlin
 minecraft {
-    loader("fabric", "0.16.0")
-    loader("forge", "47.2.0")
+    sourceSet("fabric") {
+        loader("fabric", "0.16.0")
+    }
+    sourceSet("forge") {
+        loader("forge", "47.2.0")
+    }
 }
 ```
+
+(or `--modules` for the common+per-loader subproject layout)
 
 Loader names resolve through the loader registry:
 

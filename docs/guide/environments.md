@@ -12,10 +12,10 @@ unimined {
         loader("fabric", "0.16.0")
     }
     minecraft {
-        sourceSet("server")
-        version = "1.20.1"
-        loader("forge", "47.2.0")
-        side = Side.SERVER
+        sourceSet("server") {
+            loader("forge", "47.2.0")
+            side = Side.SERVER
+        }
     }
 }
 ```
