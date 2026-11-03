@@ -52,6 +52,7 @@ class GradlePlugin : Plugin<Project> {
             "xyz.wagyourtail.unimined.mod",
             "xyz.wagyourtail.unimined.migrate",
             "xyz.wagyourtail.unimined.runs",
+            "xyz.wagyourtail.unimined.ide",
             "xyz.wagyourtail.unimined.decompiler.vineflower"
         )
     }

@@ -2,8 +2,13 @@ package xyz.wagyourtail.unimined.runs.internal
 
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 
-/** Mutable [RunConfigSpec] presented to transform run mutators. */
-internal class MutableRunConfigSpec(override val name: String) : RunConfigSpec {
+/**
+ * Mutable [RunConfigSpec] presented to transform run mutators.
+ * Public (despite the `internal` package) so `unimined-ide` can
+ * reproduce the same run resolution `RunsWiring` performs when
+ * generating IDE launch files.
+ */
+class MutableRunConfigSpec(override val name: String) : RunConfigSpec {
 
     override var mainClass: String? = null
 

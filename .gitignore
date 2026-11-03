@@ -43,3 +43,6 @@ site/
 site-web/
 docs/api/
 .gh-pages/
+testing/**/.vscode
+testing/**/launch
+testing/**/remappedSrc

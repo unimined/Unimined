@@ -8,7 +8,7 @@ dependencies {
     api(project(":unimined-remap"))
     api(project(":unimined-transform"))
     api(project(":unimined-runs"))
-    api(project(":unimined-runs-ide"))
+    api(project(":unimined-ide"))
     api(project(":unimined-source"))
     api(project(":unimined-migrate"))
     api(project(":unimined-minecraft:provider-native"))
