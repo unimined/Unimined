@@ -55,21 +55,18 @@ jobs:
         run: |
           printf '%s' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
           chmod 600 $RUNNER_TEMP/tmpl-key
-      - name: checkout target example branch
-        uses: actions/checkout@v4
-        with:
-          repository: unimined/Unimined-Templates
-          ref: snapshot/${{ matrix.mode }}
-          path: tmpl
-          ssh-key: ${{ secrets.TEMPLATES_DEPLOY_KEY }}
-          continue-on-error: true
-      - name: create orphan branch when absent
+      - name: checkout or init snapshot/${{ matrix.mode }}
         run: |
-          if [ ! -d tmpl/.git ]; then
-            mkdir -p tmpl && cd tmpl
-            git init && git checkout --orphan snapshot/${{ matrix.mode }}
-            git remote add origin git@github.com:unimined/Unimined-Templates.git
+          mkdir -p tmpl && cd tmpl
+          git init
+          git remote add origin git@github.com:unimined/Unimined-Templates.git 2>/dev/null || true
+          if git fetch origin snapshot/${{ matrix.mode }}; then
+            git checkout -B snapshot/${{ matrix.mode }} FETCH_HEAD
+          else
+            git checkout --orphan snapshot/${{ matrix.mode }} 2>/dev/null || true
           fi
+        env:
+          GIT_SSH_COMMAND: ssh -i $RUNNER_TEMP/tmpl-key -o IdentitiesOnly=yes
       - name: generate
         run: |
           java -jar unimined-cli/build/libs/unimined-cli-*-fat.jar init \
