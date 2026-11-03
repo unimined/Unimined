@@ -22,13 +22,13 @@ jobs:
           java-version: '17'
       - name: configure + build under strict config-cache
         run: |
-          ./gradlew :testing:${{ matrix.project }}:classes \
+          ./gradlew -p testing/${{ matrix.project }} classes \
             --configuration-cache \
             --configuration-cache-problems=fail \
             --stacktrace
       - name: verify the cache entry was stored
         run: |
-          ./gradlew :testing:${{ matrix.project }}:help \
+          ./gradlew -p testing/${{ matrix.project }} help \
             --configuration-cache \
             --configuration-cache-problems=fail 2>&1 \
             | grep -q "Configuration cache entry reused" \

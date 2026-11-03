@@ -18,7 +18,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ matrix.java }}
+          # primary = matrix JDK; 8 is installed for Gradle toolchain
+          # resolution (old-MC envs require it — provisioning downloads
+          # are unreliable on runners)
+          java-version: |
+            ${{ matrix.java }}
+            8
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build --stacktrace
       - uses: actions/upload-artifact@v4
