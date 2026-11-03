@@ -9,6 +9,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.Deprecations
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.deps.LoaderApi
 import xyz.wagyourtail.unimined.mod.ModExtension
 import xyz.wagyourtail.unimined.migrate.MigrateExtension
 import xyz.wagyourtail.unimined.migrate.task.MigrateMappingsTask
@@ -230,6 +231,30 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
+    }
+
+    /**
+     * `unimined.loaderApi("fabric", "0.92.2+1.20.1")` — maven
+     * coordinates for a loader's api artifact set. Also records the
+     * api's modid into `mod { depends }` when the unimined-mod
+     * extension is present.
+     */
+    fun loaderApi(name: String, version: String, mcVersion: String = "", environment: String? = null): Set<String> {
+        recordApiDep(name, version)
+        return LoaderApi.api(name, version, mcVersion, environment)
+    }
+
+    /** `unimined.loaderApiModule("fabric", "fabric-api-base", v)` —
+     *  one sub-module coordinate. */
+    fun loaderApiModule(name: String, module: String, version: String, mcVersion: String = "", environment: String? = null): String {
+        recordApiDep(name, version)
+        return LoaderApi.apiModule(name, module, version, mcVersion, environment)
+    }
+
+    private fun recordApiDep(name: String, version: String) {
+        val mod = project.extensions.findByType(ModExtension::class.java) ?: return
+        val modid = LoaderApi.providers[name]?.modid ?: return
+        if (!mod.depends.get().containsKey(modid)) mod.depends.put(modid, version)
     }
 
     /** `unimined.transform { }` → the `unimined-transform` extension. */

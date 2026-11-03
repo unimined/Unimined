@@ -20,7 +20,8 @@ dependencies {
     // mods on the classpath — remapped onto your mappings
     // modImplementation("maven:coord")
     // modCompileOnly(...) / modLocalRuntime(...)
-    // loader api helpers (fabricApi-style) are planned for 2.0
+    // unimined.loaderApi("fabric", "0.92.2+1.20.1") — loader api coords
+    // (also records the api modid into mod { depends } automatically)
 }
 
 @@EXTRAS@@
