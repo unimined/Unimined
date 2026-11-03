@@ -6,10 +6,9 @@ xyz.wagyourtail.unimined.api.environment
 xyz.wagyourtail.unimined.api.mapping
 xyz.wagyourtail.unimined.api.task
 xyz.wagyourtail.unimined.api.util
-module:unimined-cli
-xyz.wagyourtail.unimined.cli
 module:unimined-frontend
 xyz.wagyourtail.unimined
+xyz.wagyourtail.unimined.deps
 module:unimined-ide
 xyz.wagyourtail.unimined.ide
 xyz.wagyourtail.unimined.ide.internal

@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#multi-sourceset-multi-project" class="md-skip">
+        <a href="#multiple-source-sets-projects" class="md-skip">
           Skip to content
         </a>
       
@@ -563,10 +563,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#multi-sourcesets" class="md-nav__link">
+  <a href="#flat-one-env-per-source-set" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-SourceSets
+        Flat: one env per source set
       
     </span>
   </a>
@@ -574,74 +574,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-loader" class="md-nav__link">
+  <a href="#multi-module-common-per-loader-subprojects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Loader
+        Multi-module: common + per-loader subprojects
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Project
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Project">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#main-build-gradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        main build gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        common build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fabric-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fabric build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#forge-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        forge build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -751,7 +690,7 @@
   <span class="md-ellipsis">
     
   
-    Run Config
+    Run config
   
 
     
@@ -862,10 +801,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#multi-sourcesets" class="md-nav__link">
+  <a href="#flat-one-env-per-source-set" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-SourceSets
+        Flat: one env per source set
       
     </span>
   </a>
@@ -873,74 +812,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-loader" class="md-nav__link">
+  <a href="#multi-module-common-per-loader-subprojects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Loader
+        Multi-module: common + per-loader subprojects
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Project
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Project">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#main-build-gradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        main build gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        common build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fabric-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fabric build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#forge-buildgradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        forge build.gradle
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -964,305 +842,46 @@
   
 
 
-<h1 id="multi-sourceset-multi-project">Multi-SourceSet / Multi-Project<a class="headerlink" href="#multi-sourceset-multi-project" title="Permanent link">&para;</a></h1>
-<h2 id="multi-sourcesets">Multi-SourceSets<a class="headerlink" href="#multi-sourcesets" title="Permanent link">&para;</a></h2>
-<p>If you have multiple sourceSets that are seperate mods, but with the same minecraft configurations:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Groovy</label><label for="__tabbed_1_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">([</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">a</span><span class="o">,</span><span class="w"> </span><span class="n">sourceSets</span><span class="o">.</span><span class="na">b</span><span class="o">])</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="o">...</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="o">}</span>
+<h1 id="multiple-source-sets-projects">Multiple Source Sets &amp; Projects<a class="headerlink" href="#multiple-source-sets-projects" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>2.0 rewrite. The 1.x <code>unimined.minecraft(sourceSets.x)</code> /
+<code>combineWith(...)</code> APIs are gone — see
+<a href="../migration-1x-to-2.0/">Migrating from 1.x</a>.</p>
+</blockquote>
+<p>Two shapes cover the 1.x use cases:</p>
+<ul>
+<li><strong>flat</strong> — several <code>minecraft { }</code> envs in one project, each bound
+  to a source set;</li>
+<li><strong>multi-module</strong> — a <code>common</code> module + one subproject per loader
+  (what <code>unimined-cli new --modules</code> generates).</li>
+</ul>
+<h2 id="flat-one-env-per-source-set">Flat: one env per source set<a class="headerlink" href="#flat-one-env-per-source-set" title="Permanent link">&para;</a></h2>
+<p>Each <code>minecraft { sourceSet(...) { } }</code> block is an independent
+environment — its own product, loader, mappings, runs. Envs with no
+<code>sourceSet</code> call bind to <code>main</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="s">"0.16.0"</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"forge"</span><span class="p">,</span><span class="w"> </span><span class="s">"47.2.0"</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="n">side</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Side</span><span class="p">.</span><span class="na">SERVER</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">}</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">getting</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">val</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">getting</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<p>for the same mod, but with multiple sourcesets</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Groovy</label><label for="__tabbed_2_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="o">...</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="o">}</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">a</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">combineWith</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kd">val</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">getting</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="n">combineWith</span><span class="p">(</span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="p">.</span><span class="na">get</span><span class="p">())</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h2 id="multi-loader">Multi-Loader<a class="headerlink" href="#multi-loader" title="Permanent link">&para;</a></h2>
-<p>this is an extension of the multi-sourcesets concept, but with different modloaders.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Groovy</label><label for="__tabbed_3_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// main as common</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">version</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="na">mcVersion</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">       </span><span class="n">mojmap</span><span class="o">()</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="n">accessWidener</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="n">accessWidener</span><span class="w"> </span><span class="s2">"src/main/resources/accessWidenerName.aw"</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="c1">// you may want to set this if you want to include architectury mods in common</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="n">mods</span><span class="o">.</span><span class="na">modImplementation</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">        </span><span class="n">namespace</span><span class="o">(</span><span class="s2">"intermediary"</span><span class="o">)</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="c1">// if you don't want to build/remap a "common" jar</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">(</span><span class="n">sourceSet</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">        </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="o">}</span>
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="c1">// if not disabling remapJar above, </span>
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="c1">// you may want to set this so the "common" jar is in intermediary to match architectury</span>
-<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="n">tasks</span><span class="o">.</span><span class="na">named</span><span class="o">(</span><span class="s2">"remapJar"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="n">prodNamespace</span><span class="o">(</span><span class="s2">"intermediary"</span><span class="o">)</span>
-<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="o">}</span>
-<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>
-<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="c1">// forge</span>
-<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">forge</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">    </span><span class="n">combineWith</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">)</span>
-<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">    </span><span class="n">minecraftForge</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">        </span><span class="n">loader</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="na">forgeVersion</span>
-<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">        </span><span class="n">accessTransformer</span><span class="w"> </span><span class="n">aw2at</span><span class="o">(</span><span class="s2">"src/main/resources/accessWidenerName.aw"</span><span class="o">)</span>
-<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="o">}</span>
-<a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>
-<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="c1">// fabric</span>
-<a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">fabric</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a><span class="w">    </span><span class="n">combineWith</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">)</span>
-<a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="w">    </span><span class="n">fabric</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a><span class="w">        </span><span class="n">loader</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="na">fabricLoaderVersion</span>
-<a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a><span class="w">        </span><span class="n">accessWidener</span><span class="w"> </span><span class="s2">"src/main/resources/accessWidenerName.aw"</span>
-<a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">mcVersion</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">extra</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kd">val</span><span class="w"> </span><span class="nv">forgeVersion</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">extra</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kd">val</span><span class="w"> </span><span class="nv">fabricLoaderVersion</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">extra</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kd">val</span><span class="w"> </span><span class="nv">forge</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">creating</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kd">val</span><span class="w"> </span><span class="nv">fabric</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">creating</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1">// main as common</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="n">version</span><span class="p">(</span><span class="n">mcVersion</span><span class="p">)</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">       </span><span class="n">mojmap</span><span class="p">()</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="n">accessWidener</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="n">accessWidener</span><span class="p">(</span><span class="s">"src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="c1">// you may want to set this if you want to include architectury mods in common</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">    </span><span class="n">mods</span><span class="p">.</span><span class="na">modImplementation</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">        </span><span class="n">namespace</span><span class="p">(</span><span class="s">"intermediary"</span><span class="p">)</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">    </span><span class="c1">// if you don't want to build/remap a "common" jar</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sourceSet</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="p">.</span><span class="na">get</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">        </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="p">}</span>
-<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>
-<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="c1">// if not disabling remapJar above,</span>
-<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="c1">// you may want to set this so the "common" jar is in intermediary to match architectury</span>
-<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a><span class="n">tasks</span><span class="p">.</span><span class="na">named</span><span class="p">(</span><span class="s">"remapJar"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="w">    </span><span class="n">prodNamespace</span><span class="p">(</span><span class="s">"intermediary"</span><span class="p">)</span>
-<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="p">}</span>
-<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a>
-<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="c1">// forge</span>
-<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">(</span><span class="n">forge</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a><span class="w">    </span><span class="n">combineWith</span><span class="p">(</span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="p">.</span><span class="na">get</span><span class="p">())</span>
-<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="w">    </span><span class="n">minecraftForge</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="n">forgeVersion</span><span class="p">)</span>
-<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="w">        </span><span class="n">accessTransformer</span><span class="p">(</span><span class="s">"src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="p">}</span>
-<a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a>
-<a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a><span class="c1">// fabric</span>
-<a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">(</span><span class="n">fabric</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a><span class="w">    </span><span class="n">combineWith</span><span class="p">(</span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="p">.</span><span class="na">get</span><span class="p">())</span>
-<a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="w">    </span><span class="n">fabric</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-50" name="__codelineno-5-50" href="#__codelineno-5-50"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="n">fabricLoaderVersion</span><span class="p">)</span>
-<a id="__codelineno-5-51" name="__codelineno-5-51" href="#__codelineno-5-51"></a><span class="w">        </span><span class="n">accessWidener</span><span class="p">(</span><span class="s">"src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-5-52" name="__codelineno-5-52" href="#__codelineno-5-52"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-53" name="__codelineno-5-53" href="#__codelineno-5-53"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h2 id="multi-project">Multi-Project<a class="headerlink" href="#multi-project" title="Permanent link">&para;</a></h2>
-<p>multi-project is similar to multi-sourceSet, but with different projects.
-this is useful for porting arch-loom projects. for new projects, it is recommended to not use this.</p>
-<h3 id="main-build-gradle">main build gradle<a class="headerlink" href="#main-build-gradle" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Groovy</label><label for="__tabbed_4_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="o">...</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">subprojects</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="o">...</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">,</span><span class="w"> </span><span class="kc">true</span><span class="o">)</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="c1">// the true here defers loading until the next time unimined.minecraft is called, (in each subproject's build.gradle)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">           </span><span class="n">mojmap</span><span class="o">()</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">...</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">subprojects</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">(</span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// the true here defers loading until the next time unimined.minecraft is called, (in each subproject's build.gradle)</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">           </span><span class="n">mojmap</span><span class="p">()</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="common-buildgradle">common build.gradle<a class="headerlink" href="#common-buildgradle" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Groovy</label><label for="__tabbed_5_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">accessWidener</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">accessWidener</span><span class="w"> </span><span class="s2">"src/main/resources/accessWidenerName.aw"</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="c1">// you may want to set this if you want to include arch mods in common</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="n">mods</span><span class="o">.</span><span class="na">modImplementation</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="n">namespace</span><span class="w"> </span><span class="s2">"intermediary"</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="c1">// if you don't want to build/remap a "common" jar</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"common"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">        </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="o">}</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="c1">// if not disabling remapJar above, </span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="c1">// you may want to set this so the "common" jar is in intermediary to match architectury</span>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="n">tasks</span><span class="o">.</span><span class="na">named</span><span class="o">(</span><span class="s2">"remapJar"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">    </span><span class="n">prodNamespace</span><span class="o">(</span><span class="s2">"intermediary"</span><span class="o">)</span>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">accessWidener</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="n">accessWidener</span><span class="p">(</span><span class="s">"src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="c1">// you may want to set this if you want to include arch mods in common</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="n">mods</span><span class="p">.</span><span class="na">modImplementation</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="n">namespace</span><span class="p">(</span><span class="s">"intermediary"</span><span class="p">)</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">    </span><span class="c1">// if you don't want to build/remap a "common" jar</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">project</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"common"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="p">}</span>
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
-<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="c1">// if not disabling remapJar above,</span>
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="c1">// you may want to set this so the "common" jar is in intermediary to match architectury</span>
-<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="n">tasks</span><span class="p">.</span><span class="na">named</span><span class="p">(</span><span class="s">"remapJar"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">    </span><span class="n">prodNamespace</span><span class="p">(</span><span class="s">"intermediary"</span><span class="p">)</span>
-<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="fabric-buildgradle">fabric build.gradle<a class="headerlink" href="#fabric-buildgradle" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Groovy</label><label for="__tabbed_6_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">combineWith</span><span class="o">(</span><span class="s2">":common:main"</span><span class="o">)</span><span class="w"> </span><span class="c1">// combine with common, for identifying both together as one mod for dev runs </span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="n">fabric</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="n">loader</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="na">fabricLoaderVersion</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="n">accessWidener</span><span class="w"> </span><span class="s2">"../common/src/main/resources/accessWidenerName.aw"</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">fabricLoaderVersion</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">extra</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="n">combineWith</span><span class="p">(</span><span class="s">":common:main"</span><span class="p">)</span><span class="w"> </span><span class="c1">// combine with common, for identifying both together as one mod for dev runs </span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">fabric</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="n">fabricLoaderVersion</span><span class="p">)</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="n">accessWidener</span><span class="p">(</span><span class="s">"../common/src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="forge-buildgradle">forge build.gradle<a class="headerlink" href="#forge-buildgradle" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Groovy</label><label for="__tabbed_7_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">combineWith</span><span class="o">(</span><span class="s2">":common:main"</span><span class="o">)</span><span class="w"> </span><span class="c1">// combine with common, for identifying both together as one mod for dev runs </span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="n">minecraftForge</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">        </span><span class="n">loader</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="na">forgeVersion</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="n">accessTransformer</span><span class="w"> </span><span class="n">aw2at</span><span class="o">(</span><span class="s2">"../common/src/main/resources/accessWidenerName.aw"</span><span class="o">)</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">forgeVersion</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">extra</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="n">combineWith</span><span class="p">(</span><span class="s">":common:main"</span><span class="p">)</span><span class="w"> </span><span class="c1">// combine with common, for identifying both together as one mod for dev runs </span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="n">minecraftForge</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="n">forgeVersion</span><span class="p">)</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span><span class="n">accessTransformer</span><span class="w"> </span><span class="n">aw2at</span><span class="p">(</span><span class="s">"../common/src/main/resources/accessWidenerName.aw"</span><span class="p">)</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
+<p>Run configurations come from each env's <code>run { }</code>; there is no
+<code>combineWith</code> — an env that should share another's classpath just
+points at the same source set or module dependency.</p>
+<h2 id="multi-module-common-per-loader-subprojects">Multi-module: common + per-loader subprojects<a class="headerlink" href="#multi-module-common-per-loader-subprojects" title="Permanent link">&para;</a></h2>
+<p>This is what <code>unimined new mymod --modules --loader fabric=…
+--loader forge=…</code> emits. Settings includes every module:</p>
+<p>A loader module applies unimined, declares its env on <code>main</code>, and
+depends on <code>:common</code> for shared code:</p>
+<p><code>common</code> gets a loader-less env (MC classpath + mappings only); the
+loader jars land as <code>modImplementation</code> deps in each loader module.</p>
 
 
 
