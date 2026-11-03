@@ -36,6 +36,9 @@ jobs:
         run: |
           ./gradlew -p testing/${{ matrix.project }} classes \
             --configuration-cache \
-            --configuration-cache-problems=fail 2>&1 \
-            | grep -q "Configuration cache entry reused" \
-            && echo "CC entry reused — strict pass"
+            --configuration-cache-problems=fail 2>&1 | tee cc-verify.log
+          grep -q "Configuration cache entry reused" cc-verify.log || {
+            grep -E "cannot be reused|problems? (were )?found" cc-verify.log | head -20
+            exit 1
+          }
+          echo "CC entry reused — strict pass"
