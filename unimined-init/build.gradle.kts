@@ -138,14 +138,16 @@ tasks.register("genProbedVersions") {
             val num = { s: String -> s.takeLastWhile { it.isDigit() }.toIntOrNull() }
             val segs = mutableListOf<String>()
             var start = vs[0]; var prev = vs[0]
+            fun flush() { segs.add(
+                if (start == prev) start
+                else "${base(start)}${num(start)}-${num(prev)}") }
             for (v in vs.drop(1)) {
                 if (base(v) == base(prev) && num(v) != null &&
-                    num(v) == num(prev)?.minus(1)) { prev = v; continue }
-                segs.add(if (start == prev) prev else "${base(prev)}${num(prev)}-")
-                start = v; prev = v
+                    num(v) == num(prev)!! - 1) { prev = v; continue }
+                flush(); start = v; prev = v
             }
-            segs.add(if (start == prev) prev else "${base(prev)}${num(prev)}-")
-            return segs.joinToString(",") { it.removeSuffix("-") }
+            flush()
+            return segs.joinToString(",")
         }
         val p = linkedMapOf<String, List<String>>()
         p["@mc"] = runCatching {
@@ -203,10 +205,10 @@ tasks.register("genProbedVersions") {
             appendLine("        if (s.isEmpty()) emptyList() else s.split(',').flatMap { seg ->")
             appendLine("            val m = runRe.find(seg.trim())")
             appendLine("            if (m != null) {")
-            appendLine("                val (base, lo, hi) = m.destructured")
-            appendLine("                (lo.toInt()..hi.toInt()).map { base + it }")
+            appendLine("                val (base, hi, lo) = m.destructured")
+            appendLine("                (hi.toInt() downTo lo.toInt()).map { base + it }")
             appendLine("            } else listOf(seg.trim())")
-            appendLine("        }.reversed()")
+            appendLine("        }")
             appendLine("}")
         })
     }

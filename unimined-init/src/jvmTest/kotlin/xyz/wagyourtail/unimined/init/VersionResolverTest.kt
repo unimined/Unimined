@@ -40,7 +40,7 @@ class VersionResolverTest {
             )
         )
         assertEquals(
-            xyz.wagyourtail.unimined.init.Probed.MAP["@mc"]?.first(),
+            xyz.wagyourtail.unimined.init.Probed.expand("@mc").first(),
             VersionResolver(
                 fetch = { throw java.io.IOException("offline") },
                 cacheDir = dir.toString()

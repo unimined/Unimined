@@ -84,7 +84,7 @@ class VersionResolver(
 
     /** Build-time probed cache — offline floor after the disk cache. */
     private fun baked(key: String): String? =
-        Probed.expand(key).lastOrNull()?.takeIf { it.isNotEmpty() }
+        Probed.expand(key).firstOrNull()?.takeIf { it.isNotEmpty() }
 
     /** Newest-first supported versions for [loader] — live list, or
      *  the baked cache when offline. Empty when nothing resolves. */
