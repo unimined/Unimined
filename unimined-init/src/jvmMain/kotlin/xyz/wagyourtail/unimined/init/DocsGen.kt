@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.init
 
-/** Emits canonical 2.0 build snippets into `docs/snippets/` — docs
+/** Emits canonical 2.0 build snippets into `docs/generated/` — docs
  *  pages include them via `--8<--` so examples track the generator.
  *  `java DocsGen <outDir>` (Gradle task `genDocSnippets`). */
 fun main(args: Array<String>) {

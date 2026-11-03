@@ -67,7 +67,7 @@ And the following to `build.gradle`:
 ## Adding Minecraft
 
 to add minecraft to the main sourceSet, add the following (a full
-generated project looks like `--8<--` `snippets/flat-fabric.gradle.kts`):
+generated project looks like `--8<--` `generated/flat-fabric.gradle.kts`):
 
 === "Groovy"
 

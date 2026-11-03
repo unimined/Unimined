@@ -41,12 +41,12 @@ points at the same source set or module dependency.
 This is what `unimined new mymod --modules --loader fabric=…
 --loader forge=…` emits. Settings includes every module:
 
---8<-- "snippets/multiloader-settings.gradle.kts"
+--8<-- "generated/multiloader-settings.gradle.kts"
 
 A loader module applies unimined, declares its env on `main`, and
 depends on `:common` for shared code:
 
---8<-- "snippets/multiloader-fabric.gradle.kts"
+--8<-- "generated/multiloader-fabric.gradle.kts"
 
 `common` gets a loader-less env (MC classpath + mappings only); the
 loader jars land as `modImplementation` deps in each loader module.
