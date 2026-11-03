@@ -58,61 +58,73 @@ class VersionResolver(
             ?: error("no release id in piston-meta manifest")
     }.getOrElse { baked("@mc") ?: throw it }
 
-    /** Build-time probed cache — offline fallback before live fetch. */
+
+    /** Build-time probed cache — offline floor after the disk cache. */
     private fun baked(key: String): String? =
-        Probed.MAP[key]?.takeIf { it.isNotEmpty() }
+        Probed.MAP[key]?.firstOrNull()?.takeIf { it.isNotEmpty() }
+
+    /** Newest-first supported versions for [loader] — live list, or
+     *  the baked cache when offline. Empty when nothing resolves. */
+    fun loaderVersions(loader: String, mc: String): List<String> =
+        runCatching { liveLoaderVersions(loader, mc) }
+            .getOrElse { Probed.MAP["$loader:$mc"] ?: Probed.MAP[loader]
+                ?: emptyList() }
+
+    private fun liveLoaderVersions(loader: String, mc: String): List<String> =
+        when (loader.lowercase()) {
+            "fabric" -> fabricMetaVersions("loader", mc, "loader")
+            "yarn" -> fabricMetaFlat("yarn", mc)
+            "forge" -> mavenVersions(FORGE_MAVEN, mc)
+            "neoforge" -> mavenVersions(NEOFORGE_MAVEN, null)
+            "quilt" -> mavenVersions(QUILT_MAVEN, null)
+            "babric" -> mavenVersions(BABRIC_MAVEN, null)
+            "foxloader" -> mavenVersions(FOXLOADER_MAVEN, null)
+            "stationapi" -> mavenVersions(STATION_MAVEN, null)
+            "osl" -> mavenVersions(OSL_MAVEN, null)
+            "bta" -> mavenVersions(BTA_MAVEN, null)
+            "reindev" -> mavenVersions(REINDEV_MAVEN, null)
+            else -> error("no version endpoint known for loader '$loader'")
+        }
 
     /** Latest loader version for [loader] ([mc] scopes fabric/quilt). */
     fun latestLoader(loader: String, mc: String): String =
-        runCatching { liveLoader(loader, mc) }.getOrElse {
-            baked("$loader:$mc") ?: baked(loader) ?: throw it
-        }
-
-    private fun liveLoader(loader: String, mc: String): String = when (loader.lowercase()) {
-        "fabric" -> fabricMeta("loader", mc, "loader")
-        "yarn" -> fabricMeta("yarn", mc, "yarn")
-        "forge" -> latestMaven(FORGE_MAVEN, mc)
-        "neoforge" -> latestMaven(NEOFORGE_MAVEN, null)
-        "quilt" -> latestMaven(QUILT_MAVEN, null)
-        "babric" -> latestMaven(BABRIC_MAVEN, null)
-        "foxloader" -> latestMaven(FOXLOADER_MAVEN, null)
-        "stationapi" -> latestMaven(STATION_MAVEN, null)
-        "osl" -> latestMaven(OSL_MAVEN, null)
-        "bta" -> latestMaven(BTA_MAVEN, null)
-        "reindev" -> latestMaven(REINDEV_MAVEN, null)
-        else -> error("no version endpoint known for loader '$loader'")
-    }
+        loaderVersions(loader, mc).firstOrNull()
+            ?: error("no version endpoint known for loader '$loader'")
 
     /** Latest published unimined plugin version. */
     fun latestPlugin(): String = runCatching {
-        latestMaven(UNIMINED_PLUGIN_METADATA, null)
+        mavenVersions(UNIMINED_PLUGIN_METADATA, null).firstOrNull()
+            ?: error("no versions in $UNIMINED_PLUGIN_METADATA")
     }.getOrElse { baked("@plugin") ?: throw it }
 
-    /** fabric-meta `v2/versions/<kind>/<mc>` → first `<kind>.version`. */
-    private fun fabricMeta(kind: String, mc: String, key: String): String {
+    /** All `<key>.version` entries — fabric-meta order (newest-first). */
+    private fun fabricMetaVersions(kind: String, mc: String, key: String): List<String> {
         val json = fetch(
             "https://meta.fabricmc.net/v2/versions/$kind/$mc")
-        // entries look like {"loader": {"version": "x.y.z", ...}} —
-        // version may not be the first field in the flat object
-        val m = Regex("\"$key\"\\s*:\\s*\\{[^}]*?\"version\"\\s*:\\s*\"([^\"]+)\"")
-            .find(json)
-        return m?.groupValues?.get(1)
-            ?: error("no $kind version for mc $mc in fabric-meta")
+        return Regex("\"$key\"\\s*:\\s*\\{[^}]*?\"version\"\\s*:\\s*\"([^\"]+)\"")
+            .findAll(json).map { it.groupValues[1] }.toList()
+    }
+
+    /** Flat fabric-meta payloads (yarn entries have top-level `version`). */
+    private fun fabricMetaFlat(kind: String, mc: String): List<String> {
+        val json = fetch(
+            "https://meta.fabricmc.net/v2/versions/$kind/$mc")
+        return Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+            .findAll(json).map { it.groupValues[1] }.toList()
     }
 
     /**
-     * `maven-metadata.xml` latest matching [prefix] (e.g. forge's
-     * `"1.20.1-"` scoped versions) or the file's `<latest>` otherwise.
+     * `maven-metadata.xml` newest-first versions matching [prefix]
+     * (e.g. forge's `"1.20.1-"` scope).
      */
-    private fun latestMaven(metadataUri: String, prefix: String?): String {
-        val xml = fetch(metadataUri)
+    private fun mavenVersions(metadataUri: String, prefix: String?): List<String> =
+        mavenVersions0(fetch(metadataUri), prefix)
+
+    private fun mavenVersions0(xml: String, prefix: String?): List<String> {
         val versions = Regex("<version>([^<]+)</version>")
-            .findAll(xml).map { it.groupValues[1] }.toList()
-        val candidates = prefix?.let { p ->
-            versions.filter { it.startsWith(p) }
-        } ?: versions
-        return candidates.lastOrNull()
-            ?: error("no versions in $metadataUri matching '$prefix'")
+            .findAll(xml).map { it.groupValues[1] }.toList().reversed()
+        return prefix?.let { p -> versions.filter { it.startsWith(p) } }
+            ?: versions
     }
 
     companion object {
