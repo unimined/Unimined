@@ -19,7 +19,11 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          # 17 stays JAVA_HOME (last wins); 8 for toolchain resolution
+          # of old-MC fixtures (forge-fg2 requires Java 8)
+          java-version: |
+            8
+            17
       - name: configure + build under strict config-cache
         run: |
           ./gradlew -p testing/${{ matrix.project }} classes \
