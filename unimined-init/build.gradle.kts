@@ -161,11 +161,40 @@ tasks.register("genProbedVersions") {
         for ((kind, key) in listOf("yarn" to "yarn", "loader" to "fabric"))
             runCatching { fabricAll(kind) }.getOrDefault(emptyMap())
                 .forEach { (mc, vs) -> p["$key:$mc"] = vs }
+        // ornithe meta: { "<mapping>": [{version, gameVersion, ...}], ... }
+        runCatching {
+            val json = http("https://meta.ornithemc.net/v3/versions")
+            for (name in listOf("feather", "raven", "nests", "sparrow", "osl")) {
+                Regex("\"$name\"\\s*:\\s*\\[(.*?)]").find(json)?.let { sec ->
+                    Regex("\"gameVersion\"\\s*:\\s*\"([^\"]+)\"[^}]{0,200}?\"version\"\\s*:\\s*\"([^\"]+)\"")
+                        .findAll(sec.groupValues[1])
+                        .groupBy({ it.groupValues[1] }, { it.groupValues[2] })
+                        .forEach { (mc, vs) -> p["$name:$mc"] = vs }
+                }
+            }
+        }
+        // mojmap: published since 19w36a (1.15 cycle) — filter the @mc list
+        p["mojmap"] = p["@mc"].orEmpty().filter { v ->
+            if (!v[0].isDigit()) false
+            else if (v.contains("w")) {
+                // snapshot form 19w36a+ (mojmap published since 19w36a)
+                val w = v.substringBefore("w").toIntOrNull() ?: 0
+                val b = v.substringAfter("w")
+                    .filter { it.isDigit() }.toIntOrNull() ?: 0
+                w > 19 || (w == 19 && b >= 36)
+            } else {
+                // release >= 1.15, plus 1.14.4 which got retro mappings
+                val parts = v.split(".")
+                val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                minor >= 15 || v == "1.14.4"
+            }
+        }
         for ((k, u, pre) in listOf(
             Triple("quilt", "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/maven-metadata.xml", null),
             Triple("neoforge", "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml", null),
             Triple("stationapi", "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml", null),
-            Triple("osl", "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml", null)))
+            Triple("osl", "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml", null),
+            Triple("quilt-mappings", "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-mappings/maven-metadata.xml", null)))
             p[k] = runCatching { mavenVers(u, pre) }.getOrDefault(emptyList())
         p["forge"] = runCatching {
             mavenVers("https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml")

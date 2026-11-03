@@ -109,6 +109,20 @@ class VersionResolver(
             else -> error("no version endpoint known for loader '$loader'")
         }
 
+    /** Resolve a version [spec] for [axis]: `latest`, a trailing-`*`
+     *  prefix (`1.20.*`, `0.16.*`), or an exact string — checked
+     *  against the live-then-baked version list. */
+    fun resolveVersion(axis: String, spec: String): String {
+        if (spec == "latest") return loaderVersions(axis, "").firstOrNull()
+            ?: error("no versions known for '$axis'")
+        if (spec.endsWith("*")) {
+            val p = spec.dropLast(1)
+            return loaderVersions(axis, "").firstOrNull { it.startsWith(p) }
+                ?: error("no version matching '$spec' for '$axis'")
+        }
+        return spec
+    }
+
     /** Latest loader version for [loader] ([mc] scopes fabric/quilt). */
     fun latestLoader(loader: String, mc: String): String =
         loaderVersions(loader, mc).firstOrNull()
