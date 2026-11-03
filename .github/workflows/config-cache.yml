@@ -4,7 +4,7 @@ name: config-cache smoke
 # under strict configuration-cache (problems fail the build).
 on:
   push:
-    branches: [master, main, 'feature/**']
+    branches: [master, main, dev, 'feature/**']
   pull_request:
 
 jobs:

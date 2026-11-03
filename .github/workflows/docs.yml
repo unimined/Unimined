@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [main, feature/2.0]
+    branches: [main, dev]
     paths:
       - 'docs/**'
       - 'web/**'
