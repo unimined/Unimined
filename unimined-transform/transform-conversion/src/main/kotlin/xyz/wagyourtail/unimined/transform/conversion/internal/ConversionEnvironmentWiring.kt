@@ -101,7 +101,11 @@ object ConversionEnvironmentWiring {
                     val version = FoxLoaderVersionMap.resolve(
                         fetchFoxLoaderPairs(project), mc, spec.version
                     )
-                    val joinedCapable = atLeast2_9(version)
+                    // era split is on the DIST (reindev) version —
+                    // reindev 2.9 ships the merged `loader` artifact;
+                    // the resolved foxloader version only selects the
+                    // version inside the pair, not the artifact shape
+                    val joinedCapable = canCombine(mc)
                     if (joined && !joinedCapable)
                         throw GradleException(
                             "foxloader $version predates 2.9 and " +
@@ -156,8 +160,8 @@ object ConversionEnvironmentWiring {
 
     /** FoxLoader's joined-artifact cutoff — 1.x `canCombine`: the
      *  merged `loader` artifact exists from 2.9 onward. */
-    private fun atLeast2_9(version: String): Boolean {
-        val parts = version.split('.', '-')
+    private fun canCombine(version: String): Boolean {
+        val parts = version.split('.', '-', '_')
             .mapNotNull { it.toIntOrNull() }
         return (parts.getOrElse(0) { 0 } > 2) ||
                (parts.getOrElse(0) { 0 } == 2 &&

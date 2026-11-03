@@ -28,6 +28,10 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
             transformPlugin = "xyz.wagyourtail.unimined.transform.conversion",
             repos = listOf(
                 LoaderRepo.Maven("https://cdn.fox2code.com/maven"),
+                // Una's maven — hosts `com.unascribed:ears-*` the
+                // loader artifact's pom transitively requires
+                // (redirects to repo.sleeping.town)
+                LoaderRepo.Maven("https://repo.unascribed.com"),
                 LoaderRepo.Maven("https://api.modrinth.com/maven"),
                 LoaderRepo.Maven("https://jitpack.io"),
             ),
@@ -43,7 +47,7 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
                 "modsDir" to "mods",
                 "invoker" to "com.fox2code:FoxLoaderInvoker:1.1.0",
                 "sidedArtifacts" to
-                    "com.fox2code:FoxLoader:common,com.fox2code:FoxLoader:<side>",
+                    "com.fox2code.FoxLoader:common,com.fox2code.FoxLoader:<side>",
             ),
             prodNamespace = "official",
             metadata = LoaderMetadataSpec(
@@ -58,6 +62,9 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
                 // Turnip-Labs' toolchain maven — hosts the bta-fork
                 // fabric-loader (`*-bta.N` versions)
                 LoaderRepo.Maven("https://maven.thesignalumproject.net/infrastructure"),
+                // glass-launcher babric maven — hosts the
+                // `*-babric.N` lwjgl fork the bta loader deps on
+                LoaderRepo.Maven("https://maven.glass-launcher.net/babric"),
             ),
             // BTA uses a fabric-loader fork published as
             // `net.fabricmc:fabric-loader:x.y.z-bta.N` (e.g.

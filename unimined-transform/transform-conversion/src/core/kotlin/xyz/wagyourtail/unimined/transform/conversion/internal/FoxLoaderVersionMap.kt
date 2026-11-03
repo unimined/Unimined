@@ -19,7 +19,9 @@ import kotlinx.serialization.json.jsonPrimitive
  * FoxLoader fork is a different product with no maven artifact and is
  * not covered by this map.
  */
-internal object FoxLoaderVersionMap {
+// public despite the `internal` package — the Gradle-bound
+// wiring in `src/main` consumes it across the sourceSet boundary
+object FoxLoaderVersionMap {
 
     const val MAP_URL =
         "https://cdn.fox2code.com/maven/foxloader-version-map.json"
