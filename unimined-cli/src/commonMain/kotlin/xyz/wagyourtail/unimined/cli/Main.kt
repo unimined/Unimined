@@ -102,9 +102,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
 
         val loaders = loader.flatMap { it.split(',') }.map { entry ->
             val eq = entry.indexOf('=')
-            require(eq > 0) { "--loader wants name=version, got '$entry'" }
-            val l = entry.substring(0, eq).trim()
-            val v = entry.substring(eq + 1).trim()
+            val l = (if (eq > 0) entry.substring(0, eq) else entry).trim()
+            val v = if (eq > 0) entry.substring(eq + 1).trim() else "latest"
             l to if (v == "latest") resolver.latestLoader(l, mc) else v
         }
 
