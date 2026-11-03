@@ -83,6 +83,11 @@ data class InitSpec(
     /** Raw DSL lines appended to `build.gradle` — one-off fixture
      *  wiring the generator doesn't model (runs blocks, etc.). */
     val extraLines: List<String> = emptyList(),
+    /** Environment side — `Side.MERGED`/`CLIENT`/`SERVER` or a raw
+     *  expression (e.g. `mcSide` property ref). */
+    val side: String? = null,
+    /** Vars emitted inside `mappings { }` (e.g. ornitheGenVersion). */
+    val vars: Map<String, String> = emptyMap(),
 ) {
 
     enum class Dsl(val scriptSuffix: String) {

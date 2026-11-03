@@ -43,6 +43,9 @@ options:
   --toolchain <n>        pin java { toolchain } to JDK n
   --extra <dsl>          raw build.gradle line(s), repeatable —
                          one-off fixture wiring (runs blocks, etc.)
+  --side <merged|client|server|expr>
+                         env side (Side.* enum or raw expression)
+  --var <k=v>            var inside mappings { }, repeatable
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
@@ -161,6 +164,12 @@ private fun run(args: Array<String>) {
         includeBuild = one("--include-build"),
         toolchain = one("--toolchain")?.toInt(),
         extraLines = flags["--extra"].orEmpty(),
+        side = one("--side")?.uppercase(),
+        vars = flags["--var"].orEmpty().associate {
+            val eq = it.indexOf('=')
+            require(eq > 0) { "--var wants k=v, got '$it'" }
+            it.substring(0, eq) to it.substring(eq + 1)
+        },
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

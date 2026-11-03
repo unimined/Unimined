@@ -32,13 +32,19 @@ internal object Templates {
         }
 
     /** `mappings { }` partial — empty when no mappings configured. */
-    private fun mappingsBlock(spec: InitSpec, indent: String): String =
-        if (spec.mappings.isEmpty()) "" else
+    private fun mappingsBlock(spec: InitSpec, indent: String): String {
+        val lines = spec.vars.map { (k, v) -> "$k = $v" } + spec.mappings
+        return if (lines.isEmpty()) "" else
             render("partials/mappings-block.gradle", mapOf(
-                "MAPPINGS_LINES" to spec.mappings.joinToString("\n") {
-                    "    $it"
-                }
+                "MAPPINGS_LINES" to lines.joinToString("\n") { "    $it" }
             )).indented(indent)
+    }
+
+    /** `side = ...` line (empty when unset); Side.* gets enum-wrapped. */
+    private fun sideLine(spec: InitSpec): String = spec.side?.let {
+        if (it in setOf("MERGED", "CLIENT", "SERVER")) "side = Side.$it"
+        else "side = $it"
+    } ?: ""
 
     /** Loader-specific Maven repos needed for metadata resolution. */
     private fun loaderRepos(spec: InitSpec): List<String> =
@@ -96,12 +102,14 @@ internal object Templates {
                     "LOADER" to loader,
                     "LOADER_VERSION" to version,
                     "MC_VERSION" to spec.mcVersion,
+                    "SIDE" to sideLine(spec),
                     "MAPPINGS" to mappingsBlock(spec, "    "),
                 ))
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(
                 "MC_VERSION" to spec.mcVersion,
+                "SIDE" to sideLine(spec),
                 "LOADER_LINES" to spec.loaders.joinToString("\n") { (l, v) ->
                     render("partials/loader-line.gradle", mapOf(
                         "LOADER" to l, "LOADER_VERSION" to v
@@ -191,12 +199,14 @@ internal object Templates {
             "MINECRAFT_BODY" to if (loader == null) {
                 render("partials/minecraft-env.gradle", mapOf(
                     "MC_VERSION" to spec.mcVersion,
+                    "SIDE" to sideLine(spec),
                     "LOADER_LINES" to "",
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
             } else {
                 render("partials/minecraft-env.gradle", mapOf(
                     "MC_VERSION" to spec.mcVersion,
+                    "SIDE" to sideLine(spec),
                     "LOADER_LINES" to render("partials/loader-line.gradle",
                         mapOf("LOADER" to loader,
                             "LOADER_VERSION" to spec.loaders.first {
@@ -229,11 +239,22 @@ internal object Templates {
         val versionLine = spec.mcVersion.let {
             if (kts) "    version = \"$it\"" else "    version = '$it'"
         }
+        val loaderLines = spec.loaders.joinToString("\n") { (l, v) ->
+            if (v.isEmpty()) "    loader(\"$l\")"
+            else "    loader(\"$l\", \"$v\")"
+        }
+        val side = sideLine(spec).takeIf { it.isNotEmpty() }
+            ?.let { "    $it\n" } ?: ""
+        val inner = when {
+            p == "nsss" || p.startsWith("custom:") ->
+                side + fileCall.trimStart('\n') + loaderLines
+            else -> versionLine + "\n" + side + loaderLines
+        }
         return when {
-            p == "bta" || p == "reindev" -> "$p {\n$versionLine\n}"
-            p == "nsss" -> "nsss {\n$fileCall\n}"
+            p == "bta" || p == "reindev" -> "$p {\n$inner\n}"
+            p == "nsss" -> "nsss {\n$inner\n}"
             p.startsWith("custom:") ->
-                "custom(\"${p.removePrefix("custom:")}\") {\n$fileCall\n}"
+                "custom(\"${p.removePrefix("custom:")}\") {\n$inner\n}"
             else -> error("unknown product '$p' — expected bta, reindev, " +
                     "nsss, or custom:<name>")
         }
