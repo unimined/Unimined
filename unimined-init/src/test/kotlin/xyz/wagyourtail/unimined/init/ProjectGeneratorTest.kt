@@ -208,4 +208,18 @@ class ProjectGeneratorTest {
         assertTrue("custom(\"prcraft\")" in build)
         assertTrue("file(\"dist/prcraft.jar\")" in build)
     }
+
+    @Test
+    fun `jarmod emits client server jars and transform stubs`() {
+        val spec = spec().copy(jarmod = true)
+        val files = ProjectGenerator.files(spec)
+        assertTrue("src/client/java/com/example/mymod/MyModClient.java" in files)
+        assertTrue("src/server/java/com/example/mymod/MyModServer.java" in files)
+        assertTrue("src/client/resources/my_mod-client.transform" in files)
+        assertTrue("src/server/resources/my_mod-server.transform" in files)
+        val build = (files["build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("clientJar" in build && "serverJar" in build)
+        assertTrue("JarModAgent-Transforms" in build)
+    }
 }

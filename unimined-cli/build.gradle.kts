@@ -21,4 +21,5 @@ tasks.register<Jar>("fatJar") {
     // so project-dep jars (unimined-init) build first
     dependsOn(configurations.runtimeClasspath)
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
+    from(sourceSets.main.get().output)
 }

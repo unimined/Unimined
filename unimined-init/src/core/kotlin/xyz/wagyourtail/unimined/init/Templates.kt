@@ -118,8 +118,21 @@ internal object Templates {
             },
             "MINECRAFT_BODY" to minecraftBody(spec),
             "MOD_BLOCK" to modBlock(spec),
+            "EXTRAS" to extras(spec),
         ))
     }
+
+    /**
+     * Optional extras appended to `build.gradle` — JarModAgent
+     * client/server jar tasks when [InitSpec.jarmod].
+     */
+    fun extras(spec: InitSpec): String =
+        if (!spec.jarmod) "" else "\n" + render(
+            "partials/jarmod.gradle", mapOf("MODID" to spec.modId))
+
+    /** Jar sides for jarmod emits — client+server when split. */
+    fun jarSides(spec: InitSpec): List<String> =
+        if (spec.splitJars) listOf("client", "server") else listOf("client")
 
     // ---- multiloader layout ----
 
@@ -221,6 +234,7 @@ internal object Templates {
             },
             "ENV" to productEnv(spec).indented("    "),
             "MOD_BLOCK" to modBlock(spec),
+            "EXTRAS" to extras(spec),
         ))
     }
 

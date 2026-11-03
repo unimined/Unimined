@@ -44,7 +44,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { mode: multiloader, args: "--layout multiloader --loader fabric=latest --loader forge=latest" }
+          - { mode: multiloader, args: "--modules --loader fabric=latest --loader forge=latest" }
           - { mode: forge,       args: "--loader forge=latest" }
           - { mode: fabric,      args: "--loader fabric=latest" }
           - { mode: bta,         args: "--product bta" }

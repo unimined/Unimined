@@ -18,7 +18,7 @@ usage:
 
 options:
   --group <g>            Maven group (required)
-  --mc <ver>             Minecraft version (required)
+  --version <ver>        mc/product version (required; --mc is an alias)
   --plugin-version <v>   unimined plugin version (required)
   --loader <l=v>         loader, repeatable or comma-separated:
                          --loader fabric=0.16.0 --loader forge=47.2.0
@@ -27,12 +27,14 @@ options:
   --package <pkg>        base package (group.modid default)
   --mod-version <v>      mod version (1.0.0 default)
   --dsl <kotlin|groovy>  build-script DSL (kotlin default)
-  --layout <flat|multiloader>
-                         project layout (flat default); multiloader
-                         emits common + per-loader modules
-  --product <id>         non-native product env instead of minecraft:
+  --product <id>         non-native product env (default native):
                          bta, reindev, nsss, custom:<name>
   --dist <path>          dist jar for custom:/nsss product envs
+  --modules              emit common + per-loader subprojects
+                         (flat single-module layout is the default)
+  --jarmod               JarModAgent transforms: client/server source
+                         sets + per-side jars (modloadermp shape)
+  --jars <split|merged>  jarmod jar sides (split default)
   --gradle <ver>         Gradle wrapper version (8.10.2 default)
   --out <dir>            output directory (overrides the subcommand default)
 
@@ -47,6 +49,8 @@ unused).
 --metadata dsl emits a `mod { }` block — metadata generated per env
 by unimined-mod's emitters — instead of static files (default).
 """
+
+private val BOOLS = setOf("--modules", "--jarmod")
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
@@ -77,6 +81,7 @@ private fun run(args: Array<String>) {
     while (i < rest.size) {
         val a = rest[i]
         require(a.startsWith("--")) { "unexpected argument '$a'" }
+        if (a in BOOLS) { flags.getOrPut(a) { mutableListOf() } += "true"; i++; continue }
         val eq = a.indexOf('=')
         if (eq > 0) {
             flags.getOrPut(a.substring(0, eq)) { mutableListOf() } += a.substring(eq + 1)
@@ -101,7 +106,9 @@ private fun run(args: Array<String>) {
             System.getProperty("user.home"), ".unimined", "cache"
         )
     )
-    val mc = (if (template != null) "" else need("--mc"))
+    val mc = (if (template != null) "" else
+        (one("--version") ?: one("--mc")
+            ?: throw IllegalArgumentException("missing required --version")))
         .let { if (it == "latest") resolver.latestMinecraft() else it }
 
     val loaders = flags["--loader"].orEmpty()
@@ -132,12 +139,14 @@ private fun run(args: Array<String>) {
         // static resource files (unimined-mod's emitters)
         metadataFromDsl = one("--metadata") == "dsl",
         layout = when {
+            "--modules" in flags -> InitSpec.Layout.MULTILOADER
             one("--product") != null -> InitSpec.Layout.CUSTOM_PRODUCT
-            one("--layout") == "multiloader" -> InitSpec.Layout.MULTILOADER
             else -> InitSpec.Layout.FLAT
         },
         product = one("--product"),
         distFile = one("--dist"),
+        jarmod = "--jarmod" in flags,
+        splitJars = one("--jars") != "merged",
         // local path or http(s) URI — remote zips land in the cache
         templatesZip = one("--templates")?.let { raw ->
             val p = Paths.get(raw)

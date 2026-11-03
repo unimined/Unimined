@@ -80,15 +80,31 @@ object ProjectGenerator {
             val pkg = spec.basePackage
             val multi = spec.loaders.size > 1 &&
                     spec.layout != InitSpec.Layout.MULTILOADER
-            for ((loader, _) in spec.loaders) {
+            // no loaders (bare product env / vanilla): still emit one
+            // generic source unit so src/ isn't empty
+            val emitUnits = spec.loaders.ifEmpty { listOf("generic" to "") }
+            for ((loader, _) in emitUnits) {
                 // a MULTILOADER module has a single env — it lives on
                 // main inside the module dir; FLAT multi-loader uses
                 // per-loader source sets instead
                 val dir = if (spec.layout == InitSpec.Layout.MULTILOADER)
                     "$loader/" else ""
                 val ss = if (multi) loader else "main"
-                put("${dir}src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
-                    Render.Text(Templates.mainClass(spec, loader)))
+                if (spec.jarmod) {
+                    // jarmod-era: per-side source sets + transform stubs
+                    for (side in Templates.jarSides(spec)) {
+                        val cls = "${Templates.mainClassName(spec)}${
+                            side.replaceFirstChar(Char::uppercase)}"
+                        put("${dir}src/$side/java/${pkg.replace('.', '/')}/$cls.java",
+                            Render.Text(Templates.mainClass(spec, loader)
+                                .replace("${Templates.mainClassName(spec)}", cls)))
+                        put("${dir}src/$side/resources/${spec.modId}-$side.transform",
+                            Render.Text("$pkg.$cls\n"))
+                    }
+                } else {
+                    put("${dir}src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
+                        Render.Text(Templates.mainClass(spec, loader)))
+                }
                 // static files only when metadata isn't DSL-generated
                 if (!spec.metadataFromDsl) {
                     for ((path, content) in Templates.metadata(spec, loader)) {

@@ -56,6 +56,17 @@ data class InitSpec(
     /** Distribution jar path for `custom:` products / `nsss` —
      *  emitted as `file("...")` inside the env block. */
     val distFile: String? = null,
+    /**
+     * JarModAgent transforms — emit `client`/`server` source sets,
+     * `clientJar`/`serverJar` tasks stamping `JarModAgent-Transforms`,
+     * and `<modid>-<side>.transform` resource stubs (modloadermp shape).
+     */
+    val jarmod: Boolean = false,
+    /**
+     * Split client/server MC jars vs a merged jar — jarmod-era envs
+     * produce one jar per side when [jarmod] is set and this is true.
+     */
+    val splitJars: Boolean = true,
 ) {
 
     enum class Dsl(val scriptSuffix: String) {
