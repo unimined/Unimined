@@ -24,7 +24,11 @@ fun main(args: Array<String>) {
         put("flat-forge-$tag.gradle.kts", Templates.build(base.copy(
             mcVersion = mc, loaders = listOf("forge" to if (mc == "1.7.10") "10.13.4.1614"
             else if (mc == "1.12.2") "14.23.5.2860" else "47.2.0"),
-            mappings = listOf("official()"))))
+            mappings = listOf(when {
+                mc.startsWith("1.7") -> "mcp(\"stable\", \"12\")"
+                mc == "1.12.2" -> "mcp(\"stable\", \"39\")"
+                else -> "mojmap()"
+            })))
     }
 
     val multi = base.copy(loaders = listOf("fabric" to "0.16.0", "forge" to "47.2.0"),
