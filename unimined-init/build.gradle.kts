@@ -1,3 +1,4 @@
+import java.net.URI
 import java.util.Base64
 
 plugins {
@@ -106,3 +107,18 @@ tasks.register<JavaExec>("genDocSnippets") {
     )
     args(layout.projectDirectory.dir("../docs/generated").asFile.absolutePath)
 }
+
+/** Build-time version probe — refreshes the committed
+ *  `ProbedVersions.kt` (commonMain) so shipped binaries carry an
+ *  offline cache of every known probe axis. Run before releases;
+ *  the generated file is committed, so no compile cycle exists. */
+tasks.register<JavaExec>("genProbedVersions") {
+    mainClass.set("xyz.wagyourtail.unimined.init.ProbedGenKt")
+    classpath = files(
+        kotlin.targets["jvm"].compilations["main"].output.allOutputs,
+        configurations.named("jvmRuntimeClasspath")
+    )
+    args(layout.projectDirectory.dir(
+        "src/commonMain/kotlin/xyz/wagyourtail/unimined/init").asFile.absolutePath)
+}
+

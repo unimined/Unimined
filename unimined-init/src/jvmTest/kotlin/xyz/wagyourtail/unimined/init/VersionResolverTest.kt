@@ -33,20 +33,19 @@ class VersionResolverTest {
         )
         assertEquals("1.21.4", offline.latestMinecraft())
 
-        // stale entry is refused
+        // stale entry falls through to the build-time baked floor
         dir.resolve("version-resolver.json").toFile().writeText(
             VersionResolver.serializeCache(
                 mapOf(uri.toString() to (0L to body))
             )
         )
-        org.junit.jupiter.api.Assertions.assertThrows(
-            IllegalStateException::class.java
-        ) {
+        assertEquals(
+            xyz.wagyourtail.unimined.init.Probed.MAP["@mc"],
             VersionResolver(
                 fetch = { throw java.io.IOException("offline") },
                 cacheDir = dir.toString()
             ).latestMinecraft()
-        }
+        )
     }
 
     @Test

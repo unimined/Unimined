@@ -53,14 +53,22 @@ class VersionResolver(
     }
 
     /** Latest MC release version (piston-meta `latest.release`). */
-    fun latestMinecraft(): String {
-        val json = fetch(PISTON_META)
-        return jsonField(json, "release")
+    fun latestMinecraft(): String = runCatching {
+        jsonField(fetch(PISTON_META), "release")
             ?: error("no release id in piston-meta manifest")
-    }
+    }.getOrElse { baked("@mc") ?: throw it }
+
+    /** Build-time probed cache — offline fallback before live fetch. */
+    private fun baked(key: String): String? =
+        Probed.MAP[key]?.takeIf { it.isNotEmpty() }
 
     /** Latest loader version for [loader] ([mc] scopes fabric/quilt). */
-    fun latestLoader(loader: String, mc: String): String = when (loader.lowercase()) {
+    fun latestLoader(loader: String, mc: String): String =
+        runCatching { liveLoader(loader, mc) }.getOrElse {
+            baked("$loader:$mc") ?: baked(loader) ?: throw it
+        }
+
+    private fun liveLoader(loader: String, mc: String): String = when (loader.lowercase()) {
         "fabric" -> fabricMeta("loader", mc, "loader")
         "yarn" -> fabricMeta("yarn", mc, "yarn")
         "forge" -> latestMaven(FORGE_MAVEN, mc)
@@ -76,8 +84,9 @@ class VersionResolver(
     }
 
     /** Latest published unimined plugin version. */
-    fun latestPlugin(): String =
+    fun latestPlugin(): String = runCatching {
         latestMaven(UNIMINED_PLUGIN_METADATA, null)
+    }.getOrElse { baked("@plugin") ?: throw it }
 
     /** fabric-meta `v2/versions/<kind>/<mc>` → first `<kind>.version`. */
     private fun fabricMeta(kind: String, mc: String, key: String): String {
