@@ -65,6 +65,12 @@ jobs:
             cp -r build/dokka/. docs/api/
           fi
 
+      - name: Generate docs snippets
+        run: ./gradlew :unimined-init:genDocSnippets
+
+      - name: Validate docs build (strict)
+        run: mkdocs build --strict
+
       - name: Build landing site
         run: |
           mkdocs build -f mkdocs-web.yml
