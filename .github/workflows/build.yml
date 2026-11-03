@@ -33,7 +33,6 @@ jobs:
       - name: Attach release artifacts
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            ./build/distributions/unimined-templates.zip \
             "./unimined-cli/build/libs/unimined-cli-${{ github.event.release.tag_name }}-fat.jar"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +59,7 @@ jobs:
         run: ./gradlew :unimined-cli:fatJar -q
       - name: materialize deploy key
         run: |
-          printf '%s' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
+          printf '%s\n' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
           chmod 600 $RUNNER_TEMP/tmpl-key
       - name: checkout or init release/${{ matrix.mode }}
         run: |

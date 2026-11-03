@@ -53,7 +53,7 @@ jobs:
         run: ./gradlew :unimined-cli:fatJar -q
       - name: materialize deploy key
         run: |
-          printf '%s' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
+          printf '%s\n' '${{ secrets.TEMPLATES_DEPLOY_KEY }}' > $RUNNER_TEMP/tmpl-key
           chmod 600 $RUNNER_TEMP/tmpl-key
       - name: checkout or init snapshot/${{ matrix.mode }}
         run: |
