@@ -1228,29 +1228,26 @@ abstract class MinecraftExtension @Inject constructor(
                 // signature, exception enrichers) that the remapper's
                 // metadata pass applies; "z64:" marks a base64 zip so
                 // the transform can distinguish it from legacy bundles
-                val tmp = java.nio.file.Files.createTempFile("unimined-mappings", ".zip")
-                try {
-                    val data = resolvedMappingData(environment)
-                    if (SerializedMappingData.write(data, tmp).isNotEmpty()) {
-                        "z64:" + java.util.Base64.getEncoder()
-                            .encodeToString(java.nio.file.Files.readAllBytes(tmp))
-                    } else {
-                        // no serializer covered the data's views —
-                        // SerializedMappingData.write's contract says fall
-                        // back to a row bundle: capture real rows when a
-                        // MappingTree view exists, else emit a bare
-                        // identity bundle — a view-less MappingData has
-                        // nothing to rename (conversion envs' view-less
-                        // official->official resolve)
-                        val f = from.get(); val t = to.get()
-                        data.view(MappingTree::class.java)?.let {
-                            MappingBundle.capture(f, t, it).toJson()
-                        } ?: MappingBundle(
-                            listOf(f, t).distinct(), f, t,
-                            emptyList()).toJson()
-                    }
-                } finally {
-                    java.nio.file.Files.deleteIfExists(tmp)
+                val data = resolvedMappingData(environment)
+                // in-memory serialize — a temp file here becomes a
+                // config-cache invalidation key (the path is fingerprinted
+                // but deleted, so the entry can never be reused)
+                SerializedMappingData.writeBytes(data)?.let {
+                    "z64:" + java.util.Base64.getEncoder().encodeToString(it)
+                } ?: run {
+                    // no serializer covered the data's views —
+                    // SerializedMappingData.write's contract says fall
+                    // back to a row bundle: capture real rows when a
+                    // MappingTree view exists, else emit a bare
+                    // identity bundle — a view-less MappingData has
+                    // nothing to rename (conversion envs' view-less
+                    // official->official resolve)
+                    val f = from.get(); val t = to.get()
+                    data.view(MappingTree::class.java)?.let {
+                        MappingBundle.capture(f, t, it).toJson()
+                    } ?: MappingBundle(
+                        listOf(f, t).distinct(), f, t,
+                        emptyList()).toJson()
                 }
             }
             bundleJson

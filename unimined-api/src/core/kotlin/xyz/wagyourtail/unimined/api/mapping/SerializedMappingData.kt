@@ -58,12 +58,32 @@ object SerializedMappingData {
      *  so bundles are byte-reproducible across rebuilds. */
 
     fun write(data: MappingData, path: Path): List<String> {
-        val payloads = serializers().mapNotNull { s ->
+        val payloads = collectPayloads(data)
+        if (payloads.isEmpty()) return emptyList()
+        path.outputStream().use { writeZip(it, payloads) }
+        return payloads.map { it.first }
+    }
+
+    /** Serialize to an in-memory zip — the config-cache-safe form of
+     * [write] for bundles that never need a filesystem path (file
+     * accesses during configuration become CC invalidation keys).
+     * @return the zip bytes, or `null` when no serializer covered [data]
+     */
+    fun writeBytes(data: MappingData): ByteArray? {
+        val payloads = collectPayloads(data)
+        if (payloads.isEmpty()) return null
+        return java.io.ByteArrayOutputStream().also { writeZip(it, payloads) }
+            .toByteArray()
+    }
+
+    private fun collectPayloads(data: MappingData): List<Pair<String, ByteArray>> =
+        serializers().mapNotNull { s ->
             if (!data.viewTypes.containsAll(s.views)) return@mapNotNull null
             (s.write(data))?.let { s.id to it }
         }
-        if (payloads.isEmpty()) return emptyList()
-        ZipOutputStream(path.outputStream()).use { zip ->
+
+    private fun writeZip(out: java.io.OutputStream, payloads: List<Pair<String, ByteArray>>) {
+        ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry("views.json").apply { time = CONSTANT_TIME_FOR_ZIP_ENTRIES })
             zip.write(
                 json.encodeToString(Manifest(payloads = payloads.map { it.first }))
@@ -76,7 +96,6 @@ object SerializedMappingData {
                 zip.closeEntry()
             }
         }
-        return payloads.map { it.first }
     }
 
     /** Rehydrate a serialized bundle into [MappingData]. */
