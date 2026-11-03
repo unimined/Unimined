@@ -8,6 +8,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.commonskt.reader.CharReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
@@ -39,6 +40,7 @@ import xyz.wagyourtail.unimined.transform.forge.internal.userdevAts
  * `FileCollection`/`Property` inputs; only execution happens in
  * [produce].
  */
+@DisableCachingByDefault(because = "sources assembly — not cache-safe")
 abstract class ForgeSourcesTask : DefaultTask() {
 
     /** The resolved userdev jar — carries `ats`/`patches`/config. */

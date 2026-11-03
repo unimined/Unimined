@@ -88,6 +88,12 @@ subprojects {
         configurations.named("implementation") {
             extendsFrom(configurations["coreImplementation"])
         }
+        // Gradle task annotations (@Input/@Nested/...) on core SPI —
+        // compile-time metadata only; unresolvable annotation types are
+        // invisible to the JVM at runtime, so core stays Gradle-free
+        dependencies {
+            "coreCompileOnly"(gradleApi())
+        }
         configurations.named("api") {
             extendsFrom(configurations["coreApi"])
         }

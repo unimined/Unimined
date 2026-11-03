@@ -7,6 +7,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import org.gradle.api.tasks.Classpath
 
 /**
  * Stages the run directory before a [MinecraftRunTask] executes — loader
@@ -26,6 +27,7 @@ abstract class PrepareRunTask : DefaultTask() {
      * jar (dev: `jar`; prod: `remapJar`) plus the run-namespace mod
      * views. Copied into `runDir/<stageInto>` by [prepare].
      */
+    @get:Classpath
     @get:InputFiles
     abstract val modFiles: org.gradle.api.file.ConfigurableFileCollection
 

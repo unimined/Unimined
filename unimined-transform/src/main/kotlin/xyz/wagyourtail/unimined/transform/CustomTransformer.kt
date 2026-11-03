@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.file.RegularFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.tasks.TaskProvider
 import xyz.wagyourtail.unimined.transform.task.TransformMinecraftTask
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
@@ -89,6 +90,7 @@ class CustomTransformer(
  * jar-processors artifact step; this task only carries the input to
  * the emitted dev output so the pipeline has a `jar` edge.
  */
+@DisableCachingByDefault(because = "delegates to the transform pipeline")
 abstract class PassthroughTransformTask : TransformMinecraftTask() {
 
     @TaskAction

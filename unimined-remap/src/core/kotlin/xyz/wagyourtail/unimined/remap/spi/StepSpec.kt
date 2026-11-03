@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.remap.spi
 
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import java.io.Serializable
 
 /**
@@ -22,6 +24,8 @@ interface StepSpec : Serializable {
      * desired [RemapStepType]), or `null` to let the shared selection
      * machinery pick via `supports(...)`.
      */
+    @get:Input
+    @get:Optional
     val engine: String?
         get() = null
 

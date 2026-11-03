@@ -6,6 +6,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import org.gradle.api.tasks.Classpath
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
@@ -25,9 +26,11 @@ import java.util.zip.ZipOutputStream
 @DisableCachingByDefault(because = "reads live env state at execution — inputs aren't fully declared")
 abstract class LinemappedJarTask : DefaultTask() {
 
+    @get:Classpath
     @get:InputFile
     abstract val binaryJar: RegularFileProperty
 
+    @get:Classpath
     @get:InputFile
     abstract val sourcesJar: RegularFileProperty
 
