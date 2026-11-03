@@ -94,20 +94,8 @@ class VersionResolver(
                 .ifEmpty { Probed.expand(loader) } }
 
     private fun liveLoaderVersions(loader: String, mc: String): List<String> =
-        when (loader.lowercase()) {
-            "fabric" -> fabricMetaVersions("loader", mc, "loader")
-            "yarn" -> fabricMetaFlat("yarn", mc)
-            "forge" -> mavenVersions(FORGE_MAVEN, mc)
-            "neoforge" -> mavenVersions(NEOFORGE_MAVEN, null)
-            "quilt" -> mavenVersions(QUILT_MAVEN, null)
-            "babric" -> mavenVersions(BABRIC_MAVEN, null)
-            "foxloader" -> mavenVersions(FOXLOADER_MAVEN, null)
-            "stationapi" -> mavenVersions(STATION_MAVEN, null)
-            "osl" -> mavenVersions(OSL_MAVEN, null)
-            "bta" -> mavenVersions(BTA_MAVEN, null)
-            "reindev" -> mavenVersions(REINDEV_MAVEN, null)
-            else -> error("no version endpoint known for loader '$loader'")
-        }
+        RUNTIME_AXES[loader.lowercase()]?.invoke(::fetch, mc)
+            ?: error("no version endpoint known for loader '$loader'")
 
     /** Resolve a version [spec] for [axis]: `latest`, a trailing-`*`
      *  prefix (`1.20.*`, `0.16.*`), or an exact string — checked

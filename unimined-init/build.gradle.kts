@@ -132,3 +132,7 @@ listOf("compileKotlinJvm", "compileKotlinJs", "compileKotlinLinuxX64").forEach {
     tasks.matching { it.name == tn }.configureEach { dependsOn("genProbedVersions") }
 }
 kotlin.sourceSets["commonMain"].kotlin.srcDir(probedDir)
+// probe specs shared by runtime (commonMain) and the build prober
+kotlin.sourceSets["commonMain"].kotlin.srcDir("src/probedSpec/kotlin")
+kotlin.targets["jvm"].compilations["probedgen"]
+    .defaultSourceSet.kotlin.srcDir("src/probedSpec/kotlin")
