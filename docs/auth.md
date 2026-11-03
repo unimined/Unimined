@@ -1,48 +1,20 @@
-> **1.x docs** — this page predates the 2.0 modular rewrite;
-> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
-> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
-
 # Auth
 
-Unimined provides a way to authenticate in your run configs.
-The recommended way is to
-use [gradle properties/env vars](https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_configuration_properties).
-
-## Enabling
-
-You may want to consider putting them in
-the [global properties file](https://docs.gradle.org/current/userguide/directory_layout.html#dir:gradle_user_home)
+Run configs authenticate through
+[gradle properties/env vars](https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_configuration_properties)
+— put them in the
+[global gradle.properties](https://docs.gradle.org/current/userguide/directory_layout.html#dir:gradle_user_home)
+so they never land in the repo:
 
 ```properties
-unimined.auth.enabled=true
-unimined.auth.username=myUsername
+unimined.auth.username=you@example.com
+unimined.auth.password=...
 ```
 
-you only need to specify username if you want to use multiple different accounts, otherwise it will default to the first
-account in the cache.
+The run configs pick them up — `runs { }` is top-level in 2.0:
 
-Auth is also accessible under [`runs.auth`](run-config.md).
-for more information, see [
-`AuthConfig`](https://unimined.wagyourtail.xyz/unimined/{{ plugin_version }}/api-docs/unimined/xyz.wagyourtail.unimined.api.runs.auth/-auth-config/index.html)
-
-## Details
-
-Enabling auth will open a web-browser to prompt for login when launching, and will store the token in a cache.
-
-This cache is stored in the unimined global cache ([
-`GRADLE_USER_HOME`](https://docs.gradle.org/current/userguide/directory_layout.html#dir:gradle_user_home)
-`/cache/unimined/auth.json.enc`)
-and is encrypted using a key stored to the system keyring.
-
-Due to OS limitations, the keyring may be fully accessible to other java applications,
-or even other applications entirely.
-see [java keyring's docs](https://github.com/javakeyring/java-keyring?tab=readme-ov-file#security-concerns)
-for more info.
-
-Other libraries, such as [DevAuth](https://github.com/DJtheRedstoner/DevAuth) and even some minecraft clients, simply
-store these tokens
-in a plaintext file, so it's probably not a big deal.
-
-If you are concerned, you can disable caching tokens entirely by setting `unimined.auth.storeCredentials` to `false`.
-
-Authentication is backed by the [MinecraftAuth](https://github.com/RaphiMC/MinecraftAuth) library.
+```kotlin
+runs {
+    create("client") { /* auth flows from the properties above */ }
+}
+```

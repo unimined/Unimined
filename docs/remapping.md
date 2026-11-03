@@ -1,113 +1,18 @@
-> **1.x docs** — this page predates the 2.0 modular rewrite;
-> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
-> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
-
 # Remapping
 
-## Remapping Mods
+Mods you depend on are remapped onto your environment's mappings.
+Each `minecraft { }` env exposes `mod*` configurations scoped to its
+source set — `modImplementation`, `modCompileOnly`, `modLocalRuntime`:
 
-Unimined provides the ability to remap mods you depend on to the mappings you are using.
-by default, unimined only implements `modImplementation`, but the others are easily creatable by the user.
+```kotlin
+dependencies {
+    modImplementation("maven:coord")
+    // loader api helpers resolve the coordinate for you:
+    // modImplementation(unimined.loaderApi("fabric", "0.92.2+1.20.1"))
+}
+```
 
-For Example:
-
-=== "Groovy"
-
-    ```groovy
-    configurations {
-        modCompileOnly
-        compileOnly.extendsFrom modCompileOnly
-    }
-
-    unimined.minecraft {
-        ...
-        mods {
-            remap(configurations.modCompileOnly) {
-            }
-
-            // this is basically just a shortcut for `remap(configurations.modImplementation)`
-            modImplementation {
-                // you can do this is mods have the wrong access widener mapping, but it may break runs
-                catchAWNamespaceAssertion()
-            }
-        }
-    }
-
-    dependencies {
-        modCompileOnly "mod.group:mod.artifact:mod.version"
-    }
-    ```
-
-=== "Kotlin"
-
-    ```kotlin
-    val modCompileOnly by configurations.creating
-
-    configurations {
-        compileOnly {
-            extendsFrom(modCompileOnly)
-        }
-    }
-
-    unimined.minecraft {
-        ...
-        mods {
-            remap(modCompileOnly) {
-
-            }
-
-            // this is basically just a shortcut for `remap(configurations.modImplementation)`
-            modImplementation {
-                // you can do this is mods have the wrong access widener mapping, but it may break runs
-                catchAWNamespaceAssertion()
-            }
-        }
-    }
-
-    dependencies {
-        modCompileOnly("mod.group:mod.artifact:mod.version")
-    }
-    ```
-
-
-## Remapping Output
-
-unimined provides a default `remapJar` task for each configuration, it may be useful to create an extra or custom remap
-task
-
-
-=== "Groovy"
-
-    ```groovy
-
-    unimined.minecraft {
-        ...
-        defaultRemapJar = false // disable the default remapJar task
-
-        remap(myJarTask) {
-            prodNamespace "intermediary" // set the namespace to remap to
-            mixinRemap {
-                disableRefmap() // like fabric-loom 1.6+
-            }
-        }
-    }
-
-    ```
-
-=== "Kotlin"
-
-    ```kotlin
-
-    unimined.minecraft {
-        ...
-        defaultRemapJar = false // disable the default remapJar task
-
-        remap(myJarTask) {
-            prodNamespace("intermediary") // set the namespace to remap to
-            mixinRemap {
-                disableRefmap() // like fabric-loom 1.6+
-            }
-        }
-    }
-
-    ```
+The remap pipeline itself is configured in `unimined { remap { } }` —
+step verbs like `unpick(...)`, `applyClassTweaker { }`, and
+`sourceRemap { }` (UML source remapper by default; `jst { }` is the
+explicit opt-in).

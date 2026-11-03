@@ -1,34 +1,20 @@
-> **1.x docs** — this page predates the 2.0 modular rewrite;
-> `minecraft(sourceSet)`, `combineWith`, and top-level `mods {}` are
-> gone. See [Migrating from 1.x](migration-1x-to-2.0.md).
-
 # Standard Libraries
 
-Unimined provides helper functions for adding common standard libraries, such as fabric-api.
+Loader "api" artifacts resolve through `unimined.loaderApi(...)` —
+the 2.0 port of 1.x's `FabricLikeApiExtension` (`unimined.fabricApi`,
+`quiltFabric`, `station`, `osl`, …):
 
-=== "Groovy"
+```kotlin
+dependencies {
+    // whole api bundle → dependency coordinates
+    modImplementation(unimined.loaderApi("fabric", "0.92.2+1.20.1"))
+    // one sub-module
+    modImplementation(unimined.loaderApiModule(
+        "fabric", "fabric-api-base", "0.92.2+1.20.1"))
+}
+```
 
-    ```groovy
-
-    dependencies {
-        modImplementation unimined.fabricModule("fabric-api-base", project.fabricApiVersion)
-    }
-
-    ```
-
-=== "Kotlin"
-
-    ```kotlin
-    val fabricApiVersion: String by extra
-
-    dependencies {
-        modImplementation(unimined.fabricModule("fabric-api-base", fabricApiVersion))
-    }
-
-    ```
-
-
-This is under `unimined` or `fabricApi` (for legacy reasons)
-
-for a complete list of standard libraries supported,
-see [FabricLikeApi](https://unimined.wagyourtail.xyz/unimined/{{ plugin_version }}/api-docs/unimined/xyz.wagyourtail.unimined.api.minecraft.patch.fabric/-fabric-like-api-extension/index.html)
+Registered providers: `fabric`, `quilt`, `qsl`, `legacyfabric`,
+`stationapi`/`stationapi-snapshots`, `osl` (Ornithe resolves
+per-MC-version modules via meta.ornithemc.net). Calling either helper
+also records the api's modid into `mod { depends }` automatically.
