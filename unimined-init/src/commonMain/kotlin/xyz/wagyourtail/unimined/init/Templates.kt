@@ -220,6 +220,7 @@ internal object Templates {
                 |
                 |dependencies {
                 |    implementation(project(":common"))
+                |    // modImplementation("maven:coord") — remapped mods
                 |}
                 """.trimMargin(),
         ))
