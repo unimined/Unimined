@@ -26,7 +26,12 @@ class MinecraftExtensionTest {
     private fun project() = ProjectBuilder.builder()
         .withProjectDir(dir.toFile())
         .build()
-        .also { it.plugins.apply(GradlePlugin::class.java) }
+        .also {
+            // registers JavaToolchainService — real consumers apply java
+            // themselves; the plugin does not
+            it.plugins.apply("java")
+            it.plugins.apply(GradlePlugin::class.java)
+        }
 
     @BeforeEach
     fun resetFake() = FakeProvider.reset()
