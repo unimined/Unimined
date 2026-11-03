@@ -24,7 +24,9 @@ class VersionResolver(
      * (plan §13: offline → cached manifest).
      */
     cacheDir: String? = null,
-    private val cacheTtl: Duration = 24.hours
+    private val cacheTtl: Duration = 24.hours,
+    /** Skip live fetches — disk cache (any age) then baked. */
+    private val offline: Boolean = false
 ) {
 
     private val cacheFile = cacheDir?.let { Io.path(it, "version-resolver.json") }
@@ -33,6 +35,7 @@ class VersionResolver(
             ?.let { f -> parseCache(Io.readText(f)) } ?: mutableMapOf()
 
     private fun fetch(uri: String): String = try {
+        if (offline) throw IllegalStateException("offline")
         fetchBody(uri).also { body ->
             cache[uri] = epochMillis() to body
             persistCache()
@@ -118,8 +121,8 @@ class VersionResolver(
 
     /** Latest published unimined plugin version. */
     fun latestPlugin(): String = runCatching {
-        VersionProbe.mavenVersions(fetchBody, PLUGIN_META, null).firstOrNull()
-            ?: error("no versions in $PLUGIN_META")
+        pluginVersions(::fetch).firstOrNull()
+            ?: error("no versions in plugin metadata")
     }.getOrElse { baked("@plugin") ?: throw it }
 
     /** All `<key>.version` entries — fabric-meta order (newest-first). */
@@ -157,8 +160,12 @@ class VersionResolver(
             httpGet(url).decodeToString()
 
         val PISTON_META = VersionProbe.PISTON_META
-        val PLUGIN_META =
-            "https://maven.wagyourtail.xyz/releases/xyz/wagyourtail/unimined/unimined/xyz.wagyourtail.unimined.gradle.plugin/maven-metadata.xml"
+
+        /** Live plugin-version union (snapshots newest, then releases). */
+        internal fun pluginVersions(fetch: (String) -> String): List<String> =
+            listOf(VersionProbe.PLUGIN_SNAPSHOTS, VersionProbe.PLUGIN_RELEASES)
+                .flatMap { VersionProbe.mavenVersions(fetch, it, null) }
+                .distinct()
 
         /** `{"release": "x.y.z"}`-style field extraction. */
         internal fun jsonField(json: String, key: String): String? =

@@ -77,6 +77,9 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         help = "templates zip path or URL (JVM only)")
     private val metadata by option("--metadata",
         help = "'dsl' emits a mod { } block instead of static files")
+    private val offline by option("--offline",
+        help = "skip version probes — disk cache + baked versions only")
+        .flag()
 
     /** project name — `new` takes it as an argument, `init` defaults
      *  to `examplemod`. */
@@ -90,7 +93,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
 
     override fun run() {
         val resolver = VersionResolver(
-            cacheDir = Io.path(userHome(), ".unimined", "cache"))
+            cacheDir = Io.path(userHome(), ".unimined", "cache"),
+            offline = offline)
         val mc = (if (template != null) "" else (version
             ?: echo("error: missing required --version", err = true)
                 .let { throw IllegalArgumentException("missing required --version") }))

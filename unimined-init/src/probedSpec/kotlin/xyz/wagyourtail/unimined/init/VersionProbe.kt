@@ -16,6 +16,15 @@ sealed interface VersionProbe {
         }
     }
 
+    /** Union of several maven-metadata lists — first URL orders newest. */
+    class MavenMulti(val key: String, val urls: List<String>) : VersionProbe {
+        override fun run(fetch: (String) -> String,
+                         p: MutableMap<String, List<String>>) {
+            p[key] = urls.flatMap { mavenVersions(fetch, it, null) }
+                .distinct()
+        }
+    }
+
     /** piston-meta version_manifest_v2 — all release ids under `@mc`. */
     object Minecraft : VersionProbe {
         override fun run(fetch: (String) -> String,
@@ -90,6 +99,12 @@ sealed interface VersionProbe {
             "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"
         const val NEOFORGE_MAVEN =
             "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
+        private const val PLUGIN_GA =
+            "xyz/wagyourtail/unimined/xyz.wagyourtail.unimined.gradle.plugin"
+        const val PLUGIN_SNAPSHOTS =
+            "https://maven.wagyourtail.xyz/snapshots/$PLUGIN_GA/maven-metadata.xml"
+        const val PLUGIN_RELEASES =
+            "https://maven.wagyourtail.xyz/releases/$PLUGIN_GA/maven-metadata.xml"
 
         /** maven-metadata newest-first versions ([prefix] scopes e.g. forge mc). */
         fun mavenVersions(fetch: (String) -> String, url: String,
@@ -119,8 +134,8 @@ sealed interface VersionProbe {
 /** Bulk probe table — build-time (every axis, baked into Probed.MAP). */
 val PROBES: List<VersionProbe> = listOf(
     VersionProbe.Minecraft,
-    VersionProbe.Maven("@plugin",
-        "https://maven.wagyourtail.xyz/releases/xyz/wagyourtail/unimined/unimined/xyz.wagyourtail.unimined.gradle.plugin/maven-metadata.xml"),
+    VersionProbe.MavenMulti("@plugin",
+        listOf(VersionProbe.PLUGIN_SNAPSHOTS, VersionProbe.PLUGIN_RELEASES)),
     VersionProbe.FabricAll("yarn", "yarn"),
     VersionProbe.FabricAll("loader", "fabric"),
     VersionProbe.Ornithe("feather"), VersionProbe.Ornithe("raven"),

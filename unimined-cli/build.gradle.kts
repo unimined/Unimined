@@ -30,7 +30,7 @@ tasks.register<Jar>("fatJar") {
     archiveBaseName.set("unimined-cli")
     archiveClassifier.set("fat")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    manifest { attributes("Main-Class" to "xyz.wagyourtail.unimined.cli.MainKt") }
+    manifest { attributes("Main-Class" to "xyz.wagyourtail.unimined.cli.Main_jvmKt") }
     // lazy provider loses the builtBy edge — depend on the configuration
     // so project-dep jars (unimined-init) build first
     dependsOn(configurations.named("jvmRuntimeClasspath"))
