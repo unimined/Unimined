@@ -456,24 +456,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Remapping
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -490,47 +472,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#remapping-mods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Remapping Mods
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#remapping-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Remapping Output
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -690,7 +631,7 @@
   <span class="md-ellipsis">
     
   
-    Run config
+    Run configurations
   
 
     
@@ -794,36 +735,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#remapping-mods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Remapping Mods
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#remapping-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Remapping Output
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -842,109 +753,20 @@
   
 
 
-<blockquote>
-<p><strong>1.x docs</strong> — this page predates the 2.0 modular rewrite;
-<code>minecraft(sourceSet)</code>, <code>combineWith</code>, and top-level <code>mods {}</code> are
-gone. See <a href="../migration-1x-to-2.0/">Migrating from 1.x</a>.</p>
-</blockquote>
 <h1 id="remapping">Remapping<a class="headerlink" href="#remapping" title="Permanent link">&para;</a></h1>
-<h2 id="remapping-mods">Remapping Mods<a class="headerlink" href="#remapping-mods" title="Permanent link">&para;</a></h2>
-<p>Unimined provides the ability to remap mods you depend on to the mappings you are using.
-by default, unimined only implements <code>modImplementation</code>, but the others are easily creatable by the user.</p>
-<p>For Example:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Groovy</label><label for="__tabbed_1_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">configurations</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">modCompileOnly</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">compileOnly</span><span class="o">.</span><span class="na">extendsFrom</span><span class="w"> </span><span class="n">modCompileOnly</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="o">}</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="o">...</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="n">mods</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="n">remap</span><span class="o">(</span><span class="n">configurations</span><span class="o">.</span><span class="na">modCompileOnly</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="c1">// this is basically just a shortcut for `remap(configurations.modImplementation)`</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="n">modImplementation</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">            </span><span class="c1">// you can do this is mods have the wrong access widener mapping, but it may break runs</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">            </span><span class="n">catchAWNamespaceAssertion</span><span class="o">()</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">}</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="w"> </span><span class="s2">"mod.group:mod.artifact:mod.version"</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="o">}</span>
+<p>Mods you depend on are remapped onto your environment's mappings.
+Each <code>minecraft { }</code> env exposes <code>mod*</code> configurations scoped to its
+source set — <code>modImplementation</code>, <code>modCompileOnly</code>, <code>modLocalRuntime</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="c1">// loader api helpers resolve the coordinate for you:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="c1">// modImplementation(unimined.loaderApi("fabric", "0.92.2+1.20.1"))</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">modCompileOnly</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">configurations</span><span class="p">.</span><span class="na">creating</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">configurations</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">compileOnly</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">extendsFrom</span><span class="p">(</span><span class="n">modCompileOnly</span><span class="p">)</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="n">mods</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">remap</span><span class="p">(</span><span class="n">modCompileOnly</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">        </span><span class="c1">// this is basically just a shortcut for `remap(configurations.modImplementation)`</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">        </span><span class="n">modImplementation</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">            </span><span class="c1">// you can do this is mods have the wrong access widener mapping, but it may break runs</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">            </span><span class="n">catchAWNamespaceAssertion</span><span class="p">()</span>
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">}</span>
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="p">(</span><span class="s">"mod.group:mod.artifact:mod.version"</span><span class="p">)</span>
-<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h2 id="remapping-output">Remapping Output<a class="headerlink" href="#remapping-output" title="Permanent link">&para;</a></h2>
-<p>unimined provides a default <code>remapJar</code> task for each configuration, it may be useful to create an extra or custom remap
-task</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Groovy</label><label for="__tabbed_2_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="o">...</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="c1">// disable the default remapJar task</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="n">remap</span><span class="o">(</span><span class="n">myJarTask</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="n">prodNamespace</span><span class="w"> </span><span class="s2">"intermediary"</span><span class="w"> </span><span class="c1">// set the namespace to remap to</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="n">mixinRemap</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="n">disableRefmap</span><span class="o">()</span><span class="w"> </span><span class="c1">// like fabric-loom 1.6+</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="o">}</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">defaultRemapJar</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="c1">// disable the default remapJar task</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="n">remap</span><span class="p">(</span><span class="n">myJarTask</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="n">prodNamespace</span><span class="p">(</span><span class="s">"intermediary"</span><span class="p">)</span><span class="w"> </span><span class="c1">// set the namespace to remap to</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">mixinRemap</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="n">disableRefmap</span><span class="p">()</span><span class="w"> </span><span class="c1">// like fabric-loom 1.6+</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
+<p>The remap pipeline itself is configured in <code>unimined { remap { } }</code> —
+step verbs like <code>unpick(...)</code>, <code>applyClassTweaker { }</code>, and
+<code>sourceRemap { }</code> (UML source remapper by default; <code>jst { }</code> is the
+explicit opt-in).</p>
 
 
 

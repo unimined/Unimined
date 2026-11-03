@@ -27,7 +27,7 @@
     
     
       
-        <title>Run config - Unimined Docs</title>
+        <title>Run configurations - Unimined Docs</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#run-config" class="md-skip">
+        <a href="#run-configurations" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Run config
+              Run configurations
             
           </span>
         </div>
@@ -632,7 +632,7 @@
   <span class="md-ellipsis">
     
   
-    Run config
+    Run configurations
   
 
     
@@ -755,51 +755,24 @@
   
 
 
-<blockquote>
-<p><strong>1.x docs</strong> — this page predates the 2.0 modular rewrite;
-<code>minecraft(sourceSet)</code>, <code>combineWith</code>, and top-level <code>mods {}</code> are
-gone. See <a href="../migration-1x-to-2.0/">Migrating from 1.x</a>.</p>
-</blockquote>
-<h1 id="run-config">Run Config<a class="headerlink" href="#run-config" title="Permanent link">&para;</a></h1>
-<p>unimined provides a runServer and runClient task for each sourceSet by default.
-they extend the <a href="https://docs.gradle.org/current/dsl/org.gradle.api.tasks.JavaExec.html"><code>JavaExec</code></a> gradle task type.</p>
-<p>you can configure/disable these as follows:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Groovy</label><label for="__tabbed_1_2">Kotlin</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="o">...</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">runs</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="c1">// disable all run configurations</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">config</span><span class="o">(</span><span class="s2">"client"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">           </span><span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="c1">// disable the runClient task</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">            </span><span class="n">javaVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="o">.</span><span class="na">VERSION_1_8</span><span class="w"> </span><span class="c1">// change the java version</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">            </span><span class="n">args</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s2">"--my-arg"</span><span class="w"> </span><span class="c1">// add an argument to the runClient task</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="o">}</span>
+<h1 id="run-configurations">Run configurations<a class="headerlink" href="#run-configurations" title="Permanent link">&para;</a></h1>
+<p><code>runs { }</code> is a top-level block in 2.0 (it moved out of
+<code>unimined { }</code>). Each registered run gets a Gradle task + an IDE run
+config:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">runs</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">create</span><span class="p">(</span><span class="s">"client"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"net.minecraft.client.main.Main"</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">jvmArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s">"-Xmx2G"</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">programArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s">"--accessToken=0"</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">create</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"net.minecraft.server.Main"</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">}</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">...</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">runs</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="n">off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="c1">// disable all run configurations</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">config</span><span class="p">(</span><span class="s">"client"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">           </span><span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="c1">// disable the runClient task</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">            </span><span class="n">javaVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="p">.</span><span class="na">VERSION_1_8</span><span class="w"> </span><span class="c1">// change the java version</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">            </span><span class="n">args</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"--my-arg"</span><span class="p">)</span><span class="w"> </span><span class="c1">// add an argument to the runClient task</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">}</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<p>for more details on what can be changed in the run configurations,
-see <a href="https://unimined.wagyourtail.xyz/unimined/1.4.1/api-docs/unimined/xyz.wagyourtail.unimined.api.runs/-run-config/index.html">RunConfig</a></p>
+<p>Envs produce run tasks automatically from their loader's defaults;
+<code>create(name) { }</code> adds custom ones. <code>autoStop</code> and other boot-time
+options live on the run config.</p>
 
 
 
