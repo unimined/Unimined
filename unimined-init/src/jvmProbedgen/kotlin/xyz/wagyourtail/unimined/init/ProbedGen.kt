@@ -89,6 +89,7 @@ fun main(args: Array<String>) {
         Triple("neoforge", "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml", null),
         Triple("stationapi", "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml", null),
         Triple("osl", "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml", null),
+        Triple("foxloader", "https://cdn.fox2code.com/maven/com/fox2code/FoxLoader/loader/maven-metadata.xml", null),
         Triple("quilt-mappings", "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-mappings/maven-metadata.xml", null)))
         p[k] = runCatching { mavenVers(u, pre) }.getOrDefault(emptyList())
     p["forge"] = runCatching {

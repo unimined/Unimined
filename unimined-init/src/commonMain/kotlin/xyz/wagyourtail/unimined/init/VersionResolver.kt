@@ -173,7 +173,7 @@ class VersionResolver(
         val BABRIC_MAVEN =
             "https://maven.glass-launcher.net/releases/babric/fabric-loader/maven-metadata.xml"
         val FOXLOADER_MAVEN =
-            "https://maven.glass-launcher.net/releases/com/github/thefox580/FoxLoader/maven-metadata.xml"
+            "https://cdn.fox2code.com/maven/com/fox2code/FoxLoader/loader/maven-metadata.xml"
         val STATION_MAVEN =
             "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml"
         val OSL_MAVEN =
