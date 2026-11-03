@@ -52,6 +52,29 @@ class VersionResolver(
         Io.writeText(f, serializeCache(cache))
     }
 
+    /** All MC release versions, newest-first (piston-meta). */
+    fun minecraftVersions(): List<String> = runCatching {
+        Regex("\"id\"\\s*:\\s*\"([^\"]+)\"")
+            .findAll(fetch(PISTON_META)).map { it.groupValues[1] }.toList()
+    }.getOrElse { Probed.expand("@mc") }
+
+    /** MCP channel versions for [mc] — `stable_N`/`snapshot_N`
+     *  (forge files index), newest-first. */
+    fun mcpVersions(mc: String): List<String> = runCatching {
+        val json = fetch(
+            "https://files.minecraftforge.net/maven/de/oceanlabs/mcp/versions.json")
+        val m = Regex("\"$mc\"\\s*:\\s*\\{([^}]+)\\}").find(json)
+            ?: return emptyList()
+        val (snap, stable) = listOf("snapshot", "stable").map { ch ->
+            Regex("\"$ch\"\\s*:\\s*\\[([^]]*)\\]").find(m.groupValues[1])
+                ?.groupValues?.get(1)?.let {
+                    Regex("[0-9]+").findAll(it)
+                        .map { v -> "${ch}_${v.groupValues[0]}" }.toList()
+                } ?: emptyList()
+        }
+        stable + snap
+    }.getOrElse { Probed.expand("mcp:$mc") }
+
     /** Latest MC release version (piston-meta `latest.release`). */
     fun latestMinecraft(): String = runCatching {
         jsonField(fetch(PISTON_META), "release")
@@ -61,14 +84,14 @@ class VersionResolver(
 
     /** Build-time probed cache — offline floor after the disk cache. */
     private fun baked(key: String): String? =
-        Probed.MAP[key]?.firstOrNull()?.takeIf { it.isNotEmpty() }
+        Probed.expand(key).lastOrNull()?.takeIf { it.isNotEmpty() }
 
     /** Newest-first supported versions for [loader] — live list, or
      *  the baked cache when offline. Empty when nothing resolves. */
     fun loaderVersions(loader: String, mc: String): List<String> =
         runCatching { liveLoaderVersions(loader, mc) }
-            .getOrElse { Probed.MAP["$loader:$mc"] ?: Probed.MAP[loader]
-                ?: emptyList() }
+            .getOrElse { Probed.expand("$loader:$mc")
+                .ifEmpty { Probed.expand(loader) } }
 
     private fun liveLoaderVersions(loader: String, mc: String): List<String> =
         when (loader.lowercase()) {
