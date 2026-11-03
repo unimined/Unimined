@@ -31,8 +31,10 @@ jobs:
             --configuration-cache-problems=fail \
             --stacktrace
       - name: verify the cache entry was stored
+        # same task graph as above — the CC key is the task set, so
+        # re-running `classes` is the only way to observe reuse
         run: |
-          ./gradlew -p testing/${{ matrix.project }} help \
+          ./gradlew -p testing/${{ matrix.project }} classes \
             --configuration-cache \
             --configuration-cache-problems=fail 2>&1 \
             | grep -q "Configuration cache entry reused" \
