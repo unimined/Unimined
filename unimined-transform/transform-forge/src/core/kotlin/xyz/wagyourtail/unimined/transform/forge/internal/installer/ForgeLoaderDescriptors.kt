@@ -64,7 +64,12 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                     } else {
                         mc
                     }.removePrefix("1.")
-                    "net.neoforged:neoforge:$base.$v"
+                    // published neoforge versions are complete
+                    // (`21.1.265`, `26.1.2.126`) — only bare build tails
+                    // like `265` need the mc-derived base prepended
+                    val full = if (v.startsWith("$base.") ||
+                        v.count { it == '.' } >= 2) v else "$base.$v"
+                    "net.neoforged:neoforge:$full"
                 }
             },
             prodNamespace = "mojmap",
