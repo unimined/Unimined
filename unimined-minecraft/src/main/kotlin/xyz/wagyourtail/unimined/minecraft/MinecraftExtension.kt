@@ -1086,7 +1086,7 @@ abstract class MinecraftExtension @Inject constructor(
 
     private val resolvedEnvironments = mutableMapOf<String, ProductArtifacts>()
 
-    private fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
+    internal fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
         synchronized(resolvedEnvironments) {
             resolvedEnvironments.getOrPut(environment.environmentId) {
                 val spec = environment.spec()

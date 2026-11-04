@@ -635,6 +635,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * 1.x `useToolchains` semantics — opt-out: set false to run on
      * the build JVM (errors when the env requires a newer Java).
      */
+    /** Whether this environment's Minecraft is obfuscated — resolved
+     *  lazily from the product metadata's mappings channels; 26.x-era
+     *  versions ship unobfuscated (no `client_mappings`) so loaders and
+     *  mapping defaults must skip obfuscation hops. */
+    val obfuscated: Provider<Boolean> = project.provider {
+        project.extensions.getByType(MinecraftExtension::class.java)
+            .resolved(this).auxiliaryArtifacts.keys
+            .any { it.endsWith("_mappings") }
+    }
+
     val useToolchains: Property<Boolean> =
         objects.property(Boolean::class.java)
             .convention(project.providers.provider {
