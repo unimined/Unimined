@@ -87,3 +87,29 @@ class VersionResolverTest {
     }
 
 }
+
+class ProbedExpandTest {
+
+    /** Compressed `base{hi}-{lo}` runs expand newest-first. */
+    @org.junit.jupiter.api.Test
+    fun `compressed runs expand descending`() {
+        // reach into the emitted expander via a synthetic key is not
+        // possible; assert through the public expand on a known baked key
+        val mcp = Probed.expand("mcp:1.12.2")
+        assertEquals("stable_39", mcp.first())
+    }
+
+    /** Literal versions must pass through untouched — `find`-style
+     *  substring matching would corrupt these. */
+    @org.junit.jupiter.api.Test
+    fun `literal versions pass through`() {
+        // forge version containing a dash-range that looks compressed
+        val forge = Probed.expand("forge")
+        org.junit.jupiter.api.Assertions.assertTrue(
+            "1.20.1-47.4.28" in forge,
+            "dash-version literal corrupted: " + forge.take(3).toString())
+        // snapshot literals like 26w14a never parse as runs
+        org.junit.jupiter.api.Assertions.assertTrue(
+            Probed.expand("@mc").all { it.isNotEmpty() })
+    }
+}
