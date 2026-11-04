@@ -120,7 +120,8 @@ class ProjectGeneratorTest {
         // env-name loader inference
         assertTrue("sourceSet(\"fabric\")" in build)
         assertTrue("sourceSet(\"forge\")" in build)
-        assertTrue("combineWith(\"main\")" in build)
+        // implicit parent inheritance means no explicit combineWith
+        assertTrue("combineWith(" !in build)
         assertTrue("loader(\"0.16.0\")" in build)
         assertTrue("loader(\"47.2.0\")" in build)
         assertTrue(Files.exists(dir.resolve("src/fabric/resources/fabric.mod.json")))

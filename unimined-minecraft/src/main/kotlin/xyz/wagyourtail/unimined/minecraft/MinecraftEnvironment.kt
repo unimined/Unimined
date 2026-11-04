@@ -74,6 +74,37 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     override fun getName(): String = environmentId
 
+    /** Environment this env implicitly inherits sections+output from —
+     *  the enclosing configure block's env (top-level `minecraft {}` is
+     *  `main`). Set by [sourceSet] at creation; envs created through the
+     *  container default to `main`. */
+    internal var parentEnvId: String = "main"
+
+    /** Set `false` to opt this env out of implicit parent inheritance. */
+    val inheritParent: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /** Nested env whose implicit parent is THIS env — supports
+     *  `sourceSet("a") { sourceSet("b") { } }` grouping. */
+    @JvmOverloads
+    fun sourceSet(
+        sourceSetName: String,
+        action: Action<MinecraftEnvironment> = Action {}
+    ): MinecraftEnvironment =
+        project.extensions.getByType(MinecraftExtension::class.java)
+            .sourceSetInternal(sourceSetName, environmentId, action)
+
+    /** Apply the recorded implicit-parent combine, unless opted out or
+     *  the parent was already combined/copied explicitly. Deferred so
+     *  [inheritParent] can be set inside the configure block. */
+    internal fun applyImplicitParent() {
+        if (environmentId == parentEnvId) return
+        if (!inheritParent.get()) return
+        val ref = EnvironmentReference(project.path, parentEnvId)
+        if (ref in combinedWithReferences) return
+        combineWith(parentEnvId)
+    }
+
     /** Minecraft version id for this source set. */
     val version: Property<String> = objects.property(String::class.java)
 

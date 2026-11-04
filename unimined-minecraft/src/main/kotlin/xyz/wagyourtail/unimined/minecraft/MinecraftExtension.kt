@@ -80,10 +80,18 @@ abstract class MinecraftExtension @Inject constructor(
     /** Environments keyed by source-set name (`main`, `test`, `fabric`, ...). */
     val environments: NamedDomainObjectContainer<MinecraftEnvironment> =
         objects.domainObjectContainer(MinecraftEnvironment::class.java) { name ->
+
             // newInstance — decoration is what dispatches Groovy calls
             // (env.jarmod(...)) to the ExtensionAware extensions
             objects.newInstance(MinecraftEnvironment::class.java, name, project, objects)
+        }.also { container ->
+        // implicit parent-container inheritance: every env combines its
+        // lexical parent (default `main`) unless inheritParent is false —
+        // deferred to afterEvaluate so flags inside configure blocks win
+        container.configureEach { env ->
+            project.afterEvaluate { env.applyImplicitParent() }
         }
+    }
 
     /**
      * Whether tool execs, source-set compiles, and run launchers resolve
@@ -592,11 +600,29 @@ abstract class MinecraftExtension @Inject constructor(
     fun sourceSet(sourceSetName: String): MinecraftEnvironment =
         environments.maybeCreate(sourceSetName)
 
-    /** Configure a source-set-specific Minecraft environment. */
+    /** Alias for [environments] — supports container delegates like
+     *  `val fabric by sourceSets.creating { }`. */
+    val sourceSets: NamedDomainObjectContainer<MinecraftEnvironment>
+        get() = environments
+
+    /** Configure a source-set-specific Minecraft environment. Envs
+     *  declared at `minecraft {}` top level implicitly inherit `main`. */
     fun sourceSet(
         sourceSetName: String,
         action: Action<MinecraftEnvironment>
-    ): MinecraftEnvironment = sourceSet(sourceSetName).also(action::execute)
+    ): MinecraftEnvironment =
+        sourceSetInternal(sourceSetName, "main", action)
+
+    /** Create/configure an env with an explicit lexical parent — used by
+     *  nested `sourceSet` calls so the enclosing env becomes the parent. */
+    internal fun sourceSetInternal(
+        sourceSetName: String,
+        parentEnvId: String,
+        action: Action<MinecraftEnvironment>
+    ): MinecraftEnvironment = sourceSet(sourceSetName).also { env ->
+        env.parentEnvId = parentEnvId
+        action.execute(env)
+    }
 
     /** Groovy DSL overload for a source-set-specific environment. */
     fun sourceSet(
