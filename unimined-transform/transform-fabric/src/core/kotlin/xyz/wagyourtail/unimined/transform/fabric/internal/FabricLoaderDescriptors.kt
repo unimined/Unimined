@@ -24,6 +24,18 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "intermediary",
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
+            capabilities = mapOf(
+                // loom convention — `fabricApi.configureDataGeneration`:
+                // fabric-api's executor boots the datagen entrypoints
+                "datagenMain" to
+                    "net.fabricmc.fabric.impl.datagen." +
+                    "FabricDataGenHelper\$FabricDatagenExecutor",
+                "datagenArgs" to
+                    "--modid {modid} --output {output} --strict-validation",
+                "datagenClientArg" to "--client",
+                // junit-driven gametest launches
+                "gametestJunit" to "net.fabricmc:fabric-loader-junit:{loader}"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(

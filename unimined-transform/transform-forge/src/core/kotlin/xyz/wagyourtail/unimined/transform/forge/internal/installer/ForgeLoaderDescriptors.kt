@@ -73,7 +73,12 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 }
             },
             prodNamespace = "mojmap",
-            capabilities = mapOf("atTool" to "8.2.2"),
+            capabilities = mapOf(
+                "atTool" to "8.2.2",
+                // neoforge datagen is the dev launch with a data
+                // launchTarget — mod hooks GatherDataEvent itself
+                "datagenArgs" to "--launchTarget data"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/neoforge.mods.toml",
                 accessDiscovery = setOf(
