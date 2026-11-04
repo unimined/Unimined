@@ -751,7 +751,21 @@ class MappingsSpecImpl(
             providerParams: Map<String, Provider<String>> = emptyMap()
         ) : Source(), BuiltinMappingSource {
             override val params: Map<String, () -> String> =
-                providerParams.mapValues { v -> { v.value.get() } }
+                providerParams.mapValues { (key, v) ->
+                    {
+                        // MissingValueException gives no context — name
+                        // the channel + param so a contribution bug is
+                        // debuggable (e.g. loader-gated source on a
+                        // loaderless env)
+                        v.orNull ?: throw GradleException(
+                            "mappings source '${nameProvider.get()}' " +
+                            "requires parameter '$key' but its provider " +
+                            "has no value — the source may have been " +
+                            "contributed to an environment missing the " +
+                            "backing value (loader/version unset)"
+                        )
+                    }
+                }
             override val channel get() = nameProvider.get()
         }
     }
