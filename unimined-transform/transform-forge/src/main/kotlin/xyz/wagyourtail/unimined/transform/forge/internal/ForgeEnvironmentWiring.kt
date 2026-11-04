@@ -64,6 +64,10 @@ import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevSourcesC
 internal object ForgeEnvironmentWiring {
 
     fun wire(project: Project, environment: MinecraftEnvironment) {
+        // loaderless envs (e.g. `main` under flat multiloader) carry
+        // no loader — contributing loader-gated sources/steps would
+        // leave loaderSpec-bound providers unset at resolve time
+        if (environment.loaderSpec.orNull == null) return
         // forge transforms layer onto the vanilla jar like fabric's —
         // the installer-era pipelines come later
         environment.provider.convention(

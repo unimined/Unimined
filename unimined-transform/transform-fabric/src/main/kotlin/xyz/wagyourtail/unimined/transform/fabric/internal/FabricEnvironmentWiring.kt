@@ -37,6 +37,10 @@ import xyz.wagyourtail.unimined.api.util.UniminedCache
 internal object FabricEnvironmentWiring {
 
     fun wire(project: Project, environment: MinecraftEnvironment) {
+        // loaderless envs (e.g. `main` under flat multiloader) carry
+        // no loader — contributing loader-gated sources/steps would
+        // leave loaderSpec-bound providers unset at resolve time
+        if (environment.loaderSpec.orNull == null) return
         // fabric's MC artifact is the vanilla jar — the transform layers
         // loader behavior on top; convention lets users override, and the
         // convention itself only applies when the loader is fabric
