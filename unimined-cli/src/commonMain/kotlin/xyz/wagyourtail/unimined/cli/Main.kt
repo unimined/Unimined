@@ -95,16 +95,61 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         val resolver = VersionResolver(
             cacheDir = Io.path(userHome(), ".unimined", "cache"),
             offline = offline)
+        /** `latest` / trailing-`*` prefix / exact — resolved against
+         *  live-then-disk-then-baked lists for [axis]. */
+        fun resolveSpec(axis: String, spec: String, forMc: String): String {
+            val list by lazy { resolver.loaderVersions(axis, forMc) }
+            return when {
+                spec == "latest" -> list.firstOrNull()
+                    ?: throw IllegalArgumentException(
+                        "no versions known for '$axis'")
+                spec.endsWith("*") ->
+                    list.firstOrNull { it.startsWith(spec.dropLast(1)) }
+                        ?: throw IllegalArgumentException(
+                            "no version matching '$spec' for '$axis'")
+                else -> spec
+            }
+        }
+
+        // product envs take the product's own version list (bta etc.),
+        // plain mc uses piston-meta
         val mc = (if (template != null) "" else (version
             ?: echo("error: missing required --version", err = true)
                 .let { throw IllegalArgumentException("missing required --version") }))
-            .let { if (it == "latest") resolver.latestMinecraft() else it }
+            .let { v ->
+                when {
+                    product != null -> resolveSpec(product!!, v, "")
+                    v == "latest" -> resolver.latestMinecraft()
+                    v.endsWith("*") -> resolver.minecraftVersions()
+                        .firstOrNull { it.startsWith(v.dropLast(1)) }
+                        ?: throw IllegalArgumentException(
+                            "no mc version matching '$v'")
+                    else -> v
+                }
+            }
 
         val loaders = loader.flatMap { it.split(',') }.map { entry ->
             val eq = entry.indexOf('=')
             val l = (if (eq > 0) entry.substring(0, eq) else entry).trim()
             val v = if (eq > 0) entry.substring(eq + 1).trim() else "latest"
-            l to if (v == "latest") resolver.latestLoader(l, mc) else v
+            l to resolveSpec(l, v, mc)
+        }
+
+        /** `name(latest)` / `name(1.20.*)` mapping args resolve per-mc;
+         *  `stable_12`-style results expand to `("stable", "12")`. */
+        fun resolveMappingLine(line: String): String {
+            val m = Regex("^\\s*(\\w+)\\((.*)\\)\\s*$")
+                .find(line) ?: return line
+            val name = m.groupValues[1]
+            val args = m.groupValues[2].split(',').map { a ->
+                val t = a.trim().trim('"', '\'')
+                val r = resolveSpec(name, t, mc)
+                if (r == t) a
+                else Regex("^([a-zA-Z]+)_(\\d+)$").find(r)
+                    ?.let { "\"${it.groupValues[1]}\", \"${it.groupValues[2]}\"" }
+                    ?: "\"$r\""
+            }
+            return "$name(${args.joinToString(", ")})"
         }
 
         val spec = InitSpec(
@@ -117,7 +162,7 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             packageName = pkg,
             mcVersion = mc,
             loaders = loaders,
-            mappings = mappings,
+            mappings = mappings.map { resolveMappingLine(it) },
             dsl = if (dsl == "groovy") InitSpec.Dsl.GROOVY
                 else InitSpec.Dsl.KOTLIN,
             pluginVersion = (if (template != null) ""
