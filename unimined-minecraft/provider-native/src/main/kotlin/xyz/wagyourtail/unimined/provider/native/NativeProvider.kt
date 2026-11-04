@@ -182,7 +182,15 @@ class NativeProvider(
         return NativeProductArtifacts(
             artifacts = artifacts,
             auxiliaryArtifacts = auxiliary,
-            mappings = ctx.providers.provider { OfficialIdentityMappingTree },
+            mappings = ctx.providers.provider {
+                // unobf'd versions (26.x) ship no mappings downloads —
+                // the shipped names ARE mojmap; naming the identity
+                // namespace mojmap keeps prod == dev identity remaps
+                // correct for mojmap-prod loaders (neoform neoforge)
+                if (metadata().version.downloads?.containsKey("client_mappings") == true)
+                    OfficialIdentityMappingTree
+                else MojmapIdentityMappingTree
+            },
             namespaceMode = ctx.providers.provider { NamespaceMode.REMAPPABLE },
             capabilities = capabilities,
             libraries = libraries,
@@ -218,6 +226,9 @@ private class NativeAssetIndex(
 /** Identity-only official namespace until a user mapping source is composed. */
 private val OfficialIdentityMappingTree: MappingTree =
     MappingTree(listOf(Namespace("official")))
+
+private val MojmapIdentityMappingTree: MappingTree =
+    MappingTree(listOf(Namespace("mojmap")))
 
 /** Version-JSON library prefixes the native provider always treats as
  *  obfuscated artifacts (Realms is the only Mojang-published one). */

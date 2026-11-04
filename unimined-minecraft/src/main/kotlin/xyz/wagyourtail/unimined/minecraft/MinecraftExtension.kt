@@ -567,7 +567,11 @@ abstract class MinecraftExtension @Inject constructor(
         providers.provider {
             val environment = sourceSet(environmentId)
             environment.modSourceNamespaces.getOrElse(emptyList()).ifEmpty {
-                loaderModSourceNamespaces[environment.loaderSpec.orNull?.name]
+                // unobf'd products (26.x) dev == prod == official — the
+                // loader's prod namespace (intermediary/mojmap) has no
+                // channel and the remap is identity
+                if (!environment.obfuscated.get()) listOf("mojmap")
+                else loaderModSourceNamespaces[environment.loaderSpec.orNull?.name]
                     ?: run {
                         // split-official merged envs merge in the spec's
                         // shared namespace — the side-official columns

@@ -55,9 +55,20 @@ internal fun contributeMappingHop(
         val mcp = (r.profile as? ForgeProfile.Userdev)?.config?.mcp
         mcp?.split(":")?.getOrNull(2)?.substringBefore("@") ?: ""
     }
-    environment.mappingsSpec.defaultSources += MappingsSpecImpl.Source.Builtin(
-        obfNs, mapOf("version" to mcpVersion)
-    )
+    environment.mappingsSpec.deferredDefaultSources += {
+        val spec = environment.loaderSpec.orNull
+        // unobf'd product artifacts (26.x) ship no client_mappings —
+        // dev is already official; the obf-namespace hop must not
+        // contribute mojmap/searge channels that can't resolve; and
+        // on non-forge envs `resolved` is empty so obfNs/version
+        // providers would fail at query time
+        if (spec == null ||
+            LoaderRegistry.resolveBuiltin(spec.name)?.family != "forge" ||
+            !environment.obfuscated.get()) emptyList()
+        else listOf(
+            MappingsSpecImpl.Source.Builtin(obfNs, mapOf("version" to mcpVersion))
+        )
+    }
     // the dev pipeline's core remap sees content at the profile's
     // "obf" boundary — srg for modern userdev (the binpatch step
     // substitutes the srg-named clean jar), obf for notchObf-era

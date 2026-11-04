@@ -713,8 +713,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  mapping defaults must skip obfuscation hops. */
     val obfuscated: Provider<Boolean> = project.provider {
         project.extensions.getByType(MinecraftExtension::class.java)
-            .resolved(this).auxiliaryArtifacts.keys
-            .any { it.endsWith("_mappings") }
+            .resolved(this).auxiliaryArtifacts.entries
+            // a _mappings key with an empty provider means the product
+            // declares the channel but ships no artifact (26.x unobf'd)
+            .any { it.key.endsWith("_mappings") && it.value.isPresent }
     }
 
     val useToolchains: Property<Boolean> =

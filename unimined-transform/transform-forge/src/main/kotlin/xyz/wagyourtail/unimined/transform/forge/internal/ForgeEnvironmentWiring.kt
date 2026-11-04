@@ -67,7 +67,9 @@ internal object ForgeEnvironmentWiring {
         // loaderless envs (e.g. `main` under flat multiloader) carry
         // no loader — contributing loader-gated sources/steps would
         // leave loaderSpec-bound providers unset at resolve time
-        if (environment.loaderSpec.orNull == null) return
+        // no loaderSpec gate at wire time — envs bind at declaration,
+        // before `loader(...)` lands; contributions self-gate on the
+        // resolved/loaderSpec providers (empty on non-forge envs)
         // forge transforms layer onto the vanilla jar like fabric's —
         // the installer-era pipelines come later
         environment.provider.convention(
@@ -138,19 +140,38 @@ internal object ForgeEnvironmentWiring {
         // (`forge-1.20.1-47.3.0-merged.jar`, 1.x's forge-named
         // MinecraftJar) so downstream `-merged`/`-<ns>` suffixes keep
         // the needle
-        environment.artifactBaseName.convention(resolved.map { r ->
-            val coords = r.descriptor.loaderCoords(
-                environment.version.get(),
-                environment.loaderSpec.get().version
-            ).split(":")
-            "${coords[1]}-${coords[2]}"
-        })
+        environment.artifactBaseName.convention(
+            // convention() replaces, so repeat the baseline fallback —
+            // on non-forge envs `resolved` is empty and the transform
+            // param must never resolve unset
+            resolved.map { r ->
+                val coords = r.descriptor.loaderCoords(
+                    environment.version.get(),
+                    environment.loaderSpec.get().version
+                ).split(":")
+                "${coords[1]}-${coords[2]}"
+            }.orElse(environment.version.map {
+                "minecraft-${environment.environmentId}-$it"
+            })
+        )
         // mod dependencies publish at the loader's production
         // namespace (`searge` for userdev-era, `mojmap` for neoform
         // products) — remapped views read them into devNamespace
         environment.modSourceNamespaces.convention(
-            resolved.map { listOf(it.descriptor.prodNamespace) }
+            resolved.map { r ->
+                // unobf'd products (26.x) dev == prod == mojmap —
+                // identity remap. Otherwise the era-correct obf
+                // namespace: searge for userdev-era, mojmap for
+                // neoform-family — read from the profile, not the
+                // static descriptor (version ranges differ)
+                if (!environment.obfuscated.get()) listOf("mojmap")
+                else listOf(
+                    (r.profile as? ForgeProfile.Userdev)?.config?.obfNamespace
+                        ?: r.descriptor.prodNamespace
+                )
+            }
         )
+        contributeLoaderDependency(project, environment)
         contributeUserdevLibraries(project, environment, resolved)
         contributeClientExtra(project, environment, resolved)
         contributeSrgToMcp(project, environment, resolved)
@@ -176,3 +197,49 @@ internal object ForgeEnvironmentWiring {
      */
 
 }
+
+    /** `forgeLoader<Env>` — the loader's API artifact on the env's
+     *  compile+runtime classpath (fabric's `contributeLoaderDependency`
+     *  parity). Neoform-era loaders ship the API jar separately from
+     *  the patched product; userdev-era forge classes merge into the
+     *  product via binpatch, but the extra jar is harmless there too —
+     *  `withDependencies` gates on forge-family so non-forge envs get
+     *  nothing. */
+    private fun contributeLoaderDependency(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        val loaderSpec = environment.loaderSpec
+        val loader = project.configurations.create(
+            "forgeLoader${environment.environmentId.replaceFirstChar { it.uppercaseChar() }}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = true
+            conf.withDependencies { deps ->
+                val spec = loaderSpec.orNull
+                val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+                    ?.takeIf { it.family == "forge" }
+                if (descriptor != null) {
+                    deps.add(
+                        project.dependencies.create(
+                            descriptor.loaderCoords(
+                                environment.version.get(), spec!!.version
+                            )
+                        )
+                    )
+                }
+            }
+        }
+        val sourceSet = project.extensions
+            .getByType(org.gradle.api.plugins.JavaPluginExtension::class.java)
+            .sourceSets.findByName(environment.environmentId) ?: return
+        listOf(
+            sourceSet.compileClasspathConfigurationName,
+            sourceSet.runtimeClasspathConfigurationName,
+        ).forEach { name ->
+            project.configurations.named(name) { conf ->
+                conf.extendsFrom(loader)
+            }
+        }
+    }
