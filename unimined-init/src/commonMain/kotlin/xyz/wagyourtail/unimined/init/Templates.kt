@@ -148,18 +148,17 @@ internal object Templates {
                     spec.loaders.map { defaultMappingLines(it.first, mc) }
                         .firstOrNull { it.isNotEmpty() } ?: emptyList())
             }
-            val commonLines = mutableListOf(
-                "sourceSet(\"common\") {",
-                "    version = \"$mc\"")
+            // top-level minecraft{} IS the main env — shared
+            // version/mappings live there; loader envs combineWith it
+            val sharedLines = mutableListOf("version = \"$mc\"")
             sideLine(spec).takeIf { it.isNotEmpty() }
-                ?.let { commonLines.add("    $it") }
+                ?.let { sharedLines.add(it) }
             if (sharedMappings.isNotEmpty()) {
-                commonLines.add("    mappings {")
-                sharedMappings.forEach { commonLines.add("        $it") }
-                commonLines.add("    }")
+                sharedLines.add("mappings {")
+                sharedMappings.forEach { sharedLines.add("    $it") }
+                sharedLines.add("}")
             }
-            commonLines.add("}")
-            val common = commonLines.joinToString("\n")
+            val common = sharedLines.joinToString("\n")
             spec.loaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
                 render("partials/source-set-env.gradle", mapOf(
                     "LOADER" to loader,
@@ -169,7 +168,7 @@ internal object Templates {
                     "MAPPINGS" to "",
                 )).replace(
                     "version = \"combined from common\"",
-                    "combineWith(\"common\")")
+                    "combineWith(\"main\")")
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(

@@ -1,6 +1,6 @@
 sourceSet("@@LOADER@@") {
-    version = "@@MC_VERSION@@"
+    combineWith("main")
 @@SIDE@@
-    loader("@@LOADER@@", "@@LOADER_VERSION@@")
+    loader("@@LOADER_VERSION@@")
 @@MAPPINGS@@
 }

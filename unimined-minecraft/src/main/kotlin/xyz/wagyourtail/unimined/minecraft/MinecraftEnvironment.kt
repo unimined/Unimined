@@ -305,7 +305,14 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * FoxLoader version map.
      */
     fun loader(name: String) {
-        loaderSpec.set(RuntimeLoaderSpec(name, ""))
+        // in a named env a single arg that isn't the env's own name is
+        // the version — `sourceSet("fabric") { loader("0.20.1") }` reads
+        // as `loader("fabric", "0.20.1")`; env "main" keeps it as a name
+        loaderSpec.set(
+            if (environmentId == "main" || name == environmentId)
+                RuntimeLoaderSpec(name, "")
+            else RuntimeLoaderSpec(environmentId, name)
+        )
     }
 
     /** Configure this environment's modloader and version. */
