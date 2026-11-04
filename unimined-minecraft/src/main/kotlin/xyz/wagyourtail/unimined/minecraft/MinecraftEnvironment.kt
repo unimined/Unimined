@@ -757,6 +757,25 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         boundSourceSet = sourceSet
         combinedWithReferences.forEach(::wireSourceOutput)
         wireJavaCompatibility(sourceSet)
+        wireEnvJar(sourceSet)
+    }
+
+    /** `<env>Jar` — the dev-namespace jar for non-main envs (main
+     *  already has `jar`). Registered at bind so task lists stay lazy;
+     *  remap<Env>Jar (prod namespace) is registered by the remap module
+     *  when the env isn't identity-remap (unobf'd / dev==prod) and
+     *  [defaultRemapJar] is set — metadata/JiJ pipeline steps ride
+     *  whichever artifact is the publish output. */
+    private fun wireEnvJar(sourceSet: SourceSet) {
+        if (environmentId == "main") return
+        val jarName = sourceSet.getJarTaskName()
+        if (project.tasks.findByName(jarName) != null) return
+        project.tasks.register(jarName, org.gradle.jvm.tasks.Jar::class.java) { jar ->
+            jar.group = "build"
+            jar.description = "Assembles the '$environmentId' environment jar"
+            jar.archiveAppendix.set(environmentId)
+            jar.from(sourceSet.output)
+        }
     }
 
     /**
