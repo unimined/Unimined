@@ -149,8 +149,12 @@ abstract class MinecraftExtension @Inject constructor(
                     ?.let { registerModConfigurations(it, sourceSet) }
             }
             environments.all { environment ->
-                sourceSets.findByName(environment.environmentId)
-                    ?.let { registerModConfigurations(environment, it) }
+                // declaring an env declares its Gradle source set —
+                // without this the env stays inert until something
+                // else creates one (no compile/run/jar tasks)
+                registerModConfigurations(
+                    environment,
+                    sourceSets.maybeCreate(environment.environmentId))
             }
         }
     }

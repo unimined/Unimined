@@ -154,8 +154,11 @@ internal object ProductionJarWiring {
         // SOURCES pipeline and emits the prod-named `-sources` artifact.
         // `prodBundle` is reused — the dev->prod tree is identical to
         // the binary remap's; only the pipeline surface differs
-        val sourcesJar = (project.tasks.findByName("sourcesJar") as? Jar)
-            ?: project.tasks.register("sourcesJar", Jar::class.java) { t ->
+        // env-scoped name (main -> sourcesJar, fabric -> fabricSourcesJar)
+        // — the same per-env remap naming as remap${jarTaskName}
+        val sourcesJarTaskName = sourceSet.sourcesJarTaskName
+        val sourcesJar = (project.tasks.findByName(sourcesJarTaskName) as? Jar)
+            ?: project.tasks.register(sourcesJarTaskName, Jar::class.java) { t ->
                 t.description = "Assembles the '${sourceSet.name}' sources jar"
                 t.group = "build"
                 t.from(sourceSet.allSource)
@@ -177,7 +180,7 @@ internal object ProductionJarWiring {
 
         val originalSourcesClassifier = sourcesJar.archiveClassifier.getOrElse("sources")
         val remapSourcesJar = project.tasks.register(
-            "remapSourcesJar",
+            "remap${sourcesJarTaskName.cap()}",
             RemapJarTask::class.java
         ) { t ->
             t.group = "unimined"

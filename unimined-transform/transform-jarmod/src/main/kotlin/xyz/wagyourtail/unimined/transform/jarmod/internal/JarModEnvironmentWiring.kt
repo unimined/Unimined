@@ -50,6 +50,10 @@ internal object JarModEnvironmentWiring {
             LiteLoaderWiring.wire(project, environment)
             return
         }
+        // envs can now bind inside the same environments.all pass that
+        // declared them — before the plugin-level createConfigurations
+        // hook gets its turn; it is maybeCreate-based/idempotent
+        createConfigurations(project, environment)
         val envId = environment.environmentId
         val jarMod = project.configurations.getByName(
             if (envId == "main") "jarMod" else
