@@ -93,7 +93,14 @@ internal object EnvironmentClasspathWiring {
         )
         val modsBundleJson = minecraft.mappingBundleJson(
             environmentId,
-            minecraft.modSourceNamespaces(environmentId).map { it.single() },
+            minecraft.modSourceNamespaces(environmentId).map { ns ->
+                ns.singleOrNull() ?: throw org.gradle.api.GradleException(
+                    "unimined: environment '$environmentId' declares " +
+                    "${ns.size} mod source namespaces — auto mod remap " +
+                    "supports exactly one; declare remap.remappedViews " +
+                    "for mixed inputs"
+                )
+            },
             devNamespace
         )
 

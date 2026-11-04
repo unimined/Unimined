@@ -766,7 +766,12 @@ class MappingsSpecImpl(
                         )
                     }
                 }
-            override val channel get() = nameProvider.get()
+            override val channel get() = nameProvider.orNull
+                ?: throw GradleException(
+                    "mappings builtin source: channel provider has no " +
+                    "value — the source may have been contributed to an " +
+                    "environment missing the backing value"
+                )
         }
     }
 

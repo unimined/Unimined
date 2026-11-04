@@ -31,7 +31,12 @@ class GradlePlugin : Plugin<Project> {
                 target.afterEvaluate {
                     for (environment in minecraft.environments) {
                         val spec = environment.loaderSpec.orNull ?: continue
-                        val descriptor = LoaderRegistry.resolveBuiltin(spec.name) ?: continue
+                        val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+                            ?: throw org.gradle.api.GradleException(
+                                "unimined: unknown loader '${spec.name}' in " +
+                                "environment '${environment.environmentId}' — " +
+                                "check the loader(...) name spelling"
+                            )
                         val product = environment.product.get()
                         if (!descriptor.supportsProduct(product)) {
                             throw org.gradle.api.GradleException(

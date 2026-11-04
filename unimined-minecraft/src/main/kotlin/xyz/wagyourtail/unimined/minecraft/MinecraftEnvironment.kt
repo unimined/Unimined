@@ -418,7 +418,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         loaderSpec.set(
             if (environmentId == "main" || name == environmentId)
                 RuntimeLoaderSpec(name, "")
-            else RuntimeLoaderSpec(environmentId, name)
+            else {
+                // `loader("quilt")` inside env "fabric" is almost
+                // certainly a two-arg typo — the single arg is the
+                // version slot, the env id is the inferred loader name
+                project.logger.warn(
+                    "[unimined] env '$environmentId': the single " +
+                    "loader() arg is the version slot — loader($name) " +
+                    "resolves as loader $environmentId:$name; for a " +
+                    "different loader use loader(name, version)"
+                )
+                RuntimeLoaderSpec(environmentId, name)
+            }
         )
     }
 
@@ -667,7 +678,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         return RuntimeProductSpec(
             environmentId = environmentId,
             sourceSetName = environmentId,
-            version = RuntimeVersionSpec(version.get()),
+            version = RuntimeVersionSpec(
+                version.orNull ?: throw org.gradle.api.GradleException(
+                    "unimined: environment '$environmentId' has no minecraft " +
+                    "version — set version = <mc version> in the " +
+                    "minecraft {} / sourceSet($environmentId) {} block"
+                )
+            ),
             side = side.get(),
             loader = loaderSpec.orNull,
             product = product.get(),

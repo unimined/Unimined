@@ -453,7 +453,18 @@ abstract class MinecraftExtension @Inject constructor(
                 // may run after this registration
                 p.mergeNamespace.set(providers.provider {
                     if (environment.mappingsSpec.splitOfficial) {
-                        modSourceNamespaces(environmentId).get().single()
+                        modSourceNamespaces(environmentId).orNull?.let { ns ->
+                            ns.singleOrNull() ?: throw GradleException(
+                                "unimined: environment '$environmentId' is " +
+                                "split-official but has ${ns.size} mod source " +
+                                "namespaces — the merged remap needs exactly " +
+                                "one; declare remap.remappedViews for mixed inputs"
+                            )
+                        } ?: throw GradleException(
+                            "unimined: environment '$environmentId' has no mod " +
+                            "source namespace — declare a loader or set " +
+                            "modSourceNamespaces"
+                        )
                     } else null
                 })
                 p.mergeFromNamespaces.set(providers.provider {
@@ -516,7 +527,13 @@ abstract class MinecraftExtension @Inject constructor(
             // shared merge namespace (each side was remapped into it
             // pre-merge), not the union official namespace
             if (sourceSet(environmentId).mappingsSpec.splitOfficial) {
-                modSourceNamespaces(environmentId).get().single()
+                modSourceNamespaces(environmentId).orNull?.singleOrNull()
+                    ?: throw GradleException(
+                        "unimined: environment '$environmentId' declares " +
+                        "multiple or zero mod source namespaces — auto " +
+                        "remapping supports exactly one; declare " +
+                        "remap.remappedViews for mixed inputs"
+                    )
             } else {
                 artifacts(environmentId).get().mappings.get()
                     .namespaces.first().name
@@ -648,7 +665,14 @@ abstract class MinecraftExtension @Inject constructor(
                         "extension; apply the minecraft or frontend plugin before sharing " +
                         "environment '${reference.environmentId}'"
             )
-        return extension.sourceSet(reference.environmentId)
+        return extension.environments.findByName(reference.environmentId)
+            ?: throw GradleException(
+                "unimined: no minecraft environment named " +
+                "'${reference.environmentId}' in project " +
+                "'${sourceProject.path}' (referenced from environment " +
+                "'${project.path}') — declared envs: " +
+                extension.environments.names.joinToString()
+            )
     }
 
     /** Configure the modloader layer on the default `main`
@@ -1117,7 +1141,13 @@ abstract class MinecraftExtension @Inject constructor(
         return project.configurations.detachedConfiguration(
             project.dependencies.create(notation)
         ).apply { isTransitive = false }
-            .files.single().toPath()
+            .files.also { files ->
+                if (files.size != 1) throw GradleException(
+                    "mappings { maven($notation) }: resolved ${files.size} " +
+                    "files, expected exactly 1 — check the coordinate, " +
+                    "the serving repository, and whether you are offline"
+                )
+            }.single().toPath()
     }
 
     /**
