@@ -33,8 +33,43 @@ internal object Templates {
         }
 
     /** `mappings { }` partial — empty when no mappings configured. */
-    private fun mappingsBlock(spec: InitSpec, indent: String): String {
-        val lines = spec.vars.map { (k, v) -> "$k = $v" } + spec.mappings
+    /** Baked era-default mapping lines for [loader] on spec.mcVersion —
+     *  deterministic (baked lists only, no runtime probe); empty on
+     *  unobfuscated 26.x or unknown loaders. */
+    private fun defaultMappingLines(loader: String, mc: String): List<String> {
+        fun baked(axis: String): String? =
+            Probed.expand("$axis:$mc").firstOrNull()
+                ?: Probed.expand(axis).firstOrNull()
+        val l = loader.lowercase()
+        return when {
+            l in listOf("babric", "bta") -> baked("biny")
+                ?.let { listOf("biny(\"$it\")") }
+            mc.startsWith("b1.") -> baked("nostalgia")
+                ?.let { listOf("nostalgia(\"$it\")") }
+            l == "legacyfabric" -> baked("legacyyarn")
+                ?.let { listOf("legacyYarn(\"$it\")") }
+            l == "osl" -> baked("feather")
+                ?.let { listOf("feather(\"$it\")") }
+            l == "quilt" -> baked("hashed")
+                ?.let { listOf("hashed(\"$it\")") }
+            l == "fabric" -> listOfNotNull(
+                "intermediary()",
+                baked("yarn")?.let { "yarn(\"$it\")" })
+            l in listOf("forge", "fml") -> baked("mcp")?.let {
+                val p = it.split('_', limit = 2)
+                listOf("mcp(\"${p[0]}\", \"${p[1]}\")")
+            }
+            else -> null
+        } ?: listOfNotNull(
+            if (Probed.expand("mojmap").contains(mc)) "mojmap()" else null)
+    }
+
+    private fun mappingsBlock(spec: InitSpec, indent: String,
+                              loader: String? = null): String {
+        val lines = spec.vars.map { (k, v) -> "$k = $v" } +
+            spec.mappings.ifEmpty {
+                loader?.let { defaultMappingLines(it, spec.mcVersion) }
+                    ?: emptyList() }
         return if (lines.isEmpty()) "" else
             render("partials/mappings-block.gradle", mapOf(
                 "MAPPINGS_LINES" to lines.joinToString("\n") { "    $it" }
@@ -98,14 +133,23 @@ internal object Templates {
      */
     private fun minecraftBody(spec: InitSpec): String =
         if (spec.loaders.size > 1) {
-            spec.loaders.joinToString("\n") { (loader, version) ->
+            // loader-less `common` env carries version/side and the MC
+            // classpath; each loader env `combineWith`s it so shared code
+            // sees Minecraft and flows into every loader jar
+            val side = sideLine(spec).prependIndent("    ").trimEnd()
+            val common = "sourceSet(\"common\") {\n" +
+                "    version = \"${spec.mcVersion}\"\n" +
+                (if (side.isEmpty()) "" else "$side\n") + "}"
+            spec.loaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
                 render("partials/source-set-env.gradle", mapOf(
                     "LOADER" to loader,
                     "LOADER_VERSION" to version,
-                    "MC_VERSION" to spec.mcVersion,
-                    "SIDE" to sideLine(spec),
-                    "MAPPINGS" to mappingsBlock(spec, "    "),
-                ))
+                    "MC_VERSION" to "combined from common",
+                    "SIDE" to "",
+                    "MAPPINGS" to mappingsBlock(spec, "    ", loader),
+                )).replace(
+                    "version = \"combined from common\"",
+                    "combineWith(\"common\")")
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(

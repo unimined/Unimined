@@ -202,7 +202,7 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 throw IllegalArgumentException("missing required --package") },
             mcVersion = mc,
             loaders = loaders,
-            mappings = if (mappings.isEmpty()) defaultMappings()
+            mappings = if (mappings.isEmpty() && loaders.size == 1) defaultMappings()
                 else mappings.map { resolveMappingLine(it) },
             dsl = if (dsl == "groovy") InitSpec.Dsl.GROOVY
                 else InitSpec.Dsl.KOTLIN,
