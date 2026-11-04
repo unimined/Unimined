@@ -84,6 +84,61 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val inheritParent: Property<Boolean> =
         objects.property(Boolean::class.java).convention(true)
 
+    /** Declared datagen envs — consumed by the runs module when it
+     *  materializes `runDatagen`-style configs; loader descriptors carry
+     *  `datagenMain`/`datagenArgs` capabilities for the launch. */
+    val datagenEnvs = mutableListOf<MinecraftEnvironment>()
+
+    /** Declared gametest envs — runs module wires the JUnit launch +
+     *  loader junit artifact (e.g. `fabric-loader-junit`) from these. */
+    val gametestEnvs = mutableListOf<MinecraftEnvironment>()
+
+    /** Declare a datagen source-set env ([name] defaults to
+     *  `<env>Data` — `fabric` → `fabricData`, `main` → `data`). The env
+     *  inherits this env's version/mappings/output via implicit parent
+     *  inheritance, and its `src/<name>/generated` dir is added to this
+     *  env's resources so generated data lands in the mod jar. The runs
+     *  module materializes the actual "Data Generation" run from the
+     *  loader descriptor's `datagenMain`/`datagenArgs` capabilities;
+     *  the mod still declares its own `fabric-datagen`-style
+     *  entrypoint. `client = true` marks a client-side pack. */
+    @JvmOverloads
+    fun datagen(
+        name: String = if (environmentId == "main") "data"
+                       else "${environmentId}Data",
+        client: Boolean = false,
+        action: Action<MinecraftEnvironment> = Action {}
+    ): MinecraftEnvironment = sourceSet(name, action).also { env ->
+        env.clientDatagen = client
+        datagenEnvs += env
+        // loom convention: generated data lands under src/<env>/generated
+        // and ships in this env's resources — wire lazily in case the
+        // Java plugin's source set binds later
+        project.extensions
+            .getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .named(environmentId) {
+                it.resources.srcDir("src/$environmentId/generated")
+            }
+    }
+
+    /** Declare a gametest source-set env ([name] defaults to
+     *  `<env>Gametest`). Inherits like [datagen]; the runs module wires
+     *  the loader's JUnit launch artifact + a `Test`-task integration
+     *  (gametests orchestrate real game launches per test — see
+     *  `fabric-loader-junit`); the mod declares its loader-specific
+     *  gametest entrypoint key itself. */
+    @JvmOverloads
+    fun gametest(
+        name: String = if (environmentId == "main") "gametest"
+                       else "${environmentId}Gametest",
+        action: Action<MinecraftEnvironment> = Action {}
+    ): MinecraftEnvironment = sourceSet(name, action).also {
+        gametestEnvs += it
+    }
+
+    /** Datagen envs: client-side pack flag (fabric `--client` arg). */
+    internal var clientDatagen: Boolean = false
+
     /** Nested env whose implicit parent is THIS env — supports
      *  `sourceSet("a") { sourceSet("b") { } }` grouping. */
     @JvmOverloads
