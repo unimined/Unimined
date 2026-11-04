@@ -16,6 +16,12 @@ import javax.inject.Inject
 abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
 
     /** All declared run configurations. */
+    /** env a run was registered *for* — recorded eagerly at registration
+     *  because `run.environment` conventions resolve in deferred order and
+     *  a foreign env's wire pass would otherwise misread the "main"
+     *  default as an intended binding. */
+    internal val runEnvironments = mutableMapOf<String, String>()
+
     val runs: NamedDomainObjectContainer<RunConfig> =
         objects.domainObjectContainer(RunConfig::class.java)
 

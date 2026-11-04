@@ -47,9 +47,11 @@ internal object RunsWiring {
         val clientName = if (environmentId == "main") "client" else "${environmentId}Client"
         val serverName = if (environmentId == "main") "server" else "${environmentId}Server"
         if (extension.runs.findByName(clientName) == null) {
+            extension.runEnvironments[clientName] = environmentId
             extension.runs.register(clientName) { it.environment.convention(environmentId) }
         }
         if (extension.runs.findByName(serverName) == null) {
+            extension.runEnvironments[serverName] = environmentId
             extension.runs.register(serverName) { it.environment.convention(environmentId) }
         }
         // prod-namespace variants — runProdClient/runProdServer launch
@@ -60,12 +62,14 @@ internal object RunsWiring {
         val prodServerName =
             if (environmentId == "main") "prodServer" else "${environmentId}ProdServer"
         if (extension.runs.findByName(prodClientName) == null) {
+            extension.runEnvironments[prodClientName] = environmentId
             extension.runs.register(prodClientName) {
                 it.environment.convention(environmentId)
                 it.prod.convention(true)
             }
         }
         if (extension.runs.findByName(prodServerName) == null) {
+            extension.runEnvironments[prodServerName] = environmentId
             extension.runs.register(prodServerName) {
                 it.environment.convention(environmentId)
                 it.prod.convention(true)
@@ -80,9 +84,11 @@ internal object RunsWiring {
         val natives = nativesConfiguration(project, environment, minecraft)
 
         extension.runs.all { run ->
-            // unbound runs attach to the first environment that binds them;
-            // explicitly-bound runs only materialize on their own env
-            val bound = run.environment.orNull
+            // prefer the eager intended-env record — run.environment's
+            // "main" convention resolves before register actions apply
+            // on other envs' wire passes and would falsely match
+            val bound = extension.runEnvironments[run.name]
+                ?: run.environment.orNull
             if (bound == null) {
                 run.environment.convention(environmentId)
             } else if (bound != environmentId) {
