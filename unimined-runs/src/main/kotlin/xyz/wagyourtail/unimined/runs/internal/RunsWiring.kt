@@ -111,6 +111,15 @@ internal object RunsWiring {
         for (dataEnv in environment.datagenEnvs) {
             val runName = dataEnv.environmentId
             if (extension.runs.findByName(runName) != null) continue
+            if (descriptor?.capabilities?.get("datagenMain") == null) {
+                project.logger.warn(
+                    "[unimined] env '${dataEnv.environmentId}' declares " +
+                    "datagen() but loader " +
+                    "'${environment.loaderSpec.orNull?.name}' has no " +
+                    "datagenMain capability — run$runName will launch " +
+                    "the plain game"
+                )
+            }
             extension.runs.register(runName) { run ->
                 run.environment.convention(dataEnv.environmentId)
                 run.side.convention(RunSide.CLIENT)
@@ -133,6 +142,14 @@ internal object RunsWiring {
             }
         }
         for (testEnv in environment.gametestEnvs) {
+            if (descriptor?.capabilities?.get("gametestJunit") == null) {
+                project.logger.warn(
+                    "[unimined] env '${testEnv.environmentId}' declares " +
+                    "gametest() but loader " +
+                    "'${environment.loaderSpec.orNull?.name}' has no " +
+                    "gametestJunit capability — no junit dep is added"
+                )
+            }
             descriptor?.capabilities?.get("gametestJunit")?.let { tpl ->
                 val coord = tpl.replace("{loader}",
                     environment.loaderSpec.orNull?.version ?: "")

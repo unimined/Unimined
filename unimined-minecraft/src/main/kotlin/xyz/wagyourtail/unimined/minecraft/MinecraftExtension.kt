@@ -477,7 +477,12 @@ abstract class MinecraftExtension @Inject constructor(
                         mappingBundleJson(
                             environmentId,
                             artifacts(environmentId).map {
-                                it.mappings.get().namespaces.first().name
+                                it.mappings.orNull?.namespaces?.firstOrNull()?.name
+                                    ?: throw GradleException(
+                                        "unimined: environment " +
+                                        "'$environmentId' produced no " +
+                                        "mapping tree"
+                                    )
                             },
                             modSourceNamespaces(environmentId)
                                 .map { it.single() }
@@ -503,14 +508,24 @@ abstract class MinecraftExtension @Inject constructor(
         sourceSet(environmentId).devNamespace.orElse(providers.provider {
             val environment = sourceSet(environmentId)
             if (environment.mappingsSpec.effectiveSources().isEmpty()) {
-                artifacts(environmentId).get().mappings.get().namespaces.last().name
+                artifacts(environmentId).get().mappings.orNull?.namespaces?.lastOrNull()?.name
+                    ?: throw GradleException(
+                        "unimined: environment '$environmentId' produced no " +
+                        "mapping tree — declare mappings { } or check the " +
+                        "provider supports this version"
+                    )
             } else {
                 val data = mappingDataProvider(environment).get()
                 val tree = data.view<MappingTree>()
                 if (tree == null) {
                     // declared-but-empty sources compose no tree —
                     // defer to the provider's mapping tree
-                    artifacts(environmentId).get().mappings.get().namespaces.last().name
+                    artifacts(environmentId).get().mappings.orNull?.namespaces?.lastOrNull()?.name
+                    ?: throw GradleException(
+                        "unimined: environment '$environmentId' produced no " +
+                        "mapping tree — declare mappings { } or check the " +
+                        "provider supports this version"
+                    )
                 } else {
                     val present = tree.namespaces.map { it.name }.toSet()
                     data.namedNamespaces().firstOrNull { it in present }
