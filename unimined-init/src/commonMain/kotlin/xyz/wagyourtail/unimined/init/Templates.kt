@@ -136,17 +136,37 @@ internal object Templates {
             // loader-less `common` env carries version/side and the MC
             // classpath; each loader env `combineWith`s it so shared code
             // sees Minecraft and flows into every loader jar
-            val side = sideLine(spec).prependIndent("    ").trimEnd()
-            val common = "sourceSet(\"common\") {\n" +
-                "    version = \"${spec.mcVersion}\"\n" +
-                (if (side.isEmpty()) "" else "$side\n") + "}"
+            val mc = spec.mcVersion
+            // shared namespace for common code — loader envs inherit
+            // it via combineWith; intermediary rides along only when a
+            // fabric-family env needs the runtime chain
+            val sharedMappings = buildList {
+                if (spec.loaders.any { it.first.contains("fabric") })
+                    add("intermediary()")
+                if (Probed.expand("mojmap").contains(mc)) add("mojmap()")
+                else addAll(
+                    spec.loaders.map { defaultMappingLines(it.first, mc) }
+                        .firstOrNull { it.isNotEmpty() } ?: emptyList())
+            }
+            val commonLines = mutableListOf(
+                "sourceSet(\"common\") {",
+                "    version = \"$mc\"")
+            sideLine(spec).takeIf { it.isNotEmpty() }
+                ?.let { commonLines.add("    $it") }
+            if (sharedMappings.isNotEmpty()) {
+                commonLines.add("    mappings {")
+                sharedMappings.forEach { commonLines.add("        $it") }
+                commonLines.add("    }")
+            }
+            commonLines.add("}")
+            val common = commonLines.joinToString("\n")
             spec.loaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
                 render("partials/source-set-env.gradle", mapOf(
                     "LOADER" to loader,
                     "LOADER_VERSION" to version,
                     "MC_VERSION" to "combined from common",
                     "SIDE" to "",
-                    "MAPPINGS" to mappingsBlock(spec, "    ", loader),
+                    "MAPPINGS" to "",
                 )).replace(
                     "version = \"combined from common\"",
                     "combineWith(\"common\")")
