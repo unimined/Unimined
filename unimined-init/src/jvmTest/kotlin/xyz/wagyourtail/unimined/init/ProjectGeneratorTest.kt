@@ -115,10 +115,14 @@ class ProjectGeneratorTest {
             spec(listOf("fabric" to "0.16.0", "forge" to "47.2.0")), dir.toString()
         )
         val build = Files.readString(dir.resolve("build.gradle.kts"))
+        // shared version/mappings live on the main env (top-level
+        // minecraft{}); loader envs combineWith it and use the
+        // env-name loader inference
         assertTrue("sourceSet(\"fabric\")" in build)
         assertTrue("sourceSet(\"forge\")" in build)
-        assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
-        assertTrue("loader(\"forge\", \"47.2.0\")" in build)
+        assertTrue("combineWith(\"main\")" in build)
+        assertTrue("loader(\"0.16.0\")" in build)
+        assertTrue("loader(\"47.2.0\")" in build)
         assertTrue(Files.exists(dir.resolve("src/fabric/resources/fabric.mod.json")))
         assertTrue(Files.exists(dir.resolve("src/forge/resources/META-INF/mods.toml")))
         assertTrue(Files.exists(dir.resolve("src/fabric/java/com/example/mymod/MyMod.java")))
