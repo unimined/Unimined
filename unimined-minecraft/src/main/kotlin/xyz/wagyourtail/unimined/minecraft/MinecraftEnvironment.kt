@@ -137,7 +137,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     }
 
     /** Datagen envs: client-side pack flag (fabric `--client` arg). */
-    internal var clientDatagen: Boolean = false
+    var clientDatagen: Boolean = false
 
     /** Nested env whose implicit parent is THIS env — supports
      *  `sourceSet("a") { sourceSet("b") { } }` grouping. */

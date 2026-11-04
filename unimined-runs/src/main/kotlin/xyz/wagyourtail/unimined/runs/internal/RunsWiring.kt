@@ -6,6 +6,7 @@ import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
+import xyz.wagyourtail.unimined.runs.RunSide
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import java.io.File
@@ -71,6 +72,11 @@ internal object RunsWiring {
             }
         }
 
+        // datagen/gametest child envs — materialize runs from the
+        // PARENT's loader descriptor capabilities (combineWith excludes
+        // LOADER, so the child carries none of its own)
+        wireAuxEnvs(project, environment, minecraft, extension)
+
         val natives = nativesConfiguration(project, environment, minecraft)
 
         extension.runs.all { run ->
@@ -85,6 +91,57 @@ internal object RunsWiring {
             val taskName = "run${run.name.replaceFirstChar(Char::uppercase)}"
             if (project.tasks.findByName(taskName) != null) return@all
             registerRunTask(project, environment, run, sourceSet, minecraft, transform, natives)
+        }
+    }
+
+    /** Datagen → a `run<Data>` config bound to the child env with the
+     *  parent loader's `datagenMain`/`datagenArgs` rows; gametest → the
+     *  loader's junit artifact + `useJUnitPlatform()` on the child's
+     *  test task (orchestrated in-jvm launches, not run configs). */
+    private fun wireAuxEnvs(
+        project: Project,
+        environment: MinecraftEnvironment,
+        minecraft: MinecraftExtension,
+        extension: RunsExtension
+    ) {
+        val registry =
+            xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
+        val descriptor = environment.loaderSpec.orNull
+            ?.let { registry.resolve(it.name) }
+        for (dataEnv in environment.datagenEnvs) {
+            val runName = dataEnv.environmentId
+            if (extension.runs.findByName(runName) != null) continue
+            extension.runs.register(runName) { run ->
+                run.environment.convention(dataEnv.environmentId)
+                run.side.convention(RunSide.CLIENT)
+                descriptor?.capabilities?.get("datagenMain")
+                    ?.let { run.mainClass.convention(it) }
+                descriptor?.capabilities?.get("datagenArgs")?.let { tpl ->
+                    run.programArgs.convention(tpl.split(" ").map { arg ->
+                        arg.replace("{modid}", project.name)
+                            .replace("{output}",
+                                "src/${environment.environmentId}/generated")
+                    })
+                }
+                if (dataEnv.clientDatagen) {
+                    descriptor?.capabilities?.get("datagenClientArg")
+                        ?.let { arg ->
+                            run.programArgs.set(
+                                run.programArgs.get() + arg)
+                        }
+                }
+            }
+        }
+        for (testEnv in environment.gametestEnvs) {
+            descriptor?.capabilities?.get("gametestJunit")?.let { tpl ->
+                val coord = tpl.replace("{loader}",
+                    environment.loaderSpec.orNull?.version ?: "")
+                project.dependencies.add(
+                    "testImplementation",
+                    project.dependencies.create(coord))
+            }
+            project.tasks.withType(org.gradle.api.tasks.testing.Test::class.java)
+                .configureEach { it.useJUnitPlatform() }
         }
     }
 
