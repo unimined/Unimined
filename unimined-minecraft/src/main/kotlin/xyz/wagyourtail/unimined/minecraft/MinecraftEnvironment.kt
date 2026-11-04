@@ -105,6 +105,27 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         combineWith(parentEnvId)
     }
 
+    /** Sources this env copied VERSION from — checked at bind so
+     *  pinned-mismatching envs error instead of silently inheriting
+     *  version-sensitive sections. */
+    private val versionCopySources = linkedSetOf<EnvironmentReference>()
+
+    /** Environments sharing sections must resolve the same mc version. */
+    internal fun checkVersionConflicts() {
+        val target = version.orNull ?: return
+        for (source in combinedWithReferences + versionCopySources) {
+            val other = project.extensions
+                .getByType(MinecraftExtension::class.java)
+                .environment(source).version.orNull ?: continue
+            if (other != target) throw GradleException(
+                "Minecraft environment '$environmentId' inherits from " +
+                    "'${source.projectPath}:${source.environmentId}' " +
+                    "(minecraft $other) but declares version $target; " +
+                    "environments sharing sections must use the same " +
+                    "minecraft version")
+        }
+    }
+
     /** Minecraft version id for this source set. */
     val version: Property<String> = objects.property(String::class.java)
 
@@ -646,6 +667,11 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     }
 
     internal fun bindSourceSet(sourceSet: SourceSet) {
+        // consumption-time deferral — lifecycle hooks (afterEvaluate,
+        // afterProject) are mutation-guarded during plugin application,
+        // so implicit parent inheritance applies when the env binds
+        applyImplicitParent()
+        checkVersionConflicts()
         boundSourceSet = sourceSet
         combinedWithReferences.forEach(::wireSourceOutput)
         wireJavaCompatibility(sourceSet)
@@ -798,6 +824,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         requireHandlers: Boolean
     ) {
         checkSelfReference(source)
+        if (EnvironmentSection.VERSION in sections)
+            versionCopySources.add(source)
         EnvironmentCopyRegistry.record(
             project,
             EnvironmentCopyRequest(

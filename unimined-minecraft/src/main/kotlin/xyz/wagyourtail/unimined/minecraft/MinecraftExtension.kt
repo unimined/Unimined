@@ -87,9 +87,9 @@ abstract class MinecraftExtension @Inject constructor(
         }.also { container ->
         // implicit parent-container inheritance: every env combines its
         // lexical parent (default `main`) unless inheritParent is false —
-        // deferred to afterEvaluate so flags inside configure blocks win
+        // deferred to post-evaluation so flags inside configure blocks win
         container.configureEach { env ->
-            project.afterEvaluate { env.applyImplicitParent() }
+
         }
     }
 

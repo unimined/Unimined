@@ -32,19 +32,6 @@ internal class MinecraftEnvironmentCopyHandler(
             // inherit-from must not silently span mc versions: when the
             // target pinned its own version it has to agree with the
             // source's — checked once this project is configured
-            extension.project.afterEvaluate {
-                val targetVersion = target.version.orNull
-                val inherited = sourceVersion.orNull
-                if (targetVersion != null && inherited != null
-                        && targetVersion != inherited) {
-                    throw GradleException(
-                        "Minecraft environment '${request.target.environmentId}' " +
-                            "inherits version $inherited from " +
-                            "'${request.source.projectPath}:${request.source.environmentId}' " +
-                            "but declares version $targetVersion; environments " +
-                            "sharing sections must use the same minecraft version")
-                }
-            }
         }
         if (EnvironmentSection.SIDE in requested) {
             target.side.convention(extension.project.provider {
