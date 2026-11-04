@@ -13,6 +13,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import xyz.wagyourtail.unimined.init.InitSpec
 import xyz.wagyourtail.unimined.init.ProjectGenerator
+import xyz.wagyourtail.unimined.init.Probed
 import xyz.wagyourtail.unimined.init.VersionResolver
 import xyz.wagyourtail.unimined.init.Io
 import xyz.wagyourtail.unimined.init.userHome
@@ -151,6 +152,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
 
         /** `name(latest)` / `name(1.20.*)` mapping args resolve per-mc;
          *  `stable_12`-style results expand to `("stable", "12")`. */
+        /** Default mappings per loader-era — live-then-baked lists,
+         *  omitted entirely on unobfuscated (26.x) mc. */
         fun resolveMappingLine(line: String): String {
             val m = Regex("^\\s*(\\w+)\\((.*)\\)\\s*$")
                 .find(line) ?: return line
@@ -166,6 +169,27 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             return "$name(${args.joinToString(", ")})"
         }
 
+        fun defaultMappings(): List<String> {
+            val l = loaders.firstOrNull()?.first?.lowercase() ?: ""
+            return when {
+                l in listOf("babric", "bta") -> listOf("biny(latest)")
+                mc == "b1.7.3" || mc.startsWith("b1.") ->
+                    listOf("nostalgia(latest)")
+                l in listOf("forge", "fml") &&
+                        Probed.expand("mcp:$mc").isNotEmpty() ->
+                    listOf("mcp(latest)")
+                l in listOf("legacyfabric") -> listOf("legacyYarn(latest)")
+                l == "osl" || product == "ornithe" ->
+                    listOf("feather(latest)")
+                l == "quilt" -> listOf("hashed(latest)")
+                l == "fabric" -> listOf("intermediary()", "yarn(latest)")
+                // mojmap-supported mc uses the official builtin; 26.x
+                // unobfuscated needs no mappings at all
+                Probed.expand("mojmap").contains(mc) -> listOf("mojmap()")
+                else -> emptyList()
+            }.map { resolveMappingLine(it) }
+        }
+
         val spec = InitSpec(
             group = if (template != null) "com.example"
                 else (group ?: ask("Group", "com.example") {
@@ -178,16 +202,27 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 throw IllegalArgumentException("missing required --package") },
             mcVersion = mc,
             loaders = loaders,
-            mappings = mappings.map { resolveMappingLine(it) },
+            mappings = if (mappings.isEmpty()) defaultMappings()
+                else mappings.map { resolveMappingLine(it) },
             dsl = if (dsl == "groovy") InitSpec.Dsl.GROOVY
                 else InitSpec.Dsl.KOTLIN,
-            pluginVersion = (if (template != null) ""
+            pluginVersion = (if (template != null || includeBuild != null) ""
                 else (pluginVersion
-                    ?: if (includeBuild != null) ""
-                    else ask("Plugin version", "latest") {
-                        throw IllegalArgumentException(
-                            "missing required --plugin-version") }))
-                .let { if (it == "latest") resolver.latestPlugin() else it },
+                    ?: xyz.wagyourtail.unimined.init.Probed
+                        .expand("@plugin").firstOrNull()
+                        ?: throw IllegalArgumentException(
+                            "no baked plugin version"))
+                ).also { pv ->
+                    // the build-time version is authoritative; a newer
+                    // release just means this CLI is out of date
+                    if (!offline) runCatching {
+                        resolver.latestPlugin()
+                    }.getOrNull()?.let { live ->
+                        if (live != pv) echo(
+                            "note: unimined $live is out — update this CLI",
+                            err = true)
+                    }
+                },
             gradleVersion = gradle,
             templateName = template,
             metadataFromDsl = metadata == "dsl",
