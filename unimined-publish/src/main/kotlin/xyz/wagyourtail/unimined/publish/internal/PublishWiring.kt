@@ -33,12 +33,15 @@ internal object PublishWiring {
 
         // the env's standard outgoing configurations — dev/prod jars,
         // sources, and mod-support data variants land on their own
-        // configurations upstream; we surface every existing one
+        // configurations upstream; we surface every existing one.
+        // `main` confs are unprefixed (apiElements, not mainApiElements)
         val outgoing = listOf(
-            "${sourceSet.name}ApiElements",
-            "${sourceSet.name}RuntimeElements",
-            "${sourceSet.name}SourcesElements",
-            "${sourceSet.name}JavadocElements",
+            sourceSet.apiElementsConfigurationName,
+            sourceSet.runtimeElementsConfigurationName,
+            if (sourceSet.name == "main") "sourcesElements"
+            else "${sourceSet.name}SourcesElements",
+            if (sourceSet.name == "main") "javadocElements"
+            else "${sourceSet.name}JavadocElements",
         )
         for (confName in outgoing) {
             project.configurations.findByName(confName)?.let { conf ->

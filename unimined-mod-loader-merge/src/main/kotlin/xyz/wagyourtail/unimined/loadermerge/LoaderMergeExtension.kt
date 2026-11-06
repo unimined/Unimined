@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.loadermerge
 
 import org.gradle.api.Action
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import java.io.File
 
@@ -31,10 +32,8 @@ abstract class LoaderMergeExtension {
     /** Single named input — `from("forge", forgeJarTask)`. */
     fun input(name: String, source: Any) {
         when (source) {
-            is File -> inputsInternal[name] = { listOf(source) }
-            is Provider<*> -> inputsInternal[name] = {
-                listOfNotNull(source.orNull).map { asFile(it) }
-            }
+            is File, is Provider<*>, is RegularFile ->
+                inputsInternal[name] = source
 
             else -> error(
                 "unsupported loaderMerge input for '$name': " +
@@ -43,13 +42,10 @@ abstract class LoaderMergeExtension {
         }
     }
 
-    internal val inputsInternal = linkedMapOf<String, () -> List<File>>()
-
-    private fun asFile(value: Any?): File = when (value) {
-        is File -> value
-        is org.gradle.api.file.RegularFile -> value.asFile
-        else -> error("cannot interpret $value as a file")
-    }
+    // raw sources — routed through `project.files(...)` at task
+    // configuration so task-output providers keep their producer
+    // dependency (evaluating to File here would strip it)
+    internal val inputsInternal = linkedMapOf<String, Any>()
 
     /** Groovy-friendly vararg overload. */
     fun from(action: Action<InputsSpec>) {

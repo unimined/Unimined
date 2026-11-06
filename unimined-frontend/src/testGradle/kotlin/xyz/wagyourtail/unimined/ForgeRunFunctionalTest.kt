@@ -67,7 +67,13 @@ class ForgeRunFunctionalTest {
         val result = GradleRunner.create()
             .withProjectDir(dir.toFile())
             .withPluginClasspath()
-            .withArguments(task, "-Punimined.run.dryRun=true", "-s")
+            // real network resolution — cached descriptor→repo
+            // bindings otherwise pin artifacts to a repo that no
+            // longer serves the group after content filters change
+            .withArguments(
+                task, "-Punimined.run.dryRun=true", "-s",
+                "--refresh-dependencies"
+            )
             .build()
         return result.output
     }

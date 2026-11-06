@@ -60,7 +60,7 @@ class GenSourcesWiringTest {
         val project = project()
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("fabric")
+        ).maybeCreate("fabric")
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.sourceSet("main") { it.version.set("1.20.1") }
         ext.sourceSet("fabric") { it.version.set("1.20.1") }

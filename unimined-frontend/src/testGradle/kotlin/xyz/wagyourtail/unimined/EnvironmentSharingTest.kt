@@ -36,6 +36,7 @@ private class TestArtifacts(private val project: Project) : ProductArtifacts {
         EnvironmentCapabilities(minecraftVersion = "1.0")
     }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
+    override val obfuscated: Provider<Boolean> = project.provider { true }
     override val obfuscatedAuxArtifacts:
             Provider<List<Provider<RegularFile>>> =
         project.provider { emptyList() }

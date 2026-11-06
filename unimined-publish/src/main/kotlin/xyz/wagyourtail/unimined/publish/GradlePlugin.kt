@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.publish
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.publish.internal.PublishWiring
 
@@ -26,7 +27,15 @@ class GradlePlugin : Plugin<Project> {
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             minecraft.onEnvironmentBound { environment, sourceSet ->
-                PublishWiring.wire(target, environment, sourceSet, ext)
+                // aux envs (datagen/gametest) are test harnesses that
+                // produce no publishable artifact — env binding fires
+                // before datagen()/gametest() mark isAuxEnv, so the
+                // check must run post-DSL
+                target.afterDslEval {
+                    if (!environment.isAuxEnv.get()) {
+                        PublishWiring.wire(target, environment, sourceSet, ext)
+                    }
+                }
             }
         }
     }

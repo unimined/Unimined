@@ -40,8 +40,12 @@ class GradlePlugin : Plugin<Project> {
                 project.layout.buildDirectory.file("libs/${project.name}-merged.jar")
             )
             t.inputNames.set(project.provider { ext.inputsInternal.keys.toList() })
+            // route each declared source through project.files so
+            // task-output providers carry their producer task as a
+            // builtBy on the collection — plain File evaluation would
+            // leave mergeLoaderJars running before its inputs exist
             t.loaderJars.from(project.provider {
-                ext.inputsInternal.values.flatMap { it() }
+                ext.inputsInternal.values.map { project.files(it) }
             })
         }
         merged.configure {
