@@ -1,0 +1,4 @@
+# local launch-verify fixtures (downloaded jars, run dirs) stay untracked
+*
+!launch-verify.sh
+!.gitignore

@@ -32,3 +32,23 @@ init        — generate in the current directory
 | `--templates <zip>` / `--template <name>` | extract a bundled project zip |
 | `--out <dir>` | output directory |
 | `--gradle` | include `gradlew` wrapper files |
+
+## Generation modes
+
+Exactly one layout per project — the CLI picks it from the flag
+combination:
+
+| Mode | Trigger | Emitted structure |
+|---|---|---|
+| `FLAT` | default | One module; all envs in a single `unimined { minecraft { } }` block |
+| `MULTILOADER` | `--modules` | `common` subproject + one subproject per `--loader`, env per subproject |
+| `CUSTOM_PRODUCT` | `--product <p>` | One module; a non-native product env — `bta { }`/`reindev { }`/`nsss { }`/`custom("<name>") { }` per `--product` |
+| template extraction | `--templates <zip>` (+ optional `--template <name>`) | `testing/<name>/` extracted wholesale from a `unimined-templates` zip — scaffold flags ignored |
+
+Era modifiers compose with the layout modes:
+
+| Modifier | Effect |
+|---|---|
+| `--jarmod` | `client`/`server` source sets, `clientJar`/`serverJar` tasks stamping `JarModAgent-Transforms`, `<modid>-<side>.transform` stubs |
+| `--jars split` | per-side MC jar tasks (jarmod-era; `merged` = one jar) |
+| `--side client|server` | single-side env instead of merged |

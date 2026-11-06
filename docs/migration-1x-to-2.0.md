@@ -42,6 +42,7 @@ anything custom. `modsRemapRepo` is likewise managed internally.
 | mod/transform config inside `unimined { }` | `unimined.mod { }`, `unimined.transform { }` |
 | global toolchain toggle | `unimined.useToolchains = false` |
 | env java override | `unimined.javaVersion` (delegates to the `main` env) |
+| `jvmArgs += "-javaagent:/path/agent.jar"` | `javaagents.add(file("agent.jar"))` on the run config — a typed file collection resolved to `-javaagent:` flags at launch |
 
 Unknown or removed verbs raise a `GradleException` naming the
 replacement — read the message; it points here.
