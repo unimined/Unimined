@@ -13,6 +13,14 @@ interface RunConfigSpec {
 
     var mainClass: String?
 
+    /**
+     * Java agent jars attached to the launch — rendered as
+     * `-javaagent:<path>` ahead of `jvmArgs`. Prefer this over raw
+     * `-javaagent:` strings so the task can treat the jars as file
+     * inputs (up-to-date checks, config-cache fingerprinting).
+     */
+    val javaagents: MutableList<java.nio.file.Path>
+
     val jvmArgs: MutableList<String>
 
     val programArgs: MutableList<String>

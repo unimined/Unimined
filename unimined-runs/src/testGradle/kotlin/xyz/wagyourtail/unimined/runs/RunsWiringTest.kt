@@ -89,4 +89,31 @@ class RunsWiringTest {
         assertEquals(854, task.width.get())
     }
 
+    @Test
+    fun `declared and mutator javaagents reach the run task`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+
+        val agentFile = dir.resolve("agent.jar").toFile().apply { writeBytes(byteArrayOf(0)) }
+        val runs = project.extensions.getByType(RunsExtension::class.java)
+        runs.runs.getByName("client").javaagents.from(agentFile)
+
+        // transform-mutator path: specs add typed paths, wiring maps
+        // them onto `mutatedJavaagents` for -javaagent: rendering
+        val transform = project.extensions.getByType(
+            xyz.wagyourtail.unimined.transform.TransformExtension::class.java)
+        transform.sourceSet("main").runMutators += org.gradle.api.Action { spec ->
+            spec.javaagents.add(dir.resolve("mutator-agent.jar"))
+        }
+
+        val task = project.tasks.findByName("runClient") as MinecraftRunTask
+        assertTrue(task.javaagents.files.contains(agentFile))
+        assertTrue(
+            dir.resolve("mutator-agent.jar").toString() in
+                task.mutatedJavaagents.get())
+    }
+
 }

@@ -12,6 +12,8 @@ class MutableRunConfigSpec(override val name: String) : RunConfigSpec {
 
     override var mainClass: String? = null
 
+    override val javaagents: MutableList<java.nio.file.Path> = mutableListOf()
+
     override val jvmArgs: MutableList<String> = mutableListOf()
 
     override val programArgs: MutableList<String> = mutableListOf()

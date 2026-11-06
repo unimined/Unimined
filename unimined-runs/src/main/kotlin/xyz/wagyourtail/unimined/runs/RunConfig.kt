@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.runs
 
 import org.gradle.api.Named
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
@@ -42,6 +43,13 @@ abstract class RunConfig @Inject constructor(
 
     /** Main-class override — defaults from launch metadata + mutators. */
     abstract val mainClass: Property<String>
+
+    /**
+     * Java agent jars attached to the launch — each renders as
+     * `-javaagent:<path>` ahead of [jvmArgs]. File-collection typed
+     * so task-produced agents can be wired with dependencies.
+     */
+    abstract val javaagents: ConfigurableFileCollection
 
     /** Extra JVM args appended after the version document's. */
     abstract val jvmArgs: ListProperty<String>

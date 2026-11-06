@@ -75,6 +75,19 @@ abstract class MinecraftRunTask @Inject constructor(
     @get:Input
     abstract val side: Property<RunSide>
 
+    /** Java agent jars — rendered as `-javaagent:<path>` ahead of
+     *  `jvmArgs`. File-typed so agent-producing tasks are tracked
+     *  dependencies. */
+    @get:InputFiles
+    @get:Classpath
+    abstract val javaagents: ConfigurableFileCollection
+
+    /** Agent jar paths contributed by transform run mutators (the
+     *  `RunConfigSpec.javaagents` channel — strings, not files, since
+     *  mutators resolve them inside providers). */
+    @get:Input
+    abstract val mutatedJavaagents: ListProperty<String>
+
     @get:Input
     abstract val jvmArgs: ListProperty<String>
 
@@ -169,6 +182,7 @@ abstract class MinecraftRunTask @Inject constructor(
     init {
         jvmArgs.convention(emptyList())
         programArgs.convention(emptyList())
+        mutatedJavaagents.convention(emptyList())
         mutatedJvmArgs.convention(emptyList())
         mutatedProgramArgs.convention(emptyList())
         mutatedEnvironment.convention(emptyMap())
@@ -207,6 +221,15 @@ abstract class MinecraftRunTask @Inject constructor(
         val assetsRoot = assetsDirectory.get().asFile.toPath()
         if (downloadAssets.get() && assetIndexFile.isPresent) {
             val indexJson = assetIndexFile.get().asFile.readText()
+            // the game resolves the index at <assetsDir>/indexes/<id>.json —
+            // object downloads alone leave the index file absent and the
+            // client silently loads no assets
+            val indexId = assetIndexId.get()
+            val indexTarget = assetsRoot.resolve("indexes/$indexId.json")
+            if (!indexTarget.toFile().exists()) {
+                indexTarget.parent.toFile().mkdirs()
+                indexTarget.toFile().writeText(indexJson)
+            }
             val downloaded = Assets.downloadObjects(indexJson, assetsRoot, offline.get())
             if (downloaded > 0) logger.lifecycle("Unimined: fetched $downloaded asset objects")
             // pre-1.6 games load sounds/music from <gamedir>/resources;
@@ -222,10 +245,15 @@ abstract class MinecraftRunTask @Inject constructor(
         // monolithic legacy ASM (launchwrapper-era `asm-all` /
         // `asm-debug-all`) conflicts with the modular `asm` artifact
         // on loader-managed classpaths (fabric knot rejects duplicate
-        // ASM packages); drop it only when a modern `asm-<v>.jar` is
-        // present so launchwrapper-only envs keep their ASM
+        // ASM packages); drop it when a modern `asm-<v>.jar` is
+        // present OR the loader is fabric (its jar already bundles
+        // org.objectweb.asm) — launchwrapper-only envs keep theirs
         val runtimeFiles = runtimeClasspath.files.toList()
-        val dedupedClasspath = if (runtimeFiles.any { it.name.matches(Regex("""asm-\d.*\.jar""")) })
+        val loaderAsm = runtimeFiles.any {
+            it.name.matches(Regex("""asm-\d.*\.jar""")) ||
+                it.name.startsWith("fabric-loader-")
+        }
+        val dedupedClasspath = if (loaderAsm)
             runtimeFiles.filterNot {
                 it.name.startsWith("asm-all-") || it.name.startsWith("asm-debug-all-")
             }
@@ -252,10 +280,13 @@ abstract class MinecraftRunTask @Inject constructor(
 
         val subst = launchProperties.get() + mutatedLaunchProperties.get()
 
+        val agentArgs = (javaagents.files.map { it.absolutePath } +
+                mutatedJavaagents.get()).map { "-javaagent:$it" }
+
         if (dryRun.get()) {
             val allJvmArgs = subst.resolveLaunchArgs(
                 plan.jvmArgs + "-Djava.library.path=$nativesDir" +
-                        jvmArgs.get() + mutatedJvmArgs.get()
+                        agentArgs + jvmArgs.get() + mutatedJvmArgs.get()
             )
             val allArgs = subst.resolveLaunchArgs(
                 (if (side.get() == RunSide.SERVER) emptyList() else plan.programArgs) +
@@ -289,6 +320,7 @@ abstract class MinecraftRunTask @Inject constructor(
                 subst.resolveLaunchArgs(
                     plan.jvmArgs +
                             "-Djava.library.path=$nativesDir" +
+                            agentArgs +
                             jvmArgs.get() +
                             mutatedJvmArgs.get()
                 )

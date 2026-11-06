@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.runs.RunSide
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -78,8 +79,14 @@ internal object RunsWiring {
 
         // datagen/gametest child envs — materialize runs from the
         // PARENT's loader descriptor capabilities (combineWith excludes
-        // LOADER, so the child carries none of its own)
-        wireAuxEnvs(project, environment, minecraft, extension)
+        // LOADER, so the child carries none of its own). Deferred to
+        // afterEvaluate: environments.all fires inside maybeCreate —
+        // before the sourceSet { } action runs loader()/gametest(), so
+        // loaderSpec and the aux-env lists are still empty at bind time
+        // (same ordering trap isAuxEnv's managed property documents).
+        project.afterEvaluate {
+            wireAuxEnvs(project, environment, minecraft, extension)
+        }
 
         val natives = nativesConfiguration(project, environment, minecraft)
 
@@ -117,6 +124,11 @@ internal object RunsWiring {
         for (dataEnv in environment.datagenEnvs) {
             val runName = dataEnv.environmentId
             if (extension.runs.findByName(runName) != null) continue
+            // eager env binding — the run registers during afterEvaluate,
+            // where run.environment's convention may not be visible to
+            // other envs' runs.all callbacks yet (same reason the
+            // auto client/server runs record runEnvironments eagerly)
+            extension.runEnvironments[runName] = dataEnv.environmentId
             if (descriptor?.capabilities?.get("datagenMain") == null) {
                 project.logger.warn(
                     "[unimined] env '${dataEnv.environmentId}' declares " +
@@ -132,11 +144,16 @@ internal object RunsWiring {
                 descriptor?.capabilities?.get("datagenMain")
                     ?.let { run.mainClass.convention(it) }
                 descriptor?.capabilities?.get("datagenArgs")?.let { tpl ->
-                    run.programArgs.convention(tpl.split(" ").map { arg ->
-                        arg.replace("{modid}", project.name)
-                            .replace("{output}",
-                                "src/${environment.environmentId}/generated")
-                    })
+                    tpl.split(" ").forEach { arg ->
+                        val resolved = arg.replace("{output}",
+                            "src/${environment.environmentId}/generated")
+                        if ("{modid}" in resolved) {
+                            run.programArgs.add(
+                                modIdArg(project, environment.environmentId, resolved))
+                        } else {
+                            run.programArgs.add(resolved)
+                        }
+                    }
                 }
                 if (dataEnv.clientDatagen) {
                     descriptor?.capabilities?.get("datagenClientArg")
@@ -163,12 +180,51 @@ internal object RunsWiring {
                     "testImplementation",
                     project.dependencies.create(coord))
             }
+            // client gametests: arm the gametest env's auto `<env>Client`
+            // run (bound to the gametest env — its classpath carries the
+            // parent's classes via combineWith plus its own). `matching`
+            // stays live: the env's own wire pass may register the run
+            // after this one.
+            descriptor?.capabilities?.get("gametestClientJvmArgs")?.let { tpl ->
+                extension.runs
+                    .matching { it.name == "${testEnv.environmentId}Client" }
+                    .configureEach { run ->
+                        tpl.split(" ").forEach { arg ->
+                            if ("{modid}" in arg) {
+                                run.jvmArgs.add(
+                                    modIdArg(project, environment.environmentId, arg))
+                            } else {
+                                run.jvmArgs.add(arg)
+                            }
+                        }
+                    }
+            }
             project.tasks.withType(org.gradle.api.tasks.testing.Test::class.java)
                 .configureEach { it.useJUnitPlatform() }
         }
     }
 
     /** Register the `run<Name>` task for one run config on one environment. */
+    /**
+     * Resolve `{modid}` in a capability arg template against the mod id
+     * unimined-mod publishes per environment (`unimined.modId.<env>`
+     * extra property — `mod.id`, else a `*.mod.json` resource's `id`),
+     * falling back to `project.name`. Lazy so DSL configuration order
+     * doesn't matter; keep the key prefix in sync with
+     * ModPackagingWiring.
+     */
+    private fun modIdArg(
+        project: Project,
+        environmentId: String,
+        arg: String
+    ) = project.provider {
+        val extra = project.extensions.getByType(
+            org.gradle.api.plugins.ExtraPropertiesExtension::class.java)
+        val key = "unimined.modId.$environmentId"
+        val published = if (extra.has(key)) extra.get(key) as? Provider<*> else null
+        arg.replace("{modid}", (published?.get() as? String) ?: project.name)
+    }
+
     private fun registerRunTask(
         project: Project,
         environment: MinecraftEnvironment,
@@ -312,8 +368,11 @@ internal object RunsWiring {
             )
             task.side.set(run.side)
             task.mainClass.set(mutated.map { it.mainClass }.orElse(run.mainClass))
+            task.javaagents.from(run.javaagents)
             task.jvmArgs.set(run.jvmArgs)
             task.programArgs.set(run.programArgs)
+            task.mutatedJavaagents.set(
+                mutated.map { spec -> spec.javaagents.map { it.toString() } })
             task.mutatedJvmArgs.set(mutated.map { it.jvmArgs })
             task.mutatedProgramArgs.set(mutated.map { it.programArgs })
             task.mutatedEnvironment.set(mutated.map { it.environment })
