@@ -1,8 +1,8 @@
 [versions]
 java = "17"
 kotlin = "2.4.21"
-commons = "1.1.0-SNAPSHOT"
-commons-lib = "1.1.1"
+commons = "1.1.2"
+commons-lib = "1.1.2"
 kotlinx-serialization = "1.12.0"
 xmlutil = "0.91.3"
 unimined-mapping-library = "2.5.0"

@@ -25,11 +25,6 @@ jobs:
           name: unimined-artifacts
           path: '**/build/libs/'
 
-      # testing/ fixture projects packaged for release consumers —
-      # see `packageTemplates` in the root build script
-      - name: Package templates
-        run: ./gradlew packageTemplates
-
       - name: Package node cli dist
         run: |
           ./gradlew :unimined-cli:jsProductionExecutableCompileSync
