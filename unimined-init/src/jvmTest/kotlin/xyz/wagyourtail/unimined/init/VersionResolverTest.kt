@@ -96,7 +96,8 @@ class ProbedExpandTest {
         // reach into the emitted expander via a synthetic key is not
         // possible; assert through the public expand on a known baked key
         val mcp = Probed.expand("mcp:1.12.2")
-        assertEquals("stable_39", mcp.first())
+        // emitted form carries the index-key suffix — `mcp_stable:39-1.12`
+        assertEquals("stable_39-1.12", mcp.first())
     }
 
     /** Literal versions must pass through untouched — `find`-style

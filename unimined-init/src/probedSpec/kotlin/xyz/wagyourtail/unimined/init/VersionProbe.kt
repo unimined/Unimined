@@ -111,12 +111,15 @@ sealed interface VersionProbe {
             val json = fetch(
                 "https://maven.minecraftforge.net/releases/de/oceanlabs/mcp/versions.json")
             for (e in Regex("\"([^\"]+)\"\\s*:\\s*\\{([^}]+)\\}").findAll(json))
+                // artifact versions carry the index key as suffix —
+                // `mcp_stable:39-1.12` for the `1.12` key
                 p["mcp:${e.groupValues[1]}"] =
                     listOf("stable", "snapshot").flatMap { ch ->
                         Regex("\"$ch\"\\s*:\\s*\\[([^]]*)]")
                             .find(e.groupValues[2])?.groupValues?.get(1)
                             ?.let { l -> Regex("[0-9]+").findAll(l)
-                                .map { "${ch}_${it.groupValues[0]}" }.toList() }
+                                .map { "${ch}_${it.groupValues[0]}-${e.groupValues[1]}" }
+                                    .toList() }
                             ?: emptyList()
                     }
         }
@@ -215,8 +218,8 @@ val PROBES: List<VersionProbe> = listOf(
         "https://meta.legacyfabric.net/v2/versions/loader"),
     VersionProbe.FlatJson("legacyintermediary",
         "https://meta.legacyfabric.net/v2/versions/intermediary"),
-    VersionProbe.FabricAll("yarn", "legacyyarn",
-        "https://meta.legacyfabric.net"),
+    VersionProbe.Maven("legacyyarn",
+        "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/v2/yarn/maven-metadata.xml"),
     VersionProbe.Bta("bta", "release"),
     VersionProbe.Bta("bta-prerelease", "prerelease"),
     VersionProbe.Bta("bta-server", "release", "server"),
@@ -246,6 +249,10 @@ val PROBES: List<VersionProbe> = listOf(
         "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"),
     VersionProbe.Maven("forge",
         "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"),
+    VersionProbe.Maven("flint",
+        "https://maven.flintloader.net/releases/net/flintloader/punch/maven-metadata.xml"),
+    VersionProbe.Maven("cleanroom",
+        "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"),
     VersionProbe.Maven("stationapi",
         "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml"),
     VersionProbe.Maven("osl",
@@ -253,8 +260,14 @@ val PROBES: List<VersionProbe> = listOf(
     VersionProbe.Maven("foxloader",
         "https://cdn.fox2code.com/maven/com/fox2code/FoxLoader/loader/maven-metadata.xml"),
     VersionProbe.McpIndex,
-    VersionProbe.Const("mcp:1.7.10", "stable_12"),
-    VersionProbe.Const("mcp:1.12.2", "stable_39"),
+    // artifact-version form — `mcp_stable:<n>-<indexKey>`; the key
+    // differs from the mc id for `1.12.2` (-> `1.12`)
+    VersionProbe.Const("mcp:1.7.10", "stable_12-1.7.10"),
+    VersionProbe.Const("mcp:1.12.2", "stable_39-1.12"),
+    // aliases — lexforge resolves net.minecraftforge:forge
+    // (mc-prefixed), ornithe rides upstream fabric-loader
+    VersionProbe.Computed("lexforge") { p -> p["forge"].orEmpty() },
+    VersionProbe.Computed("ornithe") { p -> p["fabric"].orEmpty() },
     // mojmap: published since 19w36a (1.15 cycle)
     VersionProbe.Computed("mojmap") { p ->
         p["@mc"].orEmpty().filter { v ->
@@ -278,27 +291,79 @@ val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = ma
     "fabric" to { f, mc -> VersionProbe.fabricMetaVersions(f, "loader", mc, "loader") },
     "yarn" to { f, mc -> VersionProbe.fabricMetaFlat(f, "yarn", mc) },
     "forge" to { f, mc -> VersionProbe.mavenVersions(f, VersionProbe.FORGE_MAVEN, mc) },
-    "neoforge" to { f, _ -> VersionProbe.mavenVersions(f, VersionProbe.NEOFORGE_MAVEN, null) },
+    // neoforge versions embed the mc series: mc `1.AB.C` → `AB.C.x`
+    // (`1.21` → `21.0.x`, `1.21.1` → `21.1.x`, calver `26.1` → `26.1.x`);
+    // mc 1.20.1 predates the `neoforge` artifact and resolves
+    // `net.neoforged:forge:1.20.1-47.1.x` (mc-prefixed versions)
+    "neoforge" to { f, mc ->
+        if (mc == "1.20.1") VersionProbe.mavenVersions(f,
+            "https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml",
+            "1.20.1-").map { it.removePrefix("1.20.1-") }
+        else {
+            val p = mc.removePrefix("1.").split(".")
+            VersionProbe.mavenVersions(f, VersionProbe.NEOFORGE_MAVEN,
+                // unparseable mc → no scoping (returns the unscoped list)
+                if (p.all { it.toIntOrNull() != null })
+                    (if (p.size == 1) "${p[0]}.0." else "${p[0]}.${p[1]}.")
+                else null)
+        }
+    },
     "quilt" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/maven-metadata.xml", null) },
-    "quilt-mappings" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-mappings/maven-metadata.xml", null) },
+    "flint" to { f, _ -> VersionProbe.mavenVersions(f,
+        "https://maven.flintloader.net/releases/net/flintloader/punch/maven-metadata.xml", null) },
+    "cleanroom" to { f, _ -> VersionProbe.mavenVersions(f,
+        "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml", null) },
+    // lexforge is net.minecraftforge:forge under a separate id —
+    // same artifact axis as "forge", mc-prefixed versions
+    "lexforge" to { f, mc -> VersionProbe.mavenVersions(f, VersionProbe.FORGE_MAVEN, mc) },
+    // ornithe rides upstream fabric-loader (descriptor
+    // loaderCoords) — version axis is the fabric loader list
+    "ornithe" to { f, _ -> VersionProbe.flatJson(f,
+        "https://meta.fabricmc.net/v2/versions/loader") },
+    // mcp channels — artifact versions are `<n>-<indexKey>` (the json
+    // key, e.g. `1.12` for mc `1.12.2`); emitted `stable_39-1.12` form
+    "mcp" to { f, mc ->
+        run {
+            val json = f(
+                "https://maven.minecraftforge.net/releases/de/oceanlabs/mcp/versions.json")
+            val hit = listOf(mc, mc.substringBeforeLast('.', mc))
+                .firstNotNullOfOrNull { k ->
+                    Regex("\"${Regex.escape(k)}\"\\s*:\\s*\\{([^}]+)\\}")
+                        .find(json)?.let { k to it.groupValues[1] }
+                }
+            hit?.let { (k, body) ->
+                listOf("stable", "snapshot").flatMap { ch ->
+                    Regex("\"$ch\"\\s*:\\s*\\[([^]]*)]").find(body)
+                        ?.let { l -> Regex("[0-9]+").findAll(l.groupValues[1])
+                            .map { "${ch}_${it.groupValues[0]}-$k" }.toList() }
+                        ?: emptyList()
+                }
+            } ?: emptyList()
+        }
+    },
+    "quilt-mappings" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-mappings/maven-metadata.xml",
+        "$mc+") },
     "stationapi" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.glass-launcher.net/releases/net/modificationstation/StationAPI/maven-metadata.xml", null) },
     "osl" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.ornithemc.net/releases/net/ornithemc/osl/maven-metadata.xml", null) },
     "foxloader" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://cdn.fox2code.com/maven/com/fox2code/FoxLoader/loader/maven-metadata.xml", null) },
-    "barn" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.glass-launcher.net/babric/babric/barn/maven-metadata.xml", null) },
-    "biny" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.glass-launcher.net/releases/net/glasslauncher/biny/maven-metadata.xml", null) },
+    "barn" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://maven.glass-launcher.net/babric/babric/barn/maven-metadata.xml",
+        "$mc+") },
+    "biny" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://maven.glass-launcher.net/releases/net/glasslauncher/biny/maven-metadata.xml",
+        "$mc+") },
     "babric" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.glass-launcher.net/babric/babric/fabric-loader/maven-metadata.xml", null) },
     "liteloader" to { f, _ -> VersionProbe.flatJson(f,
         "https://dl.liteloader.com/versions/versions.json") },
-    "nostalgia" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.wispforest.io/releases/me/alphamode/nostalgia/maven-metadata.xml", null) },
+    "nostalgia" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://maven.wispforest.io/releases/me/alphamode/nostalgia/maven-metadata.xml",
+        "$mc+") },
     "hashed" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.quiltmc.org/repository/release/org/quiltmc/hashed/maven-metadata.xml", null) },
     "calamus" to { f, _ -> VersionProbe.mavenVersions(f,
@@ -309,8 +374,11 @@ val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = ma
         "https://meta.legacyfabric.net/v2/versions/intermediary") },
     "intermediary" to { f, _ -> VersionProbe.flatJson(f,
         "https://meta.fabricmc.net/v2/versions/intermediary") },
-    "legacyyarn" to { f, mc -> VersionProbe.fabricMetaFlat(f,
-        "yarn", mc, "https://meta.legacyfabric.net") },
+    // meta.legacyfabric.net lists builds the maven never published —
+    // resolve against the v2-group artifact directly
+    "legacyyarn" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/v2/yarn/maven-metadata.xml",
+        "$mc+build.") },
     "bta" to { f, _ -> VersionProbe.jsonStringArray(f,
         "https://downloads.betterthanadventure.net/bta-client/release/versions.json",
         "versions").map { it.removePrefix("v") }.reversed() },
@@ -321,18 +389,6 @@ val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = ma
         "https://mcphackers.org/versionsV3/versions.json", "id") },
     "calamus" to { f, _ -> VersionProbe.flatJson(f,
         "https://meta.ornithemc.net/v3/versions/gen2/game/intermediary") },
-    "barn" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.glass-launcher.net/babric/babric/barn/maven-metadata.xml", null) },
-    "biny" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.glass-launcher.net/releases/net/glasslauncher/biny/maven-metadata.xml", null) },
-    "babric" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.glass-launcher.net/babric/babric/fabric-loader/maven-metadata.xml", null) },
-    "liteloader" to { f, _ -> VersionProbe.flatJson(f,
-        "https://dl.liteloader.com/versions/versions.json") },
-    "nostalgia" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.wispforest.io/releases/me/alphamode/nostalgia/maven-metadata.xml", null) },
-    "hashed" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.quiltmc.org/repository/release/org/quiltmc/hashed/maven-metadata.xml", null) },
     "feather" to { f, mc -> VersionProbe.ornitheVersions(f, "feather", mc) },
     "raven" to { f, mc -> VersionProbe.ornitheVersions(f, "raven", mc) },
     "nests" to { f, mc -> VersionProbe.ornitheVersions(f, "nests", mc) },

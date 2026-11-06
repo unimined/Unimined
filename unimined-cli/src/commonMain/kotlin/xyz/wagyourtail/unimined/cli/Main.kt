@@ -141,7 +141,11 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             }
 
         val loaderArgs = loader.ifEmpty {
-            listOf(ask("Loaders (name[=version], comma-separated)",
+            // product envs have no default loader — a prompt default of
+            // "fabric" just crashes resolveSpec (nsss, bta-gen); loaders
+            // for those envs must come from an explicit --loader
+            if (product != null) emptyList()
+            else listOf(ask("Loaders (name[=version], comma-separated)",
                 "fabric") { "fabric" }) }
         val loaders = loaderArgs.flatMap { it.split(',') }.map { entry ->
             val eq = entry.indexOf('=')
@@ -158,12 +162,19 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             val m = Regex("^\\s*(\\w+)\\((.*)\\)\\s*$")
                 .find(line) ?: return line
             val name = m.groupValues[1]
+            // `quilt(...)` in mappings {} is quilt-mappings — `quilt`
+            // alone names the loader axis
+            val axis = if (name == "quilt") "quilt-mappings" else name
             val args = m.groupValues[2].split(',').map { a ->
                 val t = a.trim().trim('"', '\'')
-                val r = resolveSpec(name, t, mc)
+                val r = resolveSpec(axis, t, mc)
                 if (r == t) a
-                else Regex("^([a-zA-Z]+)_(\\d+)$").find(r)
-                    ?.let { "\"${it.groupValues[1]}\", \"${it.groupValues[2]}\"" }
+                else Regex("^\\S+\\+build\\.(\\S+)$").find(r)
+                    ?.groupValues?.get(1)  // `<mc>+build.N` -> `N`
+                    ?: Regex("^\\S+\\+(\\S+)$").find(r)
+                        ?.let { "\"${it.groupValues[1]}\"" }  // `<mc>+<tail>`
+                    ?: Regex("^([a-zA-Z]+)_(.+)$").find(r)
+                        ?.let { "\"${it.groupValues[1]}\", \"${it.groupValues[2]}\"" }
                     ?: "\"$r\""
             }
             return "$name(${args.joinToString(", ")})"
@@ -175,13 +186,18 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 l in listOf("babric", "bta") -> listOf("biny(latest)")
                 mc == "b1.7.3" || mc.startsWith("b1.") ->
                     listOf("nostalgia(latest)")
-                l in listOf("forge", "fml") &&
+                l in listOf("forge", "fml", "lexforge", "cleanroom") &&
                         Probed.expand("mcp:$mc").isNotEmpty() ->
-                    listOf("mcp(latest)")
-                l in listOf("legacyfabric") -> listOf("legacyYarn(latest)")
+                    // srg-era forge family needs the class-rename layer
+                    // (searge) under the member-name layer (mcp) — mcp
+                    // alone leaves merged-obf classes unrenamed
+                    listOf("searge()", "mcp(latest)")
+                l in listOf("legacyfabric") ->
+                    // current builds are gen-2 (`net.legacyfabric.v2`)
+                    listOf("legacyYarn(latest, 2)")
                 l == "osl" || product == "ornithe" ->
                     listOf("feather(latest)")
-                l == "quilt" -> listOf("hashed(latest)")
+                l == "quilt" -> listOf("quilt(latest)")
                 l == "fabric" -> listOf("intermediary()", "yarn(latest)")
                 // mojmap-supported mc uses the official builtin; 26.x
                 // unobfuscated needs no mappings at all

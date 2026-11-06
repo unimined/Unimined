@@ -1,3 +1,7 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.DisableCacheInKotlinVersion
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
+import java.net.URI
+
 plugins {
     kotlin("multiplatform")
 }
@@ -9,6 +13,15 @@ kotlin {
             executable {
                 baseName = "unimined-cli"
                 entryPoint = "xyz.wagyourtail.unimined.cli.main"
+                // the clikt umbrella + clikt-mordant klibs both define
+                // Context.selfAndAncestors — static-cache linking fails
+                // on the duplicate symbol (upstream packaging clash)
+                @OptIn(KotlinNativeCacheApi::class)
+                disableNativeCache(
+                    version = DisableCacheInKotlinVersion.`2_4_21`,
+                    reason = "clikt/clikt-mordant klib duplicate symbol: selfAndAncestors",
+                    issueUrl = URI("https://github.com/ajalt/clikt/issues/598")
+                )
             }
         }
     }
@@ -20,7 +33,10 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":unimined-init"))
-            implementation("com.github.ajalt.clikt:clikt:5.0.3")
+            // `clikt` umbrella (mordant-backed DSL surface), not
+            // clikt-core — the core artifact lacks the high-level
+            // option/argument/echo API the CLI uses
+            implementation("com.github.ajalt.clikt:clikt:5.1.0")
         }
     }
 }

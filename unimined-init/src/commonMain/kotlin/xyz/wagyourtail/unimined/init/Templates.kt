@@ -41,23 +41,35 @@ internal object Templates {
             Probed.expand("$axis:$mc").firstOrNull()
                 ?: Probed.expand(axis).firstOrNull()
         val l = loader.lowercase()
+        // baked lists are flat maven versions (`<mc>+build.N` /
+        // `<mc>+<tail>`); the DSL arg is the tail — build int for
+        // `*+build.N`, quoted commit/tag otherwise
+        fun buildTail(axis: String): Int? = Probed.expand(axis)
+            .firstOrNull { it.startsWith("$mc+build.") }
+            ?.substringAfterLast("build.")?.toIntOrNull()
+        fun plusTail(axis: String): String? = Probed.expand(axis)
+            .firstOrNull { it.startsWith("$mc+") }
+            ?.substringAfter('+')
         return when {
-            l in listOf("babric", "bta") -> baked("biny")
+            l in listOf("babric", "bta") -> plusTail("biny")
                 ?.let { listOf("biny(\"$it\")") }
-            mc.startsWith("b1.") -> baked("nostalgia")
-                ?.let { listOf("nostalgia(\"$it\")") }
-            l == "legacyfabric" -> baked("legacyyarn")
-                ?.let { listOf("legacyYarn(\"$it\")") }
-            l == "osl" -> baked("feather")
-                ?.let { listOf("feather(\"$it\")") }
-            l == "quilt" -> baked("hashed")
-                ?.let { listOf("hashed(\"$it\")") }
+            mc.startsWith("b1.") -> buildTail("nostalgia")
+                ?.let { listOf("nostalgia($it)") }
+            l == "legacyfabric" -> buildTail("legacyyarn")
+                // current builds are gen-2 (`net.legacyfabric.v2`)
+                ?.let { listOf("legacyYarn($it, 2)") }
+            l == "osl" -> buildTail("feather")
+                ?.let { listOf("feather($it)") }
+            l == "quilt" -> buildTail("quilt-mappings")
+                ?.let { listOf("quilt($it)") }
             l == "fabric" -> listOfNotNull(
                 "intermediary()",
-                baked("yarn")?.let { "yarn(\"$it\")" })
-            l in listOf("forge", "fml") -> baked("mcp")?.let {
+                buildTail("yarn")?.let { "yarn($it)" })
+            l in listOf("forge", "fml", "lexforge", "cleanroom") -> baked("mcp")?.let {
                 val p = it.split('_', limit = 2)
-                listOf("mcp(\"${p[0]}\", \"${p[1]}\")")
+                // searge supplies the obf->srg class/member layer
+                // mcp alone can't rename merged-obf classes
+                listOf("searge()", "mcp(\"${p[0]}\", \"${p[1]}\")")
             }
             else -> null
         } ?: listOfNotNull(
@@ -76,9 +88,11 @@ internal object Templates {
             )).indented(indent)
     }
 
-    /** `side = ...` line (empty when unset); Side.* gets enum-wrapped. */
+    /** `side = ...` line (empty when unset); enum values are emitted
+     *  fully-qualified — generated scripts have no unimined imports. */
     private fun sideLine(spec: InitSpec): String = spec.side?.let {
-        if (it in setOf("MERGED", "CLIENT", "SERVER")) "side = Side.$it"
+        if (it in setOf("MERGED", "CLIENT", "SERVER"))
+            "side = xyz.wagyourtail.unimined.api.spec.Side.$it"
         else "side = $it"
     } ?: ""
 
@@ -313,7 +327,7 @@ internal object Templates {
             ?.let { "    $it\n" } ?: ""
         val inner = when {
             p == "nsss" || p.startsWith("custom:") ->
-                side + fileCall.trimStart('\n') + loaderLines
+                versionLine + "\n" + side + fileCall.trimStart('\n') + loaderLines
             else -> versionLine + "\n" + side + loaderLines
         }
         return when {
@@ -374,28 +388,60 @@ internal object Templates {
     fun mainClass(spec: InitSpec, loader: String): String {
         val file = when (loader.lowercase()) {
             "forge", "fg1" -> forgeEra(spec.mcVersion)
-            "fabric", "quilt", "neoforge" -> loader.lowercase()
+            // 1.20.1 resolves the `net.neoforged:forge` artifact —
+            // still `net.minecraftforge.fml` packages, not the rename
+            "neoforge" -> if (neoforgeForgeEra(spec.mcVersion)) "forge"
+                          else "neoforge"
+            "fabric", "quilt" -> loader.lowercase()
             else -> "generic"
         }
         return render("entrypoint/$file.java", mapOf(
             "PACKAGE" to spec.basePackage,
-            "CLASS" to mainClassName(spec),
+            "CLASS" to entrypointClassName(spec, loader),
             "MODID" to spec.modId,
             "NAME" to spec.name,
             "VERSION" to spec.version,
         ))
     }
 
-    /** `@Mod` annotation family for [mc]: cpw.mods ≤1.7.10, fml ≤1.12. */
+    /** `@Mod` annotation family for [mc]: modloader <1.3, cpw.mods
+     *  1.3–1.7.10 (`@Mod.Init` ≤1.5.x, `@Mod.EventHandler` 1.6+),
+     *  fml 1.8–1.12, modern ≥1.13. */
     private fun forgeEra(mc: String): String {
         val m = Regex("^(?:b)?1\\.(\\d+)").find(mc) ?: return "forge"
         val minor = m.groupValues[1].toIntOrNull() ?: return "forge"
         return when {
-            mc.startsWith("b") || minor <= 7 -> "forge-cpw"
+            mc.startsWith("b") || minor < 3 -> "forge-modloader"
+            minor <= 5 -> "forge-cpw-init"
+            minor <= 7 -> "forge-cpw"
             minor <= 12 -> "forge-fml"
             else -> "forge"
         }
     }
+
+    /**
+     * NeoForge shipped under `net.neoforged:forge` (the literal Forge
+     * fork) for 1.20.1; the `net.neoforged` package rename + artifact
+     * landed at 1.20.2 — mirror the descriptor's coord switch.
+     */
+    private fun neoforgeForgeEra(mc: String): Boolean {
+        val m = Regex("^1\\.(\\d+)\\.(\\d+)").find(mc) ?: return false
+        val (minor, patch) = m.groupValues[1].toInt() to m.groupValues[2].toInt()
+        return minor < 20 || (minor == 20 && patch < 2)
+    }
+
+    /** Whether [loader] on [spec.mcVersion] uses the ModLoader-era
+     *  `mod_*`/`BaseMod` entrypoint — a default-package class, not a
+     *  packaged `@Mod` class. */
+    fun isModLoaderEra(spec: InitSpec, loader: String): Boolean =
+        (loader.equals("forge", true) || loader.equals("fg1", true)) &&
+            forgeEra(spec.mcVersion) == "forge-modloader"
+
+    /** Entrypoint class name for [loader] — `mod_<modid>` (default
+     *  package) for ModLoader-era, PascalCase otherwise. */
+    fun entrypointClassName(spec: InitSpec, loader: String): String =
+        if (isModLoaderEra(spec, loader)) "mod_${spec.modId}"
+        else mainClassName(spec)
 
     /**
      * Loader metadata stubs — `(path, content)` pairs emitted under
@@ -406,7 +452,7 @@ internal object Templates {
             "MODID" to spec.modId,
             "VERSION" to spec.version,
             "NAME" to spec.name,
-            "ENTRYPOINT" to "${spec.basePackage}.${mainClassName(spec)}",
+            "ENTRYPOINT" to "${spec.basePackage}.${entrypointClassName(spec, loader)}",
             "MC_VERSION" to spec.mcVersion,
         )
         return when (loader.lowercase()) {

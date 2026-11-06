@@ -11,6 +11,6 @@ repositories {
 
 unimined {
 @@ENV@@
-}
 @@MOD_BLOCK@@
+}
 @@EXTRAS@@

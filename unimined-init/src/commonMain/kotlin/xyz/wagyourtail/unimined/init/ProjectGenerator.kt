@@ -100,7 +100,11 @@ object ProjectGenerator {
                             Render.Text("$pkg.$cls\n"))
                     }
                 } else {
-                    put("${dir}src/$ss/java/${pkg.replace('.', '/')}/${Templates.mainClassName(spec)}.java",
+                    // ModLoader-era entrypoints are `mod_*` classes —
+                    // dev discovery is package-path-aware (ModLoader
+                    // DevFixTx) so they live in the normal package
+                    put("${dir}src/$ss/java/${pkg.replace('.', '/')}/${
+                        Templates.entrypointClassName(spec, loader)}.java",
                         Render.Text(Templates.mainClass(spec, loader)))
                 }
                 // static files only when metadata isn't DSL-generated

@@ -120,7 +120,6 @@ val probedDir = layout.buildDirectory.dir("generated/probed")
 kotlin.targets["jvm"].compilations.create("probedgen")
 
 tasks.register<JavaExec>("genProbedVersions") {
-    notCompatibleWithConfigurationCache("live network probe")
     outputs.dir(probedDir)
     val comp = kotlin.targets["jvm"].compilations["probedgen"]
     dependsOn(comp.compileTaskProvider)
@@ -128,7 +127,10 @@ tasks.register<JavaExec>("genProbedVersions") {
     mainClass.set("xyz.wagyourtail.unimined.init.ProbedGenKt")
     args(probedDir.get().asFile.absolutePath)
 }
-listOf("compileKotlinJvm", "compileKotlinJs", "compileKotlinLinuxX64").forEach { tn ->
+listOf("compileKotlinJvm", "compileKotlinJs", "compileKotlinLinuxX64",
+    // the KMP metadata compilation consumes the probed output too —
+    // without the edge Gradle flags an implicit dependency
+    "compileCommonMainKotlinMetadata").forEach { tn ->
     tasks.matching { it.name == tn }.configureEach { dependsOn("genProbedVersions") }
 }
 kotlin.sourceSets["commonMain"].kotlin.srcDir(probedDir)
