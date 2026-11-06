@@ -22,6 +22,8 @@ class FakeArtifacts(private val ctx: ProviderContext) : ProductArtifacts {
     }
     override val namespaceMode: Provider<NamespaceMode> =
         ctx.providers.provider { NamespaceMode.REMAPPABLE }
+    override val obfuscated: Provider<Boolean> =
+        ctx.providers.provider { false }
     override val capabilities = ctx.providers.provider {
         EnvironmentCapabilities(minecraftVersion = "1.0")
     }

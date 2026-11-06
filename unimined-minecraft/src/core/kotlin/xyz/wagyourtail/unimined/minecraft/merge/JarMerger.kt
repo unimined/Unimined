@@ -71,10 +71,14 @@ object JarMerger {
         val excludeGlobs: List<String> = emptyList(),
         val stripBundledServerLibraries: Boolean = true,
         /** Side-marker annotations injected on single-side
-         *  class/field/method content — the merge consumer passes
-         *  the ecosystem its env expects (patch checksums are
-         *  era-canonical, so extra markers break them). */
-        val sideMarkers: List<SideMarker> = listOf(SideMarker.FORGE_FML),
+         *  class/field/method content — opt-in per merge consumer:
+         *  pass the set its env's ecosystem expects (patch
+         *  checksums are era-canonical, so extra markers break
+         *  them). Empty by default — the loader-agnostic native
+         *  merge has no marker consumer, and foreign annotations
+         *  surface as javac "unknown enum constant" warnings on
+         *  every compile classpath the jar lands on. */
+        val sideMarkers: List<SideMarker> = emptyList(),
         /** Custom merge behavior consulted in order before the
          *  built-ins ([ServiceFileMerger], [MemberMerger], then
          *  client-wins for resources) — divergent-member strategies

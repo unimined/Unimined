@@ -93,6 +93,17 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  loader junit artifact (e.g. `fabric-loader-junit`) from these. */
     val gametestEnvs = mutableListOf<MinecraftEnvironment>()
 
+    /** `true` for envs declared via [datagen]/[gametest] — auxiliary
+     *  source sets whose classes are consumed through the PARENT env's
+     *  mod metadata (entrypoints, generated data), never as their own
+     *  mod. Mod packaging skips metadata generation for them: a second
+     *  same-id `fabric.mod.json` on the classpath would collide with
+     *  the parent's. A managed property (not a plain var) so consumers
+     *  read the final value at execution — env binding fires before
+     *  [datagen]/[gametest] mark the env. */
+    val isAuxEnv: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(false)
+
     /** Declare a datagen source-set env ([name] defaults to
      *  `<env>Data` — `fabric` → `fabricData`, `main` → `data`). The env
      *  inherits this env's version/mappings/output via implicit parent
@@ -110,6 +121,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         action: Action<MinecraftEnvironment> = Action {}
     ): MinecraftEnvironment = sourceSet(name, action).also { env ->
         env.clientDatagen = client
+        env.isAuxEnv.set(true)
         datagenEnvs += env
         // loom convention: generated data lands under src/<env>/generated
         // and ships in this env's resources — wire lazily in case the
@@ -133,6 +145,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                        else "${environmentId}Gametest",
         action: Action<MinecraftEnvironment> = Action {}
     ): MinecraftEnvironment = sourceSet(name, action).also {
+        it.isAuxEnv.set(true)
         gametestEnvs += it
     }
 
@@ -152,12 +165,43 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /** Apply the recorded implicit-parent combine, unless opted out or
      *  the parent was already combined/copied explicitly. Deferred so
      *  [inheritParent] can be set inside the configure block. */
+    /** Aux-env section inheritance runs once — [applyImplicitParent]
+     *  fires on every [combinedWith] read. */
+    private var auxSectionsInherited = false
+
     internal fun applyImplicitParent() {
         if (environmentId == parentEnvId) return
         if (!inheritParent.get()) return
         val ref = EnvironmentReference(project.path, parentEnvId)
-        if (ref in combinedWithReferences) return
-        combineWith(parentEnvId)
+        if (ref !in combinedWithReferences) combineWith(parentEnvId)
+        // aux envs (datagen/gametest) launch through the parent's
+        // loader and test the parent's mods — without LOADER their
+        // classpaths never get the loader jar, and without
+        // DEPENDENCIES neither the parent's mod buckets (fabric-api
+        // etc.) nor its plain library buckets reach the aux env. The
+        // access mirrors keep the
+        // aux artifact's transform inputs identical to the parent's
+        // (a narrower artifact would break gametest/datagen code
+        // that relies on parent-declared widening). All of these
+        // exclusions exist for neutral cross-env composition; a
+        // declared aux env is the same ecosystem by definition.
+        // First read is execution-time (validateCombinations/spec),
+        // so isAuxEnv is final here.
+        if (!isAuxEnv.get() || auxSectionsInherited) return
+        auxSectionsInherited = true
+        combineWith(
+            ref,
+            setOf(EnvironmentSection.LOADER, EnvironmentSection.DEPENDENCIES),
+            true
+        )
+        val parent = project.extensions
+            .getByType(MinecraftExtension::class.java).environment(ref)
+        transitiveAccessWideners.convention(parent.transitiveAccessWideners)
+        accessWideners.from(parent.accessWideners)
+        accessTransformers.from(parent.accessTransformers)
+        // DEPENDENCIES covers both the mod buckets and the plain
+        // sourceSet buckets (implementation/compileOnly/runtimeOnly/
+        // api) — see MinecraftEnvironmentCopyHandler.wireDependencies
     }
 
     /** Sources this env copied VERSION from — checked at bind so
@@ -181,8 +225,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         }
     }
 
-    /** Minecraft version id for this source set. */
+    /** Minecraft version id for this source set. Convention inherits the
+     *  implicit parent's version lazily — bound handlers can read it
+     *  before [applyImplicitParent] runs (env binding fires on
+     *  `maybeCreate`, ahead of the configure block, so copy-section
+     *  conventions aren't installed yet). An explicit copy (`combineWith`
+     *  with VERSION) still replaces this convention. */
     val version: Property<String> = objects.property(String::class.java)
+        .convention(project.provider {
+            if (environmentId == parentEnvId || !inheritParent.get()) null
+            else project.extensions.getByType(MinecraftExtension::class.java)
+                .environments.findByName(parentEnvId)?.version?.orNull
+        })
 
     /** Client/server/merged side for this source set; defaults to merged. */
     val side: Property<Side> = objects.property(Side::class.java).convention(Side.MERGED)
@@ -392,7 +446,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Environments whose source-set output is composed into this one. */
     val combinedWith: Set<EnvironmentReference>
-        get() = combinedWithReferences
+        get() {
+            // materialized on first read, not at bind — env binding
+            // fires on maybeCreate before the configure block runs, so
+            // `inheritParent` can't be read in bindSourceSet
+            applyImplicitParent()
+            return combinedWithReferences
+        }
 
     private val combinedWithReferences = linkedSetOf<EnvironmentReference>()
     private val wiredOutputReferences = mutableSetOf<EnvironmentReference>()
@@ -712,11 +772,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  versions ship unobfuscated (no `client_mappings`) so loaders and
      *  mapping defaults must skip obfuscation hops. */
     val obfuscated: Provider<Boolean> = project.provider {
+        // whether the shipped jar needs a deobfuscation hop is a
+        // product fact — conversion products ship decompiled on any
+        // MC version, Mojang jars are obf'd until the 26.x unobf'd
+        // era — so the resolved product reports it directly.
         project.extensions.getByType(MinecraftExtension::class.java)
-            .resolved(this).auxiliaryArtifacts.entries
-            // a _mappings key with an empty provider means the product
-            // declares the channel but ships no artifact (26.x unobf'd)
-            .any { it.key.endsWith("_mappings") && it.value.isPresent }
+            .resolved(this).obfuscated.get()
     }
 
     val useToolchains: Property<Boolean> =
@@ -752,9 +813,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     internal fun bindSourceSet(sourceSet: SourceSet) {
         // consumption-time deferral — lifecycle hooks (afterEvaluate,
-        // afterProject) are mutation-guarded during plugin application,
-        // so implicit parent inheritance applies when the env binds
-        applyImplicitParent()
+        // afterProject) are mutation-guarded during plugin application;
+        // implicit parent inheritance materializes on first
+        // `combinedWith` read (bind fires before the configure block,
+        // so `inheritParent` can't be honored here)
         checkVersionConflicts()
         boundSourceSet = sourceSet
         combinedWithReferences.forEach(::wireSourceOutput)
@@ -962,11 +1024,30 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     private fun wireSourceOutput(source: EnvironmentReference, target: SourceSet = boundSourceSet!!) {
         if (!wiredOutputReferences.add(source)) return
-        val output = project.files(project.provider { sourceSet(source).output })
+        // the source env's COMBINED output, not just its own
+        // sourceSet's — composition is transitive (a gametest env
+        // combining `fabric` must also see `main`, which `fabric`
+        // itself combines). combinedOutputs resolves lazily, so
+        // sources wired after this call still land.
+        val output = project.files().apply {
+            from(project.provider { sourceSet(source).output })
+            from(project.provider {
+                project.extensions.getByType(MinecraftExtension::class.java)
+                    .environment(source).combinedOutputs
+            })
+        }
         // Gradle 9 marks resolvable compile/runtime classpaths non-declarable.
         // Adding the output to compileOnly+runtimeOnly places it on both
         // classpaths without mutating the resolvable configurations directly.
-        project.dependencies.add(target.compileOnlyConfigurationName, output)
+        // Compile gets classesDirs only — resources on the compile
+        // classpath would pull processResources (and anything it
+        // consumes, e.g. generateModMetadata → aux-env compile tasks)
+        // into the compile graph and can cycle; runtime keeps the full
+        // output so resources (fmj etc.) still ship.
+        project.dependencies.add(
+            target.compileOnlyConfigurationName,
+            project.files(project.provider { sourceSet(source).output.classesDirs })
+        )
         project.dependencies.add(target.runtimeOnlyConfigurationName, output)
         combinedOutputs.from(output)
         combinedSources.from(project.provider { sourceSet(source).allSource })

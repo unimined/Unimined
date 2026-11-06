@@ -27,6 +27,13 @@ interface ProductArtifacts {
      *  artifact bucket so the artifact-transform chain carries them. */
     val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>>
 
+    /** Whether the product's shipped jar carries obfuscated names —
+     *  the provider reports it directly since only the product knows
+     *  if its artifact needs a deobfuscation hop: Mojang jars are
+     *  obf'd until the 26.x unobf'd era, while conversion products
+     *  ship decompiled regardless of MC version. */
+    val obfuscated: Provider<Boolean>
+
     /** Resolved mapping tree for remap specs. */
     val mappings: Provider<MappingTree>
 

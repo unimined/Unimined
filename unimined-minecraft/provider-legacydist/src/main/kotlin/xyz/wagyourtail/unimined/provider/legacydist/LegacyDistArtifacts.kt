@@ -44,6 +44,10 @@ internal class LegacyDistArtifacts(
             mappingTree(declared.namespace)
         }
 
+    // legacydist ships obf'd jars only when the declared format is obf
+    override val obfuscated: Provider<Boolean> =
+        ctx.providers.provider { declared.format == "obf" }
+
     override val namespaceMode: Provider<NamespaceMode> =
         ctx.providers.provider {
             if (declared.format == "obf") NamespaceMode.REMAPPABLE

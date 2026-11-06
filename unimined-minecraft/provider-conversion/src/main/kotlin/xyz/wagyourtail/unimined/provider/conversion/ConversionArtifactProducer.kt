@@ -158,6 +158,14 @@ class ConversionArtifactProducer : ProductArtifactProducer {
                         excludeGlobs = request.mergeExcludeGlobs,
                         stripBundledServerLibraries =
                                 request.stripBundledServerLibraries,
+                        // every conversion product is FML-era (bta,
+                        // reindev, nsss — all b1.7.3-based dists) —
+                        // stamp the era-canonical markers mergetool
+                        // checksums were built against
+                        sideMarkers = listOf(
+                            xyz.wagyourtail.unimined.minecraft.merge
+                                .JarMerger.SideMarker.FORGE_FML
+                        ),
                     )
                 )
                 out

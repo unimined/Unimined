@@ -182,6 +182,16 @@ class NativeProvider(
         return NativeProductArtifacts(
             artifacts = artifacts,
             auxiliaryArtifacts = auxiliary,
+            // Mojang jars are obf'd until the 26.x unobf'd era — a
+            // published `client_mappings` download proves obf'd
+            // (1.14.4+), and anything predating that is obf'd too
+            // (mappings were never published, but the jar is); only a
+            // post-1.14.4 product with no channel is unobf'd (26.x).
+            obfuscated = ctx.providers.provider {
+                metadata().version.downloads?.containsKey("client_mappings") == true ||
+                    xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
+                        .compare(versionId, "1.14.4") < 0
+            },
             mappings = ctx.providers.provider {
                 // unobf'd versions (26.x) ship no mappings downloads —
                 // the shipped names ARE mojmap; naming the identity
@@ -207,6 +217,7 @@ class NativeProvider(
 private class NativeProductArtifacts(
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>>,
     override val auxiliaryArtifacts: Map<String, Provider<RegularFile>>,
+    override val obfuscated: Provider<Boolean>,
     override val mappings: Provider<MappingTree>,
     override val namespaceMode: Provider<NamespaceMode>,
     override val capabilities: Provider<EnvironmentCapabilities>,

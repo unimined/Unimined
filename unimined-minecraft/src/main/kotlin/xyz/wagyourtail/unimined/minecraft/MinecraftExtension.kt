@@ -118,6 +118,13 @@ abstract class MinecraftExtension @Inject constructor(
      */
     val devViewConfigurations = mutableMapOf<String, Configuration>()
 
+    /** Set by transform-family wiring when an env's JAR pipeline carries
+     *  env-scoped work (jar processors, contributed/declared steps) — the
+     *  raw→dev transform is the only host for it, so the dev classpath
+     *  must materialize the dev artifact even when the identity shortcut
+     *  below would otherwise pick the raw view. Keyed by environmentId. */
+    val materializeDevArtifact = mutableMapOf<String, Provider<Boolean>>()
+
     /**
      * Resolvable dev-namespace views over the mod dependency buckets,
      * keyed `"<environmentId>:<bucketConfigurationName>"` — populated
@@ -271,8 +278,12 @@ abstract class MinecraftExtension @Inject constructor(
             deps.add(
                 project.dependencies.create(
                     project.files(project.provider {
+                        // unobf'd products ship no aux artifacts — the
+                        // provider is absent, and an empty get() inside
+                        // a provider-backed file collection fails the
+                        // whole classpath at transform isolation
                         artifacts(environmentId).get()
-                            .obfuscatedAuxArtifacts.get()
+                            .obfuscatedAuxArtifacts.orNull ?: emptyList()
                     })
                 )
             )
@@ -345,16 +356,21 @@ abstract class MinecraftExtension @Inject constructor(
 
         // Picks the raw view when the provider reports an identity pipeline
         // or the resolved dev namespace equals the source namespace, so
-        // identity environments never materialize a duplicate dev jar.
+        // identity environments never materialize a duplicate dev jar —
+        // unless the env's JAR pipeline carries env-scoped work (jar
+        // processors, contributed/declared steps): the raw→dev transform
+        // is the only host for it, so the dev artifact must materialize.
         val contribution = objects.fileCollection().from(providers.provider {
             val devView = devViewConfigurations[environmentId] ?: return@provider rawView
             val providerArtifacts = artifacts(environmentId).get()
-            if (providerArtifacts.namespaceMode.get() == NamespaceMode.IDENTITY) {
-                return@provider rawView
-            }
-            val dev = devNamespace(environmentId).orNull
-            val source = sourceNamespace(environmentId).orNull
-            if (dev != null && dev == source) rawView else devView
+            if (materializeDevArtifact[environmentId]?.orNull != true) {
+                if (providerArtifacts.namespaceMode.get() == NamespaceMode.IDENTITY) {
+                    return@provider rawView
+                }
+                val dev = devNamespace(environmentId).orNull
+                val source = sourceNamespace(environmentId).orNull
+                if (dev != null && dev == source) rawView else devView
+            } else devView
         })
         sourceSet.compileClasspath += contribution
         sourceSet.runtimeClasspath += contribution
@@ -519,8 +535,8 @@ abstract class MinecraftExtension @Inject constructor(
                         "provider supports this version"
                     )
             } else {
-                val data = mappingDataProvider(environment).get()
-                val tree = data.view<MappingTree>()
+                val data = mappingDataProvider(environment).orNull
+                val tree = data?.view<MappingTree>()
                 if (tree == null) {
                     // declared-but-empty sources compose no tree —
                     // defer to the provider's mapping tree
@@ -532,7 +548,7 @@ abstract class MinecraftExtension @Inject constructor(
                     )
                 } else {
                     val present = tree.namespaces.map { it.name }.toSet()
-                    data.namedNamespaces().firstOrNull { it in present }
+                    data!!.namedNamespaces().firstOrNull { it in present }
                         ?: tree.namespaces.last().name
                 }
             }
@@ -835,9 +851,14 @@ abstract class MinecraftExtension @Inject constructor(
             rejectCombinationCycles(environment, linkedSetOf(targetKey))
             for (sourceReference in environment.combinedWith) {
                 val source = environment(sourceReference)
-                val sourceVersion = source.version.get()
-                val targetVersion = environment.version.get()
-                if (sourceVersion != targetVersion) {
+                // unset on either side = no constraint — an implicit
+                // parent (often unconfigured `main`) must not hard-fail
+                // the check; matches checkVersionConflicts + the loader
+                // guard below
+                val sourceVersion = source.version.orNull
+                val targetVersion = environment.version.orNull
+                if (sourceVersion != null && targetVersion != null &&
+                    sourceVersion != targetVersion) {
                     throw GradleException(
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
@@ -899,8 +920,28 @@ abstract class MinecraftExtension @Inject constructor(
             project.project(projectPath)
         }
         val extension = sourceProject.extensions.getByType(MinecraftExtension::class.java)
-        return extension.artifacts(environmentId).get().mappings.get()
-            .namespaces.lastOrNull()?.name
+        // dev-ns resolves the composed mapping tree — when this check
+        // runs inside the target env's own resolution (validate lives
+        // inside resolvedMappingData), the re-entrant call short-
+        // circuits to an empty view and callers fall back to the
+        // provider's `official` tree — a false mismatch, not a
+        // CircularEvaluationException. Mid-eval = unknown → no
+        // constraint, matching the existing contract.
+        if (environmentId in extension.resolvingMappingData) return null
+        return try {
+            // named-aware dev ns — `namespaces.lastOrNull()` is order-
+            // dependent: inherited/default mapping hops can reorder the
+            // composed tree so `official` lands last even though the env
+            // develops in `named` (gametest/datagen aux envs hit this).
+            extension.devNamespace(environmentId).orNull
+        } catch (e: org.gradle.internal.evaluation.CircularEvaluationException) {
+            // resolving the mapping tree can re-enter this env's
+            // provider chain (deferred sources read `obfuscated`,
+            // which resolves spec() → validateCombinations → here).
+            // Mid-eval = namespace unknown → no constraint; the check
+            // still runs on the canonical spec() call path.
+            null
+        }
     }
 
     /** Build the provider-facing spec for the default `main` environment. */

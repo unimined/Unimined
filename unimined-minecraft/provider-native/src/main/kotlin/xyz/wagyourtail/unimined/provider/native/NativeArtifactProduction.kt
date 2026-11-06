@@ -225,6 +225,12 @@ internal object NativeArtifactProduction {
                     val attrs = Files.readAttributes(
                         it, BasicFileAttributes::class.java)
                     "${it.fileName}:${attrs.size()}:${attrs.lastModifiedTime()}"
+                },
+                // SideMarker isn't a data class — fold its fields or
+                // the hash is identity-based and never stable
+                options.sideMarkers.map {
+                    listOf(it.annotation, it.enumType,
+                        it.clientValue, it.serverValue)
                 }
             ).hashCode().toString()
         )

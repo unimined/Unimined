@@ -93,7 +93,32 @@ internal class MinecraftEnvironmentCopyHandler(
                 targetConfiguration.extendsFrom(sourceRuntime)
             }
         }
+
+        // plain sourceSet buckets alongside the mod buckets —
+        // DEPENDENCIES means the env's whole dependency surface, not
+        // only mod-scoped configurations; aux envs (gametest/datagen)
+        // rely on this for parent library deps like project(":core").
+        // Java-plugin naming: `main` uses the global buckets, other
+        // envs use `<envId><Suffix>`; matching().all stays lazy-safe
+        // since the source env's source set may not be bound yet.
+        for (suffix in listOf("Api", "Implementation", "CompileOnly", "RuntimeOnly")) {
+            val sourceName = dependencyBucketName(source.environmentId, suffix)
+            val targetName = dependencyBucketName(target.environmentId, suffix)
+            extension.project.configurations.matching { it.name == targetName }
+                .all { targetConfiguration ->
+                    extension.project.configurations.matching { it.name == sourceName }
+                        .all { sourceConfiguration ->
+                            if (sourceConfiguration !in targetConfiguration.extendsFrom) {
+                                targetConfiguration.extendsFrom(sourceConfiguration)
+                            }
+                        }
+                }
+        }
     }
+
+    private fun dependencyBucketName(environmentId: String, suffix: String): String =
+        if (environmentId == "main") suffix.replaceFirstChar(Char::lowercaseChar)
+        else "$environmentId$suffix"
 
     private fun source(request: EnvironmentCopyRequest): MinecraftEnvironment =
         extension.environment(request.source)

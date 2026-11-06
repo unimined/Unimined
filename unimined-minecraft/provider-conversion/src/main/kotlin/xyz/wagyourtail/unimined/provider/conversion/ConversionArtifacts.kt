@@ -58,6 +58,20 @@ internal class ConversionArtifacts(
                     it[Side.SERVER] ?: it.getValue(Side.CLIENT)
                 }.let(ctx.layout::file))
             }
+            // `fetchBothSides` products (reindev) carry the non-env
+            // side's dist for consumers that need the full class set —
+            // FoxLoader 2.x's unified patcher builds its superset
+            // patch input from both dists. Never on the classpath.
+            val productId = spec.product.removePrefix("minecraft:")
+            if (spec.side != Side.MERGED &&
+                    ConversionProvider.PRODUCTS[productId]
+                        ?.fetchBothSides == true) {
+                val other = if (spec.side == Side.CLIENT)
+                    Side.SERVER else Side.CLIENT
+                put(other.artifactKey(), jars.map {
+                    it.getValue(other)
+                }.let(ctx.layout::file))
+            }
         }
 
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
@@ -65,6 +79,10 @@ internal class ConversionArtifacts(
 
     override val mappings: Provider<xyz.wagyourtail.unimined.mapping.MappingTree> =
         ctx.providers.provider { mappingTree("official") }
+
+    // conversion products ship decompiled artifacts — never obf'd
+    override val obfuscated: Provider<Boolean> =
+        ctx.providers.provider { false }
 
     override val namespaceMode: Provider<NamespaceMode> =
         ctx.providers.provider { NamespaceMode.IDENTITY }

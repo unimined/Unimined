@@ -127,13 +127,20 @@ class MinecraftExtensionTest {
         Files.writeString(forgeMappings, "tiny\t2\t0\tofficial\tnamed\nc\ta/A\tforge/A\n")
 
         val ext = project().extensions.getByType(MinecraftExtension::class.java)
+        // implicit parent resolution reaches main's spec
+        ext.main.version.set("1.0")
+        ext.main.provider.set("fake")
+        // independence is the point of this test — opt both envs out
+        // of the implicit-parent combine (dev namespaces differ)
         ext.sourceSet("fabric") { environment ->
+            environment.inheritParent.set(false)
             environment.version.set("1.0")
             environment.provider.set("fake")
             environment.loader("fabric", "0.16.0")
             environment.mappings { it.file(fabricMappings) }
         }
         ext.sourceSet("forge") { environment ->
+            environment.inheritParent.set(false)
             environment.version.set("1.0")
             environment.provider.set("fake")
             environment.loader("forge", "47.2.0")
@@ -164,13 +171,13 @@ class MinecraftExtensionTest {
         val sourceSets = project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
         )
-        sourceSets.create("forge")
+        sourceSets.maybeCreate("forge")
         project.plugins.apply(GradlePlugin::class.java)
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
 
         ext.sourceSet("fabric")
         ext.sourceSet("forge")
-        sourceSets.create("fabric")
+        sourceSets.maybeCreate("fabric")
 
         for (name in listOf(
             "modImplementation",
@@ -194,7 +201,12 @@ class MinecraftExtensionTest {
         ext.main.provider.set("fake")
         ext.main.loader("merged", "1")
 
-        val fabric = ext.sourceSet("fabric")
+        val fabric = ext.sourceSet("fabric") {
+            // this test exercises `from` alone — the implicit-parent
+            // combine would otherwise also pull main's output/loader
+            // (main.loader("merged") != fabric) into validation
+            it.inheritParent.set(false)
+        }
         fabric.from("main")
         fabric.loader("fabric", "0.16.0")
 
@@ -210,9 +222,16 @@ class MinecraftExtensionTest {
         val mappingFile = dir.resolve("shared.tiny")
         Files.writeString(mappingFile, "tiny\t2\t0\tofficial\tnamed\nc\ta/A\tshared/A\n")
         val ext = project().extensions.getByType(MinecraftExtension::class.java)
+        // implicit parent resolution reaches main's spec
+        ext.main.version.set("1.0")
+        ext.main.provider.set("fake")
         ext.main.mappings { it.file(mappingFile) }
 
-        val fabric = ext.sourceSet("fabric")
+        val fabric = ext.sourceSet("fabric") {
+            // copyFrom(MAPPINGS) only — the implicit combine would
+            // also demand matching dev namespaces
+            it.inheritParent.set(false)
+        }
         fabric.version.set("1.0")
         fabric.provider.set("fake")
         fabric.copyFrom("main", EnvironmentSection.MAPPINGS)
@@ -232,7 +251,7 @@ class MinecraftExtensionTest {
         val sourceSets = project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
         )
-        val fabricSourceSet = sourceSets.create("fabric")
+        val fabricSourceSet = sourceSets.maybeCreate("fabric")
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.main.version.set("1.0")
         ext.sourceSet("fabric") { it.version.set("1.0") }
@@ -240,8 +259,11 @@ class MinecraftExtensionTest {
         ext.sourceSet("fabric").combineWith("main")
 
         val mainOutput = sourceSets.getByName("main").output.files
+        // compile classpath carries classesDirs only — resources on
+        // the compile classpath can cycle through processResources
+        // consumers (e.g. generateModMetadata → aux-env compiles)
         assertEquals(
-            mainOutput,
+            sourceSets.getByName("main").output.classesDirs.files,
             project.configurations.getByName(
                 fabricSourceSet.compileClasspathConfigurationName
             ).files
@@ -280,12 +302,16 @@ class MinecraftExtensionTest {
         consumer.plugins.apply(GradlePlugin::class.java)
         consumer.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("fabric")
+        ).maybeCreate("fabric")
 
         common.extensions.getByType(MinecraftExtension::class.java)
             .main.version.set("1.0")
         val consumerMinecraft = consumer.extensions.getByType(MinecraftExtension::class.java)
-        val fabric = consumerMinecraft.sourceSet("fabric")
+        val fabric = consumerMinecraft.sourceSet("fabric") {
+            // isolate the explicit cross-project combine — the implicit
+            // parent would also wire the consumer's own main output in
+            it.inheritParent.set(false)
+        }
         fabric.provider.set("fake")
         fabric.combineWith(":common:main")
 
@@ -298,7 +324,9 @@ class MinecraftExtensionTest {
             fabric.combinedOutputs.files
         )
         assertEquals(
-            commonOutput,
+            common.extensions.getByType(
+                org.gradle.api.tasks.SourceSetContainer::class.java
+            ).getByName("main").output.classesDirs.files,
             consumer.configurations.getByName("fabricCompileClasspath").files
         )
     }
@@ -310,7 +338,7 @@ class MinecraftExtensionTest {
         project.plugins.apply(GradlePlugin::class.java)
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("fabric")
+        ).maybeCreate("fabric")
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.sourceSet("fabric")
 
@@ -320,6 +348,39 @@ class MinecraftExtensionTest {
             listOf(project.configurations.getByName("modImplementation")),
             project.configurations.getByName("fabricModImplementation").extendsFrom.toList()
         )
+    }
+
+    @Test
+    fun `dependency section inherits plain source set buckets`() {
+        val project = ProjectBuilder.builder().withProjectDir(dir.toFile()).build()
+        project.plugins.apply("java")
+        project.plugins.apply(GradlePlugin::class.java)
+        val sourceSets = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        )
+        sourceSets.maybeCreate("fabric")
+        sourceSets.maybeCreate("neoforge")
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("fabric")
+        ext.sourceSet("neoforge")
+
+        // env-to-env (not main) so the java plugin's own bucket wiring
+        // can't produce a false positive — custom source sets never
+        // extendsFrom each other's buckets on their own
+        ext.sourceSet("neoforge").copyFrom("fabric", EnvironmentSection.DEPENDENCIES)
+
+        for (suffix in listOf("Api", "Implementation", "CompileOnly", "RuntimeOnly")) {
+            val target = project.configurations.findByName("neoforge$suffix")
+            val source = project.configurations.findByName("fabric$suffix")
+            // `api` only exists under java-library — absent buckets are
+            // skipped by the lazy matching() wiring on both sides
+            if (target != null && source != null) {
+                assertTrue(
+                    source in target.extendsFrom,
+                    "neoforge$suffix should extendFrom fabric$suffix"
+                )
+            }
+        }
     }
 
     @Test

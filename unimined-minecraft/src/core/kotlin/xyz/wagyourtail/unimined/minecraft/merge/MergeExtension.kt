@@ -169,6 +169,7 @@ class SideOnlyMarkers(
     override fun transformClass(
         name: String, node: ClassNode, ctx: MergeExtension.ClassContext,
     ) {
+        if (sideMarkers.isEmpty()) return
         ctx.provenance.classSide?.let { side ->
             mark(node.visibleAnnotations,
                 { node.visibleAnnotations = it }, side)

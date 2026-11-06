@@ -1,8 +1,10 @@
 package xyz.wagyourtail.unimined.provider.conversion
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.minecraft.manifest.ManifestResolver
@@ -30,7 +32,22 @@ class ConversionLaunchMetadata(
     private val offline: Boolean,
     private val refreshCache: Boolean,
     private val metadataTtlMillis: Long?,
-    private val manifestUrls: List<String>
+    private val manifestUrls: List<String>,
+    /** When set, [rootId]'s own document inherits the base Mojang
+     *  version's `libraries` the manifest doesn't itself declare —
+     *  `manifestUrl` products like BTA ride a thin manifest (the
+     *  launchwrapper set only) but still need the base doc's
+     *  paulscode/sound and other runtime libs. [documentPatch]
+     *  applies to the merged doc, so its drops/replacements see the
+     *  full set. */
+    private val baseVersionId: String? = null,
+    /** A post-parse rewrite for the root document — a product pins a
+     *  version-scoped library correction (BTA `7.3_04`'s published
+     *  manifest still declares LWJGL2 `*-babric` libs, but that build
+     *  of the game requires the LWJGL3 set — the doc's `libraries`
+     *  get rewritten so classpath AND natives resolve the swapped
+     *  set, not just the compile classpath). */
+    private val documentPatch: ((JsonObject) -> JsonObject)? = null,
 ) : LaunchMetadata {
 
     @Transient
@@ -39,12 +56,16 @@ class ConversionLaunchMetadata(
     @Transient
     private var downloader: Downloader? = null
 
-    /** Test seam — injected backends are transient and never
-     *  serialized; a deserialized instance rebuilds its own. */
+    /** Backend-injection seam — lets the constructing provider share
+     *  its own resolver/downloader pair instead of this class lazily
+     *  building a second one in [backend]. Injected factories are
+     *  transient and never serialized; a deserialized instance
+     *  rebuilds its own. Public because `core` and `main` are
+     *  separate Kotlin modules. */
     @Transient
     private var backendFactory: (() -> Pair<ManifestResolver, Downloader>)? = null
 
-    internal fun withBackendFactory(
+    fun withBackendFactory(
         factory: () -> Pair<ManifestResolver, Downloader>
     ) = apply { backendFactory = factory }
 
@@ -76,9 +97,38 @@ class ConversionLaunchMetadata(
                 metadataTtlMillis?.let(Duration::ofMillis)
                     ?: Duration.ofDays(7)
             )
-            return Json.parseToJsonElement(Files.readString(file)).jsonObject
+            var doc = Json.parseToJsonElement(Files.readString(file)).jsonObject
+            // merge the base version's libraries the thin manifest
+            // doesn't declare — base-version runtime deps the dist
+            // rides (BTA's paulscode set)
+            if (baseVersionId != null) {
+                val base = resolver.versionJsonDocument(baseVersionId)
+                doc = mergeBaseLibraries(doc, base)
+            }
+            return documentPatch?.invoke(doc) ?: doc
         }
         return resolver.versionJsonDocument(id)
+    }
+
+    /** `libraries` of [base] the manifest doesn't itself declare —
+     *  manifest entries win by name so its own (already-patched) set
+     *  stays authoritative. */
+    private fun mergeBaseLibraries(doc: JsonObject, base: JsonObject): JsonObject {
+        val declared = (doc["libraries"] as? JsonArray)
+            ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content }
+            ?.toSet() ?: return doc
+        val extra = (base["libraries"] as? JsonArray)
+            ?.filter { el ->
+                el.jsonObject["name"]?.jsonPrimitive?.content
+                    ?.let { it !in declared } == true
+            } ?: emptyList()
+        if (extra.isEmpty()) return doc
+        return JsonObject(doc.toMutableMap().apply {
+            put(
+                "libraries",
+                JsonArray((doc["libraries"] as JsonArray) + extra)
+            )
+        })
     }
 
 }
