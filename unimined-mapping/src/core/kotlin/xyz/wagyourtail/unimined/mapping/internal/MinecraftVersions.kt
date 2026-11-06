@@ -16,6 +16,12 @@ object MinecraftVersions {
     private val SNAPSHOT = Regex("""^(\d+)w(\d+)[a-z]?$""")
     private val RELEASE = Regex("""^(\d+)\.(\d+)(?:\.(\d+))?(-.*)?$""")
 
+    /** Pre-release-era ids — classic `c*`/alpha `a*`/beta `b*`/
+     *  indev `in-`/infdev `inf-`/pre-classic `rd-`. All predate the
+     *  snapshot era and every release; ordering among themselves is
+     *  lexicographic (era precision is irrelevant to channel gates). */
+    private val LEGACY = Regex("""^(?:[abc][\d.]|inf?-|rd-).*""")
+
     /** Snapshot week of the first snapshot for the release *after* [release] —
      *  a snapshot compares newer than [release] iff its week is at least this. */
     private val FIRST_SNAPSHOT_WEEK = mapOf(
@@ -53,12 +59,18 @@ object MinecraftVersions {
         val bSnap = SNAPSHOT.matchEntire(b)
         val aRel = if (aSnap == null) parse(a) else null
         val bRel = if (bSnap == null) parse(b) else null
-        if (aRel == null && aSnap == null) {
+        val aLeg = aRel == null && aSnap == null && LEGACY.matchEntire(a) != null
+        val bLeg = bRel == null && bSnap == null && LEGACY.matchEntire(b) != null
+        if (aRel == null && aSnap == null && !aLeg) {
             throw IllegalStateException("cannot compare Minecraft version '$a' against '$b'")
         }
-        if (bRel == null && bSnap == null) {
+        if (bRel == null && bSnap == null && !bLeg) {
             throw IllegalStateException("cannot compare Minecraft version '$b' against '$a'")
         }
+        // pre-release-era ids predate everything else
+        if (aLeg && bLeg) return a.compareTo(b)
+        if (aLeg) return -1
+        if (bLeg) return 1
         if (aSnap != null && bSnap != null) {
             return (aSnap.groupValues[1].toInt() * 100 + aSnap.groupValues[2].toInt())
                 .compareTo(bSnap.groupValues[1].toInt() * 100 + bSnap.groupValues[2].toInt())

@@ -11,6 +11,12 @@ import java.nio.file.Path
  */
 interface StepContext {
 
+    /** The pipeline surface this run serves — engines use it to gate
+     *  artifact-role-specific behavior (e.g. mod-jar refmap/metadata
+     *  handling belongs on [RemapSurface.JAR], not the MC artifact's
+     *  decompile fork). */
+    val surface: RemapSurface
+
     /** The remap request this run serves — source/target namespace and the
      *  resolved classpath entries. */
     val spec: RemapSpec

@@ -47,6 +47,7 @@ class TinyRemapStepTypeTest {
         classpath: List<Path> = emptyList(),
         accessModel: AccessModel? = null
     ): StepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
      override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@TinyRemapStepTypeTest.spec
         override val mappings = this@TinyRemapStepTypeTest.mappings
@@ -172,6 +173,7 @@ class TinyRemapStepTypeTest {
     private fun propagationCtx(baseJar: Path, model: AccessModel?): StepContext {
         val mappings: MappingData = UmlMappingData(propagationTree)
         return object : StepContext {
+        override val surface = RemapSurface.JAR
      override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = this@TinyRemapStepTypeTest.spec
             override val mappings = mappings

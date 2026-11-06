@@ -151,7 +151,10 @@ class MappingPipelineTest {
 
     @Test
     fun `composer passes through single parts and empty requests`() {
-        val part = umlData("tiny\t2\t0\tofficial\tnamed\nc\ta/A\tb/B\n")
+        // only tree-LESS parts pass through verbatim — a lone tree part
+        // still goes through renest+fill (intra-part hop chains carry
+        // gaps the fill propagates)
+        val part = ViewMapMappingData(mapOf(String::class to "x"))
         val composer = DefaultMappingComposer()
 
         assertSame(

@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Path
 
@@ -13,6 +14,7 @@ import java.nio.file.Path
  * declared `needs*` flags required materializing.
  */
 internal class TaskStepContext(
+    override val surface: RemapSurface,
     override val spec: RemapSpec,
     override val mappings: MappingData?,
     override val classpath: List<Path>,

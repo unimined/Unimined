@@ -45,6 +45,7 @@ class AccessRemapStepTypeTest {
     private val mappings: MappingData = UmlMappingData(tree)
 
     private fun ctx(): StepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
      override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@AccessRemapStepTypeTest.spec
         override val mappings = this@AccessRemapStepTypeTest.mappings

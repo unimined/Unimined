@@ -60,30 +60,40 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
      */
     override val priority: Int = 1
 
-    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep {
-        val jsr305 = spec.jsr305ToJetbrains
-        return ArtifactStep { input, c -> remap(input, c, jsr305) }
-    }
+    override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep =
+        ArtifactStep { input, c -> remap(input, c, spec.jsr305ToJetbrains) }
 
     private fun remap(input: Path, ctx: StepContext, jsr305: Boolean): Path {
-        val view = ctx.mappings?.view<MappingTree>()
-            ?: throw GradleException(
-                "remap step 'uml' requires mapping data exposing a UML MappingTree view"
-            )
         val spec = ctx.spec
-        val target = Files.createTempDirectory(ctx.workDir, "uml")
-            .resolve(input.fileName.toString())
-
         val slog = ctx.log.subLogger("uml:remap")
-        slog.info(
-            "remapping ${input.fileName} ${spec.sourceNamespace} -> ${spec.targetNamespace}"
-        )
 
         // the jar's live namespace — remap steps publish their output ns
         // onto state.currentNamespace, so a chained pipeline validates
         // against the post-remap truth, not the stale declared source
         val fns = Namespace(ctx.state.currentNamespace)
         val tns = Namespace(spec.targetNamespace)
+
+        // identity hop — nothing to rename; skip the classpath index +
+        // full ASM pass (pure copy). Identity envs historically ran no
+        // transform at all, so remap-pass transforms (jsr305, invalid-
+        // local renames, package-access fixes) are equally no-ops here:
+        // with no relocations there is nothing for them to rewrite.
+        if (fns == tns) {
+            ctx.state.currentNamespace = spec.targetNamespace
+            return input
+        }
+
+        val view = ctx.mappings?.view<MappingTree>()
+            ?: throw GradleException(
+                "remap step 'uml' requires mapping data exposing a UML MappingTree view"
+            )
+        val target = Files.createTempDirectory(ctx.workDir, "uml")
+            .resolve(input.fileName.toString())
+
+        slog.info(
+            "remapping ${input.fileName} ${spec.sourceNamespace} -> ${spec.targetNamespace}"
+        )
+
         val referenceTree = ctx.mappings?.view<MappingTree>()
         // remap-analysis overlay: AW/AT/CT rules declared by the batch
         // ride the trees list as a synthetic AccessElement-bearing layer,
@@ -93,10 +103,11 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
             ?.takeUnless { it.isEmpty() }
             ?.let { accessModelOverlay(it, fns, referenceTree) }
 
-        // fail loudly when the input jar isn't actually in the declared
-        // source namespace — a mismatched/sparse tree layer would
-        // otherwise "remap" to an identity copy (obf bytes in a
-        // dev-namespace-named artifact)
+        // fail loudly when the input jar is in the TARGET namespace
+        // already — a wrong-layer artifact upstream — but pass through
+        // jars foreign to the tree entirely (non-MC library deps like
+        // realms/authlib carry zero mapped classes; the identity remap
+        // they produce is correct)
         val probe = java.util.zip.ZipFile(input.toFile()).use { z ->
             val names = z.entries().asSequence()
                 .filter { !it.isDirectory && it.name.endsWith(".class") }
@@ -115,12 +126,14 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         if (fnsPopulated && probe.size >= 8 &&
             probe.none { view.getClass(fns, InternalName.unchecked(it)) != null }
         ) {
-            throw GradleException(
+            check(probe.none {
+                view.getClass(tns, InternalName.unchecked(it)) != null
+            }) {
                 "uml:remap ${input.fileName}: none of ${probe.size} sampled " +
                     "classes exist in namespace " +
                     "'${ctx.state.currentNamespace}' — the input jar is in a " +
                     "different namespace"
-            )
+            }
         }
         // classes the tree says SHOULD be renamed — used by the output
         // verification below; identity rows legitimately produce none
@@ -178,9 +191,14 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                     // are valid identifiers — flag them via pattern so
                     // renameInvalidLocals replaces them
                     invalidLvNamePattern = Regex(".*\\$\\$.*"),
-                    // JSR-305 annotation descriptors -> JetBrains
+                    // JSR-305 annotation descriptors -> JetBrains.
+                    // mod-artifact extensions (kotlin metadata, mixin
+                    // refmaps, JMA refmaps) run as the follow-on
+                    // `modArtifacts` step — engine-agnostic so tiny or
+                    // remapped-view pipelines get identical treatment
                     extensions = BuiltinAsmExtensions.defaults() +
-                        if (jsr305) listOf(Jsr305AsmExtension.factory()) else emptyList(),
+                        (if (jsr305) listOf(Jsr305AsmExtension.factory())
+                         else emptyList()),
                     onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
                 )
             )
@@ -211,7 +229,7 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         return target
     }
 
-    private companion object {
+    internal companion object {
         /** Daemon-lifetime classpath-index cache — keyed on the ordered
          *  jar-path set (with size+mtime so same-path rebuilds still
          *  re-index), so all transforms sharing a view classpath share

@@ -34,7 +34,13 @@ class DefaultMappingComposer : MappingComposer {
 
     override fun compose(request: MappingComposeRequest, ctx: MappingContext): MappingData {
         if (request.parts.isEmpty()) return ViewMapMappingData(emptyMap())
-        if (request.parts.size == 1) return request.parts.single()
+        // a lone tree-less part passes through verbatim; a lone tree
+        // still needs the renest+fill pipeline below — its own hop
+        // chain (e.g. official→searge→mcp inside one mcp_legacy zip)
+        // carries gaps the fill propagates
+        if (request.parts.size == 1 &&
+            request.parts.single().view<MappingTree>() == null
+        ) return request.parts.single()
 
         val trees = request.parts.mapIndexed { index, part ->
             part.view<MappingTree>() ?: throw IllegalStateException(

@@ -141,11 +141,38 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                         ).distinct().toTypedArray()
                 super.visit(
                     version,
-                    adjust(access, ElementType.CLASS) { t, d -> t.classChanges(name, d) },
+                    // `$`-named directives are inner-class targets — the
+                    // modifier belongs on the InnerClasses entries
+                    // (visitInnerClass below), never on the class
+                    // header. Forge's InnerClassTarget leaves
+                    // ClassNode.access untouched; merging e.g.
+                    // PROTECTED into the header clears ACC_PUBLIC and
+                    // turns the class package-private to the JVM's
+                    // verify_class_access (MappedRegistry$TagSet /
+                    // NamespacedWrapper IllegalAccessError)
+                    if ('$' in name) access
+                    else adjust(access, ElementType.CLASS) { t, d -> t.classChanges(name, d) },
                     name,
                     injected.fold(signature ?: "") { sig, inj -> sig + wrap(inj) }
                         .takeIf { it.isNotEmpty() },
                     superName, merged
+                )
+            }
+
+            override fun visitInnerClass(
+                name: String, outerName: String?, innerName: String?, access: Int
+            ) {
+                // Forge AT semantics: `Outer$Inner` class directives
+                // (InnerClassTarget) merge into the InnerClassNode
+                // entries whose name matches — the outer's declaration
+                // and the inner's self-entry both carry the flags —
+                // and plain class targets (ClassTarget) merge into
+                // their self-entry as well. Applying at every matching
+                // entry keeps declarations consistent regardless of
+                // which class file declares them.
+                super.visitInnerClass(
+                    name, outerName, innerName,
+                    adjust(access, ElementType.INNER_CLASS) { t, d -> t.classChanges(name, d) }
                 )
             }
 

@@ -97,7 +97,7 @@ internal object MappingResolver {
         }
         var data = cachedData ?: run {
             val parts = mats.map { (_, m) -> providers.select(m).resolve(m, ctx) }
-            val request = MappingComposeRequest(parts)
+            val request = MappingComposeRequest(envCollapse(parts, ctx))
             composers.select(request).compose(request, ctx).also { composed ->
                 cacheFile?.let { f ->
                     runCatching {
@@ -165,7 +165,7 @@ internal object MappingResolver {
             named += m.namedNamespaces
             providers.select(m).resolve(m, ctx)
         }
-        val request = MappingComposeRequest(parts)
+        val request = MappingComposeRequest(envCollapse(parts, ctx))
         var data = composers.select(request).compose(request, ctx)
         data.view<MappingTree>()?.namespaces
             ?.filter { it.name == "named" }
@@ -214,7 +214,7 @@ internal object MappingResolver {
                     )
                 }
             }
-            val request = MappingComposeRequest(parts)
+            val request = MappingComposeRequest(envCollapse(parts, ctx))
             val t1 = System.nanoTime()
             data = composers.select(request).compose(request, ctx).also { composed ->
                 cacheFile?.let { f ->
@@ -233,7 +233,38 @@ internal object MappingResolver {
         return postProcessors.process(data, ctx)
     }
 
-    /** Build a standalone context for file-only consumers (tasks). */
+    /**
+     * Sided envs fold the `ns:<side>` columns back into their base
+     * `ns` per part ([MappingTree.envView] — sided wins, the other
+     * side's rows drop) so compose/fill operate on the env's plain
+     * two-namespace domain. `mcp_legacy`-era csvs route member names
+     * by their `side` column into `mcp:client`/`mcp:server`; without
+     * the fold a `searge -> mcp` remap sees an empty `mcp` layer and
+     * emits identity. MERGED/nil sides keep env columns verbatim.
+     */
+    private fun envCollapse(
+        parts: List<MappingData>, ctx: MappingContext
+    ): List<MappingData> {
+        val env = when (ctx.envSide) {
+            Side.CLIENT -> "client"
+            Side.SERVER -> "server"
+            else -> return parts
+        }
+        return parts.map { part ->
+            val tree = part.view<MappingTree>() ?: return@map part
+            if (tree.namespaces.none { it.splitEnv().second == env }) {
+                return@map part
+            }
+            val collapsed = tree.envView(env)
+            object : MappingData by part {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> view(type: Class<T>): T? =
+                    if (type == MappingTree::class.java) collapsed as T
+                    else part.view(type)
+            }
+        }
+    }
+
     /**
      * Global merged-output cache file for this spec, or `null` when the
      * spec is not globally cacheable. Key = sha1 over each materialized
@@ -257,9 +288,10 @@ internal object MappingResolver {
         // share. Unhashable (missing/lazy) files just disable the cache.
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-merged-v4")
-        // v4: env-column fill exclusion (empty `ns:env` = absent on
-        // that side, not same-name) changes composed output
+        put("unimined-merged-v5")
+        // v5: sided envs env-collapse parts pre-compose (mcp:client
+        // folds into mcp) + single-part trees now fill too —
+        // both change composed output vs v4
         for ((_, m) in mats) {
             put(m.formatHint ?: "")
             put(m.nsMap.toString())

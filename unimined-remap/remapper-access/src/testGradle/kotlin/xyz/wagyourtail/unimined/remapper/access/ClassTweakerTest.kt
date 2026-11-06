@@ -338,6 +338,95 @@ class ClassTweakerTest {
     }
 
     @Test
+    fun `inner class directive updates InnerClasses entries not the class header`() {
+        // Forge AT semantics: `protected a/b/Outer$Inner` is an
+        // InnerClassTarget — the modifier lands on the InnerClassNode
+        // entries (outer's declaration + inner's self-entry); the
+        // inner class's own access_flags header is untouched.
+        // Regression: merging `protected` into the header cleared
+        // ACC_PUBLIC → IllegalAccessError for cross-module subclasses
+        // (MappedRegistry$TagSet / NamespacedWrapper on modern Forge)
+        val inner = writeInnerClass()
+        val outer = writeClass(
+            Opcodes.ACC_PUBLIC or 0x200, false, className = "a/b/Outer",
+            innerClasses = listOf(Triple("a/b/Outer\$Inner", "a/b/Outer", Opcodes.ACC_STATIC))
+        )
+        // headerless AT files declare the `source` namespace — the
+        // spec binds it to the pipeline ns at runtime (headerlessNamespace)
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "protected a/b/Outer\$Inner",
+            mapOf("source" to "named")
+        )
+        val out = apply(
+            mapOf("a/b/Outer\$Inner.class" to inner, "a/b/Outer.class" to outer),
+            own = listOf(at)
+        )
+        val innerBytes = out["a/b/Outer\$Inner.class"]!!
+        val outerBytes = out["a/b/Outer.class"]!!
+        // header must keep the binpatch-style public flags (0x0601)
+        val reader = ClassReader(innerBytes)
+        assertEquals(
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT,
+            reader.access and (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT),
+            "inner-class header must not gain protected/clear public"
+        )
+        // both declarations of the inner class carry the protected flag
+        assertEquals(
+            Opcodes.ACC_PROTECTED,
+            innerEntryAccess(innerBytes, "a/b/Outer\$Inner") and Opcodes.ACC_PROTECTED,
+            "self InnerClasses entry must be marked protected"
+        )
+        assertEquals(
+            Opcodes.ACC_PROTECTED,
+            innerEntryAccess(outerBytes, "a/b/Outer\$Inner") and Opcodes.ACC_PROTECTED,
+            "outer InnerClasses entry must be marked protected"
+        )
+    }
+
+    @Test
+    fun `top level class directive still merges into the class header`() {
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = false)
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "public a/b/C",
+            mapOf("source" to "named")
+        )
+        val out = apply(bytes, own = listOf(at))
+        assertEquals(Opcodes.ACC_PUBLIC, ClassReader(out).access and Opcodes.ACC_PUBLIC)
+    }
+
+    private fun innerEntryAccess(bytes: ByteArray, innerName: String): Int {
+        val access = IntArray(1)
+        ClassReader(bytes).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitInnerClass(
+                name: String, outerName: String?, innerName2: String?, access2: Int
+            ) {
+                if (name == innerName) access[0] = access2
+            }
+        }, 0)
+        return access[0]
+    }
+
+    /** A member interface `a/b/Outer$Inner` — javac-style public
+     *  header (0x0601) with a `protected static` self InnerClasses
+     *  entry, matching Forge's binpatched member classes. */
+    private fun writeInnerClass(): ByteArray {
+        val writer = ClassWriter(0)
+        writer.visit(
+            Opcodes.V17,
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT,
+            "a/b/Outer\$Inner", null, "java/lang/Object", null
+        )
+        writer.visitInnerClass(
+            "a/b/Outer\$Inner", "a/b/Outer", "Inner",
+            Opcodes.ACC_PROTECTED or Opcodes.ACC_STATIC
+        )
+        writer.visitEnd()
+        return writer.toByteArray()
+    }
+
+    @Test
     fun `apply is a no-op without tweaker files`() = Unit
 
     private fun apply(
@@ -346,17 +435,30 @@ class ClassTweakerTest {
         dep: List<ClassTweaker> = emptyList(),
         tree: MappingTree = identityTree,
         target: String = "named"
-    ): ByteArray {
+    ): ByteArray =
+        apply(mapOf("a/b/C.class" to bytes), own, dep, tree, target)["a/b/C.class"]!!
+
+    private fun apply(
+        entries: Map<String, ByteArray>,
+        own: List<ClassTweaker> = emptyList(),
+        dep: List<ClassTweaker> = emptyList(),
+        tree: MappingTree = identityTree,
+        target: String = "named"
+    ): Map<String, ByteArray> {
         val input = dir.resolve("in-${System.nanoTime()}.jar")
         val output = dir.resolve("out-${System.nanoTime()}.jar")
-        JarOutputStream(Files.newOutputStream(input)).use {
-            it.putNextEntry(JarEntry("a/b/C.class"))
-            it.write(bytes)
-            it.closeEntry()
+        JarOutputStream(Files.newOutputStream(input)).use { jar ->
+            for ((name, bytes) in entries) {
+                jar.putNextEntry(JarEntry(name))
+                jar.write(bytes)
+                jar.closeEntry()
+            }
         }
         ApplyClassTweakerStepType().apply(input, output, own, dep, tree, target)
         JarFile(output.toFile()).use { jar ->
-            return jar.getInputStream(jar.getJarEntry("a/b/C.class")).readBytes()
+            return entries.keys.associateWith {
+                jar.getInputStream(jar.getJarEntry(it)).readBytes()
+            }
         }
     }
 
@@ -365,7 +467,8 @@ class ClassTweakerTest {
         privateMethod: Boolean,
         className: String = "a/b/C",
         methodAccess: Int = if (privateMethod) Opcodes.ACC_PRIVATE else Opcodes.ACC_PROTECTED,
-        signature: String? = null
+        signature: String? = null,
+        innerClasses: List<Triple<String, String?, Int>> = emptyList()
     ): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
@@ -376,6 +479,9 @@ class ClassTweakerTest {
         method.visitInsn(Opcodes.RETURN)
         method.visitMaxs(0, 0)
         method.visitEnd()
+        for ((name, outer, acc) in innerClasses) {
+            writer.visitInnerClass(name, outer, name.substringAfterLast('$'), acc)
+        }
         writer.visitEnd()
         return writer.toByteArray()
     }

@@ -121,6 +121,33 @@ abstract class RemapSurfaceSpec @Inject constructor(
         return spec
     }
 
+    /** Declare the mod-artifact post-remap step (kotlin metadata,
+     *  mixin configs + refmaps, JarModAgent refmaps) explicitly. JAR
+     *  pipelines containing a `remap` step get it implicitly; use this
+     *  to pin an engine or a non-default ordering. */
+    @JvmOverloads
+    fun modArtifacts(
+        engine: String? = null,
+        action: Action<ModArtifactsStepSpec> = Action {}
+    ): ModArtifactsStepSpec {
+        val spec = ModArtifactsStepSpec(engine)
+        action.execute(spec)
+        steps.add(spec)
+        return spec
+    }
+
+    /** Groovy DSL counterpart of [modArtifacts]. */
+    fun modArtifacts(
+        @DelegatesTo(target = "modArtifactsSpec", strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ): ModArtifactsStepSpec {
+        val spec = ModArtifactsStepSpec()
+        action.delegate = spec
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+        steps.add(spec)
+        return spec
+    }
+
     /**
      * Declare a step of an engine-supplied spec type. Prefer the engine's
      * own DSL extension (e.g. `unpick(defs)`) over calling this directly.

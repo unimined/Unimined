@@ -1,11 +1,17 @@
 package xyz.wagyourtail.unimined.remapper.access
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.remapper
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATFormat
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
@@ -89,7 +95,9 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
                         val bytes = jar.getInputStream(entry).readBytes()
                         out.write(
                             try {
-                                when (kind(entry.name, bytes, explicit, formats)) {
+                                if (entry.name.endsWith(".mod.json")) {
+                                    remapModJson(bytes, tree, sourceNs, targetNs)
+                                } else when (kind(entry.name, bytes, explicit, formats)) {
                                     Kind.AW -> remapAw(bytes, tree, targetNs)
                                     Kind.AT -> remapAt(bytes, tree, sourceNs, targetNs, legacyAt)
                                     Kind.CT -> remapCt(bytes, tree, targetNs)
@@ -196,5 +204,54 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
             )
         ) { out.append(it) }
         return out.toString().toByteArray()
+    }
+
+    /**
+     * Rebase `custom.*injected_interfaces` target keys inside `*.mod.json`
+     * documents (fabric/quirk mod metadata) from [sourceNs] to
+     * [targetNs]. The values are mod-owned interface names — never
+     * remapped. Returns the input untouched when the document declares
+     * no injections or the remap is identity, so non-fabric jars and
+     * identity pipelines pass through byte-identical.
+     */
+    private fun remapModJson(
+        bytes: ByteArray,
+        tree: MappingTree,
+        sourceNs: Namespace,
+        targetNs: Namespace
+    ): ByteArray {
+        if (sourceNs == targetNs) return bytes
+        val root = runCatching {
+            Json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
+        }.getOrNull() ?: return bytes
+        val custom = root["custom"] as? JsonObject ?: return bytes
+        val injections = custom.filterKeys { it.endsWith("injected_interfaces") }
+            .filterValues { it is JsonObject }
+        if (injections.isEmpty()) return bytes
+        val src = tree.namespaces.firstOrNull { it.name == sourceNs.name }
+            ?: throw GradleException(
+                "remap-access: source namespace '${sourceNs.name}' is not in the mapping tree"
+            )
+        val dst = tree.namespaces.firstOrNull { it.name == targetNs.name }
+            ?: throw GradleException(
+                "remap-access: target namespace '${targetNs.name}' is not in the mapping tree"
+            )
+        val remapper = tree.remapper(src, dst)
+        val newCustom = LinkedHashMap<String, JsonElement>()
+        for ((key, value) in custom) {
+            val injected = injections[key] as? JsonObject
+            newCustom[key] = if (injected == null) {
+                value
+            } else {
+                JsonObject(
+                    injected.mapKeys { (target, _) ->
+                        remapper.mapClass(InternalName.unchecked(target)).value
+                    }
+                )
+            }
+        }
+        val newRoot = LinkedHashMap(root)
+        newRoot["custom"] = JsonObject(newCustom)
+        return JsonObject(newRoot).toString().toByteArray()
     }
 }

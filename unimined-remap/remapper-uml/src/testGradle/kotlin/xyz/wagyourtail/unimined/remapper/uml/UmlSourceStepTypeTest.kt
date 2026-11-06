@@ -47,6 +47,7 @@ class UmlSourceStepTypeTest {
 
     private fun ctx(spec: RemapSpec, tree: MutableMappingTree, classpath: List<Path>) =
         object : StepContext {
+        override val surface = RemapSurface.SOURCES
             override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = spec
             override val mappings: MappingData = UmlMappingData(tree)

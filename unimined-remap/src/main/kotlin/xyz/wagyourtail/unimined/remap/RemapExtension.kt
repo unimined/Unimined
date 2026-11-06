@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.remap
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
@@ -234,8 +235,15 @@ abstract class RemapExtension @Inject constructor(
     ): Provider<List<StepSpec>> =
         providers.provider {
             val environment = sourceSet(environmentId)
-            environment.validate()
-            val declared = environment.effectiveSteps(surface)
+            fun <T> named(what: String, block: () -> T): T = try { block() }
+                catch (e: Exception) {
+                    throw GradleException(
+                        "unimined: pipelineSteps($environmentId, $surface) " +
+                        "failed resolving $what: ${e.message}", e)
+                }
+            named("validate()") { environment.validate() }
+            val declared = named("effectiveSteps") {
+                environment.effectiveSteps(surface) }
             val core = if (declared.isEmpty() &&
                 (surface == RemapSurface.JAR || surface == RemapSurface.SOURCES)
             ) {
@@ -247,8 +255,12 @@ abstract class RemapExtension @Inject constructor(
             }
             val scope = if (includeEnvironmentArtifactSteps) null
             else StepScope.ALL_ARTIFACTS
-            environment.contributedPreSteps(surface, scope) + core +
-                    environment.contributedSteps(surface, scope)
+            named("contributedPreSteps") {
+                environment.contributedPreSteps(surface, scope)
+            } + core + withModArtifactsStep(core, surface) +
+            named("contributedSteps") {
+                environment.contributedSteps(surface, scope)
+            }
         }
 
     /** [pipelineSteps] for `main`. */
@@ -266,9 +278,27 @@ abstract class RemapExtension @Inject constructor(
         providers.provider {
             val environment = sourceSet(environmentId)
             environment.validate()
-            environment.effectiveSteps(surface) +
+            val declared = environment.effectiveSteps(surface)
+            declared + withModArtifactsStep(declared, surface) +
                     environment.contributedSteps(surface, StepScope.ALL_ARTIFACTS)
         }
+
+    /**
+     * Appends the mod-artifact post-remap pass (kotlin metadata, mixin
+     * configs + refmaps, JMA refmaps) when [steps] remaps namespaces on
+     * the JAR surface — engine-agnostic, so a `remap("tiny")` override
+     * or remapped dependency view gets the same treatment. No-op when
+     * the user declared the step explicitly or the pipeline carries no
+     * namespace remap (identity views stay untouched).
+     */
+    private fun withModArtifactsStep(
+        steps: List<StepSpec>, surface: RemapSurface
+    ): List<StepSpec> =
+        if (surface == RemapSurface.JAR &&
+            steps.any { it is RemapStepSpec } &&
+            steps.none { it is ModArtifactsStepSpec }
+        ) listOf(ModArtifactsStepSpec())
+        else emptyList()
 
     /**
      * Create a resolvable [Configuration] that resolves [source]'s

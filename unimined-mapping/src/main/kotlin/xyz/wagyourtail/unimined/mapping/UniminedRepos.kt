@@ -165,7 +165,14 @@ class UniminedRepos private constructor(
         override fun resolve(suffix: String) = Maven(
             namePattern.replace("{name}", suffix),
             urlPattern.replace("{name}", suffix),
-            artifactFallback, includeGroups, includeGroupRegex
+            artifactFallback,
+            // scope the repo to the groups it declares for this
+            // suffix — a mirror/proxy maven (e.g. wagyourtail
+            // mirroring loader repos) otherwise resolves a module's
+            // metadata and then fails artifact fetch with no
+            // fallback, shadowing the real upstream maven
+            includeGroups + servedGroups.filterValues { it == suffix }.keys,
+            includeGroupRegex
         )
     }
 

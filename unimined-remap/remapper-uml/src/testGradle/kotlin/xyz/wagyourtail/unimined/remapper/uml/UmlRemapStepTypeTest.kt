@@ -48,6 +48,7 @@ class UmlRemapStepTypeTest {
     private val mappings: MappingData = UmlMappingData(tree)
 
     private fun ctx(): StepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
      override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
         override val spec = this@UmlRemapStepTypeTest.spec
         override val mappings = this@UmlRemapStepTypeTest.mappings
@@ -83,6 +84,16 @@ class UmlRemapStepTypeTest {
     }
 
     @Test
+    fun `registry discovers modArtifacts step via ServiceLoader`() {
+        val type = RemapStepRegistry().resolve(
+            xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec(),
+            RemapSurface.JAR, spec
+        )
+        assertEquals("uml", type.name)
+        assertEquals("modArtifacts", type.stepName)
+    }
+
+    @Test
     fun `remaps a jar through the step`() {
         val ctx = ctx()
         val out = UmlRemapStepType().create(RemapStepSpec(), ctx)
@@ -100,6 +111,114 @@ class UmlRemapStepTypeTest {
     @Test
     fun `supports the decompile surface`() {
         assertTrue(RemapSurface.DECOMPILE in UmlRemapStepType().surfaces)
+    }
+
+    /**
+     * JAR-surface remap on a mod jar carrying `test.mixins.json` —
+     * [MixinExtension] is resource-gated on, so the config gains the
+     * emitted refmap path and `<name>-refmap.json` records the
+     * `@Inject(method = "m")` ref under its `named` form (`Lb/B;n()V`).
+     * Minimal sponge stubs compile in-test — no mixin dependency.
+     */
+    private fun mixinJar(): Path {
+        val src = dir.resolve("mixin-src")
+        val sources = mapOf(
+            "org/spongepowered/asm/mixin/Mixin.java" to """
+                package org.spongepowered.asm.mixin;
+                import java.lang.annotation.*;
+                @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE)
+                public @interface Mixin {
+                    Class<?>[] value() default {};
+                    String[] targets() default {};
+                }
+            """,
+            "org/spongepowered/asm/mixin/injection/Inject.java" to """
+                package org.spongepowered.asm.mixin.injection;
+                import java.lang.annotation.*;
+                @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD)
+                public @interface Inject { String[] method(); At[] at(); }
+            """,
+            "org/spongepowered/asm/mixin/injection/At.java" to """
+                package org.spongepowered.asm.mixin.injection;
+                import java.lang.annotation.*;
+                @Retention(RetentionPolicy.RUNTIME) @Target({})
+                public @interface At { String value(); }
+            """,
+            "org/spongepowered/asm/mixin/injection/callback/CallbackInfo.java" to """
+                package org.spongepowered.asm.mixin.injection.callback;
+                public class CallbackInfo {}
+            """,
+            "a/A.java" to """
+                package a; public class A { public int f; public void m() {} }
+            """,
+            "m/AMixin.java" to """
+                package m;
+                import org.spongepowered.asm.mixin.Mixin;
+                import org.spongepowered.asm.mixin.injection.*;
+                import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+                @Mixin(targets = "a.A")
+                public class AMixin {
+                    @Inject(method = "m", at = @At("HEAD"))
+                    public void hook(CallbackInfo ci) {}
+                }
+            """,
+        )
+        val files = sources.map { (rel, text) ->
+            val f = src.resolve(rel)
+            Files.createDirectories(f.parent)
+            Files.writeString(f, text.trimIndent())
+            f
+        }
+        val classes = dir.resolve("mixin-classes")
+        Files.createDirectories(classes)
+        val rc = ToolProvider.getSystemJavaCompiler().run(
+            null, null, null,
+            "-d", classes.toString(),
+            *files.map { it.toString() }.toTypedArray()
+        )
+        assertEquals(0, rc)
+        val jar = dir.resolve("mod.jar")
+        JarOutputStream(Files.newOutputStream(jar)).use { out ->
+            Files.walk(classes).use { stream ->
+                stream.filter { Files.isRegularFile(it) }.forEach { f ->
+                    out.putNextEntry(JarEntry(classes.relativize(f).toString()))
+                    Files.copy(f, out)
+                    out.closeEntry()
+                }
+            }
+            out.putNextEntry(JarEntry("test.mixins.json"))
+            out.write(
+                """{"required": true, "package": "m", "mixins": ["AMixin"]}"""
+                    .encodeToByteArray()
+            )
+            out.closeEntry()
+        }
+        return jar
+    }
+
+    @Test
+    fun `mod jar with mixin config gets extension-driven refmap`() {
+        val ctx = ctx()
+        // production flow: namespace remap first, then the engine-
+        // agnostic modArtifacts post-pass rewrites mod-jar metadata
+        val remapped = UmlRemapStepType().create(RemapStepSpec(), ctx)
+            .apply(mixinJar(), ctx)
+        val out = UmlModArtifactsStepType()
+            .create(xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec(), ctx)
+            .apply(remapped, ctx)
+
+        JarFile(out.toFile()).use { jar ->
+            // config patched to point at the emitted refmap
+            val config = jar.getInputStream(jar.getEntry("test.mixins.json"))
+                .readBytes().decodeToString()
+            assertTrue(config.contains("\"refmap\""), config)
+            // refmap records the m -> n method mapping under the mixin key
+            val refmap = jar.getEntry("test-refmap.json")
+            assertNotNull(refmap, "expected test-refmap.json in output")
+            val refmapText = jar.getInputStream(refmap).readBytes().decodeToString()
+            assertTrue(refmapText.contains("m/AMixin"), refmapText)
+            assertTrue(refmapText.contains("n()V"), refmapText)
+        }
     }
 
     /**
@@ -195,6 +314,7 @@ class UmlRemapStepTypeTest {
             )
         )
         val ctx = object : StepContext {
+        override val surface = RemapSurface.JAR
      override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = this@UmlRemapStepTypeTest.spec
             override val mappings = mappings

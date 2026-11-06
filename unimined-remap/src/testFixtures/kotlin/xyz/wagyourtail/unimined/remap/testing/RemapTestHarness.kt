@@ -120,8 +120,11 @@ object RemapTestHarness {
     /** Fake [StepContext] for engine steps — source `official`,
      *  target [targetNs] (`searge` covers class-name assertions). */
     fun remapCtx(data: MappingData, classpath: List<Path>, workDir: Path,
-                 sourceNs: String = "official", targetNs: String = "searge") =
+                 sourceNs: String = "official", targetNs: String = "searge",
+                 surface: xyz.wagyourtail.unimined.remap.spi.RemapSurface =
+                     xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR) =
         object : StepContext {
+            override val surface = surface
             override val state: PipelineState by lazy {
                 PipelineState(spec.sourceNamespace, null) }
             override val spec = object : RemapSpec {

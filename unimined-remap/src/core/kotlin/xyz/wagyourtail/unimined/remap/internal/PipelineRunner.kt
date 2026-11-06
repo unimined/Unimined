@@ -53,6 +53,7 @@ object PipelineRunner {
         val log = uniminedLogger(envLabel, base)
 
         val ctx = TaskStepContext(
+            surface = surface,
             spec = spec,
             mappings = if (resolved.any { it.needsMappingTree }) {
                 mappings ?: throw IllegalStateException(

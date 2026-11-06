@@ -7,7 +7,9 @@ import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 /**
@@ -36,8 +38,21 @@ class JstStep : RemapStepType<JstStepSpec> {
         val out = c.workDir.resolve("jst-out.jar")
         val javaBin = File(System.getProperty("java.home"), "bin/java").absolutePath
 
+        // JST mounts every classpath file through IntelliJ's jar FS —
+        // it fatals on entries it can't open as archives (Mojang ships
+        // 22-byte stub jars for natives-only libs like lwjgl-platform).
+        // A jar with no entries contributes no symbols, so drop it.
+        val classpath = c.classpath.filter { entry ->
+            if (Files.isDirectory(entry)) return@filter true
+            val mountable = runCatching {
+                ZipFile(entry.toFile()).use { it.entries().hasMoreElements() }
+            }.getOrDefault(false)
+            if (!mountable) c.logger.debug("jst: dropping unmountable classpath entry $entry")
+            mountable
+        }
+
         val args = buildJstArgs(
-            javaBin, toolCp.map { it.absolutePath }, c.classpath,
+            javaBin, toolCp.map { it.absolutePath }, classpath,
             spec.enable.get(), spec.extraArgs.get(), input.toString(), out.toString()
         )
         c.log.subLogger("jst").info(args.joinToString(" "))

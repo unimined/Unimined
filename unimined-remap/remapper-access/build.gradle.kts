@@ -10,6 +10,7 @@ dependencies {
     // AW/CT/AT directive parsing (AccessElement-bearing trees)
     api(libs.unimined.mapping.library)
     implementation(libs.asm)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
