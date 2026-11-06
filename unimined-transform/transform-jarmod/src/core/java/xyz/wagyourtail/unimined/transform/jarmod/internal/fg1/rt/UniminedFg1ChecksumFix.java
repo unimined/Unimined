@@ -35,6 +35,21 @@ public final class UniminedFg1ChecksumFix {
 
     private static Map<String, String> readSums() {
         Map<String, String> out = new HashMap<>();
+        // per-run delivery: the run mutator passes the staged libs'
+        // sha1s as a system property — needed when CoreFMLLibraries
+        // loads from the untouched forge zip on the classpath and no
+        // in-jar sums resource exists
+        try {
+            String prop = System.getProperty("unimined.fg1.libSums");
+            if (prop != null) {
+                for (String entry : prop.split(";")) {
+                    int sep = entry.indexOf('=');
+                    if (sep > 0) out.put(entry.substring(0, sep), entry.substring(sep + 1));
+                }
+                if (!out.isEmpty()) return out;
+            }
+        } catch (Throwable ignored) {
+        }
         try {
             InputStream in = UniminedFg1ChecksumFix.class.getResourceAsStream(RESOURCE);
             if (in == null) return out;

@@ -66,6 +66,10 @@ internal fun bootstrapDevVersion(resolved: ResolvedForge): String? {
 internal class ResolvedForge(
     val descriptor: LoaderDescriptor,
     val profile: ForgeProfile,
+    /** The resolved `g:a:v[:classifier]` coordinate — era-correct
+     *  classifier for classpath deps (bare `g:a:v` jars don't
+     *  exist for FG2-era Forge — only `-universal`/`-userdev`). */
+    val notation: String,
     val jar: Path
 )
 
@@ -100,9 +104,12 @@ internal fun contributeLoaderResolution(
         ).apply { isTransitive = false }.files.single().toPath()
     }.getOrNull()
 
-    val jar = tryResolve("$base:userdev")
+    var notation: String? = null
+    val jar = tryResolve("$base:userdev")?.also { notation = "$base:userdev" }
         ?: run {
-            val universal = tryResolve("$base:universal") ?: tryResolve(base)
+            val universal = tryResolve("$base:universal")
+                ?.also { notation = "$base:universal" }
+                ?: tryResolve(base)?.also { notation = base }
             // 1.x `userdevClassifier`: a universal carrying
             // `binpatches.pack.lzma` pairs with the `userdev3`
             // classifier (FG3-era config.json dev metadata
@@ -110,14 +117,15 @@ internal fun contributeLoaderResolution(
             if (universal != null &&
                 ForgeInstallerProbe.hasEntry(universal, "binpatches.pack.lzma")
             ) {
-                tryResolve("$base:userdev3") ?: universal
+                tryResolve("$base:userdev3")
+                    ?.also { notation = "$base:userdev3" } ?: universal
             } else universal
         }
         ?: error(
             "Unable to resolve forge loader artifact at $base " +
                     "(:userdev/:universal classifiers and bare artifact all failed)"
         )
-    ResolvedForge(descriptor, ForgeInstallerProbe.inspect(jar), jar)
+    ResolvedForge(descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar)
 }
 
 /**

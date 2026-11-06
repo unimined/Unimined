@@ -221,7 +221,9 @@ internal fun contributeDevSources(
     }))
     environment.devSourcesNamespace.set(resolved.map {
         when (val profile = it.profile) {
-            is ForgeProfile.Userdev -> profile.config.obfNamespace
+            is ForgeProfile.Userdev -> profile.config.obfNamespaceFor(
+                !environment.obfuscated.get()
+            )
             is ForgeProfile.Binpatches ->
                 // FG2 dev content is srg-named under either
                 // metadata shape (dev package / universal
@@ -308,6 +310,29 @@ internal fun mcpconfigCleanJar(
                     project.configurations.detachedConfiguration(
                         project.dependencies.create(tool.coord)
                     ).apply { isTransitive = true }.files
+                }
+            })
+            p.toolJarPaths.putAll(project.provider {
+                val zip = mcpConf.files.singleOrNull()
+                    ?: return@provider emptyMap<String, String>()
+                val parsed = McpConfigDescriptorFormat().parse(
+                    zip,
+                    object : FormatContext {
+                        override val side = side
+                        override val bindingNames = setOf(
+                            "client", "server",
+                            "clientMappings", "serverMappings"
+                        )
+                    }
+                )
+                parsed.functions.values.associate { tool ->
+                    tool.coord to
+                        project.configurations.detachedConfiguration(
+                            project.dependencies.create(tool.coord)
+                        ).apply { isTransitive = true }
+                            .files.joinToString(java.io.File.pathSeparator) {
+                                it.absolutePath
+                            }
                 }
             })
             p.side.set(side)

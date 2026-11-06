@@ -40,6 +40,7 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeBinpatchStep
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeDevFixes
+import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeMinecraftModuleName
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.contributeLoaderResolution
@@ -171,7 +172,7 @@ internal object ForgeEnvironmentWiring {
                 )
             }
         )
-        contributeLoaderDependency(project, environment)
+        contributeLoaderDependency(project, environment, resolved)
         contributeUserdevLibraries(project, environment, resolved)
         contributeClientExtra(project, environment, resolved)
         contributeSrgToMcp(project, environment, resolved)
@@ -182,6 +183,7 @@ internal object ForgeEnvironmentWiring {
         contributeBinpatchStep(project, environment, resolved)
         contributeAccessSteps(project, environment, resolved)
         contributeDevFixes(project, environment, resolved)
+        contributeMinecraftModuleName(project, environment, resolved)
         contributeDevSources(project, environment, resolved)
         contributeRunMutators(project, environment, resolved)
     }
@@ -207,7 +209,8 @@ internal object ForgeEnvironmentWiring {
      *  nothing. */
     private fun contributeLoaderDependency(
         project: Project,
-        environment: MinecraftEnvironment
+        environment: MinecraftEnvironment,
+        resolved: Provider<xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge>
     ) {
         val loaderSpec = environment.loaderSpec
         val loader = project.configurations.create(
@@ -216,18 +219,26 @@ internal object ForgeEnvironmentWiring {
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.isTransitive = true
+            // loader poms may declare `net.minecraft:*` placeholders
+            // (cleanroom userdev: client extra + mappings_stable zip)
+            // — the env supplies both itself; resolving them would
+            // 404 on every public maven. Artifact-scoped: the same poms
+            // legitimately declare `net.minecraft:launchwrapper` and
+            // other real libs the run classpath needs
+            for (artifact in listOf("client", "server", "merged",
+                "mappings_stable", "mappings_snapshot")) {
+                conf.exclude(mapOf("group" to "net.minecraft", "module" to artifact))
+            }
             conf.withDependencies { deps ->
                 val spec = loaderSpec.orNull
                 val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
                     ?.takeIf { it.family == "forge" }
                 if (descriptor != null) {
-                    deps.add(
-                        project.dependencies.create(
-                            descriptor.loaderCoords(
-                                environment.version.get(), spec!!.version
-                            )
-                        )
-                    )
+                    // era-correct classifier — bare `g:a:v` jars don't
+                    // exist for FG2-era Forge (universal/userdev only)
+                    resolved.orNull?.notation?.let {
+                        deps.add(project.dependencies.create(it))
+                    }
                 }
             }
         }

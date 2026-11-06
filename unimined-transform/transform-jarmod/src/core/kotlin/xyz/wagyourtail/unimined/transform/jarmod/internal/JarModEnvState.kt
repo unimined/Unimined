@@ -41,7 +41,7 @@ internal object JarModEnvState {
      *  dyn lib instead of the bundled/maven 4.x — Java 8 classfile
      *  support in dev. The resolved jar is written to `runDir/lib`
      *  under the name `CoreFMLLibraries` asks for. */
-    fun useAsm52(envId: String): Boolean = useAsm52[envId] ?: false
+    fun useAsm52(envId: String): Boolean = useAsm52[envId] ?: true
     fun useAsm52(envId: String, value: Boolean) {
         useAsm52[envId] = value
     }

@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.mappingTree
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.transform.forge.internal.CoremodRemapTransformStep
@@ -45,6 +46,7 @@ class CoremodRemapTransformStepTest {
     private fun ctx(mappings: MappingData? = null) = object : TransformStepContext {
         override val workDir = dir.resolve("work").also { java.nio.file.Files.createDirectories(it) }
         override val stepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
             override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = object : RemapSpec {
                 override val sourceNamespace = "searge"

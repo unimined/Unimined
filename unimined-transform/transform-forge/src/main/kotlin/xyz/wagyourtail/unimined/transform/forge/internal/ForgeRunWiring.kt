@@ -105,6 +105,18 @@ internal fun contributeRunMutators(
         )
         file.toString()
     }
+    // `-DlegacyClassPath` — pathSeparator-joined view of the same file.
+    // `CommonDevLaunchHandler.findClassPath` reads this property to
+    // locate `client-extra` and `forge-<ver>` for `getMinecraftPaths`;
+    // unset it falls back to `java.class.path`, where
+    // `forge-<ver>-userdev.jar` sorts before the transformed artifact —
+    // the userdev jar (no MC classes) wins as the `minecraft` module and
+    // `Class.forName(module, "net.minecraft.client.main.Main")` fails
+    val legacyClassPath = project.provider {
+        java.nio.file.Files.readString(
+            java.nio.file.Path.of(classpathFile.get())
+        ).trim().replace("\n", java.io.File.pathSeparator)
+    }
     // unprotect — always-on for Userdev (1.x FG3 parity:
     // `unprotectRuntime = true`). The agent needs tiny mappings
     // with dst ns literally `named` to identify MC classes
@@ -155,16 +167,46 @@ internal fun contributeRunMutators(
                     run.name, defaultTweak, ctx
                 ) ?: return@Action
                 run.mainClass = spec.mainClass
-                run.programArgs.addAll(spec.args)
+                // strip template args duplicating options unimined
+                // already supplies — jopt-simple rejects a second
+                // value for single-arg options
+                // (MultipleArgumentsForOptionException on gameDir,
+                // then version, at ArgumentHandler.setArgs)
+                val owned = setOf(
+                    "--gameDir", "--version", "--assetsDir",
+                    "--assetIndex", "--username", "--uuid",
+                    "--accessToken", "--clientId", "--xuid",
+                    "--versionType"
+                )
+                run.programArgs.addAll(
+                    spec.args.let { args ->
+                        val out = mutableListOf<String>()
+                        var i = 0
+                        while (i < args.size) {
+                            val a = args[i]
+                            val opt = a.substringBefore('=')
+                            if (opt in owned) {
+                                i += if ('=' in a ||
+                                    args.getOrNull(i + 1)
+                                        ?.startsWith("--") != false
+                                ) 1 else 2
+                                continue
+                            }
+                            out.add(a); i++
+                        }
+                        out
+                    }
+                )
                 run.jvmArgs.addAll(spec.jvmArgs)
                 run.environment.putAll(spec.environment)
                 // 1.x FG3 `unprotectRuntime = true` — the javaagent
                 // lifts sealed-package/final restrictions on MC
                 // classes; mappings zip carries `named` dst ns
+                run.javaagents.add(unprotectJar.get().toPath())
                 run.jvmArgs.addAll(
                     listOf(
-                        "-javaagent:${unprotectJar.get().absolutePath}",
-                        "-Dunprotect.mappings=${unprotectMappings.get()}"
+                        "-Dunprotect.mappings=${unprotectMappings.get()}",
+                        "-DlegacyClassPath=${legacyClassPath.get()}"
                     )
                 )
             }
@@ -220,6 +262,30 @@ internal fun forgeGroups(
     spec: xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec,
     minecraft: MinecraftExtension
 ): Map<String, List<String>> {
+    // SecureJar unions each MOD_CLASSES group and names the union from
+    // its manifest — `JarMetadata.from` reads the *last* member carrying
+    // `META-INF/`, so a manifest in the trailing member always wins
+    // (member order is reversed again by bootstrap's `secureJar`, making
+    // the appended member last in both the scanned classpath union and
+    // the module-layer union). Without one, the union root's filename is
+    // empty and `SecureJar.from` crashes with `Invalid module name: ''`
+    // (upstream MinecraftForge MOD_CLASSES footgun; arch-loom #215).
+    fun manifestMemberFor(key: String): String {
+        val moduleName = "unimined.dev." + key.replace(":", "_")
+            .trim('_').ifEmpty { "env" }
+        val dir = project.layout.projectDirectory
+            .dir(".gradle/unimined/forge/mod-classes/" +
+                    key.replace(Regex("[^A-Za-z0-9._-]+"), "_"))
+            .asFile.toPath()
+        val manifest = dir.resolve("META-INF/MANIFEST.MF")
+        java.nio.file.Files.createDirectories(manifest.parent)
+        java.nio.file.Files.writeString(
+            manifest,
+            "Manifest-Version: 1.0\nAutomatic-Module-Name: $moduleName\n"
+        )
+        return dir.toAbsolutePath().toString()
+    }
+
     fun dirsFor(projectPath: String, envId: String): List<String> {
         val proj = if (projectPath == project.path) project
         else project.rootProject.project(projectPath)
@@ -232,7 +298,8 @@ internal fun forgeGroups(
 
     val ownKey = "${project.path}:${spec.environmentId}"
     val groups = linkedMapOf(
-        ownKey to dirsFor(project.path, spec.environmentId).toMutableList()
+        ownKey to (dirsFor(project.path, spec.environmentId) +
+                manifestMemberFor(ownKey)).toMutableList()
     )
     for ((refPath, refEnvId) in spec.inheritedEnvironmentReferences()) {
         // only same-project environments can be classified
@@ -250,8 +317,19 @@ internal fun forgeGroups(
             ) { mutableListOf() }
                 .addAll(dirs)
         } else {
-            groups.getValue(ownKey).addAll(dirs)
+            // inherited non-forge env dirs merge into the owning
+            // group — they must land *before* its manifest member so
+            // the manifest stays the union's last META-INF carrier
+            val own = groups.getValue(ownKey)
+            own.addAll(own.size - 1, dirs)
         }
+    }
+    // a forge-family inherited env forms its own group — it needs
+    // its own trailing manifest member too
+    groups.entries.forEach { (key, dirs) ->
+        if (key != ownKey &&
+            dirs.lastOrNull()?.contains("mod-classes") != true
+        ) dirs.add(manifestMemberFor(key))
     }
     return groups
 }

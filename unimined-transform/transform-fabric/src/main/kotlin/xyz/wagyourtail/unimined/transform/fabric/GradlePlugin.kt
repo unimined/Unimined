@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.fabric
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.mapping.UniminedRepos
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.fabric.internal.FabricEnvironmentWiring
@@ -25,7 +26,7 @@ class GradlePlugin : Plugin<Project> {
             // loader repos for loaders actually selected — registering
             // the whole family's repos eagerly would add unrelated (and
             // potentially unreachable) mavens to every resolution
-            target.afterEvaluate {
+            target.afterDslEval {
                 val registry = xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
                 minecraft.environments.forEach { env ->
                     val loader = env.loaderSpec.orNull ?: return@forEach

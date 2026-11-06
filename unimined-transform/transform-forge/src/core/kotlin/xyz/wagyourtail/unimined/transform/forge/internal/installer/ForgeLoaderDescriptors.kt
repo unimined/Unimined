@@ -22,7 +22,12 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
-            loaderCoords = { mc, v -> "net.minecraftforge:forge:$mc-$v" },
+            loaderCoords = { mc, v ->
+                // version may arrive mc-prefixed (`26.3-66.1.5`
+                // from `latest` resolution) or bare (`47.3.0`)
+                if (v.startsWith("$mc-")) "net.minecraftforge:forge:$v"
+                else "net.minecraftforge:forge:$mc-$v"
+            },
             prodNamespace = "searge",
             capabilities = mapOf("atTool" to "8.2.2"),
             metadata = LoaderMetadataSpec(
@@ -38,7 +43,12 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
-            loaderCoords = { mc, v -> "net.minecraftforge:forge:$mc-$v" },
+            loaderCoords = { mc, v ->
+                // version may arrive mc-prefixed (`26.3-66.1.5`
+                // from `latest` resolution) or bare (`47.3.0`)
+                if (v.startsWith("$mc-")) "net.minecraftforge:forge:$v"
+                else "net.minecraftforge:forge:$mc-$v"
+            },
             prodNamespace = "searge",
             capabilities = mapOf("atTool" to "8.2.2"),
             metadata = LoaderMetadataSpec(
@@ -73,6 +83,15 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 }
             },
             prodNamespace = "mojmap",
+            // 1.20.1 ships `net.neoforged:forge` — FML-era ASM can't
+            // parse JDK-25 classes. ≥1.20.2 ships `neoforge` +
+            // securejarhandler 3.x — class file 69
+            javaVersion = { mc, _ ->
+                val m = Regex("^1\\.(\\d+)\\.(\\d+)").find(mc)
+                val minor = m?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val patch = m?.groupValues?.get(2)?.toIntOrNull() ?: 0
+                if (minor < 20 || (minor == 20 && patch < 2)) 21 else 25
+            },
             capabilities = mapOf(
                 "atTool" to "8.2.2",
                 // neoforge datagen is the dev launch with a data
@@ -99,8 +118,9 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             ),
             loaderCoords = { _, v -> "com.cleanroommc:cleanroom:$v" },
             prodNamespace = "searge",
-            // cleanroom runs 1.12.2 on Java 21 (1.x runConfig parity)
-            javaVersion = 21,
+            // published artifacts (incl. 0.5.0-alpha userdev) carry
+            // org.gradle.jvm.version=25 — variant check fails lower
+            javaVersion = { _, _ -> 25 },
             capabilities = mapOf(
                 "atTool" to "8.1.6"
             ),

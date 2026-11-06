@@ -6,6 +6,7 @@ dependencies {
     "coreApi"(project(":unimined-transform"))
     "coreApi"(project(":unimined-transform:transform-jarmod"))
     "coreApi"(project(":unimined-api"))
+    "coreApi"(project(":unimined-mod"))
     "coreApi"(libs.unimined.mapping.library)
     "coreApi"(libs.kotlinx.serialization.json)
     api(project(":unimined-transform"))

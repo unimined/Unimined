@@ -151,9 +151,63 @@ internal fun contributeDevFixes(
     fixesSpec.enabled.set(resolved.map {
         it.profile is ForgeProfile.Binpatches ||
                 (it.profile as? ForgeProfile.Userdev)?.config?.notchObf == true
-    })
+    }.orElse(false))
     environmentSpec.contributeStep(
         RemapSurface.JAR, fixesSpec, StepScope.ENVIRONMENT_ARTIFACT
+    )
+}
+
+/**
+ * Stamp `Automatic-Module-Name: net.minecraftforge.forge` on the dev
+ * jar — the merged artifact is named `forge-<v>-merged`, so
+ * SecureJarHandler would derive `forge.merged` for the forge modfile
+ * the launcher looks up (`updateModuleReads` requires the
+ * `net.minecraftforge.forge` module to exist and carry
+ * `net.minecraftforge.client.loading.*`). The `minecraft` module is
+ * named by client-extra's manifest through `getMinecraftOnly`'s
+ * union (first-member manifest wins after UnionFileSystem's
+ * reversal). For `userdev` profiles the universal jar also donates
+ * its version-bearing `Name:` sections
+ * (`net/minecraftforge/versions/forge/`, `…/mcp/`) — FML's
+ * `JarVersionLookupHandler` resolves `Package.getSpecificationVersion`
+ * from them and `ForgeVersion.<clinit>` throws without it. Matches
+ * the attribute on the shipping universal jar. Appended
+ * post-pipeline so the remap's rewritten manifest can't drop it.
+ */
+internal fun contributeMinecraftModuleName(
+    project: Project,
+    environment: MinecraftEnvironment,
+    resolved: Provider<ResolvedForge>
+) {
+    val environmentSpec = project.extensions
+        .getByType(RemapExtension::class.java)
+        .sourceSet(environment.environmentId)
+    val moduleSpec = project.objects
+        .newInstance(JarProcessorsStepSpec::class.java)
+    // `resolved` is absent on non-forge envs — the spec is contributed
+    // unconditionally (ENVIRONMENT_ARTIFACT scope only excludes it from
+    // dependency pipelines, not the env's own transforms), so an
+    // unguarded map leaves processorSpecs set-but-absent and transform
+    // param isolation fails. Same guard as ForgeAccessWiring's specs.
+    moduleSpec.modJars.from(
+        resolved.map { listOf(it.jar.toFile()) }.orElse(emptyList())
+    )
+    moduleSpec.processorSpecs.set(resolved.map { r ->
+        val donor = (r.profile as? ForgeProfile.Userdev)
+            ?.config?.universal
+            ?.let { coord ->
+                runCatching {
+                    project.configurations.detachedConfiguration(
+                        project.dependencies.create(coord)
+                    ).apply { isTransitive = false }.files.single().absolutePath
+                }.getOrNull()
+            }
+        listOfNotNull("automatic-module-name", "net.minecraftforge.forge", donor)
+            .joinToString(" ")
+            .let(::listOf)
+    }.orElse(emptyList()))
+    environmentSpec.contributeStep(
+        RemapSurface.JAR, moduleSpec, StepScope.ENVIRONMENT_ARTIFACT
     )
 }
 

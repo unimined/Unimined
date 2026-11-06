@@ -19,8 +19,14 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             id = "jarmod",
             family = "jarmod",
             repos = listOf(
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/"),
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/")
+                // wagyourtail releases/snapshots mirror PROXIES forge
+                // maven — it serves de.oceanlabs POMs but its artifact
+                // set lags (26.3-era mcp_config zips 404 while the POM
+                // resolves). de.oceanlabs must stay OUT of the filter
+                // so the real forge maven wins — it's ensured by the
+                // searge/mcp paths and fg1's own repos anyway.
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?"),
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?")
             ),
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             // baseline loader — jars into any product
@@ -32,10 +38,30 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             id = "fg1",
             family = "jarmod",
             repos = listOf(
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/"),
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/")
+                // same lagged-mirror scoping as jarmod above — keep
+                // de.oceanlabs off the wagyourtail proxy
+                // `de.oceanlabs.mcp:mcp_legacy` (FG1-era MCP zips) is
+                // hosted HERE — files.minecraftforge.net 301s into a
+                // maven.minecraftforge.net 404 for it. Scoped by
+                // module, not group: the same group also carries
+                // `mcp_config` (26.x userdev) which wagyourtail only
+                // POM-mirrors — a group filter would shadow the real
+                // forge maven on artifact fetch.
+                LoaderRepo.Maven(
+                    "https://maven.wagyourtail.xyz/releases/",
+                    includeGroupRegex = "xyz\\.wagyourtail(\\..*)?",
+                    includeModules = setOf("de.oceanlabs.mcp" to "mcp_legacy")),
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?"),
+                // FG1-era forge zips — the user-facing "loader version"
+                // is forge's (1.x `forge { loader(coord) }` parity); the
+                // era artifact merges into the dev jar via the `forge`
+                // config (a user-declared dep — the CLI emits it)
+                LoaderRepo.Maven("https://files.minecraftforge.net/maven/", includeGroupRegex = "net\\.minecraftforge(\\..*)?")
             ),
-            loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
+            // FG1-era artifacts all live under `net.minecraftforge:forge`
+            // — 1.3+ ships `:universal`, pre-1.3 ships per-side
+            // `:client`/`:server` (the CLI emits the side classifier)
+            loaderCoords = { mc, v -> "net.minecraftforge:forge:$mc-$v:universal@zip" },
             prodNamespace = "official",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         ),

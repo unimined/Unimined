@@ -27,6 +27,7 @@ private class FakeArtifacts(private val project: Project) : ProductArtifacts {
     override val capabilities = project.provider {
         EnvironmentCapabilities(minecraftVersion = "1.0")
     }
+    override val obfuscated: Provider<Boolean> = project.provider { true }
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
         project.provider { emptyList() }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
@@ -141,6 +142,7 @@ class TransformPipelineTest {
             override val name = "client"
             override var mainClass: String? = null
             override val jvmArgs = mutableListOf<String>()
+            override val javaagents = mutableListOf<Path>()
             override val programArgs = mutableListOf<String>()
             override val environment = mutableMapOf<String, String>()
             override val properties = mutableMapOf<String, () -> String>()

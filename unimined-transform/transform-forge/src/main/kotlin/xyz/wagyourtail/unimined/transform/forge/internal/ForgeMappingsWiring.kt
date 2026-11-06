@@ -48,7 +48,8 @@ internal fun contributeMappingHop(
     resolved: Provider<ResolvedForge>
 ) {
     val obfNs: Provider<String> = resolved.map { r ->
-        (r.profile as? ForgeProfile.Userdev)?.config?.obfNamespace
+        (r.profile as? ForgeProfile.Userdev)?.config
+            ?.obfNamespaceFor(!environment.obfuscated.get())
             ?: "official"
     }
     val mcpVersion: Provider<String> = resolved.map { r ->
@@ -155,7 +156,14 @@ internal fun exportSrgToMcpZip(
                 "params.csv" to params
             )) {
                 zip.putNextEntry(java.util.zip.ZipEntry(name))
-                zip.write(content.toByteArray())
+                // FML's CSV parser keys on the literal `name` column —
+                // the writer emits the devNs there (`searge,mcp,...`),
+                // so rewrite the header line before zipping
+                zip.write(
+                    content.replaceFirst(
+                        "$prodNs,$devNs,", "$prodNs,name,"
+                    ).toByteArray()
+                )
                 zip.closeEntry()
             }
         }

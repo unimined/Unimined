@@ -76,6 +76,9 @@ internal object UserdevRunConfigs {
             !arg.startsWith("{") -> arg
             arg == "{asset_index}" -> assetIndex()
             arg == "{mcp_mappings}" -> "unimined.stub"
+            // cleanroom's dev.json carries `MCP_TO_SRG: {mcp_to_srg}`
+            // in env — Foundation feeds it to FMLDeobfuscatingRemapper
+            arg == "{mcp_to_srg}" -> srgToMcpAsSrg()
             arg == "{natives}" -> "\${natives_directory}"
             arg == "{source_roots}" -> groupsString()
             arg == "{minecraft_classpath_file}" -> minecraftClasspathFile()

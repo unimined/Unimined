@@ -40,7 +40,7 @@ import java.util.List;
  * target actually contains, so a single transformer covers both
  * variants in one pass.
  */
-@CTransformer(name = {"ModLoader"})
+@CTransformer(name = {"ModLoader", "net.minecraft.src.ModLoader"})
 public class ModLoaderDevFixTx {
 
     /** javac declaration + extract signature: on old ModLoader the

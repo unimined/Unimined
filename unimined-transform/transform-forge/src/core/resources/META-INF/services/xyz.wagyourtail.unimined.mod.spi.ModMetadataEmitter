@@ -1,0 +1,4 @@
+xyz.wagyourtail.unimined.transform.forge.internal.ForgeModMetadataEmitter
+xyz.wagyourtail.unimined.transform.forge.internal.LexforgeModMetadataEmitter
+xyz.wagyourtail.unimined.transform.forge.internal.NeoforgeModMetadataEmitter
+xyz.wagyourtail.unimined.transform.forge.internal.CleanroomModMetadataEmitter

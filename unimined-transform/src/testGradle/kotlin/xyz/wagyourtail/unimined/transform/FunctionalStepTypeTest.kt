@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.transform.step.TransformStep
@@ -29,6 +30,7 @@ class FunctionalStepTypeTest {
 
     private val ctx
         get() = object : StepContext {
+        override val surface = RemapSurface.JAR
             override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = object : RemapSpec {
                 override val sourceNamespace = "official"

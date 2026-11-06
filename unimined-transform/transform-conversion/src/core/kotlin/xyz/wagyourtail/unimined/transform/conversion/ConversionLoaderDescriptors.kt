@@ -51,7 +51,9 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
             ),
             prodNamespace = "official",
             metadata = LoaderMetadataSpec(
-                fileName = "fabric.mod.json",
+                // foxloader mods carry no metadata file — identity and
+                // entrypoints are jar-manifest attributes
+                fileName = "META-INF/MANIFEST.MF",
             )
         ),
         LoaderDescriptor(
@@ -65,6 +67,13 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
                 // glass-launcher babric maven — hosts the
                 // `*-babric.N` lwjgl fork the bta loader deps on
                 LoaderRepo.Maven("https://maven.glass-launcher.net/babric"),
+                // hosts the patched Paulscode-SoundSystem fork
+                // (com.paulscode:*) the bta product's extraLibraries
+                // resolve from — scoped so it can't shadow real groups
+                LoaderRepo.Maven(
+                    "https://maven.wagyourtail.xyz/snapshots",
+                    includeGroupRegex = "com\\.paulscode(\\..*)?"
+                ),
             ),
             // BTA uses a fabric-loader fork published as
             // `net.fabricmc:fabric-loader:x.y.z-bta.N` (e.g.
@@ -78,6 +87,9 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
             // fabric-loader fork — consumes a standard `mods/` dir
             capabilities = mapOf(
                 "modsDir" to "mods",
+                // a fabric-loader jar — launches via knot, not the
+                // version doc's legacy launchwrapper/VanillaTweaker
+                "launcher" to "knot",
             ),
             prodNamespace = "official",
             metadata = LoaderMetadataSpec(

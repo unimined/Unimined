@@ -68,7 +68,7 @@ class ForgeEnvironmentWiringTest {
     }.also {
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create(product)
+        ).maybeCreate(product)
     }
 
     @Test
@@ -81,8 +81,11 @@ class ForgeEnvironmentWiringTest {
         }
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("notforge")
-        assertNull(env.artifactBaseName.orNull)
+        ).maybeCreate("notforge")
+        // non-forge envs fall back to the generic
+        // `minecraft-<env>-<version>` base name (ebaf7bb8) — forge
+        // conventions contribute the loader-specific name only
+        assertEquals("minecraft-notforge-1.20.1", env.artifactBaseName.orNull)
     }
 
     @Test
@@ -101,6 +104,9 @@ class ForgeEnvironmentWiringTest {
     fun `every forge-family product resolves loader artifact and conventions`() {
         project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // implicit-parent resolution reaches main's spec
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
         // product -> (mc, loaderVer, expected artifact base, expected prodNs)
         val products = listOf(
             Product("forge", "1.20.1", "47.3.0", "forge-1.20.1-47.3.0", "searge"),

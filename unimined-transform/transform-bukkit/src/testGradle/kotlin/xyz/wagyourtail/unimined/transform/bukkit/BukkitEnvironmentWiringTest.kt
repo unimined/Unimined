@@ -61,7 +61,11 @@ class BukkitEnvironmentWiringTest {
         }
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("paper")
+        ).maybeCreate("paper")
+        // server-processor/run-config contributions land in
+        // afterDslEval — fire it now that loader() is declared
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
         return ext to "paper"
     }
 
@@ -84,6 +88,7 @@ class BukkitEnvironmentWiringTest {
         val runConfig = object : RunConfigSpec {
             override val name = "server"
             override var mainClass: String? = null
+            override val javaagents = mutableListOf<java.nio.file.Path>()
             override val jvmArgs = mutableListOf<String>()
             override val programArgs = mutableListOf<String>()
             override val environment = mutableMapOf<String, String>()
@@ -92,7 +97,7 @@ class BukkitEnvironmentWiringTest {
         assertTrue(envSpec.runMutators.isNotEmpty(), "run mutators should be wired")
         envSpec.runMutators.forEach { it.execute(runConfig) }
         assertEquals("org.bukkit.craftbukkit.Main", runConfig.mainClass)
-        assertTrue(runConfig.jvmArgs.any { it.startsWith("-javaagent:") })
+        assertTrue(runConfig.javaagents.isNotEmpty())
         assertTrue(runConfig.jvmArgs.any { it.startsWith("-Dcpl.pluginGroups=") })
     }
 
@@ -106,7 +111,7 @@ class BukkitEnvironmentWiringTest {
         }
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("fabric")
+        ).maybeCreate("fabric")
         val envSpec = project.extensions
             .getByType(TransformExtension::class.java).sourceSet("fabric")
         assertTrue(envSpec.jarProcessors.none {
@@ -125,7 +130,9 @@ class BukkitEnvironmentWiringTest {
         }
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("paperapi")
+        ).maybeCreate("paperapi")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
         val envSpec = project.extensions
             .getByType(TransformExtension::class.java).sourceSet("paperapi")
         assertTrue(envSpec.jarProcessors.none {

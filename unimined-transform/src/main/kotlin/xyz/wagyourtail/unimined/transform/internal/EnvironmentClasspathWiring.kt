@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.transform.internal
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.SourceSet
@@ -58,6 +60,7 @@ internal object EnvironmentClasspathWiring {
         // convention, so a user's explicit `javaVersion` wins
         environment.javaVersion.convention(environment.loaderSpec.map {
             LoaderRegistry.resolveBuiltin(it.name)?.javaVersion
+                ?.invoke(environment.version.get(), it.version)
         })
 
         val minecraftBucket = project.configurations.getByName(
@@ -137,6 +140,21 @@ internal object EnvironmentClasspathWiring {
             minecraft, environment, envSpec, modBatch
         )
 
+        // identity envs (conversion products — dev ns == source ns)
+        // normally shortcut the dev classpath to the raw artifact, but
+        // the raw→dev transform is the only host for env-scoped pipeline
+        // work: jar processors, contributed steps, declared JAR steps.
+        // Lazily probed at classpath resolution — contributions can land
+        // after this wiring runs.
+        minecraft.materializeDevArtifact[environmentId] = project.provider {
+            envSpec.effectiveJarProcessors().isNotEmpty() ||
+                    remap.sourceSet(environmentId).let { spec ->
+                        spec.configuredSurfaces()[RemapSurface.JAR]?.steps?.isNotEmpty() == true ||
+                                spec.contributedPreSteps(RemapSurface.JAR).isNotEmpty() ||
+                                spec.contributedSteps(RemapSurface.JAR).isNotEmpty()
+                    }
+        }
+
         project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
             t.from.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
@@ -147,9 +165,14 @@ internal object EnvironmentClasspathWiring {
                 minecraft.devArtifactType(environmentId)
             )
             t.parameters { p ->
+                fun <T : Any> Provider<T>.orThrowNamed(what: String): Provider<T> =
+                    map { it }.orElse(project.provider {
+                        throw GradleException("unimined: transform param " +
+                            "'$what' for env '$environmentId' resolved no value")
+                    })
                 p.label.set("$environmentId/dev")
-                p.sourceNamespace.set(devSrcNamespace)
-                p.targetNamespace.set(devNamespace)
+                p.sourceNamespace.set(devSrcNamespace.orThrowNamed("sourceNamespace"))
+                p.targetNamespace.set(devNamespace.orThrowNamed("targetNamespace"))
                 p.envSide.set(environment.side.map { it.name })
                 p.mappingBundleJson.set(mcBundleJson)
                 p.classpath.from(libraries)
@@ -192,7 +215,11 @@ internal object EnvironmentClasspathWiring {
                 p.classpath.from(libraries)
                 // remap-only — the dev pipeline's jar processors are
                 // environment-artifact-scoped, not modclasspath-scoped
-                p.stepSpecs.set(remap.pipelineSteps(environmentId, RemapSurface.JAR))
+                p.stepSpecs.set(
+                    remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
+                        listOf(jarProcessorsPreSpec) + steps + jarProcessorsPostSpec
+                    }
+                )
             }
         }
 
@@ -313,7 +340,16 @@ internal object EnvironmentClasspathWiring {
         environment: MinecraftEnvironment
     ): org.gradle.api.provider.Provider<Configuration> {
         val environmentId = environment.environmentId
-        return minecraft.modSourceNamespaces(environmentId).map { namespaces ->
+        // orElse-named: an empty modSourceNamespaces yields an empty
+        // provider-backed file collection whose bare get() surfaces as
+        // an unlabelled MissingValueException during transform isolation
+        return minecraft.modSourceNamespaces(environmentId)
+            .orElse(project.provider {
+                throw GradleException(
+                    "unimined: modSourceNamespaces('$environmentId') resolved " +
+                    "empty — check the env's loader/mappings wiring")
+            })
+            .map { namespaces ->
             val source = minecraft.sourceNamespace(environmentId).get()
             require(namespaces.size == 1) {
                 "environment '$environmentId' declares ${namespaces.size} mod " +

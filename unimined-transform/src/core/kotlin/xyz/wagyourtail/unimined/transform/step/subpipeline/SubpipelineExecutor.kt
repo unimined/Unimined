@@ -133,6 +133,10 @@ class SubpipelineExecutor(
             if (last != null) outputs[step.name] = last!!
             if (untilStep == step.name) return last
         }
+        if (untilStep != null) error(
+            "step '$untilStep' not in pipeline " +
+                    "(steps: ${pipeline.steps.joinToString { it.name }})"
+        )
         return last
     }
 

@@ -31,8 +31,8 @@ internal class BukkitLoaderDescriptors : LoaderDescriptorSource {
         "https://oss.sonatype.org/content/repositories/snapshots/")
 
 private val wagYourMaven = listOf(
-    LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases"),
-    LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots")
+    LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?"),
+    LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?")
 )
 
     override fun descriptors(): List<LoaderDescriptor> = listOf(

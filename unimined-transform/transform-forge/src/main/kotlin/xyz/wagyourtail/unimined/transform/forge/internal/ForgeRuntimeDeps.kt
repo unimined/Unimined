@@ -102,14 +102,24 @@ internal fun contributeSrgToMcp(
         val mainClass = profile.config.runs["client"]?.get("main")
             ?.jsonPrimitive?.contentOrNull ?: ""
         if (mainClass.startsWith("net.minecraftforge.legacydev") ||
-            profile.config.obfNamespace == "mojmap") {
+            profile.config.obfNamespaceFor(!environment.obfuscated.get()) == "mojmap") {
+            return@provider emptyList()
+        }
+        val tree = artifacts.get().mappings.get()
+        val prod = r.descriptor.prodNamespace
+        val dev = devNs.get()
+        // unobf'd-era products (26.x+) resolve an identity mapping
+        // tree — prod/dev namespaces coincide (or are absent) so
+        // there is no searge->mcp hop to emit; MCPv6 csvs need
+        // exactly 2 distinct namespaces.
+        val nsNames = tree.namespaces.map { it.name }
+        if (prod == dev || prod !in nsNames || dev !in nsNames) {
             return@provider emptyList()
         }
         listOf(
             File(
                 exportSrgToMcpZip(
-                    artifacts.get().mappings.get(),
-                    r.descriptor.prodNamespace, devNs.get(), cacheDir
+                    tree, prod, dev, cacheDir
                 )
             )
         )

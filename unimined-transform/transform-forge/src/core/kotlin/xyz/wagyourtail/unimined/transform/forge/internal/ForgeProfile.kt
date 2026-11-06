@@ -106,12 +106,23 @@ class UserdevConfig(val json: JsonObject) {
 
     /** Obfuscation namespace the userdev config targets —
      *  `notchObf`→official, neoform-family mcp→mojmap, else searge
-     *  (1.x `obfNamespace`). */
+     *  (1.x `obfNamespace`). For unobf'd products (26.x — still
+     *  plain `mcp_config` coordinates so the raw value reads
+     *  `searge`) use [obfNamespaceFor] with the environment's
+     *  `obfuscated` flag — pipeline content sits at mojmap there. */
     val obfNamespace: String
         get() =
             if (json["notchObf"]?.jsonPrimitive?.booleanOrNull == true) "official"
             else if (mcp.contains("neoform")) "mojmap"
             else "searge"
+
+    /** [obfNamespace] adjusted for the environment's MC
+     *  obfuscation — unobf'd products have no srg boundary at all;
+     *  every namespace-sensitive consumer (dev remap source, AT
+     *  file source ns, enricher classTweakers, dev sources ns)
+     *  reads mojmap. */
+    fun obfNamespaceFor(unobfuscated: Boolean): String =
+        if (unobfuscated) "mojmap" else obfNamespace
 
     /** `notchObf` — runtime is notch-obfuscated (pre-1.16.5-era). */
     val notchObf: Boolean

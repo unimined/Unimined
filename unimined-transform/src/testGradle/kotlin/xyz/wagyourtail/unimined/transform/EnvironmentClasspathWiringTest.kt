@@ -112,7 +112,7 @@ class EnvironmentClasspathWiringTest {
         project.plugins.apply("xyz.wagyourtail.unimined.transform")
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("fabric")
+        ).maybeCreate("fabric")
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.sourceSet("fabric") { it.version.set("1.20.1") }
 

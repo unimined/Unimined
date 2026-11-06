@@ -91,8 +91,13 @@ internal object JarProcessorWiring {
         // modSourceNamespaces would re-enter the env's own mapping
         // resolution (recursive update)
         val productionNamespace = nsOverride ?: minecraft
-            .modSourceNamespaces(environmentId)
-            .map { it.singleOrNull() ?: it.first() }.get()
+            .modSourceNamespaces(environmentId).orNull
+            ?.let { it.singleOrNull() ?: it.first() }
+            // unset mod-source namespaces (loaderless/unresolved envs)
+            // fall back to the dev namespace — the processor specs
+            // only use it as a label/context anyway
+            ?: minecraft.devNamespace(environmentId).orNull
+            ?: "mojmap"
         val modPaths = modBatch.files.map { it.toPath() }
         val inner = envSpec.effectiveJarProcessorSpecContext()
             ?.invoke(productionNamespace, modPaths)
@@ -126,11 +131,22 @@ internal object JarProcessorWiring {
         if (processors.isEmpty()) return emptyList()
         val ctx = specContext(null)
         return processors.mapNotNull { processor ->
-            processor.buildSpec(ctx)?.let { spec ->
-                "${processor.name} ${processor.serializeSpec(spec)}"
+            // a processor whose inputs resolve empty on this env
+            // (e.g. loader-contributed processors on a loaderless
+            // env) can't build a spec — treat as "no spec", the
+            // same contract as buildSpec returning null
+            val spec = try {
+                processor.buildSpec(ctx)
+            } catch (e: Exception) {
+                if (e.causeChain().any { it::class.java.simpleName == "MissingValueException" }) null
+                else throw e
             }
+            spec?.let { "${processor.name} ${processor.serializeSpec(it)}" }
         }
     }
+
+    private fun Throwable.causeChain(): Sequence<Throwable> =
+        generateSequence(this) { it.cause }
 
 }
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.commons.core.logger.Logger
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.transform.forge.internal.MergeInputsTransformStep
@@ -34,6 +35,7 @@ class MergeInputsTransformStepTest {
     private fun ctx(inputs: Map<String, List<File>>) = object : TransformStepContext {
         override val workDir = dir.resolve("work").also { java.nio.file.Files.createDirectories(it) }
         override val stepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
             override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
             override val spec = object : RemapSpec {
                 override val sourceNamespace = "official"

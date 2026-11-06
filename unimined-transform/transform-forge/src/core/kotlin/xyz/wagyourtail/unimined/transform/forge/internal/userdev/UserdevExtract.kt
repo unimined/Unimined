@@ -120,13 +120,28 @@ internal object UserdevExtract {
     /**
      * Write `client-extra-<ver>.jar`: every non-class, non-`META-INF`
      * file from the vanilla client jar (assets/data 1.x carries on the
-     * classpath beside the patched jar).
+     * classpath beside the patched jar), plus a manifest declaring
+     * `Automatic-Module-Name: minecraft`.
+     *
+     * FML's `getMinecraftOnly` unions `[merged, clientExtra]` into the
+     * game-layer `minecraft` module — the union FS resolves
+     * `META-INF/MANIFEST.MF` from the *first* member supplying it
+     * (UnionFileSystem reverses member order), which is this jar.
+     * The manifest must exist but carry **no** `Automatic-Module-Name`:
+     * an AMN here would both name the raw union path `minecraft` (clashing
+     * with FML's MinecraftLocator modfile, which synthesizes modId
+     * `minecraft`) and override that modfile's name. With a bare manifest,
+     * the modfile gets `minecraft` and the raw union stays unnamed.
      */
     fun writeClientExtra(clientJar: Path, outJar: Path) {
         if (outJar.toFile().isFile) return
         outJar.parent.createDirectories()
         JarFile(clientJar.toFile()).use { inJar ->
-            java.util.jar.JarOutputStream(outJar.outputStream()).use { out ->
+            val manifest = java.util.jar.Manifest().apply {
+                mainAttributes.putValue(
+                    java.util.jar.Attributes.Name.MANIFEST_VERSION.toString(), "1.0")
+            }
+            java.util.jar.JarOutputStream(outJar.outputStream(), manifest).use { out ->
                 inJar.entries().asSequence()
                     .filter { !it.isDirectory }
                     .filter {

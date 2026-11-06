@@ -27,11 +27,15 @@ sealed interface LoaderRepo {
     }
 
     /** Maven repo — [metadata] controls non-default metadata source
-     *  sets; [includeGroups] content-filters to specific groups. */
+     *  sets; [includeGroups]/[includeGroupRegex]/[includeModules]
+     *  content-filters — a mirror/proxy must declare what it owns or
+     *  it shadows the real upstream on partial artifacts. */
     data class Maven(
         val url: String,
         val metadata: MetadataMode = MetadataMode.DEFAULT,
-        val includeGroups: Set<String> = emptySet()
+        val includeGroups: Set<String> = emptySet(),
+        val includeGroupRegex: String? = null,
+        val includeModules: Set<Pair<String, String>> = emptySet()
     ) : LoaderRepo {
         override fun registerOn(repos: RepositoryHandler) {
             repos.maven { r ->
@@ -46,8 +50,13 @@ sealed interface LoaderRepo {
                         s.artifact()
                     }
                 }
-                if (includeGroups.isNotEmpty()) {
-                    r.content { c -> includeGroups.forEach(c::includeGroup) }
+                if (includeGroups.isNotEmpty() || includeGroupRegex != null ||
+                    includeModules.isNotEmpty()) {
+                    r.content { c ->
+                        includeGroups.forEach(c::includeGroup)
+                        includeGroupRegex?.let(c::includeGroupByRegex)
+                        includeModules.forEach { (g, m) -> c.includeModule(g, m) }
+                    }
                 }
             }
         }

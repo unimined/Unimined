@@ -12,6 +12,11 @@ import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.transform.BundledLibraryStripStepSpec
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Duration
 
 /**
@@ -61,6 +66,60 @@ object ConversionEnvironmentWiring {
                 }
         }
 
+        // loaders that are fabric-loader forks (bta-babric's
+        // `net.fabricmc:fabric-loader:*-bta.N`) launch via knot — the
+        // version doc's `net.minecraft.launchwrapper.Launch`/`VanillaTweaker`
+        // default is wrong for them
+        if (descriptor.capabilities["launcher"] == "knot") {
+            project.extensions.getByType(
+                xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+            ).sourceSet(environment.environmentId)
+                .runMutators += org.gradle.api.Action<
+                    xyz.wagyourtail.unimined.api.spec.RunConfigSpec> { config ->
+                    config.mainClass = if (config.name.contains(
+                            "server", ignoreCase = true)) {
+                        "net.fabricmc.loader.impl.launch.knot.KnotServer"
+                    } else {
+                        "net.fabricmc.loader.impl.launch.knot.KnotClient"
+                    }
+                }
+        }
+
+        // foxloader launches through its own launcher mains — the
+        // invoker patches the MC jar's entry points to call into
+        // FoxLauncher (see FoxLoaderPatchProcessor); without it the
+        // env would start the vanilla main and never load mods.
+        // NO `-Dfoxloader.dev-mode`: that flag selects the 1.x
+        // source-dev path (font.txt patched-file lookup + inject-mod
+        // classpath hacks); the 2.x flow just needs the patched jar
+        // on the classpath and PreLoader copies it into
+        // .foxloader/internal/patched/ itself.
+        if (descriptor.id == "foxloader") {
+            project.extensions.getByType(
+                xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+            ).sourceSet(environment.environmentId).let { envSpec ->
+                envSpec.jarProcessors += FoxLoaderPatchProcessor()
+                envSpec.runMutators += org.gradle.api.Action<
+                        xyz.wagyourtail.unimined.api.spec.RunConfigSpec> { config ->
+                    config.mainClass = if (config.name.contains(
+                            "server", ignoreCase = true)) {
+                        "com.fox2code.foxloader.launcher.ServerMain"
+                    } else {
+                        "com.fox2code.foxloader.launcher.ClientMain"
+                    }
+                }
+            }
+        }
+
+        // BTA probes `Class.forName("a")` for the obfuscated b1.7.3 base
+        // it was built over — the dist is deobf so it's vestigial, but
+        // it shows "Beta 1.7.3 is Missing!" when it fails. Inject the
+        // stub; self-scopes on the ScreenMissingMinecraft marker.
+        project.extensions.getByType(
+            xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+        ).sourceSet(environment.environmentId)
+            .jarProcessors += BtaBetaCheckProcessor()
+
         // dist-source seam rides provider-conversion: the env's loader
         // claim resolves the dist jar as the MC artifact directly.
 
@@ -85,50 +144,97 @@ object ConversionEnvironmentWiring {
         // a resolution hook re-enter resolution ("Recursive update")
         val mc = environment.version.get()
         val joined = environment.side.orNull == Side.MERGED
+        // deps FoxLoader self-manages at runtime — DependencyHelper
+        // fetches each into <gameDir>/libraries/ when its classCheck
+        // isn't already loadable. They must stay OFF the -cp: a
+        // classpath copy plus the libraries/ copy puts the same
+        // package on two classloaders and splits runtime packages
+        // (IllegalAccessError on package-private members). Everything
+        // NOT listed here (asm 9.11 family, annotations, jansi, jna,
+        // lwjgl, vineflower...) is expected on -cp — FoxLoader never
+        // fetches those.
+        val foxLoaderSelfManaged = listOf(
+            "com.unascribed" to "ears-api",
+            "com.unascribed" to "ears-common",
+            "com.google.code.gson" to "gson",
+            "it.unimi.dsi" to "fastutil-core",
+            "org.slf4j" to "slf4j-api",
+            "net.fabricmc" to "sponge-mixin",
+            "io.github.llamalad7" to "mixinextras-common",
+            "com.github.bawnorton.mixinsquared" to "mixinsquared-common",
+            "com.fox2code" to "FoxFlexVer",
+            "com.fox2code.FoxEvents" to "core",
+            "com.fox2code" to "ReBuild",
+            "com.google.guava" to "guava",
+            "xyz.wagyourtail.jvmdowngrader" to "jvmdowngrader",
+            "xyz.wagyourtail.jvmdowngrader" to "jvmdowngrader-java-api",
+            "maven.modrinth" to "spark",
+        )
+        // foxloader's dep set — shared by the env `loader` config and
+        // the patch-tooling config below.
+        fun addFoxLoaderDeps(
+            deps: org.gradle.api.artifacts.DependencySet,
+            transitive: Boolean,
+            excludeSelfManaged: Boolean = false
+        ) {
+            // version-pair check rides the CDN map — fetched here, at
+            // resolution time, never during config; blank version
+            // picks the newest compatible pair
+            val version = FoxLoaderVersionMap.resolve(
+                fetchFoxLoaderPairs(project), mc, spec.version
+            )
+            // era split is on the DIST (reindev) version — reindev 2.9
+            // ships the merged `loader` artifact; the resolved
+            // foxloader version only selects the version inside the
+            // pair, not the artifact shape
+            val joinedCapable = canCombine(mc)
+            if (joined && !joinedCapable)
+                throw GradleException(
+                    "foxloader $version predates 2.9 and " +
+                    "cannot run in a merged (joined) env"
+                )
+            fun dep(notation: String) = project.dependencies.create(notation)
+                .also {
+                    (it as? org.gradle.api.artifacts.ModuleDependency)?.let { md ->
+                        md.isTransitive = transitive
+                        if (excludeSelfManaged)
+                            foxLoaderSelfManaged.forEach { (g, a) ->
+                                md.exclude(mapOf("group" to g, "module" to a))
+                            }
+                    }
+                }
+            descriptor.capabilities["invoker"]?.let { deps.add(dep(it)) }
+            if (joinedCapable) {
+                deps.add(dep(descriptor.loaderCoords(mc, version)))
+            } else {
+                // pre-2.9 has no `loader` artifact — the dep set is
+                // common + <side> instead
+                val side = environment.side.orNull!!.name.lowercase()
+                descriptor.capabilities["sidedArtifacts"]
+                    ?.split(',')?.forEach { coord ->
+                        deps.add(dep(coord.replace("<side>", side) + ":" + version))
+                    }
+            }
+        }
         val loader = project.configurations.create(
             "conversionLoader${environment.environmentId.replaceFirstChar(Char::uppercase)}"
         ) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
-            conf.isTransitive = false
+            // knot-launch loaders (bta-babric's fabric-loader fork)
+            // need their declared deps — fabric-loader doesn't bundle
+            // `org.objectweb.asm`, it resolves it transitively.
+            // foxloader needs its pom transitives too (asm 9.11 for
+            // the runtime patcher) minus the self-managed set the
+            // dep() excludes strip.
+            conf.isTransitive = descriptor.capabilities["launcher"] == "knot" ||
+                    descriptor.id == "foxloader"
             conf.withDependencies { deps ->
                 var addPrimary = true
                 if (descriptor.id == "foxloader") {
                     addPrimary = false
-                    // version-pair check rides the CDN map — fetched
-                    // here, at resolution time, never during config;
-                    // blank version picks the newest compatible pair
-                    val version = FoxLoaderVersionMap.resolve(
-                        fetchFoxLoaderPairs(project), mc, spec.version
-                    )
-                    // era split is on the DIST (reindev) version —
-                    // reindev 2.9 ships the merged `loader` artifact;
-                    // the resolved foxloader version only selects the
-                    // version inside the pair, not the artifact shape
-                    val joinedCapable = canCombine(mc)
-                    if (joined && !joinedCapable)
-                        throw GradleException(
-                            "foxloader $version predates 2.9 and " +
-                            "cannot run in a merged (joined) env"
-                        )
-                    descriptor.capabilities["invoker"]?.let {
-                        deps.add(project.dependencies.create(it))
-                    }
-                    if (joinedCapable) {
-                        deps.add(project.dependencies.create(
-                            descriptor.loaderCoords(mc, version)
-                        ))
-                    } else {
-                        // pre-2.9 has no `loader` artifact — the dep
-                        // set is common + <side> instead
-                        val side = environment.side.orNull!!.name.lowercase()
-                        descriptor.capabilities["sidedArtifacts"]
-                            ?.split(',')?.forEach { coord ->
-                                deps.add(project.dependencies.create(
-                                    coord.replace("<side>", side) + ":" + version
-                                ))
-                            }
-                    }
+                    addFoxLoaderDeps(deps, transitive = true,
+                        excludeSelfManaged = true)
                 }
                 if (addPrimary) {
                     if (spec.version.isBlank())
@@ -143,6 +249,60 @@ object ConversionEnvironmentWiring {
                         )
                     )
                 }
+                // knot-launch loaders (fabric-loader forks) publish
+                // their runtime deps in a `<ver>.json` metadata doc on
+                // the publishing repo — the bta pom is a stub (no deps)
+                // and the version doc's legacy `asm-all`/`asm-debug-all`
+                // can't read v52 anyway, so ride the metadata doc
+                if (descriptor.capabilities["launcher"] == "knot") {
+                    fetchLoaderLibraries(project, environment, descriptor, spec)
+                        .forEach { deps.add(project.dependencies.create(it)) }
+                }
+            }
+        }
+        // foxloader's patch tooling — the invoker subprocess needs
+        // the loader jar PLUS its transitives (PatchBridge →
+        // GamePatches → asm), which the env classpath deliberately
+        // doesn't carry. Its own configuration so the transitive
+        // resolution never reaches the runtime classpath.
+        val tooling = if (descriptor.id == "foxloader") {
+            project.configurations.create(
+                "conversionLoader${environment.environmentId.replaceFirstChar(Char::uppercase)}Tooling"
+            ) { conf ->
+                conf.isCanBeConsumed = false
+                conf.isCanBeResolved = true
+                conf.isTransitive = true
+                conf.withDependencies { deps ->
+                    addFoxLoaderDeps(deps, transitive = true)
+                }
+            }
+        } else null
+        // the invoker classpath FoxLoaderPatchProcessor execs —
+        // surfaced via `SpecContext.envArtifacts` lazily; the
+        // configuration resolves at spec-build time, never here.
+        if (descriptor.id == "foxloader") {
+            val envSpec = project.extensions.getByType(
+                xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+            ).sourceSet(environment.environmentId)
+            envSpec.envArtifactBindings["foxloader:invoker"] = {
+                tooling!!.files.map { it.toPath() }
+            }
+            // the other dist — foxloader 2.x's unified patcher needs
+            // the full client+server class set; the processor builds
+            // a superset input and strips the other side back out
+            // (reindev sets `fetchBothSides` so the key exists)
+            envSpec.envArtifactBindings["foxloader:otherSide"] = {
+                val artifacts = project.extensions.getByType(
+                    xyz.wagyourtail.unimined.minecraft.MinecraftExtension::class.java
+                ).artifacts(environment.environmentId).get()
+                val otherKey = if (environment.side.orNull == Side.CLIENT) {
+                    xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey.SERVER
+                } else {
+                    xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey.CLIENT
+                }
+                artifacts.artifacts[otherKey]
+                    ?.let { listOf(it.get().asFile.toPath()) }
+                    .orEmpty()
             }
         }
         val sourceSet = project.extensions
@@ -193,6 +353,58 @@ object ConversionEnvironmentWiring {
                 .fetchMetadata(FoxLoaderVersionMap.MAP_URL, "foxloader-version-map.json")
                 .toFile().readText()
         )
+    }
+
+    /** knot-launch loaders (fabric-loader forks) publish their runtime
+     *  dep set as `<artifact>-<version>.json` next to the jar on the
+     *  publishing repo — FabricMeta shape: `libraries.{common,client,
+     *  server}` entries carrying `name` coords. The bta pom is a stub
+     *  so the doc is the authoritative set; the first repo serving it
+     *  wins, a repo that lacks the doc just skips it. */
+    private fun fetchLoaderLibraries(
+        project: Project,
+        environment: MinecraftEnvironment,
+        descriptor: xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor,
+        spec: xyz.wagyourtail.unimined.api.spec.LoaderSpec,
+    ): List<String> {
+        val parts = descriptor.loaderCoords(
+            environment.version.get(), spec.version
+        ).split(':')
+        if (parts.size < 3 || spec.version.isBlank()) return emptyList()
+        val path = "${parts[0].replace('.', '/')}/${parts[1]}/${parts[2]}" +
+                "/${parts[1]}-${parts[2]}.json"
+        val downloader = Downloader(
+            cacheDir = UniminedCache.global(project)
+                .resolve("transform-conversion"),
+            offline = project.gradle.startParameter.isOffline,
+            refreshCache = project.gradle.startParameter.isRefreshDependencies ||
+                    flag(project, "unimined.forceReload") ||
+                    flag(project, "unimined.refreshDownloads"),
+            metadataTtl = project.providers
+                .gradleProperty("unimined.metadataCacheTtl").orNull
+                ?.let(Duration::parse) ?: Duration.ofHours(24),
+        )
+        val file = descriptor.repos.filterIsInstance<LoaderRepo.Maven>()
+            .firstNotNullOfOrNull { repo ->
+                runCatching {
+                    downloader.fetchMetadata(
+                        "${repo.url.trimEnd('/')}/$path",
+                        "loader-${parts[1]}-${parts[2]}.json",
+                    )
+                }.getOrNull()
+            } ?: return emptyList()
+        val libs = Json.parseToJsonElement(file.toFile().readText())
+            .jsonObject["libraries"]?.jsonObject ?: return emptyList()
+        val sides = listOf("common") + when (environment.side.orNull) {
+            Side.SERVER -> listOf("server")
+            Side.CLIENT -> listOf("client")
+            else -> listOf("client", "server")
+        }
+        return sides.flatMap { key ->
+            (libs[key] as? JsonArray)?.mapNotNull {
+                it.jsonObject["name"]?.jsonPrimitive?.content
+            } ?: emptyList()
+        }.distinct()
     }
 
     private fun flag(project: Project, name: String): Boolean =

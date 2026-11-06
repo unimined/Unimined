@@ -45,6 +45,31 @@ internal object FabricModAnalysis {
     fun customValue(jar: Path, key: String): String? =
         modJson(jar)?.custom?.get(key)?.jsonPrimitive?.contentOrNull
 
+    /**
+     * Interface injections declared under `custom.*injected_interfaces`
+     * keys (the `loom:injected_interfaces`/`quilt_loom.injected_interfaces`
+     * convention) — target class internal name → interface internal
+     * names, in the jar's production namespace. Consumed by synthesizing
+     * classTweaker directives for the dependent's compile artifact.
+     */
+    fun injectedInterfaces(jar: Path): Map<String, List<String>> {
+        val custom = modJson(jar)?.custom ?: return emptyMap()
+        val out = LinkedHashMap<String, MutableList<String>>()
+        for ((key, value) in custom) {
+            if (!key.endsWith("injected_interfaces")) continue
+            val obj = value as? JsonObject ?: continue
+            for ((target, ifaces) in obj) {
+                val list = (ifaces as? JsonArray)?.mapNotNull {
+                    (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content
+                }.orEmpty()
+                if (list.isNotEmpty()) {
+                    out.getOrPut(target) { mutableListOf() } += list
+                }
+            }
+        }
+        return out.mapValues { (_, v) -> v.distinct() }
+    }
+
     /** Path of the declared `accessWidener` entry in the jar, if any. */
     fun accessWidenerPath(jar: Path): String? = modJson(jar)?.accessWidener
 
@@ -134,6 +159,7 @@ internal object FabricModAnalysis {
 
     private fun installerJson(jar: Path): FabricInstallerJson? =
         readJarEntry(jar, "fabric-installer.json")
+            ?: readJarEntry(jar, "quilt_installer.json")
 
     private inline fun <reified T> readJarEntry(jar: Path, name: String): T? = runCatching {
         JarFile(jar.toFile()).use { jarFile ->

@@ -171,7 +171,9 @@ internal fun contributeAccessSteps(
         if (paths.isEmpty()) return@provider emptyList()
         val extracted = UserdevEnrichers.extract(r.jar, paths, enricherDir(r.jar))
         UserdevEnrichers.classTweakerFiles(
-            extracted, profile.config.obfNamespace, enricherDir(r.jar)
+            extracted,
+            profile.config.obfNamespaceFor(!environment.obfuscated.get()),
+            enricherDir(r.jar)
         )
     }
 
@@ -182,7 +184,8 @@ internal fun contributeAccessSteps(
     // obf-named runtime); user-authored ATs are in dev names
     // (1.x `at2aw` defaulted to devNamespace).
     val extractedObfNs = resolved.map { r ->
-        (r.profile as? ForgeProfile.Userdev)?.config?.obfNamespace
+        (r.profile as? ForgeProfile.Userdev)?.config
+            ?.obfNamespaceFor(!environment.obfuscated.get())
             ?: "searge"
     }
     val extractedSpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
@@ -247,7 +250,7 @@ internal fun contributeAccessSteps(
             enabled.set(resolved.map {
                 it.profile is ForgeProfile.Userdev ||
                         it.profile is ForgeProfile.Binpatches
-            })
+            }.orElse(false))
             classes.set(
                 listOf(
                     "net/minecraftforge/registries/ObjectHolderRegistry",
@@ -313,7 +316,12 @@ internal fun contributeAccessSteps(
     // Userdev `inject`: prefix-stripped installer entries merged
     // into the dev jar via the jar-processors channel
     val jarProcessorsSpec = objects.newInstance(JarProcessorsStepSpec::class.java)
-    jarProcessorsSpec.modJars.from(resolved.map { listOf(it.jar.toFile()) })
+    // `resolved` is absent on non-forge envs — an empty provider in a
+    // `from` position surfaces as a bare MissingValueException during
+    // transform param isolation, so fall back to an empty jar set
+    jarProcessorsSpec.modJars.from(
+        resolved.map { listOf(it.jar.toFile()) }.orElse(emptyList())
+    )
     // `set` — `add` would discard the implicit-empty base and a
     // null-yielding provider leaves the property set-but-absent;
     // no `inject`/`universal` on non-Userdev profiles → empty list
@@ -330,7 +338,7 @@ internal fun contributeAccessSteps(
                 )
             }
         }
-    })
+    }.orElse(emptyList()))
     environmentSpec.contributePreStep(
         RemapSurface.JAR, jarProcessorsSpec, StepScope.ENVIRONMENT_ARTIFACT
     )
@@ -374,7 +382,7 @@ internal fun contributeAccessSteps(
                 )
             }
         } ?: emptyList()
-    })
+    }.orElse(emptyList()))
     environmentSpec.contributePreStep(
         RemapSurface.JAR, shadeSpec, StepScope.ENVIRONMENT_ARTIFACT
     )

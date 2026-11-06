@@ -6,6 +6,7 @@ dependencies {
     "coreApi"(project(":unimined-api"))
     api(project(":unimined-minecraft"))
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.asm)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.transform.bukkit.internal
 
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.transform.TransformExtension
@@ -39,8 +40,13 @@ internal object BukkitEnvironmentWiring {
                 if (d != null) listOf("spigot", d.prodNamespace) else emptyList()
             }
         )
-        contributeServerProcessors(project, environment)
-        contributeRunConfig(project, environment)
+        // bound fires before the DSL's `loader(...)` lands — the
+        // contributions inside check loaderSpec, so defer to
+        // post-evaluation (or run now when already evaluated)
+        project.afterDslEval {
+            contributeServerProcessors(it, environment)
+            contributeRunConfig(it, environment)
+        }
     }
 
     /**
@@ -101,7 +107,7 @@ internal object BukkitEnvironmentWiring {
         envSpec.runMutators += org.gradle.api.Action { config ->
             config.mainClass = "org.bukkit.craftbukkit.Main"
             val jar = cplConfig.resolve().first { it.extension == "jar" }
-            config.jvmArgs += "-javaagent:${jar.absolutePath}"
+            config.javaagents.add(jar.toPath())
             val out = sourceSets.getByName(envId).output
             val paths = (out.classesDirs.files + listOfNotNull(out.resourcesDir))
                 .joinToString(java.io.File.pathSeparator) { it.absolutePath }

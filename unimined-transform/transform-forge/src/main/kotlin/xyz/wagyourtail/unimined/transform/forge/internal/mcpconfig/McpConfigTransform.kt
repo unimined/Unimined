@@ -49,8 +49,14 @@ abstract class McpConfigTransform @Inject constructor(
         @get:InputFile @get:Classpath @get:Optional val serverMappings: RegularFileProperty
         /** MC env classpath (`listLibraries` `-e=` rows). */
         @get:Classpath val libraries: ConfigurableFileCollection
-        /** Union of every `functions.*` tool's resolved classpath. */
+        /** Union of every `functions.*` tool's resolved classpath —
+         *  carried for the transform content fingerprint. */
         @get:Classpath val toolJars: ConfigurableFileCollection
+        /** `functions.*` coord → pathSeparator-joined resolved
+         *  classpath — the per-tool exec classpath. A union keyed on
+         *  jar-name can't attribute shared libs (jopt-simple) to the
+         *  thin tools that actually need them (DiffPatch). */
+        @get:Input val toolJarPaths: MapProperty<String, String>
         @get:Input val side: Property<String>
         @get:Input val notchObf: Property<Boolean>
         @get:Input val useToolchains: Property<Boolean>
@@ -93,8 +99,32 @@ abstract class McpConfigTransform @Inject constructor(
                 )
             }
         )
-        val step = if (params.notchObf.get() && side == "joined")
-            "merge" else "rename"
+        // the clean jar is `decompile`'s input — the step that
+        // produced it is the one to run through. Pipelines vary: srg-era
+        // descriptors decompile `{renameOutput}`, unobf'd (26.x)
+        // descriptors have no `rename` at all and decompile
+        // `{mergeOutput}`/`{stripOutput}`. `untilStep` falls through to
+        // the chain tail when the name is absent — a missing `rename`
+        // silently yields the `patch` sources jar, so the step name
+        // must be read off the descriptor, not guessed.
+        val decompileInput = pipeline.steps
+            .firstOrNull { it.name == "decompile" }
+            ?.args?.get("input")
+            ?.let {
+                Regex("\\{(.+)Output\\}").find(it)?.groupValues?.get(1)
+            }
+        val step = if (params.notchObf.get()) {
+            // notchObf binpatches index the *pre-rename* jar — the
+            // obfNamespace boundary (1.x `executeMcp("merge")` for
+            // joined). Derive it from `rename`'s input rather than
+            // hardcoding `merge`: joined reads `{mergeOutput}`, split
+            // sides read the strip output.
+            pipeline.steps.firstOrNull { it.name == "rename" }
+                ?.args?.get("input")
+                ?.let {
+                    Regex("\\{(.+)Output\\}").find(it)?.groupValues?.get(1)
+                } ?: if (side == "joined") "merge" else "rename"
+        } else decompileInput ?: "rename"
         val output = SubpipelineExecutor(
             pipeline,
             McpConfigDescriptorFormat(),
@@ -107,20 +137,19 @@ abstract class McpConfigTransform @Inject constructor(
                 params.serverMappings.orNull?.asFile
                     ?.let { "serverMappings" to { it } },
             ).toMap(),
-            // per-tool isolated classpath: the union pollutes
-            // serialization (e.g. asm-6.1-beta2 shadowing
-            // mergetool's bundled 6.0 produces non-canonical
-            // merge output). mcpconfig tools are fat/shaded and
-            // self-contained, so filter by artifact name; fall
-            // back to the union if nothing matches (thin tools).
+            // per-tool isolated classpath: each coord resolves to its
+            // own transitive set in toolJarPaths — the union pollutes
+            // serialization (e.g. asm-6.1-beta2 shadowing mergetool's
+            // bundled 6.0 produces non-canonical merge output) and
+            // name-filtering drops thin tools' deps (DiffPatch needs
+            // jopt-simple). Fall back to the union if the coord is
+            // absent (defensive — map should cover every functions.*
+            // entry the wiring parsed).
             toolResolver = { coord ->
-                val artifact = coord.substringAfter(':')
-                    .substringBefore(':')
-                val own = toolJars.filter {
-                    it.name.startsWith("$artifact-") ||
-                            it.name == "$artifact.jar"
-                }
-                (own.ifEmpty { toolJars }).map { it.toPath() }
+                params.toolJarPaths.get()[coord]
+                    ?.split(File.pathSeparator)
+                    ?.map { java.nio.file.Path.of(it) }
+                    ?: toolJars.map { it.toPath() }
             },
             listBindings = mapOf(
                 "libraries" to { params.libraries.files.toList() }

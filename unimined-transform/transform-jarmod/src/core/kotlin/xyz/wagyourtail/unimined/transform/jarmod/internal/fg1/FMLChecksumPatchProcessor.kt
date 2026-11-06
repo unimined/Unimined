@@ -59,12 +59,24 @@ internal class FMLChecksumPatchProcessor(
             java.nio.file.Files.createDirectories(res.parent)
             java.nio.file.Files.writeString(res,
                 sums.entries.joinToString("\n") { "${it.key}=${it.value}" })
-            ClassTransformJarFix.fix(fs, mapOf(
+            // the forge zip may already carry the tx splice (the
+            // classpath patch path runs on the zip itself) — re-fixing
+            // would collide on the injected `unimined$` method name
+            val target = fs.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
+            val alreadySpliced = java.nio.file.Files.exists(target) && run {
+                val cn = org.objectweb.asm.tree.ClassNode()
+                org.objectweb.asm.ClassReader(
+                    java.nio.file.Files.readAllBytes(target)).accept(cn, 0)
+                cn.methods.any { it.name.startsWith("unimined$") }
+            }
+            if (!alreadySpliced) {
+                ClassTransformJarFix.fix(fs, mapOf(
                 "xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.CoreFMLLibrariesChecksumTx" to
                     listOf("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
             ), helpers = listOf(
                 "xyz/wagyourtail/unimined/transform/jarmod/internal/fg1/rt/UniminedFg1ChecksumFix.class"
             ))
+            }
         }
     }
 

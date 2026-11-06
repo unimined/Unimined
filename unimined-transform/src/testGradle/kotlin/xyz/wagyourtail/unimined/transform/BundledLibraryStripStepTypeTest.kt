@@ -31,6 +31,7 @@ class BundledLibraryStripStepTypeTest {
 
     private val ctx
         get() = object : StepContext {
+        override val surface = RemapSurface.JAR
             override val state: PipelineState by lazy {
                 PipelineState(spec.sourceNamespace, null)
             }

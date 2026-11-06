@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
+import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -38,7 +39,7 @@ class FabricEnvironmentWiringTest {
         project: org.gradle.api.Project,
         ext: MinecraftExtension
     ) = org.gradle.api.tasks.SourceSetContainer::class.java.let { type ->
-        project.extensions.getByType(type).create("fabric")
+        project.extensions.getByType(type).maybeCreate("fabric")
         ext.sourceSet("fabric") { env ->
             env.version.set("1.20.1")
             env.loader("fabric", "0.16.0")
@@ -49,6 +50,15 @@ class FabricEnvironmentWiringTest {
     fun `apply contributes fabric repo and intermediary mod-source default`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // repo registration is per-selected-loader — an env must
+        // declare a fabric-family loader for the maven to land
+        ext.sourceSet("fabric") { env ->
+            env.version.set("1.20.1")
+            env.loader("fabric", "0.16.0")
+        }
+        // per-loader repo registration runs in afterDslEval
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
         assertEquals(listOf("intermediary"), ext.loaderModSourceNamespaces["fabric"])
         assertTrue(
             project.repositories.any { (it as? org.gradle.api.artifacts.repositories.MavenArtifactRepository)?.url.toString() == "https://maven.fabricmc.net/" }
@@ -59,19 +69,25 @@ class FabricEnvironmentWiringTest {
     fun `fabric env gets loader dep, contributed steps, run mutator`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // implicit-parent resolution reaches main's spec
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
         val env = fabricEnv(project, ext)
 
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val steps = remap.pipelineSteps("fabric", RemapSurface.JAR).get()
-        assertEquals(3, steps.size)
+        assertEquals(4, steps.size)
         assertTrue(steps[0] is RemapStepSpec)
-        assertTrue(steps[1] is ApplyClassTweakerStepSpec)
-        assertTrue(steps[2] is AccessRemapStepSpec)
+        // auto-appended after remap: embedded-ref fixups (kotlin
+        // metadata, mixin configs + refmaps) for the dev->prod hop
+        assertTrue(steps[1] is ModArtifactsStepSpec)
+        assertTrue(steps[2] is ApplyClassTweakerStepSpec)
+        assertTrue(steps[3] is AccessRemapStepSpec)
 
         // own AW/CTs and dependency-extracted files feed separate
         // collections — dependencies apply through the transitive-only
         // filter
-        val awSpec = steps[1] as ApplyClassTweakerStepSpec
+        val awSpec = steps[2] as ApplyClassTweakerStepSpec
         assertTrue(awSpec.classTweakerFiles !== awSpec.dependencyClassTweakerFiles)
         assertEquals(true, env.transitiveAccessWideners.get())
 
@@ -112,6 +128,9 @@ class FabricEnvironmentWiringTest {
     fun `family members contribute their own loader and intermediary deps`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // implicit-parent resolution reaches main's spec
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
         val sourceSets = project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
         )
@@ -127,6 +146,13 @@ class FabricEnvironmentWiringTest {
             jarDir.resolve("${p[1]}-${p[2]}$classifier.jar").writeBytes(
                 byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
             )
+            // artifact()-only metadata establishes the module via the
+            // unclassified artifact — classified deps need it served too
+            if (p.size > 3) {
+                jarDir.resolve("${p[1]}-${p[2]}.jar").writeBytes(
+                    byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+                )
+            }
         }
         project.repositories.maven {
             it.url = repo.toURI()
@@ -134,7 +160,7 @@ class FabricEnvironmentWiringTest {
         }
         val cases = listOf(
             FamilyCase("quilt", "0.25.0", "org.quiltmc:quilt-loader:0.25.0", "net.fabricmc:intermediary:1.20.1:v2"),
-            FamilyCase("legacyfabric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.legacyfabric.v1:intermediary:1.20.1:v2"),
+            FamilyCase("legacyfabric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.legacyfabric:intermediary:1.20.1:v2"),
             FamilyCase("babric", "0.16.0", "babric:fabric-loader:0.16.0", "babric:intermediary-upstream:1.20.1:v2"),
             FamilyCase("ornithe", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2"),
             FamilyCase("flint", "1.0.0", "net.flintloader:punch:1.0.0", "net.fabricmc:intermediary:1.20.1:v2"),
@@ -142,7 +168,7 @@ class FabricEnvironmentWiringTest {
         for (c in cases) {
             serve(c.loaderGav)
             serve(c.interGav)
-            sourceSets.create(c.loader)
+            sourceSets.maybeCreate(c.loader)
             ext.sourceSet(c.loader) { env ->
                 env.version.set("1.20.1")
                 env.loader(c.loader, c.loaderVer)
@@ -154,6 +180,9 @@ class FabricEnvironmentWiringTest {
                 .getByName("fabricLoader$capitalized").resolve()
                 .map { it.name }
             assertTrue(loaderJar in resolved, "${c.loader} loader: $resolved")
+            // ornithe's intermediary arrives via the calamus upstream
+            // channel, not fabricIntermediary* (no intermediaryCoords)
+            if (c.loader == "ornithe") continue
             val interGav = c.interGav.split(":")
             val interJar = "${interGav[1]}-${interGav[2]}-v2.jar"
             val resolvedInter = project.configurations
@@ -238,22 +267,33 @@ class FabricEnvironmentWiringTest {
     fun `legacy fabric-family loaders get the LWJGL2 substitution`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
-        for ((loader, rule) in mapOf(
+        val cases = mapOf(
             "legacyfabric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
             "babric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
             "ornithe" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
             "flint" to ("org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"),
-        )) {
-            // loader() before the matching sourceSet: env wiring reads
-            // loaderSpec eagerly when the env binds (production order is
-            // guaranteed by lazy transform-plugin apply)
+        )
+        // declare all envs before evaluation — post-eval sourceSet()
+        // hits a raw afterEvaluate in EnvironmentClasspathWiring
+        val envs = cases.keys.associateWith { loader ->
             val env = ext.sourceSet(loader) { e ->
+                // asserting only the loader's contributed substitution —
+                // the implicit combine would resolve the env's full
+                // mapping chain (incl. the intermediary config, which
+                // has no resolvable artifact for a fake mc version)
+                e.inheritParent.set(false)
                 e.version.set("1.20.1")
                 e.loader(loader, "1.0")
             }
             project.extensions.getByType(
                 org.gradle.api.tasks.SourceSetContainer::class.java
-            ).create(loader)
+            ).maybeCreate(loader)
+            env
+        }
+        // librarySubstitutions are contributed in afterDslEval
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+        for ((loader, rule) in cases) {
+            val env = envs.getValue(loader)
             assertEquals(listOf(rule), env.librarySubstitutions,
                 "$loader should carry its 1.x LWJGL2 substitution")
             // the rule reaches the provider-facing spec
@@ -265,13 +305,21 @@ class FabricEnvironmentWiringTest {
     fun `modern fabric and quilt get no LWJGL swap`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // implicit-parent resolution reaches main's spec
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
         val env = ext.sourceSet("quilt") { e ->
+            // asserting quilt's own contributions, not a combine —
+            // quilt's intermediary namespace differs from main's
+            e.inheritParent.set(false)
             e.version.set("1.20.1")
             e.loader("quilt", "1.0")
         }
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).create("quilt")
+        ).maybeCreate("quilt")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
         assertEquals(emptyList<Pair<String, String>>(), env.librarySubstitutions)
         assertEquals(
             emptyList<Pair<String, String>>(),

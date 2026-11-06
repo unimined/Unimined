@@ -34,7 +34,14 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                     "--modid {modid} --output {output} --strict-validation",
                 "datagenClientArg" to "--client",
                 // junit-driven gametest launches
-                "gametestJunit" to "net.fabricmc:fabric-loader-junit:{loader}"
+                "gametestJunit" to "net.fabricmc:fabric-loader-junit:{loader}",
+                // client gametests ride the env's auto `<env>Client`
+                // run — fabric-client-gametest-api's mixin plugin keys
+                // off the system property; {modid} scopes which mod's
+                // `fabric-client-gametest` entrypoints run
+                "gametestClientJvmArgs" to
+                    "-Dfabric.client.gametest " +
+                    "-Dfabric.client.gametest.modid={modid}"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -75,7 +82,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "legacyIntermediary",
             // 1.x legacyFabricRevisionTransform: generation-keyed group
-            intermediaryCoords = { mc -> "net.legacyfabric.v1:intermediary:$mc:v2" },
+            intermediaryCoords = { mc -> "net.legacyfabric:intermediary:$mc:v2" },
             capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -87,7 +94,12 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "babric",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            repos = listOf(LoaderRepo.Maven("https://maven.glass-launcher.net/babric/")),
+            repos = listOf(
+                LoaderRepo.Maven("https://maven.glass-launcher.net/babric/"),
+                // `replaceLwjgl` GAV (`org.lwjgl.lwjgl:lwjgl:2.9.4+
+                // legacyfabric.8`) is published on legacyfabric's maven
+                LoaderRepo.Maven("https://maven.legacyfabric.net")
+            ),
             loaderCoords = { _, v -> "babric:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
@@ -122,7 +134,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 "libraryOverlayMeta" to "https://meta.ornithemc.net",
             ),
             // ornithe runs on Java 17
-            javaVersion = 17,
+            javaVersion = { _, _ -> 17 },
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),

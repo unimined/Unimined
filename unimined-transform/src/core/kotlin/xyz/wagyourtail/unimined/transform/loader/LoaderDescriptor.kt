@@ -71,9 +71,12 @@ data class LoaderDescriptor(
     /** Minimum Java the product's runtime requires — raises the
      *  environment's java floor (the version-json `javaVersion`) for
      *  the compile toolchain, run launcher, and tool execs.
-     *  Cleanroom → 21 (1.x `config.javaVersion = VERSION_21`),
-     *  ornithe → 17. `null` leaves the version-json requirement. */
-    val javaVersion: Int? = null,
+     *  `(mcVersion, loaderVersion) -> floor`; cleanroom → 25 (its
+     *  artifacts carry jvm-version=25 metadata), ornithe → 17,
+     *  neoforge → 21 on the 1.20.1-forge artifact (JDK25-class deps
+     *  crash its ASM) and 25 after. `null` leaves the version-json
+     *  requirement. */
+    val javaVersion: ((String, String) -> Int?)? = null,
 
     /** Static product capabilities, surfaced through
      *  `EnvironmentCapabilities.loaderCapabilities`

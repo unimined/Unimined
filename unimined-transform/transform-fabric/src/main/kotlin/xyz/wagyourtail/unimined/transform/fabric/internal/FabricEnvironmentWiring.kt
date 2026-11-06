@@ -26,6 +26,10 @@ import xyz.wagyourtail.unimined.transform.fabric.processor.ModJavadocJarProcesso
 import xyz.wagyourtail.unimined.transform.fabric.processor.fabricSpecContext
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.afterDslEval
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Per-environment fabric wiring. Binding callbacks can run before the
@@ -54,7 +58,7 @@ internal object FabricEnvironmentWiring {
         // loaderSpec is only set once the build script's loader(...)
         // runs — the substitution decision must happen after the DSL
         // has evaluated but before spec() snapshots librarySubstitutions
-        project.afterEvaluate {
+        project.afterDslEval {
             contributeLibrarySubstitutions(it, environment)
         }
         contributeIntermediaryMappings(project, environment)
@@ -294,20 +298,27 @@ internal object FabricEnvironmentWiring {
         val ctCacheDir = UniminedCache.global(project).resolve("fabric/ct")
         // every dep-declared classTweaker file, unfiltered — the
         // compile-artifact input filters to transitive rules below, but
-        // the analysis model needs the complete rule set
+        // the analysis model needs the complete rule set. fmj
+        // `custom.*injected_interfaces` declarations synthesize an
+        // equivalent transitive CT per jar (loom parity: those keys are
+        // how published mods declare interface injection).
         val extractedCts = project.provider {
-            if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric" ||
+            val descriptor = loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+            if (descriptor?.family != "fabric" ||
                 !environment.transitiveAccessWideners.get()
             ) {
                 emptyList()
             } else {
-                modJarFiles.files.flatMap {
-                    FabricModAnalysis.extractClassTweakers(
-                        it.toPath(),
-                        ctCacheDir.resolve(
-                            UniminedCache.artifactKey(it.toPath())
-                        )
+                modJarFiles.files.flatMap { jar ->
+                    val jarPath = jar.toPath()
+                    val dir = ctCacheDir.resolve(
+                        UniminedCache.artifactKey(jarPath)
                     )
+                    FabricModAnalysis.extractClassTweakers(jarPath, dir) +
+                            synthesizeInjectedInterfacesCt(
+                                jar, dir, descriptor.prodNamespace
+                            )
                 }
             }
         }
@@ -349,6 +360,34 @@ internal object FabricEnvironmentWiring {
     }
 
     /**
+     * Write a `classTweaker` file equivalent to a dep jar's fmj
+     * `custom.*injected_interfaces` declarations — one
+     * `transitive-inject-interface` row per (target, interface). The
+     * header declares [prodNamespace] since published fmj keys are
+     * production-namespace names; `apply-class-tweaker` rebases them
+     * onto the dev artifact like any other dep CT. Returns the written
+     * path, or empty when the jar declares no injections.
+     */
+    private fun synthesizeInjectedInterfacesCt(
+        jar: File, dir: Path, prodNamespace: String
+    ): List<Path> {
+        val injections = FabricModAnalysis.injectedInterfaces(jar.toPath())
+        if (injections.isEmpty()) return emptyList()
+        val target = dir.resolve("${jar.nameWithoutExtension}-injected-interfaces.ct")
+        if (Files.notExists(target)) {
+            Files.createDirectories(target.parent)
+            val sb = StringBuilder("classTweaker\tv1\t$prodNamespace\n")
+            for ((t, ifaces) in injections.toSortedMap()) {
+                for (iface in ifaces.sorted()) {
+                    sb.append("transitive-inject-interface\t$t\t$iface\n")
+                }
+            }
+            Files.write(target, sb.toString().toByteArray())
+        }
+        return listOf(target)
+    }
+
+    /**
      * Register fabric's jar processors and the fmj-aware spec context:
      * `ModJavadocJarProcessor` merges mod-declared javadoc layers into
      * the environment's composed mappings. The spec context gives
@@ -387,17 +426,37 @@ internal object FabricEnvironmentWiring {
             if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric") return@Action
             val jar = loaderFiles.singleFile.toPath()
             val side = if (config.name.contains("server", ignoreCase = true)) "server" else "client"
-            val fallback = if (side == "server") {
-                "net.fabricmc.loader.impl.launch.knot.KnotServer"
-            } else {
-                "net.fabricmc.loader.impl.launch.knot.KnotClient"
-            }
+            // loaders that ship fabric-loader unmodified (fabric,
+            // legacyfabric, babric, ornithe, flint) hit the fabric knot
+            // path; quilt-loader carries its own knot package plus
+            // compat shims that don't cover `impl.launch` — probe the
+            // resolved jar rather than hardcoding either
+            val knot = "Knot${side.replaceFirstChar(Char::uppercase)}"
+            val fallback = sequenceOf(
+                "net.fabricmc.loader.impl.launch.knot.$knot",
+                "org.quiltmc.loader.impl.launch.knot.$knot"
+            ).firstOrNull { main ->
+                java.util.jar.JarFile(jar.toFile()).use {
+                    it.getJarEntry(main.replace('.', '/') + ".class") != null
+                }
+            } ?: "net.fabricmc.loader.impl.launch.knot.$knot"
             config.mainClass = FabricModAnalysis.loaderMainClass(jar, side) ?: fallback
             // dev launches run the game jar in the dev (e.g. named) namespace;
             // this flag makes the loader widen non-public MC access flags at
             // class-load (PackageAccessFixer) — required since remap-induced
             // cross-package access violations are inherent to dev jars
             config.jvmArgs += "-Dfabric.development=true"
+            // quilt-loader's MappingConfigurationImpl throws when its target
+            // namespace (`intermediary`) isn't resolvable from mappings jars
+            // on the classpath — fabric-loader silently skips the same check.
+            // The dev run ships the pre-remapped dev jar, so 'official' is
+            // quilt's "trust the supplied jar" escape hatch.
+            val isQuilt = java.util.jar.JarFile(jar.toFile()).use {
+                it.getJarEntry("org/quiltmc/loader/impl/launch/knot/KnotClient.class") != null
+            }
+            if (isQuilt) {
+                config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=official"
+            }
         }
     }
 

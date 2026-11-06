@@ -145,10 +145,17 @@ class UserdevExtractTest {
             assertEquals(
                 setOf(
                     "assets/minecraft/textures/block/dirt.png",
-                    "data/minecraft/loot_tables/x.json"
+                    "data/minecraft/loot_tables/x.json",
+                    "META-INF/MANIFEST.MF"
                 ),
                 names
             )
+            // the union FS serves this manifest (getMinecraftOnly's first
+            // member after reversal). It must exist — to shadow the merged
+            // jar's `net.minecraftforge.forge` AMN — but carry no AMN, so
+            // the MinecraftLocator modfile falls back to synthetic modId
+            // `minecraft` and the raw union path stays unnamed.
+            assertEquals(null, j.manifest.mainAttributes.getValue("Automatic-Module-Name"))
         }
     }
 }
