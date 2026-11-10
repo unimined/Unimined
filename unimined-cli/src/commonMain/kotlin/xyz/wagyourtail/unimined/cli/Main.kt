@@ -185,6 +185,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         fun defaultMappings(): List<String> {
             val l = loaders.firstOrNull()?.first?.lowercase() ?: ""
             return when {
+                // 26.x unobfuscated needs no mapping layer at all
+                InitSpec.isUnobfEra(mc) -> emptyList()
                 l in listOf("babric", "bta") -> listOf("biny(latest)")
                 // ornithe uses feather even on b1.x — checked before
                 // the b1-era nostalgia fallback. The v3 feather axis
@@ -226,10 +228,19 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 l in listOf("legacyfabric") ->
                     // current builds are gen-2 (`net.legacyfabric.v2`)
                     listOf("legacyYarn(latest, 2)")
-                l == "quilt" -> listOf("quilt(latest)")
-                l == "fabric" -> listOf("intermediary()", "yarn(latest)")
-                // mojmap-supported mc uses the official builtin; 26.x
-                // unobfuscated needs no mappings at all
+                // loaders can outlive their mapping layers (yarn /
+                // quilt-mappings lag or skip versions the loader
+                // ships) — emit the layer only when the axis has
+                // versions for this mc; matches Templates.kt's baked
+                // `listOfNotNull` shape
+                l == "quilt" -> listOfNotNull(
+                    if (resolver.loaderVersions("quilt-mappings", mc)
+                        .isNotEmpty()) "quilt(latest)" else null)
+                l == "fabric" -> listOfNotNull(
+                    "intermediary()",
+                    if (resolver.loaderVersions("yarn", mc)
+                        .isNotEmpty()) "yarn(latest)" else null)
+                // mojmap-supported mc uses the official builtin
                 Probed.expand("mojmap").contains(mc) -> listOf("mojmap()")
                 else -> emptyList()
             }.map { resolveMappingLine(it) }

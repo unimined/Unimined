@@ -13,14 +13,16 @@ class ProjectGeneratorTest {
 
     private fun spec(
         loaders: List<Pair<String, String>> = listOf("fabric" to "0.16.0"),
+        mcVersion: String = "1.20.1",
+        mappings: List<String> = listOf("yarn(10)"),
         templateName: String? = null,
         templatesZip: Path? = null
     ) = InitSpec(
         group = "com.example",
         name = "my-mod",
-        mcVersion = "1.20.1",
+        mcVersion = mcVersion,
         loaders = loaders,
-        mappings = listOf("yarn(10)"),
+        mappings = mappings,
         pluginVersion = "2.0.0-SNAPSHOT",
         templateName = templateName,
         templatesZip = templatesZip.toString()
@@ -286,5 +288,36 @@ class ProjectGeneratorTest {
                 ProjectGenerator.Render.Text).content
         assertTrue("clientJar" in build && "serverJar" in build)
         assertTrue("JarModAgent-Transforms" in build)
+    }
+
+    @Test
+    fun `unobf era detection covers 26 dot x releases and snapshots`() {
+        for (unobf in listOf("26.3", "26.1", "26.4-snapshot-8",
+                "26.3-rc-1", "26.3-pre-2", "100.0")) {
+            assertTrue(InitSpec.isUnobfEra(unobf), "$unobf should be unobf era")
+        }
+        for (obf in listOf("1.21.4", "1.21", "1.12.2", "b1.7.3", "25w14a")) {
+            assertTrue(!InitSpec.isUnobfEra(obf), "$obf should not be unobf era")
+        }
+    }
+
+    @Test
+    fun `fabric on unobf mc emits no mappings block`(@TempDir dir: Path) {
+        // 26.x ships unobfuscated — the default-mappings path must not
+        // emit `intermediary()` or any other layer
+        val s = spec(mcVersion = "26.3", mappings = emptyList())
+        val build = (ProjectGenerator.files(s)["build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("mappings {" !in build && "intermediary" !in build,
+            "unobf mc generated a mapping layer:\n$build")
+        // multi-loader shared env carries intermediary() for fabric
+        // family — must be suppressed on unobf too
+        val multi = spec(
+            loaders = listOf("fabric" to "0.20.1", "neoforge" to "21.0.0"),
+            mcVersion = "26.3", mappings = emptyList())
+        val shared = (ProjectGenerator.files(multi)["build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("intermediary" !in shared,
+            "unobf multi-loader env generated intermediary:\n$shared")
     }
 }

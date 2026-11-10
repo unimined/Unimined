@@ -121,6 +121,15 @@ data class InitSpec(
 
     companion object {
         const val DEFAULT_GRADLE_VERSION = "9.8.2"
+
+        /** MC's post-obfuscation version scheme — `26.x` releases and
+         *  their `26.x-snapshot-N`/`-pre`/`-rc` builds (bare major ≥ 26,
+         *  no `1.` prefix) — ship unobfuscated: last version with
+         *  `client_mappings` was 1.21.11, first without was
+         *  26.1-snapshot-1, so no mapping layer applies. */
+        fun isUnobfEra(mc: String): Boolean =
+            (Regex("^(\\d+)").find(mc)?.groupValues?.get(1)
+                ?.toIntOrNull() ?: 0) >= 26
     }
 
 }

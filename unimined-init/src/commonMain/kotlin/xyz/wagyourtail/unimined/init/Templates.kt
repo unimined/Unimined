@@ -51,6 +51,10 @@ internal object Templates {
             .firstOrNull { it.startsWith("$mc+") }
             ?.substringAfter('+')
         return when {
+            // 26.x unobfuscated ships no mappings — checked before
+            // any loader branch (fabric would emit `intermediary()`
+            // unconditionally otherwise)
+            InitSpec.isUnobfEra(mc) -> emptyList()
             l in listOf("babric", "bta") -> plusTail("biny")
                 ?.let { listOf("biny(\"$it\")") }
             // ornithe uses feather even on b1.x — checked before
@@ -171,7 +175,8 @@ internal object Templates {
             // it via combineWith; intermediary rides along only when a
             // fabric-family env needs the runtime chain
             val sharedMappings = buildList {
-                if (spec.loaders.any { it.first.contains("fabric") })
+                if (spec.loaders.any { it.first.contains("fabric") } &&
+                        !InitSpec.isUnobfEra(mc))
                     add("intermediary()")
                 if (Probed.expand("mojmap").contains(mc)) add("mojmap()")
                 else addAll(
