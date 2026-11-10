@@ -44,8 +44,11 @@ class BuildToolsProvider : ProductProvider {
         }
         val base = delegate.resolve(stripped, ctx)
 
-        val cacheDir = ctx.layout.projectDirectory
-            .dir(".gradle/unimined/buildtools-cache").asFile.toPath()
+        // shares the execution-time producer's cache root
+        // (`native-cache`) so the expensive BuildTools build runs
+        // once whether the classpath view or the raw-artifact
+        // transform asks first
+        val cacheDir = ctx.globalCacheDir.resolve("native-cache")
         val downloader = Downloader(
             cacheDir = cacheDir,
             offline = ctx.offline,
@@ -57,10 +60,15 @@ class BuildToolsProvider : ProductProvider {
                 )
             }
         )
-        val exec = BuildToolsExec(downloader, cacheDir.resolve(target)) { exe, args, dir ->
+        val exec = BuildToolsExec(
+            downloader, cacheDir.resolve("buildtools/$target")
+        ) { exe, args, dir ->
             ctx.exec.javaexec { java ->
                 java.executable = exe
-                java.args = args
+                // args arrive as ["-jar", <jar>, ...] — javaexec
+                // models `-jar` through mainClass, not args
+                java.mainClass.set(args.first())
+                java.args = args.drop(1)
                 java.workingDir = dir.toFile()
             }
         }
@@ -103,11 +111,26 @@ class BuildToolsProvider : ProductProvider {
             )
         }
 
+        // the bootstrap's embedded `META-INF/libraries/*` set is the
+        // authoritative craftbukkit classpath — it carries the bukkit
+        // api jar itself plus the server's runtime libs, as file deps
+        // on both compile and runtime views
+        val embeddedLibs = ctx.objects.fileCollection().from(
+            ctx.providers.provider {
+                exec.serverJar(target, rev) { javaExecutable.get() }
+                exec.embeddedLibraries(
+                    target, rev, cacheDir.resolve("bundler-libs")
+                )
+            }
+        )
+
         return object : ProductArtifacts by base {
             override val artifacts = base.artifacts + mapOf(
                 ArtifactKey.SERVER to serverFile,
                 ArtifactKey.MERGED to serverFile
             )
+            override val extraDependencies = ctx.objects.fileCollection()
+                .from(base.extraDependencies, embeddedLibs)
         }
     }
 

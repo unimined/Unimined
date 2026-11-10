@@ -40,6 +40,41 @@ internal object RunsWiring {
         val sourceSet = project.extensions.getByType(JavaPluginExtension::class.java)
             .sourceSets.findByName(environmentId) ?: return
 
+        // device-code login is a standalone task — runs never prompt
+        // mid-launch, they consume what this stored (0600 creds)
+        if (project.tasks.findByName("loginMicrosoft") == null) {
+            // config-time values — the exec-time action must not touch
+            // `project` (configuration cache)
+            val storePath = UniminedCache.global(project)
+                .resolve("auth/credentials.json")
+            val loginUser = project.findProperty("unimined.auth.username")
+                ?.toString()
+            val encrypt = project.providers.gradleProperty("unimined.auth.encrypt")
+                .orNull?.toBoolean() == true
+            project.tasks.register("loginMicrosoft") { t ->
+                t.group = "unimined"
+                t.description = "Microsoft device-code login — stores " +
+                    "credentials for `auth { microsoft() }` runs"
+                t.doLast {
+                    val store: xyz.wagyourtail.unimined.mclauncher.SessionStore =
+                        if (encrypt) {
+                            xyz.wagyourtail.unimined.mclauncher
+                                .EncryptedCredentialStore(storePath,
+                                    xyz.wagyourtail.unimined.mclauncher
+                                        .EncryptedCredentialStore
+                                        .JavaKeyringProvider().key())
+                        } else {
+                            xyz.wagyourtail.unimined.mclauncher.CredentialStore(storePath)
+                        }
+                    xyz.wagyourtail.unimined.mclauncher.MicrosoftAuth(
+                        store,
+                        username = loginUser,
+                        interactive = true
+                    ).session()
+                }
+            }
+        }
+
         // default client/server runs — `client`/`server` for the `main`
         // environment, `<env>Client`/`<env>Server` for others
         // `register` (not `maybeCreate`) keeps environment binding set
@@ -85,7 +120,7 @@ internal object RunsWiring {
         // loaderSpec and the aux-env lists are still empty at bind time
         // (same ordering trap isAuxEnv's managed property documents).
         project.afterEvaluate {
-            wireAuxEnvs(project, environment, minecraft, extension)
+            RunsAuxWiring.wireAuxEnvs(project, environment, minecraft, extension)
         }
 
         val natives = nativesConfiguration(project, environment, minecraft)
@@ -107,124 +142,7 @@ internal object RunsWiring {
         }
     }
 
-    /** Datagen → a `run<Data>` config bound to the child env with the
-     *  parent loader's `datagenMain`/`datagenArgs` rows; gametest → the
-     *  loader's junit artifact + `useJUnitPlatform()` on the child's
-     *  test task (orchestrated in-jvm launches, not run configs). */
-    private fun wireAuxEnvs(
-        project: Project,
-        environment: MinecraftEnvironment,
-        minecraft: MinecraftExtension,
-        extension: RunsExtension
-    ) {
-        val registry =
-            xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
-        val descriptor = environment.loaderSpec.orNull
-            ?.let { registry.resolve(it.name) }
-        for (dataEnv in environment.datagenEnvs) {
-            val runName = dataEnv.environmentId
-            if (extension.runs.findByName(runName) != null) continue
-            // eager env binding — the run registers during afterEvaluate,
-            // where run.environment's convention may not be visible to
-            // other envs' runs.all callbacks yet (same reason the
-            // auto client/server runs record runEnvironments eagerly)
-            extension.runEnvironments[runName] = dataEnv.environmentId
-            if (descriptor?.capabilities?.get("datagenMain") == null) {
-                project.logger.warn(
-                    "[unimined] env '${dataEnv.environmentId}' declares " +
-                    "datagen() but loader " +
-                    "'${environment.loaderSpec.orNull?.name}' has no " +
-                    "datagenMain capability — run$runName will launch " +
-                    "the plain game"
-                )
-            }
-            extension.runs.register(runName) { run ->
-                run.environment.convention(dataEnv.environmentId)
-                run.side.convention(RunSide.CLIENT)
-                descriptor?.capabilities?.get("datagenMain")
-                    ?.let { run.mainClass.convention(it) }
-                descriptor?.capabilities?.get("datagenArgs")?.let { tpl ->
-                    tpl.split(" ").forEach { arg ->
-                        val resolved = arg.replace("{output}",
-                            "src/${environment.environmentId}/generated")
-                        if ("{modid}" in resolved) {
-                            run.programArgs.add(
-                                modIdArg(project, environment.environmentId, resolved))
-                        } else {
-                            run.programArgs.add(resolved)
-                        }
-                    }
-                }
-                if (dataEnv.clientDatagen) {
-                    descriptor?.capabilities?.get("datagenClientArg")
-                        ?.let { arg ->
-                            run.programArgs.set(
-                                run.programArgs.get() + arg)
-                        }
-                }
-            }
-        }
-        for (testEnv in environment.gametestEnvs) {
-            if (descriptor?.capabilities?.get("gametestJunit") == null) {
-                project.logger.warn(
-                    "[unimined] env '${testEnv.environmentId}' declares " +
-                    "gametest() but loader " +
-                    "'${environment.loaderSpec.orNull?.name}' has no " +
-                    "gametestJunit capability — no junit dep is added"
-                )
-            }
-            descriptor?.capabilities?.get("gametestJunit")?.let { tpl ->
-                val coord = tpl.replace("{loader}",
-                    environment.loaderSpec.orNull?.version ?: "")
-                project.dependencies.add(
-                    "testImplementation",
-                    project.dependencies.create(coord))
-            }
-            // client gametests: arm the gametest env's auto `<env>Client`
-            // run (bound to the gametest env — its classpath carries the
-            // parent's classes via combineWith plus its own). `matching`
-            // stays live: the env's own wire pass may register the run
-            // after this one.
-            descriptor?.capabilities?.get("gametestClientJvmArgs")?.let { tpl ->
-                extension.runs
-                    .matching { it.name == "${testEnv.environmentId}Client" }
-                    .configureEach { run ->
-                        tpl.split(" ").forEach { arg ->
-                            if ("{modid}" in arg) {
-                                run.jvmArgs.add(
-                                    modIdArg(project, environment.environmentId, arg))
-                            } else {
-                                run.jvmArgs.add(arg)
-                            }
-                        }
-                    }
-            }
-            project.tasks.withType(org.gradle.api.tasks.testing.Test::class.java)
-                .configureEach { it.useJUnitPlatform() }
-        }
-    }
-
     /** Register the `run<Name>` task for one run config on one environment. */
-    /**
-     * Resolve `{modid}` in a capability arg template against the mod id
-     * unimined-mod publishes per environment (`unimined.modId.<env>`
-     * extra property — `mod.id`, else a `*.mod.json` resource's `id`),
-     * falling back to `project.name`. Lazy so DSL configuration order
-     * doesn't matter; keep the key prefix in sync with
-     * ModPackagingWiring.
-     */
-    private fun modIdArg(
-        project: Project,
-        environmentId: String,
-        arg: String
-    ) = project.provider {
-        val extra = project.extensions.getByType(
-            org.gradle.api.plugins.ExtraPropertiesExtension::class.java)
-        val key = "unimined.modId.$environmentId"
-        val published = if (extra.has(key)) extra.get(key) as? Provider<*> else null
-        arg.replace("{modid}", (published?.get() as? String) ?: project.name)
-    }
-
     private fun registerRunTask(
         project: Project,
         environment: MinecraftEnvironment,
@@ -247,7 +165,7 @@ internal object RunsWiring {
         // the spec reference so run-name/loader decisions stay lazy
         val transformSpec = transform.sourceSet(environmentId)
         val mutated = project.provider {
-            val spec = MutableRunConfigSpec(run.name)
+            val spec = MutableRunConfigSpec(run.name, run.prod.get())
             transformSpec.effectiveRunMutators().forEach { it.execute(spec) }
             spec
         }
@@ -428,7 +346,20 @@ internal object RunsWiring {
                 it.properties.mapValues { (_, v) -> v() }
             })
             task.features.set(run.features)
-            task.username.set(run.username)
+            // auth{} is the typed form; `username` bridges in through
+            // auth.username's convention (explicit auth.username wins)
+            task.username.set(run.auth.username)
+            task.authKind.set(run.auth.kind)
+            task.authProvider.set(run.auth.provider)
+            task.authStorePath.set(
+                UniminedCache.global(project)
+                    .resolve("auth/credentials.json").toString())
+            task.authEncrypt.set(project.providers
+                .gradleProperty("unimined.auth.encrypt")
+                .map { it.toBoolean() }.orElse(false))
+            task.authStoreCredentials.set(project.providers
+                .gradleProperty("unimined.auth.storeCredentials")
+                .map { it.toBoolean() }.orElse(true))
             task.width.set(run.width)
             task.height.set(run.height)
             task.downloadAssets.set(run.downloadAssets)

@@ -1,11 +1,11 @@
 package xyz.wagyourtail.unimined.transform.bukkit.internal
 
 import io.sigpipe.jbsdiff.Patch
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
 import kotlin.io.path.inputStream
@@ -23,7 +23,13 @@ import kotlin.io.path.outputStream
  * era-versioned data (~50–500KB), not configuration.
  */
 internal class PaperPatchProcessor(
-    private val distJar: () -> Path
+    /** Config-time dist jar supplier; null on the ServiceLoader instance
+     *  (only `buildSpec` needs it — execution rides the serialized spec). */
+    private val distJar: (() -> Path)? = null,
+    /** Namespace the patched jar comes out in — `mojmap` on paper
+     *  >=1.20.5 (mojang-mapped runtime), `spigotProd` before. Config-time
+     *  only; the value travels inside the serialized spec. */
+    private val outputNamespace: (() -> String)? = null
 ) : JarProcessor {
 
     override val name = "paper-patch"
@@ -37,12 +43,16 @@ internal class PaperPatchProcessor(
 
     class Spec(
         val patchBytes: ByteArray,
+        val outputNamespace: String,
         val originalHash: ByteArray? = null,
         val outputHash: ByteArray? = null
     ) : JarProcessor.JarProcessorSpec, Serializable
 
     override fun buildSpec(context: JarProcessor.SpecContext): Spec {
-        val jar = distJar()
+        val jar = requireNotNull(distJar) {
+            "PaperPatchProcessor.buildSpec runs at config time — " +
+                "the ServiceLoader instance is deserialize/process only"
+        }.invoke()
         ZipFile(jar.toFile()).use { zip ->
             val entry = zip.entries().asSequence().firstOrNull {
                 it.name == "paperMC.patch" ||
@@ -57,8 +67,14 @@ internal class PaperPatchProcessor(
             // original/output sha256 — paperclip verifies both
             val hashes = zip.getEntry("META-INF/patches.list")
                 ?.let { patchesList(zip, it) }
-            return Spec(patchBytes,
-                hashes?.first, hashes?.second)
+            return Spec(
+                patchBytes,
+                requireNotNull(outputNamespace) {
+                    "PaperPatchProcessor.buildSpec runs at config time — " +
+                        "the ServiceLoader instance is deserialize/process only"
+                }.invoke(),
+                hashes?.first, hashes?.second
+            )
         }
     }
 
@@ -75,11 +91,31 @@ internal class PaperPatchProcessor(
     private fun String.toSha(): ByteArray =
         chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
-    override fun serializeSpec(spec: JarProcessor.JarProcessorSpec) =
-        java.util.Base64.getEncoder().encodeToString((spec as Spec).patchBytes)
+    override fun serializeSpec(spec: JarProcessor.JarProcessorSpec): String {
+        spec as Spec
+        // first line: output namespace + optional integrity hashes;
+        // remainder: the patch payload
+        return buildString {
+            append(spec.outputNamespace)
+            spec.originalHash?.let { append(' ').append(it.toHex()) }
+            spec.outputHash?.let { append(' ').append(it.toHex()) }
+            append('\n')
+            append(java.util.Base64.getEncoder().encodeToString(spec.patchBytes))
+        }
+    }
 
-    override fun deserializeSpec(payload: String) =
-        Spec(java.util.Base64.getDecoder().decode(payload))
+    override fun deserializeSpec(payload: String): Spec {
+        val head = payload.substringBefore('\n')
+        val toks = head.split(' ')
+        fun hex(i: Int) = toks.getOrNull(i)
+            ?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
+        return Spec(
+            java.util.Base64.getDecoder().decode(payload.substringAfter('\n')),
+            toks.first(), hex(1), hex(2)
+        )
+    }
+
+    private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
 
     override fun processJar(
         jar: Path,
@@ -87,14 +123,13 @@ internal class PaperPatchProcessor(
         context: JarProcessor.ProcessorContext
     ) {
 
-        val tmp = Files.createTempFile("unimined-paper-patch", ".jar")
-        try {
+        val spec0 = spec as Spec
+        jar.writeAtomically { tmp ->
             // paperclip semantics: the patch input is the nested
             // META-INF/versions/<ver>/server-<ver>.jar INSIDE the
             // mojang jar (mojang ships a bundler too) — patching the
             // outer jar yields corrupt output. Fall back to the
             // whole jar when no nested entry exists (legacy layouts)
-            val spec0 = spec as Spec
             val base = nestedServerJar(jar) ?: jar.inputStream().use { it.readBytes() }
             if (spec0.originalHash != null) {
                 check(java.security.MessageDigest.getInstance("SHA-256")
@@ -114,10 +149,10 @@ internal class PaperPatchProcessor(
                         "patched jar does not match patches.list"
                 }
             }
-            Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
-        } finally {
-            Files.deleteIfExists(tmp)
         }
+        // the patch changes the jar's namespace entirely — remap
+        // must source from the patched namespace, not `official`
+        context.state?.currentNamespace = spec0.outputNamespace
     }
 
     /** The mojang server jar is itself a bundler —

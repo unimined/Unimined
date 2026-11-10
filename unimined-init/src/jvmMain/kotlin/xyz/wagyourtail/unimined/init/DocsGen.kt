@@ -68,8 +68,8 @@ fun main(args: Array<String>) {
         || `forge` | era-aware — FG1-era ≤1.7.10, 1.8–1.12, modern ≥1.13 |
         || `neoforge` | |
         || `cleanroom` | CleanroomMC |
-        || `flint` | |
-        || `rift` | |
+        || `flint` | removed — maven.flintloader.net offline |
+        || `rift` | DimDev's 1.13-era LaunchWrapper loader — versions MC-keyed (`org.dimdev:rift:<mc>`) |
         || `foxloader` | ReIndev's loader |
         || `liteloader` | |
         || `craftbukkit`, `spigot`, `paper` | server-side |

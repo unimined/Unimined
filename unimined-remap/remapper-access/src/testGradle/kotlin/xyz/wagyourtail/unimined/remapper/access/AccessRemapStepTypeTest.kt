@@ -180,6 +180,45 @@ class AccessRemapStepTypeTest {
     }
 
     @Test
+    fun `rebases injected_interfaces keys inside mod json`() {
+        val jar = dir.resolve("modjson.jar")
+        JarOutputStream(Files.newOutputStream(jar)).use { out ->
+            fun put(name: String, text: String) {
+                out.putNextEntry(JarEntry(name))
+                out.write(text.toByteArray())
+                out.closeEntry()
+            }
+            put(
+                "fabric.mod.json", """
+                {
+                  "id": "test",
+                  "custom": {
+                    "loom:injected_interfaces": {
+                      "example/Target": ["mod/IfaceA", "mod/IfaceB"]
+                    }
+                  }
+                }
+            """.trimIndent()
+            )
+            put("resource.txt", "unchanged")
+        }
+
+        val ctx = ctx()
+        val out = AccessRemapStepType().create(AccessRemapStepSpec(), ctx)
+            .apply(jar, ctx)
+
+        JarFile(out.toFile()).use { result ->
+            val fmj = result.entryText("fabric.mod.json")
+            // target keys rebase to the destination namespace; the
+            // mod-owned interface values are never remapped
+            assertTrue(fmj.contains("mapped/Target"))
+            assertTrue(fmj.contains("mod/IfaceA"))
+            assertFalse(fmj.contains("example/Target"))
+            assertEquals("unchanged", result.entryText("resource.txt"))
+        }
+    }
+
+    @Test
     fun `unknown format fails clearly`() {
         val spec = AccessRemapStepSpec().apply { formats = setOf("unknown") }
         val e = assertThrows(GradleException::class.java) {

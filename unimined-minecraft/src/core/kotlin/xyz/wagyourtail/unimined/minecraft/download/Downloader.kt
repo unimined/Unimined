@@ -5,16 +5,15 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.time.Duration
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import xyz.wagyourtail.commonskt.utils.toHex
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 
 /**
  * Downloads immutable artifacts and mutable metadata into a shared cache.
@@ -55,16 +54,23 @@ class Downloader(
      * Fetch an immutable artifact; a valid cached file is reused indefinitely
      * unless [refreshCache] is set. Offline mode always takes precedence.
      */
+    /**
+     * Fetch an immutable artifact; a valid cached file is reused indefinitely
+     * unless [refreshCache] is set. Offline mode always takes precedence.
+     * [sha1] carries the expected hex digest — the algorithm is inferred
+     * from length (32=MD5, 40=SHA-1, 64=SHA-256, 128=SHA-512); upstreams
+     * publish different digests per endpoint (paper's fill api is sha256).
+     */
     fun fetch(url: String, name: String, sha1: String? = null): Path {
         val dest = cachePath(name)
-        val cachedValid = dest.exists() && (sha1 == null || sha1(dest) == sha1)
+        val cachedValid = dest.exists() && (sha1 == null || digest(dest, sha1) == sha1)
         if (cachedValid && (offline || !refreshCache)) return dest
         if (offline) throw missingCache(url, dest)
 
         return try {
             val bytes = fetch(url)
-            if (sha1 != null && sha1(bytes) != sha1) {
-                throw IOException("sha1 mismatch for $url — expected $sha1")
+            if (sha1 != null && digest(bytes, sha1) != sha1) {
+                throw IOException("checksum mismatch for $url — expected $sha1")
             }
             writeAtomically(dest, bytes)
             dest
@@ -128,35 +134,35 @@ class Downloader(
     )
 
     private fun writeAtomically(dest: Path, bytes: ByteArray) {
-        val parent = dest.parent
-        parent.createDirectories()
-        val temp = Files.createTempFile(parent, ".${dest.fileName}.", ".tmp")
-        try {
-            Files.write(temp, bytes)
-            try {
-                Files.move(temp, dest, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            } catch (_: AtomicMoveNotSupportedException) {
-                Files.move(temp, dest, StandardCopyOption.REPLACE_EXISTING)
-            }
-            Files.setLastModifiedTime(dest, java.nio.file.attribute.FileTime.fromMillis(nowMillis()))
-        } finally {
-            Files.deleteIfExists(temp)
-        }
+        dest.parent.createDirectories()
+        // shared helper owns the temp+move; the mtime stamp is
+        // downloader-specific (cache freshness checks read it)
+        dest.writeAtomically { Files.write(it, bytes) }
+        Files.setLastModifiedTime(dest, java.nio.file.attribute.FileTime.fromMillis(nowMillis()))
     }
 
-    private fun sha1(path: Path): String = path.inputStream().use { input ->
-        MessageDigest.getInstance("SHA-1").run {
-            val buffer = ByteArray(8192)
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                update(buffer, 0, count)
-            }
-            digest().toHex()
-        }
+    /** Algorithm for [expected] by hex length; defaults to SHA-1. */
+    private fun algorithm(expected: String?): String = when (expected?.length) {
+        32 -> "MD5"
+        64 -> "SHA-256"
+        128 -> "SHA-512"
+        else -> "SHA-1"
     }
 
-    private fun sha1(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-1").digest(bytes).toHex()
+    private fun digest(path: Path, expected: String?): String =
+        path.inputStream().use { input ->
+            MessageDigest.getInstance(algorithm(expected)).run {
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    update(buffer, 0, count)
+                }
+                digest().toHex()
+            }
+        }
+
+    private fun digest(bytes: ByteArray, expected: String?): String =
+        MessageDigest.getInstance(algorithm(expected)).digest(bytes).toHex()
 
 }

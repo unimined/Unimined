@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform.ClassTransformExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExtension
+import xyz.wagyourtail.unimined.mapping.remapper.ext.liteloader.LiteloaderObfTableExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
@@ -129,9 +130,11 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
      * Extension set for a JAR-surface mod artifact:
      * `kotlin.Metadata` remap (any Kotlin mod jar — undetectable without
      * parsing classes, so unconditional on this surface), mixin config
-     * rewrite + refmap emission (jars with `*.mixins.json`), and
+     * rewrite + refmap emission (jars with `*.mixins.json`), pre-mixin
+     * LiteLoader baked name-table rewrite (jars carrying
+     * `com/mumfrey/liteloader/core/runtime/Obf` or `litemod.json`), and
      * JarModAgent refmap emission (jars whose manifest declares
-     * `JarModAgent-Refmaps`). All three are non-`perClass`
+     * `JarModAgent-Refmaps`). All four are non-`perClass`
      * [xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension]s —
      * safe here because this step only runs on (small) mod jars, never
      * on the MC artifact's streaming decompile pipeline.
@@ -143,9 +146,19 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
         exts += AsmExtensionFactory { c -> KotlinMetadataExtension(c) }
         java.util.zip.ZipFile(input.toFile()).use { zip ->
             if (zip.entries().asSequence().any {
-                    it.name.endsWith(".mixins.json")
+                    MixinExtension.isMixinConfigPath(it.name)
                 }) {
                 exts += AsmExtensionFactory { c -> MixinExtension(c) }
+            }
+            if (zip.getEntry(
+                    "com/mumfrey/liteloader/core/runtime/Obf.class") != null ||
+                // LiteMod jars carry @Obfuscated overlay tables but not the
+                // loader's own Obf runtime class — the litemod.json marker
+                // catches them
+                zip.getEntry("litemod.json") != null) {
+                exts += AsmExtensionFactory { c ->
+                    LiteloaderObfTableExtension(c)
+                }
             }
             zip.getEntry("META-INF/MANIFEST.MF")?.let { e ->
                 val manifest = java.util.jar.Manifest(
@@ -153,12 +166,14 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
                 val refmaps = manifest.mainAttributes
                     .getValue("JarModAgent-Refmaps")
                 if (!refmaps.isNullOrBlank()) {
-                    // manifest lists pathSeparator-separated refmap
-                    // resources — emit onto the first declared path
+                    // the agent splits manifest attributes on a single
+                    // space (JarModder) — emit onto the first declared
+                    // path; the agent merges all refmaps per transformer
+                    // anyway, so one canonical path carries the result
                     val refmapPath = refmaps
-                        .split(java.io.File.pathSeparatorChar)
-                        .first().trim()
-                        .ifEmpty { "jarmodagent.refmap.json" }
+                        .split(" ")
+                        .firstOrNull { it.isNotBlank() }
+                        ?: "jarmodagent.refmap.json"
                     exts += AsmExtensionFactory { c ->
                         ClassTransformExtension(c, refmapPath = refmapPath)
                     }

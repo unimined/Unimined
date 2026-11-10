@@ -127,14 +127,15 @@ class McpConfigRunnerTest {
         assertEquals("com.example.Tool", call.main)
         assertEquals(listOf(tool), call.cp)
         // {downloadClientOutput} resolved to the client jar path;
-        // {output} → the step's own output file
-        assertEquals(
-            listOf(
-                "--input", clientJar.toAbsolutePath().toString(),
-                "--out", result.output!!.toAbsolutePath().toString()
-            ),
-            call.args
-        )
+        // {output} → a staging sibling of the step output (the tool's
+        // arg file is moved into place on success, #78)
+        assertEquals("--input", call.args[0])
+        assertEquals(clientJar.toAbsolutePath().toString(), call.args[1])
+        assertEquals("--out", call.args[2])
+        val outArg = Path.of(call.args[3])
+        assertEquals(result.output!!.parent, outArg.parent)
+        assertTrue(outArg.fileName.toString().startsWith("."))
+        assertTrue(outArg.fileName.toString().endsWith(".tmp"))
         assertEquals(listOf("-Xmx1G"), call.jvmArgs)
     }
 

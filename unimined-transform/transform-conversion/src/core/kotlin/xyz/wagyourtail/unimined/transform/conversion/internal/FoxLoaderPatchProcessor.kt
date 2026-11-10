@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.conversion.internal
 
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.File
 import java.io.Serializable
@@ -123,8 +124,7 @@ class FoxLoaderPatchProcessor : JarProcessor {
             // strip-back: copy patched -> jar minus other-side-only
             // entries. In-place is unsafe mid-iteration — write a tmp
             // then move over.
-            val tmp = jar.resolveSibling("${jar.fileName}+foxloader-tmp.jar")
-            try {
+            jar.writeAtomically { tmp ->
                 FileSystems.newFileSystem(patched).use { inFs ->
                     FileSystems.newFileSystem(
                         tmp, mapOf("create" to true)
@@ -147,9 +147,6 @@ class FoxLoaderPatchProcessor : JarProcessor {
                         }
                     }
                 }
-                Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
-            } finally {
-                Files.deleteIfExists(tmp)
             }
         } finally {
             Files.deleteIfExists(superset)

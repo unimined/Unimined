@@ -19,12 +19,25 @@ abstract class PublishExtension {
 
     /**
      * Also publish the ordinary `components.java` component — off by
-     * default (plan §11: never auto-publish `components.java`).
+     * default (plan §11: never auto-publish `components.java`). Only
+     * takes effect when [mavenPublications] is enabled.
      */
     abstract val javaPublication: Property<Boolean>
 
     /** Opt-in the ordinary Java publication. */
     fun javaPublication() = javaPublication.set(true)
+
+    /**
+     * Create `MavenPublication`s for the environment components via
+     * Gradle's `maven-publish` plugin — on by default. Set false to
+     * keep the components without any Maven publication plumbing
+     * (e.g. ModPublisher-only builds):
+     *
+     * ```kotlin
+     * uniminedPublish { mavenPublications.set(false) }
+     * ```
+     */
+    abstract val mavenPublications: Property<Boolean>
 
     /**
      * Per-environment publication settings — artifactId/groupId and

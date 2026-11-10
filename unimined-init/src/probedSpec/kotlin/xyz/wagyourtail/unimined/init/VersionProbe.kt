@@ -58,13 +58,16 @@ sealed interface VersionProbe {
     }
 
     /** ornithe meta `/v3/versions/<name>` — flat entries keyed
-     *  `<name>:<mc>` (raven/sparrow/nests/feather). */
+     *  `<name>:<mc>` (raven/sparrow/nests/feather). Object field
+     *  order varies (`version` may precede `gameVersion`), so each
+     *  object is parsed independently. */
     class Ornithe(val name: String) : VersionProbe {
         override fun run(fetch: (String) -> String,
                          p: MutableMap<String, List<String>>) {
-            Regex("\"gameVersion\"\\s*:\\s*\"([^\"]+)\"[^}]{0,200}?\"version\"\\s*:\\s*\"([^\"]+)\"")
+            Regex("\\{([^{}]*)\\}")
                 .findAll(fetch("https://meta.ornithemc.net/v3/versions/$name"))
-                .groupBy({ it.groupValues[1] }, { it.groupValues[2] })
+                .mapNotNull { ornitheObject(it.groupValues[1]) }
+                .groupBy({ it.first }, { it.second })
                 .forEach { (mc, vs) -> p["$name:$mc"] = vs }
         }
     }
@@ -193,12 +196,24 @@ sealed interface VersionProbe {
             Regex("\"$field\"\\s*:\\s*\"([^\"]+)\"")
                 .findAll(fetch(url)).map { it.groupValues[1] }.toList()
 
+        /** One `{...}` object's gameVersion+version pair, order-
+         *  agnostic; null when either field is absent. */
+        fun ornitheObject(body: String): Pair<String, String>? {
+            fun field(k: String) = Regex("\"$k\"\\s*:\\s*\"([^\"]+)\"")
+                .find(body)?.groupValues?.get(1)
+            val mc = field("gameVersion") ?: return null
+            val v = field("version") ?: return null
+            return mc to v
+        }
+
         /** ornithe per-mc — global section filtered by gameVersion. */
         fun ornitheVersions(fetch: (String) -> String,
                             name: String, mc: String): List<String> =
-            Regex("\"gameVersion\"\\s*:\\s*\"$mc\"[^}]{0,200}?\"version\"\\s*:\\s*\"([^\"]+)\"")
+            Regex("\\{([^{}]*)\\}")
                 .findAll(fetch("https://meta.ornithemc.net/v3/versions/$name"))
-                .map { it.groupValues[1] }.toList()
+                .mapNotNull { ornitheObject(it.groupValues[1]) }
+                .filter { it.first == mc }
+                .map { it.second }.toList()
     }
 }
 
@@ -249,8 +264,7 @@ val PROBES: List<VersionProbe> = listOf(
         "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"),
     VersionProbe.Maven("forge",
         "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml"),
-    VersionProbe.Maven("flint",
-        "https://maven.flintloader.net/releases/net/flintloader/punch/maven-metadata.xml"),
+    // flint dropped — maven.flintloader.net is offline
     VersionProbe.Maven("cleanroom",
         "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"),
     VersionProbe.Maven("stationapi",
@@ -310,13 +324,23 @@ val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = ma
     },
     "quilt" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/maven-metadata.xml", null) },
-    "flint" to { f, _ -> VersionProbe.mavenVersions(f,
-        "https://maven.flintloader.net/releases/net/flintloader/punch/maven-metadata.xml", null) },
+    // flint dropped — maven.flintloader.net is offline
     "cleanroom" to { f, _ -> VersionProbe.mavenVersions(f,
         "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml", null) },
     // lexforge is net.minecraftforge:forge under a separate id —
     // same artifact axis as "forge", mc-prefixed versions
     "lexforge" to { f, mc -> VersionProbe.mavenVersions(f, VersionProbe.FORGE_MAVEN, mc) },
+    // bukkit family — versions are `<mc>-R0.1-SNAPSHOT`, mc-prefix
+    // scopes; "bukkit" resolves the craftbukkit artifact (family
+    // member ids are the real descriptors)
+    "paper" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml", mc) },
+    "craftbukkit" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://hub.spigotmc.org/nexus/content/groups/public/org/bukkit/craftbukkit/maven-metadata.xml", mc) },
+    "bukkit" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://hub.spigotmc.org/nexus/content/groups/public/org/bukkit/craftbukkit/maven-metadata.xml", mc) },
+    "spigot" to { f, mc -> VersionProbe.mavenVersions(f,
+        "https://hub.spigotmc.org/nexus/content/groups/public/org/spigotmc/spigot/maven-metadata.xml", mc) },
     // ornithe rides upstream fabric-loader (descriptor
     // loaderCoords) — version axis is the fabric loader list
     "ornithe" to { f, _ -> VersionProbe.flatJson(f,
@@ -361,6 +385,8 @@ val RUNTIME_AXES: Map<String, ((String) -> String, String) -> List<String>> = ma
         "https://maven.glass-launcher.net/babric/babric/fabric-loader/maven-metadata.xml", null) },
     "liteloader" to { f, _ -> VersionProbe.flatJson(f,
         "https://dl.liteloader.com/versions/versions.json") },
+    "rift" to { f, _ -> VersionProbe.mavenVersions(f,
+        "https://maven.wagyourtail.xyz/releases/org/dimdev/rift/maven-manifest.xml", null) },
     "nostalgia" to { f, mc -> VersionProbe.mavenVersions(f,
         "https://maven.wispforest.io/releases/me/alphamode/nostalgia/maven-metadata.xml",
         "$mc+") },

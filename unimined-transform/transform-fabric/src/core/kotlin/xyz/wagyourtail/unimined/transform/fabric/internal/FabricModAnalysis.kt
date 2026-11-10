@@ -35,7 +35,19 @@ internal object FabricModAnalysis {
         val libraries: Map<String, List<Library>> = emptyMap()
     ) {
         @Serializable
-        class Library(val name: String)
+        class Library(
+            val name: String,
+            // e.g. babric's `asm-all:*` disallow — an exclusion
+            // marker for artifacts the loader supersedes, never a
+            // resolvable coordinate
+            val rules: List<Rule> = emptyList()
+        ) {
+            @Serializable
+            class Rule(val action: String? = null)
+
+            val disallowed: Boolean
+                get() = rules.any { it.action == "disallow" }
+        }
     }
 
     /** The `id` field of the mod's `fabric.mod.json`, if present. */
@@ -150,7 +162,9 @@ internal object FabricModAnalysis {
     fun loaderLibraries(jar: Path): List<String> = installerJson(jar)
         ?.let { installer ->
             listOf("common", "server", "client").flatMap { section ->
-                installer.libraries[section].orEmpty().map { it.name }
+                installer.libraries[section].orEmpty()
+                    .filter { !it.disallowed }
+                    .map { it.name }
             }
         }
         ?: emptyList()

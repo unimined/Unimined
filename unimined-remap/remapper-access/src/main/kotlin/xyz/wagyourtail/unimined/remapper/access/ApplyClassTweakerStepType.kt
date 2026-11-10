@@ -55,7 +55,10 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         val depTweakers = depFiles.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
         val output = Files.createTempDirectory(c.workDir, "ct")
             .resolve(input.fileName.toString())
-        apply(input, output, tweakers, depTweakers, tree, c.spec.targetNamespace)
+        apply(
+            input, output, tweakers, depTweakers, tree, c.spec.targetNamespace,
+            spec.namespaceAliases.getOrElse(emptyMap())
+        )
         output
     }
 
@@ -65,7 +68,8 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         tweakers: List<ClassTweaker>,
         dependencyTweakers: List<ClassTweaker>,
         tree: MappingTree,
-        targetNamespace: String
+        targetNamespace: String,
+        namespaceAliases: Map<String, String> = emptyMap()
     ) {
         // Rebase each file's directives onto the target namespace so
         // bytecode members can be looked up under their own names.
@@ -73,9 +77,18 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
             if (tweaker.namespace == targetNamespace) tweaker
             else {
                 val src = tree.namespaces.firstOrNull { it.name == tweaker.namespace }
+                    ?: namespaceAliases[tweaker.namespace]
+                        ?.let { alias ->
+                            tree.namespaces.firstOrNull { it.name == alias }
+                                // gen-suffixed prod columns (`calamusGen2`)
+                                // share the channel name's prefix
+                                ?: tree.namespaces.firstOrNull { it.name.startsWith(alias) }
+                        }
                     ?: throw GradleException(
                         "apply-class-tweaker: file namespace '${tweaker.namespace}' " +
-                                "is not in the mapping tree"
+                                "is not in the mapping tree " +
+                                "(namespaces: ${tree.namespaces.joinToString { it.name }}; " +
+                                "aliases: $namespaceAliases)"
                     )
                 val dst = tree.namespaces.firstOrNull { it.name == targetNamespace }
                     ?: throw GradleException(

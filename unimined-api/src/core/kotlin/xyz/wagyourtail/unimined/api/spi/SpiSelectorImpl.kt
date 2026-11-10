@@ -18,12 +18,15 @@ internal class SpiSelectorImpl<T : Supports<S>, S>(private val kind: String) : S
                     "unknown $kind '$override'; registered: ${names()}"
                 )
         }
+        return probe(spec) ?: throw SpiSelectionException(
+            "no $kind supports $spec; registered: ${names()}"
+        )
+    }
+
+    override fun probe(spec: S): T? {
         val candidates = registered.filter { it.supports(spec) }
         return when (candidates.size) {
-            0 -> throw SpiSelectionException(
-                "no $kind supports $spec; registered: ${names()}"
-            )
-
+            0 -> null
             1 -> candidates.single()
             else -> {
                 val top = candidates.maxOf { it.priority }

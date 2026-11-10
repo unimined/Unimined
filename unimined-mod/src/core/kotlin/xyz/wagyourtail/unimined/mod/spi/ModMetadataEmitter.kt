@@ -34,6 +34,17 @@ interface ModMetadataEmitter {
     val clientGametestInterface: String? get() = null
 
     /**
+     * Binary name of a *method-level* annotation marking gametest
+     * methods for this loader (e.g.
+     * `net.fabricmc.fabric.api.gametest.v1.GameTest` — the 1.20-era
+     * fabric API replaced the [gametestInterface] marker with it).
+     * A class carrying the annotation on any method is emitted as a
+     * gametest entrypoint alongside [gametestInterface] implementors;
+     * `null` disables.
+     */
+    val gametestAnnotation: String? get() = null
+
+    /**
      * The DSL section created for `loader("<name>") { }` — subclass
      * [LoaderSection] for loader-specific fields, or return the base for
      * the shared bag only. Invoked at configuration time; the returned

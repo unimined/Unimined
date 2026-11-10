@@ -11,7 +11,7 @@ plugins {
  * source so JVM and Native targets share one lookup without a
  * classpath.
  */
-val genTemplateFiles by tasks.registering {
+val genTemplateFiles = tasks.register("genTemplateFiles") {
     val src = layout.projectDirectory.dir("templates")
     val out = layout.buildDirectory.dir(
         "generated/init-templates/xyz/wagyourtail/unimined/init")

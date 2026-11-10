@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.spi.ModArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 import xyz.wagyourtail.unimined.transform.TransformExtension
@@ -62,6 +63,9 @@ internal object EnvironmentClasspathWiring {
             LoaderRegistry.resolveBuiltin(it.name)?.javaVersion
                 ?.invoke(environment.version.get(), it.version)
         })
+
+        // `env.jvmdowngrader` is strictly opt-in (user sets it) — no
+        // descriptor convention: jvmdg rewriting is off by default
 
         val minecraftBucket = project.configurations.getByName(
             environment.minecraftConfigurationName
@@ -178,7 +182,11 @@ internal object EnvironmentClasspathWiring {
                 p.classpath.from(libraries)
                 p.stepSpecs.set(
                     remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
-                        listOf(jarProcessorsPreSpec) + steps + jarProcessorsPostSpec
+                        // ModArtifactOnly (e.g. modArtifacts refmaps)
+                        // applies to mod jars, not the MC artifact
+                        listOf(jarProcessorsPreSpec) +
+                            steps.filter { it !is ModArtifactOnlyStepSpec } +
+                            jarProcessorsPostSpec
                     }
                 )
             }
@@ -217,7 +225,9 @@ internal object EnvironmentClasspathWiring {
                 // environment-artifact-scoped, not modclasspath-scoped
                 p.stepSpecs.set(
                     remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
-                        listOf(jarProcessorsPreSpec) + steps + jarProcessorsPostSpec
+                        listOf(jarProcessorsPreSpec) +
+                            steps.filter { it !is ModArtifactOnlyStepSpec } +
+                            jarProcessorsPostSpec
                     }
                 )
             }

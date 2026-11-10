@@ -87,6 +87,7 @@ class BukkitEnvironmentWiringTest {
 
         val runConfig = object : RunConfigSpec {
             override val name = "server"
+            override val prod = false
             override var mainClass: String? = null
             override val javaagents = mutableListOf<java.nio.file.Path>()
             override val jvmArgs = mutableListOf<String>()
@@ -97,8 +98,52 @@ class BukkitEnvironmentWiringTest {
         assertTrue(envSpec.runMutators.isNotEmpty(), "run mutators should be wired")
         envSpec.runMutators.forEach { it.execute(runConfig) }
         assertEquals("org.bukkit.craftbukkit.Main", runConfig.mainClass)
-        assertTrue(runConfig.javaagents.isNotEmpty())
+        // paper-plugin.yml can't be read by CPL — the dev jar stages
+        // into `plugins/` and loads via the server's own plugin
+        // classloader instead, so no javaagent/pluginGroups land
+        assertTrue(runConfig.javaagents.isEmpty(),
+            "paper env stages into plugins/ — no CPL agent")
+        assertTrue(runConfig.jvmArgs.none { it.startsWith("-Dcpl.pluginGroups=") },
+            "paper env should not declare CPL plugin groups")
+        assertTrue(envSpec.prepareTaskMutators.isNotEmpty(),
+            "paper env should stage the dev jar into plugins/")
+    }
+
+    @Test
+    fun `classpath modDiscovery opts into the CPL classpath loader`() {
+        project = project()
+        serveCpl()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("spigot") { env ->
+            env.version.set("1.20.4")
+            env.loader("spigot", "1.20.4-R0.1-SNAPSHOT")
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("spigot")
+        val envSpec = project.extensions
+            .getByType(TransformExtension::class.java).sourceSet("spigot")
+        // user opt-in: CPL's classpath scan instead of plugins/ staging
+        envSpec.features.binding("modDiscovery", "classpath")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val runConfig = object : RunConfigSpec {
+            override val name = "server"
+            override val prod = false
+            override var mainClass: String? = null
+            override val javaagents = mutableListOf<java.nio.file.Path>()
+            override val jvmArgs = mutableListOf<String>()
+            override val programArgs = mutableListOf<String>()
+            override val environment = mutableMapOf<String, String>()
+            override val properties = mutableMapOf<String, () -> String>()
+        }
+        envSpec.runMutators.forEach { it.execute(runConfig) }
+        assertEquals("org.bukkit.craftbukkit.Main", runConfig.mainClass)
+        assertTrue(runConfig.javaagents.isNotEmpty(),
+            "classpath opt-in should carry the CPL agent")
         assertTrue(runConfig.jvmArgs.any { it.startsWith("-Dcpl.pluginGroups=") })
+        assertTrue(envSpec.prepareTaskMutators.isEmpty(),
+            "classpath mode should not stage into plugins/")
     }
 
     @Test
@@ -138,6 +183,51 @@ class BukkitEnvironmentWiringTest {
         assertTrue(envSpec.jarProcessors.none {
             it.javaClass.simpleName == "PaperPatchProcessor"
         }, "apiOnly should skip the dist-patch processor")
+    }
+
+    @Test
+    fun `paper env resolves server side by convention`() {
+        project = project()
+        val (ext, envId) = paperEnv()
+        val env = ext.environments.getByName(envId)
+        assertEquals(xyz.wagyourtail.unimined.api.spec.Side.SERVER,
+            env.side.get(),
+            "bukkit-family envs are server-only — the raw artifact " +
+                    "must be the mojang server jar the dist patch expects")
+    }
+
+    @Test
+    fun `explicit side beats the server convention`() {
+        project = project()
+        serveCpl()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("paper") { env ->
+            env.version.set("1.20.4")
+            env.loader("paper", "496")
+            env.side.set(xyz.wagyourtail.unimined.api.spec.Side.CLIENT)
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("paper")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+        assertEquals(xyz.wagyourtail.unimined.api.spec.Side.CLIENT,
+            ext.environments.getByName("paper").side.get())
+    }
+
+    @Test
+    fun `non-bukkit envs keep the merged side default`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("fabric") { env ->
+            env.version.set("1.20.4")
+            env.loader("fabric", "1.0")
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("fabric")
+        assertEquals(xyz.wagyourtail.unimined.api.spec.Side.MERGED,
+            ext.environments.getByName("fabric").side.get())
     }
 
     @Test

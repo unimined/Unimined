@@ -33,6 +33,31 @@ class RemapTaskTest {
         }
     }
 
+    private fun writeJar(path: Path, entries: Map<String, ByteArray>) {
+        JarOutputStream(Files.newOutputStream(path)).use { jar ->
+            entries.forEach { (name, data) ->
+                jar.putNextEntry(JarEntry(name))
+                jar.write(data)
+                jar.closeEntry()
+            }
+        }
+    }
+
+    private fun remapJarTask(
+        project: org.gradle.api.Project, input: Path,
+        surface: RemapSurface = RemapSurface.JAR
+    ): RemapJarTask {
+        val task = project.tasks.register("remapJar", RemapJarTask::class.java).get()
+        task.from(project.zipTree(input))
+        task.destinationDirectory.set(dir.toFile())
+        task.archiveFileName.set("out.jar")
+        task.sourceNamespace.set("official")
+        task.targetNamespace.set("named")
+        task.surface.set(surface)
+        task.stepSpecs.set(emptyList())
+        return task
+    }
+
     @BeforeEach
     fun resetFake() = FakeStep.reset()
 
@@ -122,6 +147,90 @@ class RemapTaskTest {
         assertTrue(Files.exists(output))
         JarFile(output.toFile()).use { jar ->
             assertEquals(9, jar.getInputStream(jar.getEntry("in.bin")).readBytes().single())
+        }
+    }
+
+    @Test
+    fun `production jar carries the namespace marker`() {
+        val project = project()
+        val input = dir.resolve("in.jar").also { writeJar(it, "original.bin") }
+        val task = remapJarTask(project, input)
+        task.copy()
+        JarFile(dir.resolve("out.jar").toFile()).use { jar ->
+            assertEquals(
+                "named",
+                jar.manifest.mainAttributes.getValue(
+                    xyz.wagyourtail.unimined.remap.internal.JarLint.NAMESPACE_ATTRIBUTE
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `footgunChecks error fails on dangling access widener`() {
+        val project = project()
+        val input = dir.resolve("in.jar").also {
+            writeJar(it, mapOf(
+                "fabric.mod.json" to """{"id": "m", "version": "1",
+                    "accessWidener": "missing.accesswidener"}""".toByteArray()
+            ))
+        }
+        val task = remapJarTask(project, input)
+        val e = assertThrows(org.gradle.api.GradleException::class.java) {
+            task.copy()
+        }
+        assertTrue(e.message!!.contains("missing.accesswidener"))
+    }
+
+    @Test
+    fun `footgunChecks warn logs but succeeds`() {
+        val project = project()
+        val input = dir.resolve("in.jar").also {
+            writeJar(it, mapOf(
+                "fabric.mod.json" to """{"id": "m", "version": "1",
+                    "accessWidener": "missing.accesswidener"}""".toByteArray()
+            ))
+        }
+        val task = remapJarTask(project, input)
+        task.footgunChecks.set(FootgunCheckLevel.WARN)
+        task.copy()
+        assertTrue(Files.exists(dir.resolve("out.jar")))
+    }
+
+    @Test
+    fun `footgunChecks off skips validation`() {
+        val project = project()
+        val input = dir.resolve("in.jar").also {
+            writeJar(it, mapOf(
+                "fabric.mod.json" to """{"id": "m", "version": "1",
+                    "accessWidener": "missing.accesswidener"}""".toByteArray()
+            ))
+        }
+        val task = remapJarTask(project, input)
+        task.footgunChecks.set(FootgunCheckLevel.OFF)
+        task.copy()
+        assertTrue(Files.exists(dir.resolve("out.jar")))
+    }
+
+    @Test
+    fun `sources surface gets the marker but skips metadata lint`() {
+        val project = project()
+        val input = dir.resolve("in.jar").also {
+            writeJar(it, mapOf(
+                "fabric.mod.json" to """{"id": "m", "version": "1",
+                    "accessWidener": "missing.accesswidener"}""".toByteArray()
+            ))
+        }
+        val task = remapJarTask(project, input, RemapSurface.SOURCES)
+        // dangling AW in a sources jar: no class-path lint, no failure
+        task.copy()
+        JarFile(dir.resolve("out.jar").toFile()).use { jar ->
+            assertEquals(
+                "named",
+                jar.manifest.mainAttributes.getValue(
+                    xyz.wagyourtail.unimined.remap.internal.JarLint.NAMESPACE_ATTRIBUTE
+                )
+            )
         }
     }
 

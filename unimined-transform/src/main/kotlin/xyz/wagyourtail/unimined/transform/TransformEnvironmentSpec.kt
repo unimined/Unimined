@@ -90,6 +90,14 @@ class TransformEnvironmentSpec internal constructor(
      */
     var jarProcessorSpecContext: ((String, List<Path>) -> JarProcessor.SpecContext)? = null
 
+    /**
+     * Embedded-classpath artifacts the contributing transform declares
+     * for this env (`BundledResourceChannel.materialize` turns each
+     * into a file dep) — provider-facing channel for payload jars
+     * with no maven home (FG1's `/fmllibs/` set).
+     */
+    val bundledResources: MutableList<BundledResource> = mutableListOf()
+
     private val inheritedEnvironments =
         linkedMapOf<EnvironmentReference, () -> TransformEnvironmentSpec>()
 
@@ -259,7 +267,8 @@ class TransformEnvironmentSpec internal constructor(
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveJarProcessors(visiting)
-            } + jarProcessors + pipelineJarProcessors()
+            } + jarProcessors + pipelineJarProcessors() +
+                    postPipelineJarProcessors
         } finally {
             visiting.remove(key)
         }
@@ -283,6 +292,15 @@ class TransformEnvironmentSpec internal constructor(
      * providers), so they may back lazy artifact resolution.
      */
     val envArtifactBindings = mutableMapOf<String, () -> List<Path>>()
+
+    /**
+     * Jar processors that run **after** declared-pipeline step
+     * contributions — for loader wiring that must patch the merged
+     * output (e.g. the FG1 checksum patch needs the forge zip's
+     * `CoreFMLLibraries` already merged in). Registered eagerly like
+     * [jarProcessors], flattened last in [effectiveJarProcessors].
+     */
+    val postPipelineJarProcessors = mutableListOf<JarProcessor>()
 
     private var declaredApplied = false
 

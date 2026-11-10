@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.ide
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.DefaultTaskExecutionRequest
+import xyz.wagyourtail.unimined.api.spi.IdeSyncTasks
 import xyz.wagyourtail.unimined.ide.internal.GenerateIdeRunsTask
 import xyz.wagyourtail.unimined.ide.internal.IdeWiring
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -16,12 +17,17 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        // umbrella — every emitter task registers itself under this
+        // umbrella — every emitter task registers itself under this;
+        // provider resolves IdeSyncTasks contributions lazily so
+        // plugins applying after this one still get wired
         target.tasks.register("genIdeRuns") { t ->
             t.group = "unimined"
             t.description =
                 "Generate all IDE launch files (idea, vscode, eclipse)"
             t.dependsOn("genVsCodeRuns")
+            t.dependsOn(target.provider {
+                IdeSyncTasks.contributions(target)
+            })
         }
 
         // vscode emits one merged launch.json across all envs —
@@ -50,14 +56,16 @@ class GradlePlugin : Plugin<Project> {
         }
 
         // IDEA sync hook — 1.x `scheduleTaskAfterIDEASync` port:
-        // during a Gradle sync invoked by IntelliJ, append the run
-        // generator so configs regenerate as part of the sync
+        // during a Gradle sync invoked by IntelliJ, append the
+        // umbrella so configs regenerate as part of the sync.
+        // genIdeRuns (not genIdeaRuns) — it always exists and carries
+        // IdeSyncTasks contributions
         if (System.getProperty("idea.sync.active").toBoolean()) {
             val startParameter = target.gradle.startParameter
             val taskRequests = ArrayList(startParameter.taskRequests)
             taskRequests.add(
                 DefaultTaskExecutionRequest(
-                    listOf("genIdeaRuns"), target.path, target.rootDir
+                    listOf("genIdeRuns"), target.path, target.rootDir
                 )
             )
             startParameter.setTaskRequests(taskRequests)

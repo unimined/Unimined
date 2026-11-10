@@ -21,7 +21,10 @@ import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
+import xyz.wagyourtail.commonskt.jvm.tempSibling
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -135,7 +138,15 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
                 parameters.label.orNull ?: "",
                 Logging.getLogger(RemapDependencyTransform::class.java)
             ).info("remap — no mod markers in ${input.fileName}; passing through unmapped")
-            Files.copy(input, output)
+            // temp + atomic move — a killed copy must not leave a
+            // partial jar at the transform output (#78)
+            val tmp = output.tempSibling()
+            try {
+                Files.copy(input, tmp, StandardCopyOption.REPLACE_EXISTING)
+                tmp.moveAtomicTo(output)
+            } finally {
+                Files.deleteIfExists(tmp)
+            }
             return
         }
         val workDir = Files.createTempDirectory("unimined-remap-")

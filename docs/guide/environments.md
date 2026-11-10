@@ -20,7 +20,9 @@ unimined {
 ```
 
 - `sourceSet(name)` binds the env to a source set (default `main`);
-  each env is independent — no `combineWith`.
+  sibling envs are independent — `combineWith("other")` (optionally
+  with `EnvironmentSection`s) composes one into another, and nested
+  envs (`datagen()`/`gametest()`) inherit their parent implicitly.
 - `side` selects `Side.CLIENT`/`SERVER`/`MERGED`
   ([example](../generated/side-server.gradle.kts)).
 - Multiple envs in one project = flat multi-env;

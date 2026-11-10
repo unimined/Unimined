@@ -17,7 +17,12 @@ import kotlin.io.path.readText
  */
 internal class SpigotBuildData(private val downloader: Downloader) {
 
-    private val cbRefs = Regex(""""craftbukkit"\s*:\s*"([0-9a-f]+)"""")
+    // versions.json keys are the capitalized git repo names
+    // ("CraftBukkit", "Spigot", ...) — match case-insensitively
+    private val cbRefs = Regex(
+        """"craftbukkit"\s*:\s*"([0-9a-f]+)"""",
+        RegexOption.IGNORE_CASE
+    )
 
     /**
      * The `v<maj>_<min>_R<rev>` package token for [mcVersion].
@@ -32,8 +37,11 @@ internal class SpigotBuildData(private val downloader: Downloader) {
         val ref = cbRefs.find(info.readText())?.groupValues?.get(1)
             ?: error("no craftbukkit ref in $info")
         val pom = downloader.fetch(
-            "https://hub.spigotmc.org/stash/projects/SPIGOT/repos/" +
-                "craftbukkit/raw/pom.xml?at=$ref",
+            // the pretty URL (/stash/projects/...) sits behind a
+            // Cloudflare browser challenge; the Bitbucket REST path
+            // serves the same raw file to non-browser clients
+            "https://hub.spigotmc.org/stash/rest/api/latest/projects/" +
+                "SPIGOT/repos/craftbukkit/raw/pom.xml?at=$ref",
             "builddata/craftbukkit-pom-$ref.xml"
         )
         val doc = DocumentBuilderFactory.newInstance()

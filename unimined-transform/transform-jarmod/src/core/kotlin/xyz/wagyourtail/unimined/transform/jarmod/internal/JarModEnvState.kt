@@ -14,7 +14,10 @@ internal object JarModEnvState {
     private val customSearge = mutableMapOf<String, Boolean>()
 
     fun addTransforms(envId: String, entries: Iterable<String>) {
-        transforms.getOrPut(envId) { mutableListOf() } += entries
+        // dedupe — env DSL blocks can evaluate more than once, and a
+        // repeated entry would double-register the transform list
+        val list = transforms.getOrPut(envId) { mutableListOf() }
+        entries.forEach { if (it !in list) list += it }
     }
 
     fun addPriorityClasspath(envId: String, entries: Iterable<String>) {
@@ -47,5 +50,41 @@ internal object JarModEnvState {
     }
 
     private val useAsm52 = mutableMapOf<String, Boolean>()
+
+    private val refmaps = mutableMapOf<String, MutableList<String>>()
+    private val initializers = mutableMapOf<String, MutableList<String>>()
+    private val failStrategy = mutableMapOf<String, String>()
+    private val debug = mutableMapOf<String, Boolean>()
+
+    /** `jma.refmaps` — classpath-resource names of refmap JSON files
+     *  (agent merges all listed maps per transformer). */
+    fun addRefmaps(envId: String, entries: Iterable<String>) {
+        val list = refmaps.getOrPut(envId) { mutableListOf() }
+        entries.forEach { if (it !in list) list += it }
+    }
+
+    fun refmaps(envId: String): List<String> = refmaps[envId] ?: emptyList()
+
+    /** `jma.initializers` — `JMAInitializer` class names, run before
+     *  manifest-declared initializers (list order is load order). */
+    fun addInitializers(envId: String, entries: Iterable<String>) {
+        val list = initializers.getOrPut(envId) { mutableListOf() }
+        entries.forEach { if (it !in list) list += it }
+    }
+
+    fun initializers(envId: String): List<String> = initializers[envId] ?: emptyList()
+
+    /** `jma.failStrategy` — ClassTransform `FailStrategy` name
+     *  (CONTINUE/CANCEL/EXIT/THROW); agent ≥ 0.1.5. */
+    fun failStrategy(envId: String): String? = failStrategy[envId]
+    fun failStrategy(envId: String, value: String) {
+        failStrategy[envId] = value
+    }
+
+    /** `jma.debug` — dump patched classes under `.jma/patched`. */
+    fun debug(envId: String): Boolean = debug[envId] ?: false
+    fun debug(envId: String, value: Boolean) {
+        debug[envId] = value
+    }
 
 }

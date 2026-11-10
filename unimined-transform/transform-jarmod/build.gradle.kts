@@ -15,6 +15,11 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(testFixtures(project(":unimined-remap")))
     testImplementation(project(":unimined-remap:remapper-uml"))
+
+    // env.version resolution goes through the ProductProvider SPI —
+    // wiring tests need a provider for loader-less `minecraft:native`
+    // specs to get past selection (ServiceLoader-registered).
+    "testGradleImplementation"(project(":unimined-minecraft:provider-native"))
 }
 
 gradlePlugin {

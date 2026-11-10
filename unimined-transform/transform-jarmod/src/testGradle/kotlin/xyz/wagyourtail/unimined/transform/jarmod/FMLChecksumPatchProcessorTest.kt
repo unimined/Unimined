@@ -4,6 +4,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -72,6 +73,25 @@ class FMLChecksumPatchProcessorTest {
         return cw.toByteArray()
     }
 
+    /**
+     * Empty artifacts → `buildSpec` null. Envs where the era wiring
+     * scans no dyn-libs (the jarmod substrate on a forge-family env,
+     * whose `forge` config is empty) produce a processor whose spec
+     * must never enter `entries`: the step machinery stamps the
+     * run-once `META-INF/unimined-processor/fg1-checksum-patch` marker
+     * even for no-op `processJar`s, and that marker `isApplied`-skips
+     * the real sums-carrying instance later in the flattened list.
+     */
+    @Test
+    fun `buildSpec is null when artifacts resolve empty`() {
+        val proc = FMLChecksumPatchProcessor()
+        val spec = proc.buildSpec(object : JarProcessor.SpecContext {
+            override val productionNamespace: String = "production"
+            override fun mods(): List<ModJarInfo> = emptyList()
+        })
+        assertNull(spec, "empty-artifacts processor must yield no spec")
+    }
+
     @Test
     fun `checksums are rewritten to shipped artifact sha1s`() {
         val artifact = dir.resolve("asm-all-5.2.jar")
@@ -89,7 +109,7 @@ class FMLChecksumPatchProcessorTest {
             override val productionNamespace: String = "production"
             override fun mods(): List<ModJarInfo> = emptyList()
         })
-        proc.processJar(jar, spec, ctx)
+        proc.processJar(jar, spec!!, ctx)
         ZipFile(jar.toFile()).use { z ->
             // per-env sums ship inside the jar for the spliced helper
             val sumsText = z.getInputStream(

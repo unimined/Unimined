@@ -11,6 +11,14 @@ interface RunConfigSpec {
     /** Run configuration name, e.g. `"client"`, `"server"`. */
     val name: String
 
+    /**
+     * Whether the run launches against the production-namespace
+     * classpath (the remapped jar + prod views). Mutators must gate
+     * dev-only classpath surgery on this — dev class dirs do not
+     * belong on a prod launch.
+     */
+    val prod: Boolean
+
     var mainClass: String?
 
     /**

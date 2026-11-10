@@ -184,26 +184,20 @@ abstract class MigrateMappingsTask @Inject constructor(
             ?: error("target mapping data does not expose a UML MappingTree view")
 
         val fromNs = Namespace(devNamespace.get())
-        val toNsName = targetDevNamespace.orNull
-            ?: listOf("named", "mojmap", "yarn", "mcp")
-                .firstOrNull { n -> targetTree.namespaces.any { it.name == n } }
-            ?: targetTree.namespaces.last().name
+        val toNsName = pickTargetNamespace(targetTree, targetDevNamespace.orNull)
         val toNs = Namespace(toNsName)
 
         // bridge: explicit > env prod ns > intermediary > official >
         // any common namespace, else fail listing candidates
         val shared = inputTree.namespaces.toSet() intersect targetTree.namespaces.toSet()
-        val via = bridgeNamespace.orNull?.let { Namespace(it) }
-            ?: (prodNamespaces.get() + listOf("intermediary", "official"))
-                .map { Namespace(it) }
-                .firstOrNull { it in shared }
-            ?: shared.firstOrNull()
-            ?: error(
-                "cannot migrate: input tree namespaces " +
-                        "${inputTree.namespaces} and target tree namespaces " +
-                        "${targetTree.namespaces} share none — set " +
-                        "`bridgeNamespace` or choose compatible mappings"
-            )
+        val via = pickBridgeNamespace(
+            shared, bridgeNamespace.orNull, prodNamespaces.get()
+        ) ?: error(
+            "cannot migrate: input tree namespaces " +
+                    "${inputTree.namespaces} and target tree namespaces " +
+                    "${targetTree.namespaces} share none — set " +
+                    "`bridgeNamespace` or choose compatible mappings"
+        )
 
         log.lifecycle(
             "[${this.name}] migrating sources {} -> {} via '{}'",
@@ -254,3 +248,22 @@ abstract class MigrateMappingsTask @Inject constructor(
     }
 
 }
+
+/** Target-side dev column for a migration — explicit override, then
+ *  the well-known named-style columns, then the tree's last. */
+internal fun pickTargetNamespace(tree: MappingTree, override: String?): String =
+    override
+        ?: listOf("named", "mojmap", "yarn", "mcp")
+            .firstOrNull { n -> tree.namespaces.any { it.name == n } }
+        ?: tree.namespaces.last().name
+
+/** Graft bridge — explicit > env prod ns > intermediary > official >
+ *  any common namespace; `null` when [shared] is empty. */
+internal fun pickBridgeNamespace(
+    shared: Set<Namespace>, override: String?, prodNamespaces: List<String>
+): Namespace? =
+    override?.let { Namespace(it) }
+        ?: (prodNamespaces + listOf("intermediary", "official"))
+            .map { Namespace(it) }
+            .firstOrNull { it in shared }
+        ?: shared.firstOrNull()

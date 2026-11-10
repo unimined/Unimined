@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.jarmod.internal
 
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import xyz.wagyourtail.commonskt.utils.toHex
@@ -7,7 +8,6 @@ import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -72,8 +72,7 @@ internal class JarModMergeProcessor(
         context: JarProcessor.ProcessorContext
     ) {
         spec as Spec
-        val tmp = Files.createTempFile(jar.parent, "jarmod-merge", ".jar")
-        try {
+        jar.writeAtomically { tmp ->
             ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
                 val emittedDirs = mutableSetOf<String>()
                 val seen = mutableSetOf<String>()
@@ -101,12 +100,8 @@ internal class JarModMergeProcessor(
                 for (e in spec.jars) copyFrom(Path.of(e.path), stripAllMetaInf = true, isModJar = true)
                 copyFrom(jar, stripAllMetaInf = spec.deleteMetaInf, isModJar = false)
             }
-            Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
-            context.log.info("[JarMod] merged ${spec.jars.size} jar(s) into ${jar.fileName}")
-        } catch (t: Throwable) {
-            Files.deleteIfExists(tmp)
-            throw t
         }
+        context.log.info("[JarMod] merged ${spec.jars.size} jar(s) into ${jar.fileName}")
     }
 
     private fun skip(name: String, stripAllMetaInf: Boolean): Boolean {

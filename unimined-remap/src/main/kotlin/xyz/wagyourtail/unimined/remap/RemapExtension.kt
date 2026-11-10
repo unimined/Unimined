@@ -10,8 +10,11 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.TaskProvider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
+import xyz.wagyourtail.unimined.remap.task.RemapArtifactTask
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
+import xyz.wagyourtail.unimined.remap.internal.RemappedViewWiring
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
@@ -35,13 +38,28 @@ import javax.inject.Inject
  * ```
  */
 abstract class RemapExtension @Inject constructor(
-    private val project: Project,
+    internal val project: Project,
     val objects: ObjectFactory,
     private val providers: ProviderFactory
 ) {
 
     /** Engine-supplied step impls; populated by engine plugins. */
     val registry = RemapStepRegistry()
+
+    /** Remapped-dependency-view wiring — [RemappedViewWiring] owns
+     *  view creation + artifact-transform registration; the verbs
+     *  delegate after populating the spec. */
+    internal val viewWiring = RemappedViewWiring(this)
+
+    /**
+     * Post-remap validation level for production jars — packaging
+     * footguns compile fine and only fail at runtime: dangling
+     * access-widener/mixin/nested-jar/icon paths, missing
+     * entrypoint/main classes, wrong remapped-namespace marker.
+     * Defaults to [FootgunCheckLevel.ERROR]; `remap { footgunChecks = WARN }`
+     * downgrades to warnings, `OFF` disables.
+     */
+    abstract val footgunChecks: org.gradle.api.provider.Property<FootgunCheckLevel>
 
     private val environments = mutableMapOf<String, RemapEnvironmentSpec>()
 
@@ -72,6 +90,7 @@ abstract class RemapExtension @Inject constructor(
     }
 
     init {
+        footgunChecks.convention(FootgunCheckLevel.ERROR)
         EnvironmentCopyRegistry.registerHandler(
             project,
             RemapEnvironmentCopyHandler(project)
@@ -231,7 +250,8 @@ abstract class RemapExtension @Inject constructor(
     private fun pipelineSteps(
         environmentId: String,
         surface: RemapSurface,
-        includeEnvironmentArtifactSteps: Boolean
+        includeEnvironmentArtifactSteps: Boolean,
+        includeModArtifactsStep: Boolean = true
     ): Provider<List<StepSpec>> =
         providers.provider {
             val environment = sourceSet(environmentId)
@@ -257,7 +277,8 @@ abstract class RemapExtension @Inject constructor(
             else StepScope.ALL_ARTIFACTS
             named("contributedPreSteps") {
                 environment.contributedPreSteps(surface, scope)
-            } + core + withModArtifactsStep(core, surface) +
+            } + core + (if (includeModArtifactsStep)
+                withModArtifactsStep(core, surface) else emptyList()) +
             named("contributedSteps") {
                 environment.contributedSteps(surface, scope)
             }
@@ -350,7 +371,7 @@ abstract class RemapExtension @Inject constructor(
         source: String,
         action: Action<RemappedViewSpec>
     ): Configuration = remappedViewFor(
-        environmentId, source, defaultViewName(environmentId, source), action
+        environmentId, source, viewWiring.defaultViewName(environmentId, source), action
     )
 
     /** Groovy DSL overload for the default-named environment view. */
@@ -360,7 +381,7 @@ abstract class RemapExtension @Inject constructor(
         @DelegatesTo(value = RemappedViewSpec::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ): Configuration = remappedViewFor(
-        environmentId, source, defaultViewName(environmentId, source), action
+        environmentId, source, viewWiring.defaultViewName(environmentId, source), action
     )
 
     /** Create a named remapped dependency view for a named environment. */
@@ -381,7 +402,7 @@ abstract class RemapExtension @Inject constructor(
         })
         spec.onlyRemapMarkedJars.convention(true)
         action.execute(spec)
-        return createRemappedView(environmentId, source, name, spec)
+        return viewWiring.createRemappedView(environmentId, source, name, spec)
     }
 
     /**
@@ -424,41 +445,7 @@ abstract class RemapExtension @Inject constructor(
             "remappedViews('$baseName') must declare at least one source namespace"
         }
 
-        val views = linkedMapOf<String, Configuration>()
-        for (namespace in spec.namespaces) {
-            val sourceConfiguration = project.configurations.maybeCreate(
-                namespace.sourceConfiguration
-            ).apply {
-                isCanBeConsumed = false
-                isCanBeResolved = false
-            }
-            val viewSpec = objects.newInstance(RemappedViewSpec::class.java)
-            viewSpec.sourceNamespace.set(namespace.sourceNamespace)
-            viewSpec.targetNamespace.set(spec.targetNamespace)
-            viewSpec.discriminator.set(
-                spec.discriminator.get() + "-from-" + artifactToken(namespace.sourceNamespace)
-            )
-            if (namespace.mappingFile.isPresent) {
-                viewSpec.mappingFile.set(namespace.mappingFile)
-            }
-            viewSpec.classpath.from(spec.classpath)
-            viewSpec.accessModel.set(spec.accessModel)
-            viewSpec.stepSpecs.set(spec.stepSpecs)
-            viewSpec.modMarkers.set(spec.modMarkers)
-            viewSpec.onlyRemapMarkedJars.set(spec.onlyRemapMarkedJars)
-
-            views[namespace.sourceNamespace] = createRemappedView(
-                environmentId,
-                sourceConfiguration.name,
-                defaultViewName(environmentId, sourceConfiguration.name),
-                viewSpec
-            )
-        }
-        return RemappedViewSet(
-            baseName,
-            views.toMap(),
-            project.files(views.values)
-        )
+        return viewWiring.buildViewSet(environmentId, baseName, spec)
     }
 
     /** Groovy DSL overload for an environment-scoped remapped view set. */
@@ -473,30 +460,6 @@ abstract class RemapExtension @Inject constructor(
         action.call()
     })
 
-    private fun createRemappedView(
-        environmentId: String,
-        source: String,
-        name: String,
-        spec: RemappedViewSpec
-    ): Configuration {
-        val artifactType = spec.artifactTypeToken.orNull ?: spec.targetNamespace.get().let {
-            "unimined-remapped-$environmentId-$it" + spec.discriminator.get()
-        }
-        val view = project.configurations.create(name) { conf ->
-            conf.isCanBeConsumed = false
-            conf.isCanBeResolved = true
-            conf.extendsFrom(project.configurations.getByName(source))
-            conf.attributes.attribute(
-                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, artifactType
-            )
-        }
-        registerRemapTransform(spec, artifactType, "$environmentId/$source")
-        return view
-    }
-
-    private fun artifactToken(value: String): String =
-        value.replace(Regex("[^A-Za-z0-9._-]"), "-")
-
     /** Groovy DSL overload for a named remapped dependency view. */
     fun remappedViewFor(
         environmentId: String,
@@ -510,68 +473,84 @@ abstract class RemapExtension @Inject constructor(
         action.call()
     })
 
-    private fun defaultViewName(environmentId: String, source: String): String =
-        if (environmentId == "main" || source.startsWith(environmentId, true)) {
-            "${source}Remapped"
-        } else {
-            "${environmentId}${source.replaceFirstChar(Char::uppercase)}Remapped"
-        }
-
-    private val transformRegistrations = mutableMapOf<String, RemappedViewSpec>()
-
-    private fun registerRemapTransform(
-        spec: RemappedViewSpec,
-        artifactType: String,
-        label: String
-    ) {
-        val existing = transformRegistrations[artifactType]
-        if (existing != null) {
-            require(
-                existing.sourceNamespace.get() == spec.sourceNamespace.get() &&
-                        existing.targetNamespace.get() == spec.targetNamespace.get() &&
-                        existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile &&
-                        existing.hasLazyMappings == spec.hasLazyMappings &&
-                        existing.accessModel.isPresent == spec.accessModel.isPresent &&
-                        existing.classpath.files == spec.classpath.files &&
-                        existing.stepSpecs.getOrElse(emptyList()) == spec.stepSpecs.getOrElse(emptyList())
-            ) {
-                "remap target '${spec.targetNamespace.get()}' already registered with a different spec — " +
-                        "set a discriminator on one of the views"
-            }
-            return
-        }
-        transformRegistrations[artifactType] = spec
-
-        project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
-            t.from.attribute(
-                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
-                ArtifactTypeDefinition.JAR_TYPE
-            )
-            t.to.attribute(
-                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
-                artifactType
-            )
-            t.parameters { p ->
-                p.label.set(label)
-                p.modMarkers.set(project.provider {
-                    if (spec.onlyRemapMarkedJars.get()) spec.modMarkers.get()
-                    else emptyList()
-                })
-                p.sourceNamespace.set(spec.sourceNamespace)
-                p.targetNamespace.set(spec.targetNamespace)
-                if (spec.hasLazyMappings) {
-                    p.mappingBundleJson.set(spec.mappingBundleJson)
-                } else if (spec.mappingFile.isPresent) {
-                    p.mappingFile.set(spec.mappingFile)
-                }
-                if (spec.accessModel.isPresent) {
-                    p.accessModel.set(spec.accessModel)
-                }
-                p.classpath.from(spec.classpath)
-                p.stepSpecs.set(spec.stepSpecs)
-            }
+    /**
+     * Register a standalone one-off artifact remap — the non-Minecraft
+     * entry point: any jar in, remapped jar out.
+     *
+     * The mapping file may be a SerializedMappingData bundle, a legacy
+     * MappingBundle, or any UML-recognized format (tiny, umf, srg, tsrg,
+     * proguard, mcp, ...) autodetected by content at execution time.
+     * When `from`/`to` are unset the namespaces are autodetected: the
+     * column whose class names best match the input jar becomes the
+     * source, and the single remaining column becomes the target.
+     *
+     * ```kotlin
+     * remap {
+     *     artifact("baritone") {
+     *         input.set(layout.projectDirectory.file("baritone.jar"))
+     *         mappings.set(layout.projectDirectory.file("baritone.mapping.txt"))
+     *         from.set("obf")
+     *         to.set("deobf")
+     *     }
+     * }
+     * // -> :remapBaritoneArtifact
+     * ```
+     */
+    fun artifact(name: String, action: Action<RemapArtifactSpec>): TaskProvider<RemapArtifactTask> {
+        val spec = objects.newInstance(RemapArtifactSpec::class.java)
+        spec.output.convention(
+            project.layout.buildDirectory.file("remapped/$name-remapped.jar")
+        )
+        action.execute(spec)
+        val taskName = "remap${name.replaceFirstChar(Char::uppercase)}Artifact"
+        return project.tasks.register(taskName, RemapArtifactTask::class.java) { t ->
+            t.group = "unimined"
+            t.description = "Remaps the '$name' artifact between namespaces"
+            t.inputArtifact.set(spec.input)
+            t.outputArtifact.set(spec.output)
+            t.surface.set(RemapSurface.JAR)
+            t.mappingFile.set(spec.mappings)
+            t.sourceNamespace.set(spec.from)
+            t.targetNamespace.set(spec.to)
+            t.remapClasspath.from(spec.classpath)
+            t.stepSpecs.set(artifactSteps())
+            t.footgunChecks.set(footgunChecks)
         }
     }
+
+    /**
+     * Step pipeline for standalone artifacts: the environment's declared
+     * JAR steps (or the implicit remap core) plus `ALL_ARTIFACTS`-scoped
+     * contributions — but never `ModArtifactsStepSpec`, whose impl only
+     * exists in remapper-uml and only makes sense for environment jars.
+     */
+    private fun artifactSteps(): Provider<List<StepSpec>> =
+        pipelineSteps(
+            "main", RemapSurface.JAR,
+            includeEnvironmentArtifactSteps = false,
+            includeModArtifactsStep = false
+        )
+
+    /** Standalone artifact remap using the default `remapArtifact` task. */
+    fun artifact(action: Action<RemapArtifactSpec>): TaskProvider<RemapArtifactTask> =
+        artifact("Artifact", action)
+
+    /** Groovy DSL overload for a named standalone artifact remap. */
+    fun artifact(
+        name: String,
+        @DelegatesTo(value = RemapArtifactSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): TaskProvider<RemapArtifactTask> = artifact(name, Action { spec ->
+        action.delegate = spec
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+    })
+
+    /** Groovy DSL overload for the default-named artifact remap. */
+    fun artifact(
+        @DelegatesTo(value = RemapArtifactSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): TaskProvider<RemapArtifactTask> = artifact("Artifact", action)
 
     /**
      * DSL-time validation.

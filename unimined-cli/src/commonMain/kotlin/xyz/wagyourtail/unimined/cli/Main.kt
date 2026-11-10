@@ -150,8 +150,10 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         val loaders = loaderArgs.flatMap { it.split(',') }.map { entry ->
             val eq = entry.indexOf('=')
             val l = (if (eq > 0) entry.substring(0, eq) else entry).trim()
+            // "bukkit" is the family name — the descriptor is craftbukkit
+            val id = if (l.equals("bukkit", true)) "craftbukkit" else l
             val v = if (eq > 0) entry.substring(eq + 1).trim() else "latest"
-            l to resolveSpec(l, v, mc)
+            id to resolveSpec(id, v, mc)
         }
 
         /** `name(latest)` / `name(1.20.*)` mapping args resolve per-mc;
@@ -184,8 +186,37 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             val l = loaders.firstOrNull()?.first?.lowercase() ?: ""
             return when {
                 l in listOf("babric", "bta") -> listOf("biny(latest)")
+                // ornithe uses feather even on b1.x — checked before
+                // the b1-era nostalgia fallback. The v3 feather axis
+                // is the gen-2 series; the var pins the implicit
+                // intermediary/calamus gen or they land gen1 and the
+                // mixed-gen merge crashes
+                l == "osl" || l == "ornithe" || product == "ornithe" ->
+                    listOf("ornitheGenVersion = 2", "feather(latest)")
                 mc == "b1.7.3" || mc.startsWith("b1.") ->
                     listOf("nostalgia(latest)")
+                l == "rift" -> listOf("searge()")
+                l == "liteloader" -> {
+                    // 1.12.2 is the only liteloader MC with a
+                    // mcp_config artifact — older ones carry their
+                    // srg/mcp data inside the FG1-era forge :src zip.
+                    // Pick the newest `<mc>-<digits>` build: pre-release
+                    // tags sort last in forge's metadata, and republished
+                    // old builds (10.13.0.x) postdate the real latest.
+                    if (mc == "1.12.2" &&
+                            Probed.expand("mcp:$mc").isNotEmpty())
+                        listOf("searge()", "mcp(latest)")
+                    else resolver.loaderVersions("forge", mc)
+                        .filter { it.startsWith("$mc-") }
+                        .maxByOrNull {
+                            it.removePrefix("$mc-").substringBefore('-')
+                                .split('.').mapNotNull { p -> p.toIntOrNull() }
+                                .fold(0L) { acc, n -> acc * 10000 + n }
+                        }
+                        ?.removePrefix("$mc-")
+                        ?.let { listOf("forgeBuiltinMCP(\"$it\")") }
+                        ?: emptyList()
+                }
                 l in listOf("forge", "fml", "lexforge", "cleanroom") &&
                         Probed.expand("mcp:$mc").isNotEmpty() ->
                     // srg-era forge family needs the class-rename layer
@@ -195,8 +226,6 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 l in listOf("legacyfabric") ->
                     // current builds are gen-2 (`net.legacyfabric.v2`)
                     listOf("legacyYarn(latest, 2)")
-                l == "osl" || product == "ornithe" ->
-                    listOf("feather(latest)")
                 l == "quilt" -> listOf("quilt(latest)")
                 l == "fabric" -> listOf("intermediary()", "yarn(latest)")
                 // mojmap-supported mc uses the official builtin; 26.x
@@ -214,7 +243,11 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             version = modVersion,
             modid = modid,
             packageName = pkg ?: ask("Package",
-                "${if (template != null) "com.example" else (group ?: "com.example")}.${modid ?: projectName.lowercase()}") {
+                // sanitized like InitSpec.modId/basePackage — raw
+                // names like "my-mod" would emit invalid packages
+                "${if (template != null) "com.example" else (group ?: "com.example")}.${
+                    modid ?: projectName.lowercase()
+                        .replace(Regex("[^a-z0-9]+"), "")}") {
                 throw IllegalArgumentException("missing required --package") },
             mcVersion = mc,
             loaders = loaders,

@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.remap
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
@@ -122,17 +121,18 @@ class RemappedViewFunctionalTest {
         Files.writeString(
             dir.resolve("build.gradle"),
             """
-            plugins {
-                id 'java'
-                id 'xyz.wagyourtail.unimined.remap'
-            }
+            plugins { id 'java' }
+            // legacy apply: resolves via the buildscript classpath's
+            // META-INF/gradle-plugins marker — plugins{}-DSL resolution
+            // needs a plugin repository the TestKit project lacks
+            apply plugin: 'xyz.wagyourtail.unimined.remap'
 
             repositories {
                 maven { url = uri('${repo.toUri()}') }
             }
 
             remap {
-                jar { it.remap("tiny") }
+                jar { remap("tiny") }
             }
 
             configurations.create("deps")
@@ -179,20 +179,41 @@ class RemappedViewFunctionalTest {
         }
     }
 
+    /** `withPluginClasspath` injects only this module's *main* runtime
+     *  classpath — the `remapper-tiny` engine (a testGradle dep) is
+     *  missing, so the transform's classloader ServiceLoader can't see
+     *  it. An init script puts the whole test classpath on the
+     *  buildscript classpath instead; the plugin + engine then load
+     *  from the same classloader graph. */
+    private fun writeInitScript(): Path {
+        val entries = System.getProperty("java.class.path")
+            .split(java.io.File.pathSeparator)
+            .joinToString(", ") { "'${it.replace("'", "\\'")}'" }
+        val init = dir.resolve("init-classpath.gradle")
+        Files.writeString(
+            init,
+            """
+            allprojects { p ->
+                p.buildscript {
+                    dependencies {
+                        classpath p.files($entries)
+                    }
+                }
+            }
+            """.trimIndent()
+        )
+        return init
+    }
+
     @Test
-    @Disabled(
-        "transform verified end-to-end manually (lib-1.0.jar -> lib-1.0-named.jar " +
-                "through the pipeline); under TestKit the engine jar is not visible to " +
-                "the transform's isolated classloader — needs composite/published-plugin setup"
-    )
     fun `module dependency resolves through the remap transform`() {
         val repo = writeRepo()
         writeProject(repo)
 
         GradleRunner.create()
             .withProjectDir(dir.toFile())
-            .withPluginClasspath()
-            .withArguments("copyRemapped", "--configuration-cache", "-s")
+            .withArguments("copyRemapped", "--configuration-cache", "-s",
+                "-I", writeInitScript().toString())
             .build()
 
         val outDir = dir.resolve("build/remapped")

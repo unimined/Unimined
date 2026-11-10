@@ -20,22 +20,29 @@ they never produce components or publications.
 ```kotlin
 uniminedPublish {
     javaPublication()                 // opt-in ordinary `java` component
+    mavenPublications.set(false)      // opt out of all Maven publications
     environment("main") {
         groupId = "com.example"
-        artifactId = "examplemod-fabric"
+        artifactId = "examplemod"
         version = "1.0.0"
     }
 }
 ```
 
-Coordinate values override the publication's coordinates per
-environment.
+`mavenPublications` is on by default: the host applies `maven-publish`
+and creates one `MavenPublication` per `unimined<Env>` component.
+Set it to `false` for component-only or ModPublisher-only builds —
+no publications are created at all (the `publishing { }` extension
+still exists for your own use). `javaPublication()` opts the ordinary
+`components.java` into a `java` publication — it only takes effect
+while `mavenPublications` is enabled, and defaults its artifactId to
+`<project>-java` since `uniminedMain` already claims `<project>`.
 
 ## Maven
 
-`xyz.wagyourtail.unimined.publish-maven` creates one
-`MavenPublication` per `unimined<Env>` component and applies
-`maven-publish`. Repositories and credentials are plain Gradle
+One `MavenPublication` is created per environment component as it
+binds — `uniminedMain` → `uniminedMain`, `uniminedFabric` →
+`uniminedFabric`, etc. Repositories and credentials are plain Gradle
 `publishing {}` config:
 
 ```kotlin
@@ -49,8 +56,20 @@ publishing {
 }
 ```
 
-Each publication carries the environment's dev/prod jars and variant
-metadata (Gradle module metadata included). The loader-merge merged
+Coordinates default per environment: `main` publishes as
+`<project.name>`; every other environment as `<project.name>-<env>`
+(the `name-fabric`/`name-forge` convention) — set
+`environment("<env>") { artifactId = ... }` to override. Publications
+that would resolve to identical coordinates fail the build.
+
+Each publication carries the environment's dev and production
+variants plus sources (Gradle module metadata included): the dev jar
+rides custom `unimined-dev-*` usage attributes so plain
+`java-api`/`java-runtime` consumers resolve the production variant
+unambiguously — request a dev usage explicitly to opt in (see
+`PublishAttributes`). `publishDev`/`publishProduction`/`publishDataFiles`
+on `environment("<env>")` gate each channel; identity-remap
+environments publish a single artifact. The loader-merge merged
 artifact is intentionally not part of the Maven path — it belongs to
 ModPublisher uploads.
 
@@ -59,29 +78,32 @@ ModPublisher uploads.
 `xyz.wagyourtail.unimined.publish-modpublisher` feeds artifacts and
 release metadata into
 [`com.hypherionmc.modutils:modpublisher`](https://github.com/HypherionMC/modpublisher)'s
-`publisher { }` when that plugin is applied (it stays `compileOnly` —
-no ModPublisher classes load unless you apply it).
+`publisher { }` as **conventions** when that plugin is applied (it
+stays `compileOnly` — no ModPublisher classes load unless you apply
+it). There is no adapter DSL — `publisher { }` is the single surface
+for what can't be inferred, and anything you set there wins:
 
 ```kotlin
-uniminedPublishModpublisher {
+publisher {
     apiKeys {
-        curseforge.set(providers.environmentVariable("CURSE_TOKEN"))
-        modrinth.set(providers.environmentVariable("MODRINTH_TOKEN"))
+        curseforge(providers.environmentVariable("CURSE_TOKEN").get())
+        modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
     }
     curseID.set("1234")
     modrinthID.set("abc")
     versionType.set("release")
-    gameVersions.set(listOf("1.20.1"))
-    loaders.set(listOf("fabric", "forge"))
-    mergedArtifact.set(layout.buildDirectory.file("libs/mymod-merged.jar"))
-    // or, without a merged jar:
-    // perLoaderArtifacts.put("forge", <prod jar provider>)
     debug.set(true)   // dry-run: builds the upload plan, uploads nothing
 }
 ```
 
-`mergedArtifact` wins over `perLoaderArtifacts`; dev artifacts are
-never uploadable.
+Conventions supplied automatically: `artifact` (the forgix
+`mergedElements` jar when `adapter-forgix` is applied, else the first
+bound env's production jar — `remap<Env>Jar` when it remaps, else
+`jar`), `additionalFiles` (remaining per-loader prod jars), `loaders`
+(bound envs' loader names), `gameVersions` (env versions), and
+`version` (`project.version`). The merged artifact suppresses the
+per-loader jars; aux envs are excluded; dev artifacts are never
+uploadable.
 
 ### Manual verification (live upload)
 
@@ -99,27 +121,24 @@ release still needs a human pass:
 
 ## Loader-jar merging (forgix)
 
-`xyz.wagyourtail.unimined.mod-loader-merge` declares `loaderMerge { }`
-and `mergeLoaderJars`; engines are `ServiceLoader` plugins on the
-buildscript classpath. Forgix ships as
-`xyz.wagyourtail.unimined:unimined-mod-loader-merge-forgix`:
+The `adapter-forgix` adapter (plugin id
+`xyz.wagyourtail.unimined.adapter-forgix`) merges per-loader
+production jars with Forgix's engine:
 
 ```kotlin
-buildscript {
-    dependencies {
-        classpath("xyz.wagyourtail.unimined:unimined-mod-loader-merge-forgix:<version>")
-    }
-}
-
-loaderMerge {
-    engine.set("forgix")
-    from(
-        "fabric" to tasks.named("remapFabricJar").flatMap { it.archiveFile },
-        "forge" to tasks.named("remapForgeJar").flatMap { it.archiveFile },
-    )
+plugins {
+    id("xyz.wagyourtail.unimined.adapter-forgix") version "..."
 }
 ```
 
-Task-output providers are inferred — inputs build before the merge
-runs. The merged jar is published on the consumable `mergedElements`
-configuration (classifier `merged`) for publishers.
+Every bound environment's production jar feeds `mergeLoaderJars`
+automatically (`remap<Env>Jar`, or `jar` for non-remapping envs;
+auxiliary environments are excluded), keyed by loader name — most
+multi-loader builds need no configuration. Forgix's own plugin isn't
+required (its DSL only supports multi-project layouts); when applied,
+its `forgix { }` merge configurations feed in too, and
+`loaderMerge.from(...)` adds or overrides any input. The merged jar
+is published on the consumable `mergedElements` configuration
+(classifier `merged`) — the ModPublisher adapter prefers it as the
+upload artifact and suppresses the per-loader jars when it exists.
+See [adapters/forgix](../adapters/forgix.md).

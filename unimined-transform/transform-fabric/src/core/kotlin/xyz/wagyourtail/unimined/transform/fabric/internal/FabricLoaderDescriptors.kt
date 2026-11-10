@@ -41,7 +41,15 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // `fabric-client-gametest` entrypoints run
                 "gametestClientJvmArgs" to
                     "-Dfabric.client.gametest " +
-                    "-Dfabric.client.gametest.modid={modid}"
+                    "-Dfabric.client.gametest.modid={modid}",
+                // server gametests ride `<env>Server` — fabric-api's
+                // gametest module runs `fabric-gametest` entrypoints +
+                // @GameTest methods in-process when the flag is set and
+                // writes junit xml to report-file; {reportFile} fills a
+                // build/reports path per run
+                "gametestServerJvmArgs" to
+                    "-Dfabric-api.gametest " +
+                    "-Dfabric-api.gametest.report-file={reportFile}"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -103,6 +111,13 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "babric:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
+            // babric targets beta only — client/server obf spaces are
+            // disjoint; upstream's tiny carries both side columns
+            splitMerge = xyz.wagyourtail.unimined.transform.loader
+                .SplitMergeSpec(
+                    listOf("clientOfficial", "serverOfficial"),
+                    "intermediary"
+                ),
             capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -141,27 +156,10 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 nestedJarsKey = "jars"
             )
         ),
-        LoaderDescriptor(
-            id = "flint",
-            family = "fabric",
-            transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            repos = listOf(LoaderRepo.Maven("https://maven.flintloader.net/releases/")),
-            loaderCoords = { _, v -> "net.flintloader:punch:$v" },
-            prodNamespace = "intermediary",
-            // flint rides fabric intermediary
-            intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
-            capabilities = mapOf(
-                "replaceLwjgl" to "2.9.4+legacyfabric.10",
-                // flint substitutes only the lwjgl artifact, not the
-                // whole org.lwjgl group
-                "replaceLwjglMatch" to "org.lwjgl.lwjgl",
-            ),
-            metadata = LoaderMetadataSpec(
-                fileName = "fabric.mod.json",
-                accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
-                nestedJarsKey = "jars"
-            )
-        ),
+        // NOTE: the `flint` descriptor was removed — its only artifact
+        // host (maven.flintloader.net) is offline, so loader("flint")
+        // could never resolve. Reintroduce via LoaderRegistry.register
+        // if a mirror appears.
     )
 
 }

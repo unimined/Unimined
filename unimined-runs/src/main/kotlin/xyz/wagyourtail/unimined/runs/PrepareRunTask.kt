@@ -40,8 +40,28 @@ abstract class PrepareRunTask : DefaultTask() {
     @get:org.gradle.api.tasks.Optional
     abstract val stageInto: org.gradle.api.provider.Property<String>
 
+    /**
+     * Dynamic-library jars staged into [dynLibInto] — a separate
+     * channel from [modFiles] (FML-era loaders fetch libs from
+     * `runDir/lib`, not the mod folder). File names may be rewritten
+     * through [dynLibRenames].
+     */
+    @get:Classpath
+    @get:InputFiles
+    abstract val dynLibFiles: org.gradle.api.file.ConfigurableFileCollection
+
+    /** Subdirectory receiving [dynLibFiles]. Unset = no staging. */
+    @get:Input
+    @get:org.gradle.api.tasks.Optional
+    abstract val dynLibInto: org.gradle.api.provider.Property<String>
+
+    /** `originalName -> stagedName` for [dynLibFiles] (empty = verbatim). */
+    @get:Input
+    abstract val dynLibRenames: org.gradle.api.provider.MapProperty<String, String>
+
     init {
         group = "unimined"
+        dynLibRenames.convention(emptyMap())
     }
 
     @TaskAction
@@ -51,6 +71,16 @@ abstract class PrepareRunTask : DefaultTask() {
             val target = dir.resolve(sub).apply { mkdirs() }
             modFiles.filter { it.isFile }.forEach {
                 it.copyTo(target.resolve(it.name), overwrite = true)
+            }
+        }
+        dynLibInto.orNull?.let { sub ->
+            val renames = dynLibRenames.get()
+            val target = dir.resolve(sub).apply { mkdirs() }
+            dynLibFiles.filter { it.isFile }.forEach {
+                it.copyTo(
+                    target.resolve(renames[it.name] ?: it.name),
+                    overwrite = true
+                )
             }
         }
     }

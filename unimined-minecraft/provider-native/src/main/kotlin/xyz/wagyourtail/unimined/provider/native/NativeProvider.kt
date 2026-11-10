@@ -102,7 +102,7 @@ class NativeProvider(
         val libraries: Provider<List<org.gradle.api.artifacts.Dependency>> =
             ctx.providers.provider {
                 (metadata().libraries + overlayLibraries(
-                    spec.libraryOverlays, versionId, downloader
+                    spec.libraryOverlays, versionId, downloader, resolver
                 )).map {
                     ctx.dependencyFactory.create(substitute(it, spec.librarySubstitutions))
                 }
@@ -274,7 +274,8 @@ private val overlayJson = Json { ignoreUnknownKeys = true }
 internal fun overlayLibraries(
     overlays: List<String>,
     versionId: String,
-    downloader: Downloader
+    downloader: Downloader,
+    resolver: ManifestResolver? = null
 ): List<String> {
     return overlays.flatMap { url ->
         val file = downloader.fetchMetadata(
@@ -287,17 +288,28 @@ internal fun overlayLibraries(
         ).jsonArray.filter { entry ->
             val max = entry.jsonObject["maxGameVersion"]
                 ?.jsonPrimitive?.content
-            max == null || versionAtMost(versionId, max)
+            max == null || versionAtMost(versionId, max, resolver)
         }.mapNotNull {
             it.jsonObject["name"]?.jsonPrimitive?.content
         }
     }
 }
 
-/** Loose MC-version compare: numeric on dot-separated components where
- *  both parse (covers `1.4.7`/`1.8` shapes); `null`/`a`/`b`/`c`-
- *  prefixed ids fall through to string equality. */
-private fun versionAtMost(versionId: String, max: String): Boolean {
+/** MC-version compare: chronological when both ids are manifest-resolvable
+ *  (ISO `releaseTime` strings sort correctly — required for `b1.7.3` vs
+ *  `13w39b` where every lexical/numeric shape misorders); otherwise a
+ *  loose numeric-on-dot-components heuristic, falling through to string
+ *  equality for `null`/`a`/`b`/`c`-prefixed ids. */
+private fun versionAtMost(versionId: String, max: String, resolver: ManifestResolver? = null): Boolean {
+    if (resolver != null) {
+        val a = resolver.versionRef(versionId)?.releaseTime
+        val b = resolver.versionRef(max)?.releaseTime
+        if (a != null && b != null) return a <= b
+    }
+    return legacyVersionAtMost(versionId, max)
+}
+
+private fun legacyVersionAtMost(versionId: String, max: String): Boolean {
     val a = versionId.split('.', '-', '_')
     val b = max.split('.', '-', '_')
     val len = maxOf(a.size, b.size)

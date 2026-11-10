@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.remap
 
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
-import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.spi.ModArtifactOnlyStepSpec
 
 /**
  * DSL spec of the mod-artifact post-remap step — rewrites mod-jar
@@ -20,4 +20,4 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  */
 class ModArtifactsStepSpec(
     @get:Input @get:Optional override val engine: String? = null
-) : StepSpec
+) : ModArtifactOnlyStepSpec

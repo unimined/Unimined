@@ -40,7 +40,7 @@ By consequence, seeing as it's only bugfixes, snapshots on the LTS branch are co
 - [Minecraft Forge](https://minecraftforge.net)
 - [Neoforge](https://neoforged.net)
 - [Cleanroom](https://cleanroommc.com)
-- [Flint Loader](https://flintloader.net)
+- ~~Flint Loader~~ (removed — maven.flintloader.net offline)
 - [JarModAgent](https://github.com/unimined/JarModAgent)
 - [Rift](https://github.com/DimensionalDevelopment/Rift)
 - [FoxLoader](https://github.com/Fox2Code/FoxLoader)

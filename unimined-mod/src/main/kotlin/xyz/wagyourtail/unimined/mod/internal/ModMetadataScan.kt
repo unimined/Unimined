@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import java.io.File
@@ -32,7 +33,10 @@ internal object ModMetadataScan {
     /** What one class file declares for interface-injection purposes. */
     data class ClassInfo(
         val superName: String?,
-        val interfaces: List<String>
+        val interfaces: List<String>,
+        /** annotation descriptors (`Lfoo/Bar;`) seen on any method —
+         *  for method-level markers like fabric's 1.20-era `@GameTest`. */
+        val methodAnnotations: Set<String> = emptySet()
     )
 
     /** A parsed `*.mixins.json`: root package + member class names. */
@@ -125,10 +129,14 @@ internal object ModMetadataScan {
      * Class names (dot form) implementing [ifaceInternal] — direct
      * implementors plus subclasses whose ancestry resolves inside the
      * scanned set (a subclass of a gametest is itself a gametest).
+     * When [annotationInternal] is given (internal name, no `L;`),
+     * classes carrying it on any method match too — the 1.20-era fabric
+     * API marks tests with a method annotation instead of an interface.
      */
     fun gametestClasses(
         classesDirs: Collection<File>,
-        ifaceInternal: String
+        ifaceInternal: String,
+        annotationInternal: String? = null
     ): List<String> {
         val infos = scanClasses(classesDirs)
         val memo = HashMap<String, Boolean>()
@@ -137,8 +145,13 @@ internal object ModMetadataScan {
             info.interfaces.contains(ifaceInternal) ||
                     (info.superName?.let { isGame(it) } == true)
         }
-        return infos.keys.filter(::isGame)
-            .map { it.replace('/', '.') }
+        val annotationDescriptor = annotationInternal?.let { "L$it;" }
+        return infos.keys.filter { internal ->
+            isGame(internal) ||
+                (annotationDescriptor != null &&
+                    annotationDescriptor in (infos[internal]?.methodAnnotations
+                        ?: emptySet()))
+        }.map { it.replace('/', '.') }
             .sorted()
     }
 
@@ -227,14 +240,35 @@ internal object ModMetadataScan {
     }
 
     private open class InfoVisitor : ClassVisitor(Opcodes.ASM9) {
-        var info: ClassInfo? = null
-            private set
+        private var visited = false
+        private var superName: String? = null
+        private var interfaces: List<String> = emptyList()
+        private val methodAnnotations = mutableSetOf<String>()
+
+        val info: ClassInfo?
+            get() = if (visited) ClassInfo(
+                superName, interfaces, methodAnnotations
+            ) else null
 
         override fun visit(
             version: Int, access: Int, name: String,
             signature: String?, superName: String?, interfaces: Array<out String>?
         ) {
-            info = ClassInfo(superName, interfaces?.toList().orEmpty())
+            visited = true
+            this.superName = superName
+            this.interfaces = interfaces?.toList().orEmpty()
+        }
+
+        override fun visitMethod(
+            access: Int, name: String, descriptor: String,
+            signature: String?, exceptions: Array<out String>?
+        ): MethodVisitor = object : MethodVisitor(Opcodes.ASM9) {
+            override fun visitAnnotation(
+                descriptor: String, visible: Boolean
+            ): AnnotationVisitor? {
+                methodAnnotations += descriptor
+                return null
+            }
         }
     }
 

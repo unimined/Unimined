@@ -1,0 +1,4 @@
+name: @@NAME@@
+main: @@ENTRYPOINT@@
+version: @@VERSION@@
+api-version: @@MC_VERSION@@

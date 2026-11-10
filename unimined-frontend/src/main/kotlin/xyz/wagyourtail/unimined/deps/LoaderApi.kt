@@ -29,6 +29,15 @@ interface LoaderApiProvider {
 
     /** Coordinate of one api sub-[module], or null when absent. */
     fun module(module: String, version: String, mcVersion: String = "", environment: String? = null): String?
+
+    /**
+     * `mod { depends }` entries recorded when this api is used.
+     * Defaults to `{modid: version}` — providers whose umbrella
+     * version isn't a real mod version (module-split apis like OSL)
+     * override to point at a concrete mod id.
+     */
+    fun dependsSpec(version: String, mcVersion: String = ""): Map<String, String> =
+        mapOf(modid to version)
 }
 
 /** [LoaderApiProvider] whose sub-modules are the pom's `<dependency>`
@@ -81,19 +90,30 @@ class OslApiProvider : PomModulesProvider(
 ) {
 
     private fun moduleList(version: String): Map<String, String> {
-        val deps = LoaderApi.pom(pomUrl(version)).getElementsByTagName("dependency")
-        val out = linkedMapOf<String, String>()
-        for (i in 0 until deps.length) {
-            var name: String? = null
-            var vers: String? = null
-            for (j in 0 until deps.item(i).childNodes.length) {
-                val c = deps.item(i).childNodes.item(j)
-                if (c.nodeName == "artifactId") name = c.textContent
-                if (c.nodeName == "version") vers = c.textContent
+        // OSL gen-split at 0.17+: the umbrella pom moved from `osl` to
+        // `osl-gen1`/`osl-gen2` (the pom still lists `module -> version`
+        // deps either way; meta resolves each module's mc build).
+        for (artifact in listOf("osl", "osl-gen2", "osl-gen1")) {
+            val url =
+                "https://maven.ornithemc.net/releases/net/ornithemc/" +
+                        "$artifact/$version/$artifact-$version.pom"
+            val pom = runCatching { LoaderApi.pom(url) }.getOrNull()
+                ?: continue
+            val deps = pom.getElementsByTagName("dependency")
+            val out = linkedMapOf<String, String>()
+            for (i in 0 until deps.length) {
+                var name: String? = null
+                var vers: String? = null
+                for (j in 0 until deps.item(i).childNodes.length) {
+                    val c = deps.item(i).childNodes.item(j)
+                    if (c.nodeName == "artifactId") name = c.textContent
+                    if (c.nodeName == "version") vers = c.textContent
+                }
+                if (name != null && vers != null) out[name] = vers
             }
-            if (name != null && vers != null) out[name] = vers
+            if (out.isNotEmpty()) return out
         }
-        return out
+        return emptyMap()
     }
 
     private fun forMc(module: String, version: String, mc: String, environment: String?): String? {
@@ -112,6 +132,18 @@ class OslApiProvider : PomModulesProvider(
 
     override fun module(module: String, version: String, mcVersion: String, environment: String?): String? =
         moduleList(version)[module]?.let { forMc(module, it, mcVersion, environment) }
+
+    override fun dependsSpec(version: String, mcVersion: String): Map<String, String> {
+        // OSL is module-split at every gen — there is no `osl`
+        // aggregate modid. `osl-core` is the base every module
+        // transitively depends on; pin the mc-resolved core build
+        // when meta answers, else accept any version.
+        val coreV = moduleList(version)["core"] ?: return mapOf("osl-core" to "*")
+        val resolved = if (mcVersion.isBlank()) null else runCatching {
+            forMc("core", coreV, mcVersion, null)
+        }.getOrNull()?.split(":")?.getOrNull(2)
+        return mapOf("osl-core" to (resolved?.let { ">=$it" } ?: "*"))
+    }
 }
 
 /**

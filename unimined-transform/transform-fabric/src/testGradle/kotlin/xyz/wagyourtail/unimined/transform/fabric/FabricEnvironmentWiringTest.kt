@@ -50,6 +50,9 @@ class FabricEnvironmentWiringTest {
     fun `apply contributes fabric repo and intermediary mod-source default`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // implicit-parent resolution reaches main's spec — it needs a
+        // version even though the test only exercises the fabric env
+        ext.main.version.set("1.20.1")
         // repo registration is per-selected-loader — an env must
         // declare a fabric-family loader for the maven to land
         ext.sourceSet("fabric") { env ->
@@ -163,7 +166,7 @@ class FabricEnvironmentWiringTest {
             FamilyCase("legacyfabric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.legacyfabric:intermediary:1.20.1:v2"),
             FamilyCase("babric", "0.16.0", "babric:fabric-loader:0.16.0", "babric:intermediary-upstream:1.20.1:v2"),
             FamilyCase("ornithe", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2"),
-            FamilyCase("flint", "1.0.0", "net.flintloader:punch:1.0.0", "net.fabricmc:intermediary:1.20.1:v2"),
+            // flint removed — maven.flintloader.net offline
         )
         for (c in cases) {
             serve(c.loaderGav)
@@ -271,8 +274,44 @@ class FabricEnvironmentWiringTest {
             "legacyfabric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
             "babric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
             "ornithe" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
-            "flint" to ("org.lwjgl.lwjgl" to "2.9.4+legacyfabric.10"),
+            // flint removed — maven.flintloader.net offline
         )
+        // spec() resolves each env's own loader+intermediary coords —
+        // serve them from a local repo so the test doesn't depend on
+        // live mavens
+        val repo = dir.resolve("repo").toFile()
+        fun serve(gav: String) {
+            val p = gav.split(":")
+            val jarDir = repo.resolve("${p[0].replace('.', '/')}/${p[1]}/${p[2]}")
+            jarDir.mkdirs()
+            val classifier = p.getOrNull(3)?.let { "-$it" } ?: ""
+            jarDir.resolve("${p[1]}-${p[2]}$classifier.jar").writeBytes(
+                byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+            )
+            if (p.size > 3) {
+                jarDir.resolve("${p[1]}-${p[2]}.jar").writeBytes(
+                    byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+                )
+            }
+        }
+        listOf(
+            "net.fabricmc:fabric-loader:1.0",       // legacyfabric + ornithe
+            "babric:fabric-loader:1.0",
+            "net.legacyfabric:intermediary:1.20.1:v2",
+            "babric:intermediary-upstream:1.20.1:v2",
+            "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2",
+        ).forEach(::serve)
+        // exclusiveContent is consulted before — and instead of — the
+        // remote mavens the loader wiring contributes at evaluate-time
+        project.repositories.exclusiveContent { exclusive ->
+            exclusive.forRepository {
+                project.repositories.maven { m ->
+                    m.url = repo.toURI()
+                    m.metadataSources { s -> s.artifact() }
+                }
+            }
+            exclusive.filter { it.includeGroupByRegex(".*") }
+        }
         // declare all envs before evaluation — post-eval sourceSet()
         // hits a raw afterEvaluate in EnvironmentClasspathWiring
         val envs = cases.keys.associateWith { loader ->

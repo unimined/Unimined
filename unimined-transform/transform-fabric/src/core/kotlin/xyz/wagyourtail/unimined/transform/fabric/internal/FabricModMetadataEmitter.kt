@@ -16,6 +16,10 @@ class FabricModMetadataEmitter : FabricModJsonEmitter() {
     override val gametestInterface =
         "net.fabricmc.fabric.api.gametest.v1.FabricGameTest"
 
+    // 1.20-era fabric API: `@GameTest` methods replace the interface
+    override val gametestAnnotation =
+        "net.fabricmc.fabric.api.gametest.v1.GameTest"
+
     override val clientGametestInterface =
         "net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest"
 

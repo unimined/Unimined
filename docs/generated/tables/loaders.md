@@ -7,7 +7,7 @@
 || `forge` | era-aware — FG1-era ≤1.7.10, 1.8–1.12, modern ≥1.13 |
 || `neoforge` | |
 || `cleanroom` | CleanroomMC |
-|| `flint` | |
+|| `flint` | removed — maven.flintloader.net offline |
 || `rift` | |
 || `foxloader` | ReIndev's loader |
 || `liteloader` | |

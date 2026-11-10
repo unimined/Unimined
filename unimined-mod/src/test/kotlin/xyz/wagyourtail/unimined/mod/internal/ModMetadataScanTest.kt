@@ -14,12 +14,14 @@ import kotlin.io.path.writeBytes
 class ModMetadataScanTest {
 
     /** Emit a minimal class: [ifaces] as implemented interfaces, optional
-     *  `@Mixin` annotation carrying [targets] as `value` class literals. */
+     *  `@Mixin` annotation carrying [targets] as `value` class literals,
+     *  optional `test()` method carrying [methodAnnotations] descriptors. */
     private fun classBytes(
         internalName: String,
         ifaces: List<String> = emptyList(),
         mixinTargets: List<String> = emptyList(),
-        superName: String = "java/lang/Object"
+        superName: String = "java/lang/Object",
+        methodAnnotations: List<String> = emptyList()
     ): ByteArray {
         val cw = ClassWriter(0)
         cw.visit(
@@ -36,6 +38,17 @@ class ModMetadataScanTest {
             }
             arr.visitEnd()
             av.visitEnd()
+        }
+        if (methodAnnotations.isNotEmpty()) {
+            val mv = cw.visitMethod(
+                Opcodes.ACC_PUBLIC, "test", "()V", null, null
+            )
+            methodAnnotations.forEach {
+                mv.visitAnnotation(it, true).visitEnd()
+            }
+            mv.visitCode()
+            mv.visitInsn(Opcodes.RETURN)
+            mv.visitEnd()
         }
         cw.visitEnd()
         return cw.toByteArray()
@@ -130,6 +143,40 @@ class ModMetadataScanTest {
         )
         assertEquals(
             listOf("com.example.BaseTest", "com.example.ConcreteTest"), out
+        )
+    }
+
+    @Test
+    fun `gametestClasses finds method-annotation markers`() {
+        // the 1.20-era fabric api replaced the FabricGameTest interface
+        // with a method-level @GameTest annotation
+        val dir = Files.createTempDirectory("scan")
+        val iface = "net/fabricmc/fabric/api/gametest/v1/FabricGameTest"
+        val anno = "net/fabricmc/fabric/api/gametest/v1/GameTest"
+        writeClass(
+            dir, "com/example/AnnotatedTest",
+            classBytes(
+                "com/example/AnnotatedTest",
+                methodAnnotations = listOf("L$anno;")
+            )
+        )
+        writeClass(
+            dir, "com/example/InterfaceTest",
+            classBytes("com/example/InterfaceTest", ifaces = listOf(iface))
+        )
+        writeClass(
+            dir, "com/example/UnrelatedAnno",
+            classBytes(
+                "com/example/UnrelatedAnno",
+                methodAnnotations = listOf("Lorg/junit/jupiter/api/Test;")
+            )
+        )
+        val out = ModMetadataScan.gametestClasses(
+            listOf(dir.toFile()), iface, anno
+        )
+        assertEquals(
+            listOf("com.example.AnnotatedTest", "com.example.InterfaceTest"),
+            out
         )
     }
 

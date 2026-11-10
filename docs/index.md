@@ -20,7 +20,7 @@ build mods with ease.
 - just plain jarmodding
     - [Modloader](https://mcarchive.net/mods/modloader)
     - [JarModAgent](https://github.com/unimined/JarModAgent)
-- [Flint Loader](https://flintloader.net)
+- ~~Flint Loader~~ (removed — maven.flintloader.net offline)
 - Rift
 - [Craftbukkit/Spigot](https://hub.spigotmc.org)
 - [Paper](https://papermc.io)

@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.transform.jarmod
 
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
+import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 
 /**
  * Kotlin DSL sugar for the jarmod loader — thin shims delegating to
@@ -60,3 +61,58 @@ fun MinecraftEnvironment.jarmodTransforms(transforms: List<String>) =
  *  always dropped either way). */
 fun MinecraftEnvironment.deleteMetaInf(disable: Boolean = true) =
     jarmodExt().deleteMetaInf(disable)
+
+/** Register a refmap resource (`jma.refmaps`) — a classpath-resource
+ *  name like `examplemod.refmap.json`; the agent merges all listed
+ *  refmaps per transformer. */
+fun MinecraftEnvironment.jarmodRefmap(refmap: String) =
+    jarmodExt().jarmodRefmap(refmap)
+
+/** Declare a set of refmap resources. */
+fun MinecraftEnvironment.jarmodRefmaps(refmaps: List<String>) =
+    jarmodExt().jarmodRefmaps(refmaps)
+
+/** Register a `JMAInitializer` class (`jma.initializers`) — runs
+ *  before manifest-declared initializers; call order is load order. */
+fun MinecraftEnvironment.jarmodInitializer(initializer: String) =
+    jarmodExt().jarmodInitializer(initializer)
+
+/** Declare an ordered set of `JMAInitializer` classes. */
+fun MinecraftEnvironment.jarmodInitializers(initializers: List<String>) =
+    jarmodExt().jarmodInitializers(initializers)
+
+/** `jma.failStrategy` — ClassTransform `FailStrategy` for transformer
+ *  failures: CONTINUE, CANCEL, EXIT or THROW (agent ≥ 0.1.5). */
+fun MinecraftEnvironment.jarmodFailStrategy(strategy: String) =
+    jarmodExt().jarmodFailStrategy(strategy)
+
+/** `jma.debug` — dump patched classes under `.jma/patched`. */
+fun MinecraftEnvironment.jarmodDebug() = jarmodExt().jarmodDebug()
+
+// `minecraft {}` configures the `main` environment — these forward
+// there so `unimined { minecraft { jarmodTransformer("x.transform") } }`
+// works alongside `sourceSet("other") { jarmodTransformer(...) }`.
+
+fun MinecraftExtension.jarmodTransformer(transform: String) =
+    environments.getByName("main").jarmodTransformer(transform)
+
+fun MinecraftExtension.jarmodTransforms(transforms: List<String>) =
+    environments.getByName("main").jarmodTransforms(transforms)
+
+fun MinecraftExtension.jarmodRefmap(refmap: String) =
+    environments.getByName("main").jarmodRefmap(refmap)
+
+fun MinecraftExtension.jarmodRefmaps(refmaps: List<String>) =
+    environments.getByName("main").jarmodRefmaps(refmaps)
+
+fun MinecraftExtension.jarmodInitializer(initializer: String) =
+    environments.getByName("main").jarmodInitializer(initializer)
+
+fun MinecraftExtension.jarmodInitializers(initializers: List<String>) =
+    environments.getByName("main").jarmodInitializers(initializers)
+
+fun MinecraftExtension.jarmodFailStrategy(strategy: String) =
+    environments.getByName("main").jarmodFailStrategy(strategy)
+
+fun MinecraftExtension.jarmodDebug() =
+    environments.getByName("main").jarmodDebug()

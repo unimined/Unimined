@@ -147,6 +147,7 @@ internal object ProductionJarWiring {
             // the dev classpath: remapped mod views + dev MC + libraries —
             // feeds inheritance/propagation for engines that need it
             t.remapClasspath.from(sourceSet.compileClasspath)
+            t.footgunChecks.set(remap.footgunChecks)
         }
         // prod-mapped sources — 1.x's `remapSourcesJar`: a conventional
         // `sourcesJar` carries dev-namespace sources under a `-dev`
@@ -163,6 +164,13 @@ internal object ProductionJarWiring {
                 t.group = "build"
                 t.from(sourceSet.allSource)
                 t.archiveClassifier.set("sources")
+                // env-qualified name like wireEnvJar's — without it
+                // every env's sources jar (and its remap) emits
+                // `<name>-<version>-sources.jar`, colliding with
+                // main's in build/libs
+                if (environmentId != "main") {
+                    t.archiveAppendix.set(environmentId)
+                }
                 t.destinationDirectory.set(jar.destinationDirectory)
             }.get()
 
@@ -210,6 +218,7 @@ internal object ProductionJarWiring {
                 ).serialize()
             })
             t.remapClasspath.from(sourceSet.compileClasspath)
+            t.footgunChecks.set(remap.footgunChecks)
         }
         sourcesJar.archiveClassifier.set(
             identity.map { isIdentity ->

@@ -63,3 +63,6 @@ testing/modloader/
 testing/nsss/
 testing/ornithe-b173/
 testing/reindev/
+
+# KMP transformed-metadata cache
+.kotlin/

@@ -8,6 +8,7 @@ import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.Provider
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
+import java.nio.file.Path
 import java.time.Duration
 
 /**
@@ -41,6 +42,18 @@ interface ProviderContext {
      * the environment's `useToolchains` opt-out; when false tools
      * run on the build JVM (providers validate its version). */
     val useToolchains: Provider<Boolean>
+
+    /**
+     * Cross-project cache root (`UniminedCache.global`) — heavyweight
+     * tool outputs that must be shared with execution-time
+     * [ProductArtifactProducer]s land here so config-time and
+     * transform-time paths hit one work dir (e.g. a 20-minute
+     * BuildTools build). Defaults to the project `.gradle` for
+     * contexts that never see the global root.
+     */
+    val globalCacheDir: Path
+        get() = layout.projectDirectory.dir(".gradle/unimined")
+            .asFile.toPath()
 
     /** Whether Gradle was invoked with `--offline`. */
     val offline: Boolean

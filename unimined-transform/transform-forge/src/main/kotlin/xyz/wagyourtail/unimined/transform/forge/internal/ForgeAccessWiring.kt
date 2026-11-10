@@ -184,9 +184,14 @@ internal fun contributeAccessSteps(
     // obf-named runtime); user-authored ATs are in dev names
     // (1.x `at2aw` defaulted to devNamespace).
     val extractedObfNs = resolved.map { r ->
-        (r.profile as? ForgeProfile.Userdev)?.config
-            ?.obfNamespaceFor(!environment.obfuscated.get())
-            ?: "searge"
+        when (val p = r.profile) {
+            is ForgeProfile.Userdev ->
+                p.config.obfNamespaceFor(!environment.obfuscated.get())
+            // FG1-era ATs name official-obf targets (`als.a`,
+            // `baz.u`) — pre-binpatches trees have no searge column
+            is ForgeProfile.ZipPatches -> "official"
+            else -> "searge"
+        }
     }
     val extractedSpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
     extractedSpec.classTweakerFiles.from(extractedAts)

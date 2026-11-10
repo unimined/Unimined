@@ -73,12 +73,30 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             id = "liteloader",
             family = "jarmod",
             repos = listOf(
-                // artifact-only feed — no poms/module metadata
+                // repo.mumfrey.com is the real Nexus behind
+                // dl.liteloader.com's feeds — declared first so
+                // artifacts resolve directly, avoiding the
+                // https->http downgrade redirect Gradle refuses
+                LoaderRepo.Maven(
+                    "https://repo.mumfrey.com/content/repositories/snapshots/"
+                ),
+                LoaderRepo.Maven(
+                    "https://repo.mumfrey.com/content/repositories/liteloader/"
+                ),
+                // NOTE: dl.liteloader.com/versions is intentionally
+                // absent — its artifact hits 302 to an insecure http
+                // redirector, which Gradle treats as a hard failure
+                // that short-circuits resolution before later repos
+                // get tried
+                LoaderRepo.Maven("https://repo.spongepowered.org/maven/"),
+                // release-era artifacts (e.g. 1.7.10_04) live here under a
+                // maven layout despite versions.json's "ivy" label — last
+                // maven so mumfrey wins for snapshots; no poms exist on
+                // this host so it must be artifact-only metadata
                 LoaderRepo.Maven(
                     "https://dl.liteloader.com/versions/",
                     metadata = LoaderRepo.MetadataMode.ARTIFACT_ONLY
                 ),
-                LoaderRepo.Maven("https://repo.spongepowered.org/maven/"),
                 // legacy redist is a plain file feed — ivy pattern
                 LoaderRepo.Ivy(
                     "https://dl.liteloader.com/redist/legacy/",
@@ -90,6 +108,32 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "official",
             wiringVariant = "liteloader",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
+        ),
+        LoaderDescriptor(
+            id = "rift",
+            family = "jarmod",
+            repos = listOf(
+                // rift + its dimdev mixin fork — www.dimdev.org is
+                // offline; wagyourtail releases mirrors both under
+                // org.dimdev (group-scoped so it can't shadow)
+                LoaderRepo.Maven(
+                    "https://maven.wagyourtail.xyz/releases/",
+                    includeGroupRegex = "org\\.dimdev"),
+                // launchwrapper 1.12 backup — primary host is
+                // libraries.minecraft.net (always in env repos)
+                LoaderRepo.Maven("https://maven.minecraftforge.net/"),
+                // org.spongepowered artifacts users may layer on
+                // (1.x added sponge maven for mixin; the dimdev
+                // fork resolves from the mirror above)
+                LoaderRepo.Maven("https://repo.spongepowered.org/maven/")
+            ),
+            // rift versions are MC-keyed (org.dimdev:rift:1.13.2) —
+            // an empty declared version means the env's MC version
+            loaderCoords = { mc, v -> "org.dimdev:rift:${v.ifEmpty { mc }}" },
+            prodNamespace = "official",
+            wiringVariant = "rift",
+            transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod",
+            metadata = LoaderMetadataSpec(fileName = "riftmod.json")
         )
     )
 }

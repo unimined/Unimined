@@ -8,7 +8,10 @@ import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
  * reproduce the same run resolution `RunsWiring` performs when
  * generating IDE launch files.
  */
-class MutableRunConfigSpec(override val name: String) : RunConfigSpec {
+class MutableRunConfigSpec(
+    override val name: String,
+    override val prod: Boolean
+) : RunConfigSpec {
 
     override var mainClass: String? = null
 

@@ -9,6 +9,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
+import java.nio.file.Path
 import java.time.Duration
 
 /**
@@ -24,6 +25,7 @@ class DefaultProviderContext(
     override val logger: Logger,
     override val javaToolchains: JavaToolchainService,
     override val useToolchains: Provider<Boolean>,
+    override val globalCacheDir: Path,
     override val offline: Boolean,
     override val forceReload: Boolean,
     override val refreshDependencies: Boolean,

@@ -116,4 +116,36 @@ class RunsWiringTest {
                 task.mutatedJavaagents.get())
     }
 
+    @Test
+    fun `prepare task stages modFiles and renamed dynLibFiles`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+
+        val task = project.tasks.findByName("prepareRunClient")
+        assertNotNull(task)
+        task as PrepareRunTask
+
+        val runDir = dir.resolve("run-client")
+        task.runDirectory.set(runDir.toFile())
+
+        val mod = dir.resolve("mod.jar").toFile().apply { writeBytes(byteArrayOf(0)) }
+        val lib = dir.resolve("asm-all-5.2.jar").toFile().apply { writeBytes(byteArrayOf(0)) }
+        task.modFiles.from(mod)
+        task.stageInto.set("mods")
+        task.dynLibFiles.from(lib)
+        task.dynLibInto.set("lib")
+        task.dynLibRenames.put("asm-all-5.2.jar", "asm-all-4.1.jar")
+
+        task.prepare()
+
+        assertTrue(runDir.resolve("mods/mod.jar").toFile().isFile)
+        assertTrue(runDir.resolve("lib/asm-all-4.1.jar").toFile().isFile)
+        assertFalse(runDir.resolve("lib/asm-all-5.2.jar").toFile().exists())
+        // mods channel must not leak into the lib dir
+        assertFalse(runDir.resolve("lib/mod.jar").toFile().exists())
+    }
+
 }

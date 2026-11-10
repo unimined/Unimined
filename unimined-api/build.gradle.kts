@@ -22,6 +22,13 @@ dependencies {
     testRuntimeOnly(libs.slf4j.nop)
 }
 
+// ProjectBuilder (testGradle) needs java.lang opens for Gradle's
+// classloader injection — java-gradle-plugin sets this on plugin
+// modules automatically; this module is plain java-library
+tasks.named<Test>("testGradle") {
+    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {

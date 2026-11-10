@@ -191,7 +191,8 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             }
             emitter.gametestInterface?.let { iface ->
                 gametestEntrypoints = ModMetadataScan.gametestClasses(
-                    classDirs, iface.replace('.', '/')
+                    classDirs, iface.replace('.', '/'),
+                    emitter.gametestAnnotation?.replace('.', '/')
                 )
             }
             emitter.clientGametestInterface?.let { iface ->

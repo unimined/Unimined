@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logging
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
@@ -14,7 +15,6 @@ import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.util.jar.JarFile
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -82,19 +82,19 @@ class JarProcessorsStepType : RemapStepType<JarProcessorsStepSpec> {
         ZipFile(jar.toFile()).use { it.getEntry(markerPath(name)) != null }
 
     private fun markApplied(jar: Path, name: String) {
-        val tmp = Files.createTempFile(jar.parent, "marker", ".jar")
-        ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
-            val dirs = mutableSetOf<String>()
-            ZipFile(jar.toFile()).use { zip ->
-                zip.entries().asSequence().filter { !it.isDirectory }.forEach { e ->
-                    out.putEntryWithDirs(e.name, dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) { o ->
-                        zip.getInputStream(e).use { it.copyTo(o) }
+        jar.writeAtomically { tmp ->
+            ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
+                val dirs = mutableSetOf<String>()
+                ZipFile(jar.toFile()).use { zip ->
+                    zip.entries().asSequence().filter { !it.isDirectory }.forEach { e ->
+                        out.putEntryWithDirs(e.name, dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) { o ->
+                            zip.getInputStream(e).use { it.copyTo(o) }
+                        }
                     }
                 }
+                out.putEntryWithDirs(markerPath(name), dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) {}
             }
-            out.putEntryWithDirs(markerPath(name), dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) {}
         }
-        Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
     }
 
     /**

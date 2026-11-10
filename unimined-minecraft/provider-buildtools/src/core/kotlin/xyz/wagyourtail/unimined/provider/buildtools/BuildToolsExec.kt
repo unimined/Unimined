@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.provider.buildtools
 
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.nio.channels.FileChannel
-import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
@@ -40,8 +39,11 @@ internal class BuildToolsExec(
 
     /**
      * Produce the [target] server jar at [rev] (a Minecraft version
-     * like `1.20.4`). Idempotent — skips when the output already
-     * exists in the work dir.
+     * like `1.20.4`) — the maven module output under `…/target/` with
+     * the real server classes (`org.bukkit.craftbukkit.Main`,
+     * `net.minecraft.server.*`), not the bootstrap launcher jar
+     * BuildTools also drops in the work-dir root. Idempotent —
+     * skips when the output already exists.
      */
     fun serverJar(
         target: String, rev: String,
@@ -67,7 +69,7 @@ internal class BuildToolsExec(
                                 "-jar", buildTools().toAbsolutePath().toString(),
                                 "--rev", rev,
                                 "--compile",
-                                if (target == "spigot") "SPIGOT" else "CRAFT-BUKKIT"
+                                target.uppercase()
                             ),
                             dir
                         )
@@ -79,17 +81,79 @@ internal class BuildToolsExec(
             ?: error("BuildTools produced no $target jar under $dir")
     }
 
-    private fun existingOutput(dir: Path, target: String): Path? =
+    /**
+     * The bootstrap launcher jar (`<target>-<rev>.jar` in the work
+     * dir root) — a paperclip-style container carrying
+     * `META-INF/libraries/` + `META-INF/versions/`, which is where
+     * the bukkit api and the server's runtime library set live.
+     */
+    fun bootstrapJar(dir: Path, target: String): Path? =
         if (dir.exists()) {
             dir.listDirectoryEntries("$target-*.jar")
-                .firstOrNull { !it.fileName.toString().endsWith("-sources.jar") }
+                .firstOrNull { !it.fileName.toString()
+                    .endsWith("-sources.jar") }
         } else null
 
-    private fun lockFile(dir: Path): FileLock =
-        FileChannel.open(
-            dir.resolve(".build.lock"),
-            StandardOpenOption.CREATE, StandardOpenOption.WRITE
-        ).use { it.lock() }
+    /**
+     * The runtime library set the bootstrap embeds: rows of
+     * `META-INF/libraries.list` shaped `<sha256>\t*<name>.jar` mark
+     * embedded jars under `META-INF/libraries/` — extracted to
+     * [outDir] and returned as file-dep paths (the set includes the
+     * bukkit api jar itself — `bukkit-<rev>-R0.1-SNAPSHOT.jar`).
+     * Empty when the bootstrap predates the bundler layout.
+     */
+    fun embeddedLibraries(target: String, rev: String, outDir: Path): List<Path> {
+        val bootstrap = bootstrapJar(workDir.resolve("$target-$rev"), target)
+            ?: return emptyList()
+        return java.util.zip.ZipFile(bootstrap.toFile()).use { zip ->
+            val list = zip.getEntry("META-INF/libraries.list")
+                ?: return emptyList()
+            zip.getInputStream(list).bufferedReader().readLines()
+                .mapNotNull { line ->
+                    line.split(Regex("\\s+"))
+                        .firstOrNull { it.startsWith("*") && it.endsWith(".jar") }
+                        ?.removePrefix("*")
+                }
+                .mapNotNull { name ->
+                    // rows can name jars carried outside
+                    // `libraries/` (the vanilla server jar lives
+                    // under `versions/`) — those are not classpath
+                    // members, the impl jar already shades them
+                    val entry = zip.getEntry("META-INF/libraries/$name")
+                        ?: return@mapNotNull null
+                    val dest = outDir.resolve(name)
+                    if (!dest.exists()) {
+                        dest.parent.createDirectories()
+                        zip.getInputStream(entry).use { input ->
+                            java.nio.file.Files.copy(input, dest)
+                        }
+                    }
+                    dest
+                }
+        }
+    }
+
+    /** The maven-module output jar — `…/target/<target>-*.jar`,
+     *  skipping classifier jars and the `original-*` pre-shade
+     *  copy. `target/` confinement keeps the root bootstrap and the
+     *  bukkit-api sibling module out of the match. */
+    private fun existingOutput(dir: Path, target: String): Path? =
+        if (dir.exists()) {
+            java.nio.file.Files.walk(dir).use { stream ->
+                stream.filter {
+                    it.parent?.fileName?.toString() == "target" &&
+                        it.fileName.toString().let { n ->
+                            n.startsWith("$target-") &&
+                                n.getOrNull(target.length + 1)?.isDigit() == true &&
+                                n.endsWith(".jar") &&
+                                !n.endsWith("-sources.jar") &&
+                                !n.endsWith("-bootstrap.jar") &&
+                                !n.endsWith("-javadoc.jar") &&
+                                !n.endsWith("-tests.jar")
+                        }
+                }.findFirst().orElse(null)
+            }
+        } else null
 
     companion object {
         private val LOCKS = ConcurrentHashMap<Path, ReentrantLock>()

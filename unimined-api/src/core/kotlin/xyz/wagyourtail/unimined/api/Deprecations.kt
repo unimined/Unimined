@@ -19,4 +19,11 @@ object Deprecations {
     fun loaderBlock(loader: String): Nothing =
         movedDsl("$loader { }", "loader(\"$loader\", \"<version>\")")
 
+    /** Loader removed entirely — no migration path. */
+    fun removedLoader(loader: String, why: String): Nothing {
+        throw IllegalStateException(
+            "[unimined 2.0] `$loader` loader support was removed — $why"
+        )
+    }
+
 }

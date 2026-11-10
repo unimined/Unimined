@@ -333,9 +333,8 @@ class UniminedRepos private constructor(
         "https://maven.wagyourtail.xyz/{name}/",
         artifactFallback = true,
         servedGroups = mapOf("xyz.wagyourtail" to "releases"))
-    val flint by ParameterizedMaven(
-        "Flint ({name})", "https://maven.flintloader.net/{name}/",
-        servedGroups = mapOf("net.flintloader" to "releases"))
+    // `flint` preset removed — maven.flintloader.net is offline; the
+    // loader descriptor was dropped with it.
     val cleanroom by ParameterizedMaven(
         "cleanroom-{name}", "https://repo.cleanroommc.com/{name}")
     val signalum by ParameterizedMaven(

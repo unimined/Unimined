@@ -12,6 +12,7 @@ import java.util.jar.JarOutputStream
 import java.util.zip.Adler32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import kotlin.io.path.outputStream
 import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 
@@ -182,7 +183,9 @@ object BinpatchesPackPatcher {
          *  threads, so throttle inside the callback */
         onProgress: ((done: Int, total: Int) -> Unit)? = null
     ) {
-        output.toFile().delete()
+        // write via temp+atomic move — a killed patch run must not
+        // leave a partial (or deleted-then-partial) jar (#78)
+        output.writeAtomically { tmp ->
         // per-side entry adler maps — built lazily: only needed to
         // attribute entries whose patch candidates can't be verified
         // directly (ambiguous or unpatched-side entries); hashing both
@@ -305,7 +308,7 @@ object BinpatchesPackPatcher {
                     )
                 }
                 .toList()
-            output.outputStream().buffered().let {
+            tmp.outputStream().buffered().let {
                 java.util.zip.ZipOutputStream(it)
             }.use { out ->
                 val emittedDirs = HashSet<String>()
@@ -319,6 +322,7 @@ object BinpatchesPackPatcher {
                     log("added $name ($side patch)")
                 }
             }
+        }
         }
     }
 

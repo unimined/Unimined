@@ -21,7 +21,16 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "forge",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
+            repos = listOf(
+                // FG1-era forge artifacts are pom-less dir listings —
+                // `:$side`/`universal@zip` zips exist at this maven's
+                // root but no `.pom` does, so module metadata alone
+                // can't resolve them
+                LoaderRepo.Maven(
+                    "https://maven.minecraftforge.net/",
+                    metadata = LoaderRepo.MetadataMode.POM_AND_ARTIFACT
+                )
+            ),
             loaderCoords = { mc, v ->
                 // version may arrive mc-prefixed (`26.3-66.1.5`
                 // from `latest` resolution) or bare (`47.3.0`)
@@ -42,7 +51,13 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             id = "lexforge",
             family = "forge",
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
-            repos = listOf(LoaderRepo.Maven("https://maven.minecraftforge.net/")),
+            repos = listOf(
+                // same pom-less FG1-era feed as `forge`
+                LoaderRepo.Maven(
+                    "https://maven.minecraftforge.net/",
+                    metadata = LoaderRepo.MetadataMode.POM_AND_ARTIFACT
+                )
+            ),
             loaderCoords = { mc, v ->
                 // version may arrive mc-prefixed (`26.3-66.1.5`
                 // from `latest` resolution) or bare (`47.3.0`)

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.runs
 
+import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
@@ -68,8 +69,21 @@ abstract class RunConfig @Inject constructor(
      */
     abstract val stdin: Property<String>
 
-    /** Offline-mode player name — `auth(offline(name))` for now. */
+    /**
+     * Offline-mode player name — back-compat shorthand feeding
+     * `auth.username`'s convention; `auth { offline(it) }` is the
+     * typed form.
+     */
     abstract val username: Property<String>
+
+    /**
+     * Per-run auth — `auth { microsoft() }` / `offline(name)` /
+     * `custom(provider)`. See [AuthSpec].
+     */
+    val auth: AuthSpec = objects.newInstance(AuthSpec::class.java)
+
+    /** Configure this run's [auth]. */
+    fun auth(action: Action<AuthSpec>) = action.execute(auth)
 
     /** Rule features to enable (`is_demo_user`, `has_custom_resolution`). */
     abstract val features: SetProperty<String>
@@ -82,6 +96,64 @@ abstract class RunConfig @Inject constructor(
 
     /** Download asset objects for the launch's asset index (default on). */
     abstract val downloadAssets: Property<Boolean>
+
+    /**
+     * Copy another run's spec into this one — every property is
+     * wired as a *convention* off the source's provider, so explicit
+     * sets on this run still win and un-configured fields follow the
+     * source (including mutations made after `from` runs — copy is
+     * lazy, not a snapshot). `name` is never copied.
+     *
+     * ```
+     * runs.create("debugClient") {
+     *     from(runs.named("client"))
+     *     jvmArgs.add("-Xmx4G")
+     * }
+     * ```
+     */
+    fun from(other: RunConfig) {
+        environment.convention(other.environment)
+        side.convention(other.side)
+        prod.convention(other.prod)
+        workingDirectory.convention(other.workingDirectory)
+        mainClass.convention(other.mainClass)
+        javaagents.from(other.javaagents)
+        jvmArgs.convention(other.jvmArgs)
+        programArgs.convention(other.programArgs)
+        environmentVariables.convention(other.environmentVariables)
+        stdin.convention(other.stdin)
+        username.convention(other.username)
+        auth.kind.convention(other.auth.kind)
+        auth.username.convention(other.auth.username)
+        auth.provider.convention(other.auth.provider)
+        features.convention(other.features)
+        width.convention(other.width)
+        height.convention(other.height)
+        downloadAssets.convention(other.downloadAssets)
+    }
+
+    /** `from(runs.named("client"))` — each property flat-mapped
+     *  lazily, so the source run doesn't need to exist yet. */
+    fun from(other: org.gradle.api.provider.Provider<RunConfig>) {
+        environment.convention(other.flatMap { it.environment })
+        side.convention(other.flatMap { it.side })
+        prod.convention(other.flatMap { it.prod })
+        workingDirectory.convention(other.flatMap { it.workingDirectory })
+        mainClass.convention(other.flatMap { it.mainClass })
+        javaagents.from(other.map { it.javaagents })
+        jvmArgs.convention(other.flatMap { it.jvmArgs })
+        programArgs.convention(other.flatMap { it.programArgs })
+        environmentVariables.convention(other.flatMap { it.environmentVariables })
+        stdin.convention(other.flatMap { it.stdin })
+        username.convention(other.flatMap { it.username })
+        auth.kind.convention(other.flatMap { it.auth.kind })
+        auth.username.convention(other.flatMap { it.auth.username })
+        auth.provider.convention(other.flatMap { it.auth.provider })
+        features.convention(other.flatMap { it.features })
+        width.convention(other.flatMap { it.width })
+        height.convention(other.flatMap { it.height })
+        downloadAssets.convention(other.flatMap { it.downloadAssets })
+    }
 
     init {
         environment.convention(SourceSet.MAIN_SOURCE_SET_NAME)
@@ -96,7 +168,11 @@ abstract class RunConfig @Inject constructor(
         )
         environmentVariables.convention(emptyMap())
         prod.convention(false)
-        username.convention("Dev")
+        // `username` is the offline-name bridge INTO auth.username —
+        // it stays unset unless the user assigns it, so an env-level
+        // `runs { auth { } }` default can still show through below it;
+        // an explicit `auth.username` (`auth { offline("x") }`) wins.
+        auth.username.convention(username.orElse("Dev"))
         features.convention(emptySet())
         downloadAssets.convention(true)
     }

@@ -11,6 +11,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
@@ -23,6 +24,7 @@ import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.transform.FunctionalStepSpec
 import xyz.wagyourtail.unimined.transform.forge.ForgeEnvExtension
+import xyz.wagyourtail.unimined.transform.jarmod.FG1DynLibWiring
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
@@ -101,9 +103,9 @@ internal object ForgeEnvironmentWiring {
         project.extensions.findByType(TransformExtension::class.java)
             ?.sourceSet(environment.environmentId)
             ?.envArtifactBindings?.set("jarmod:merge") {
-                resolved.get()
-                    .takeIf { it.profile is ForgeProfile.ZipPatches }
-                    ?.jar?.let { listOf(it) }
+                val r = resolved.get()
+                r.takeIf { it.profile is ForgeProfile.ZipPatches }
+                    ?.mergeJars
                     .orEmpty()
             }
         // `forge:jsCoremodRemap` — default-on for FG3-era
@@ -172,6 +174,39 @@ internal object ForgeEnvironmentWiring {
                 )
             }
         )
+        // FG1 zip-patches era: provision FML's runtime dyn-libs — the
+        // same CoreFMLLibraries scan/forgeDeps/staging/checksum-patch
+        // the jarmod-family path applies, shared via FG1DynLibWiring.
+        // Deferred to afterDslEval (jarmod parity): `resolved` runs a
+        // detached resolution that must land after the env DSL body
+        project.afterDslEval {
+            val r = resolved.orNull
+            if (r?.profile is ForgeProfile.ZipPatches) {
+                project.extensions.getByType(TransformExtension::class.java)
+                    .sourceSet(environment.environmentId)
+                    ?.let { envSpec ->
+                        FG1DynLibWiring.wire(
+                            project, environment, envSpec,
+                            project.provider {
+                                r.mergeJars.map { it.toFile() }.toSet()
+                            },
+                            // asm-5.2 substitution — matches jarmod's
+                            // default (FG1-era FML discovery can't
+                            // parse Java 8 classfiles under asm-4.x);
+                            // a forge-side opt-out knob can land with
+                            // the ForgeEnvExtension pass
+                            useAsm52 = true,
+                            // the merge rides the declared pipeline
+                            // (`jarmod:merge` step), so the checksum
+                            // patch must run after it to see the
+                            // merged CoreFMLLibraries
+                            checksumPatchSink = {
+                                envSpec.postPipelineJarProcessors += it
+                            },
+                        )
+                    }
+            }
+        }
         contributeLoaderDependency(project, environment, resolved)
         contributeUserdevLibraries(project, environment, resolved)
         contributeClientExtra(project, environment, resolved)
@@ -235,9 +270,14 @@ internal object ForgeEnvironmentWiring {
                     ?.takeIf { it.family == "forge" }
                 if (descriptor != null) {
                     // era-correct classifier — bare `g:a:v` jars don't
-                    // exist for FG2-era Forge (universal/userdev only)
-                    resolved.orNull?.notation?.let {
-                        deps.add(project.dependencies.create(it))
+                    // exist for FG2-era Forge (universal/userdev only).
+                    // FG1 zip-patches artifacts merge into the MC jar —
+                    // the raw zip must not ride the classpath: its
+                    // unpatched CoreFMLLibraries would shadow the
+                    // checksum-patched copy in the merged jar
+                    resolved.orNull?.let { r ->
+                        if (r.profile !is ForgeProfile.ZipPatches)
+                            deps.add(project.dependencies.create(r.notation))
                     }
                 }
             }

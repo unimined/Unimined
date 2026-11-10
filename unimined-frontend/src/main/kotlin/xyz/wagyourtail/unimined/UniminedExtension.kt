@@ -143,9 +143,61 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
 
     // region 1.x deprecation bridge — moved DSL (plan §Phase 8)
 
-    @Deprecated("moved to top-level in 2.0", level = DeprecationLevel.ERROR)
-    fun runs(action: Action<Any>): Nothing =
-        Deprecations.movedDsl("unimined { runs { } }", "runs { } (top level)")
+    /** `unimined.runs { }` → the `unimined-runs` extension — same
+     *  object as the top-level `runs { }` (that stays the canonical
+     *  DSL; this is the umbrella accessor). */
+    fun runs(action: Action<xyz.wagyourtail.unimined.runs.RunsExtension>) {
+        action.execute(project.extensions.getByType(
+            xyz.wagyourtail.unimined.runs.RunsExtension::class.java))
+    }
+
+    /** Groovy DSL overload; delegates the closure to the runs extension. */
+    fun runs(
+        @DelegatesTo(value = xyz.wagyourtail.unimined.runs.RunsExtension::class,
+            strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        val extension = project.extensions.getByType(
+            xyz.wagyourtail.unimined.runs.RunsExtension::class.java)
+        action.delegate = extension
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+    }
+
+    /** `unimined.mapping { }` → the `unimined-mapping` extension. */
+    fun mapping(action: Action<xyz.wagyourtail.unimined.mapping.MappingExtension>) {
+        action.execute(project.extensions.getByType(
+            xyz.wagyourtail.unimined.mapping.MappingExtension::class.java))
+    }
+
+    /** Groovy DSL overload; delegates the closure to the mapping extension. */
+    fun mapping(
+        @DelegatesTo(value = xyz.wagyourtail.unimined.mapping.MappingExtension::class,
+            strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        val extension = project.extensions.getByType(
+            xyz.wagyourtail.unimined.mapping.MappingExtension::class.java)
+        action.delegate = extension
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+    }
+
+    /** `unimined.source { }` → the `unimined-source` extension. */
+    fun source(action: Action<xyz.wagyourtail.unimined.source.SourceExtension>) {
+        action.execute(project.extensions.getByType(
+            xyz.wagyourtail.unimined.source.SourceExtension::class.java))
+    }
+
+    /** Groovy DSL overload; delegates the closure to the source extension. */
+    fun source(
+        @DelegatesTo(value = xyz.wagyourtail.unimined.source.SourceExtension::class,
+            strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        val extension = project.extensions.getByType(
+            xyz.wagyourtail.unimined.source.SourceExtension::class.java)
+        action.delegate = extension
+        action.resolveStrategy = Closure.DELEGATE_FIRST
+        action.call()
+    }
 
     @Deprecated("moved to top-level in 2.0", level = DeprecationLevel.ERROR)
     fun mods(action: Action<Any>): Nothing =
@@ -240,21 +292,22 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
      * extension is present.
      */
     fun loaderApi(name: String, version: String, mcVersion: String = "", environment: String? = null): Set<String> {
-        recordApiDep(name, version)
+        recordApiDep(name, version, mcVersion)
         return LoaderApi.api(name, version, mcVersion, environment)
     }
 
     /** `unimined.loaderApiModule("fabric", "fabric-api-base", v)` —
      *  one sub-module coordinate. */
     fun loaderApiModule(name: String, module: String, version: String, mcVersion: String = "", environment: String? = null): String {
-        recordApiDep(name, version)
+        recordApiDep(name, version, mcVersion)
         return LoaderApi.apiModule(name, module, version, mcVersion, environment)
     }
 
-    private fun recordApiDep(name: String, version: String) {
+    private fun recordApiDep(name: String, version: String, mcVersion: String) {
         val mod = project.extensions.findByType(ModExtension::class.java) ?: return
-        val modid = LoaderApi.providers[name]?.modid ?: return
-        if (!mod.depends.get().containsKey(modid)) mod.depends.put(modid, version)
+        LoaderApi.providers[name]?.dependsSpec(version, mcVersion)?.forEach { (modid, v) ->
+            if (!mod.depends.get().containsKey(modid)) mod.depends.put(modid, v)
+        }
     }
 
     /** `unimined.transform { }` → the `unimined-transform` extension. */

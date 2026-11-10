@@ -19,7 +19,9 @@ import java.nio.file.Path
  * obfuscated (that's what distinguishes prod from named).
  */
 internal class SpigotNmsRelocationProcessor(
-    private val versionPackage: () -> String
+    /** Config-time BuildData lookup; null on the ServiceLoader instance
+     *  (only `buildSpec` needs it — execution rides the serialized spec). */
+    private val versionPackage: (() -> String)? = null
 ) : JarProcessor {
 
     override val name = "spigot-nms-relocation"
@@ -27,7 +29,10 @@ internal class SpigotNmsRelocationProcessor(
     class Spec(val versionPackage: String) : JarProcessor.JarProcessorSpec
 
     override fun buildSpec(context: JarProcessor.SpecContext) =
-        Spec(versionPackage())
+        Spec(requireNotNull(versionPackage) {
+            "SpigotNmsRelocationProcessor.buildSpec runs at config time — " +
+                "the ServiceLoader instance is deserialize/process only"
+        }.invoke())
 
     override fun serializeSpec(spec: JarProcessor.JarProcessorSpec) =
         (spec as Spec).versionPackage

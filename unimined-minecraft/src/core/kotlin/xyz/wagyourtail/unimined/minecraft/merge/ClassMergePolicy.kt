@@ -20,7 +20,7 @@ interface ClassMergePolicy {
     /**
      * Class-level metadata diverged between the sides (superName,
      * static flag, outer/nest host — see
-     * [ClassMerger.classMetadataDiffs]). Return the node to emit as
+     * [ClassNodeEquality.classMetadataDiffs]). Return the node to emit as
      * the merged class, or throw to fail the merge.
      */
     fun resolveClassMetadata(
@@ -54,7 +54,7 @@ interface ClassMergePolicy {
         override fun resolveMethod(
             client: MethodNode, server: MethodNode,
         ): MethodNode {
-            if (!ClassMerger.areMethodNodesEqual(client, server)) {
+            if (!ClassNodeEquality.areMethodNodesEqual(client, server)) {
                 throw IllegalStateException(
                     "Methods are not equal: ${client.name} ${client.desc}")
             }
@@ -66,7 +66,7 @@ interface ClassMergePolicy {
         override fun resolveField(
             client: FieldNode, server: FieldNode,
         ): FieldNode {
-            if (!ClassMerger.areFieldNodesEqual(client, server)) {
+            if (!ClassNodeEquality.areFieldNodesEqual(client, server)) {
                 throw IllegalStateException(
                     "Fields are not equal: ${client.name} ${client.desc}")
             }

@@ -18,9 +18,12 @@ data class Session(
 
 /**
  * Supplies a [Session] at execution time. Implementations: [OfflineAuth]
- * (always available), token-backed, and (JVM actual) MSA device code.
+ * (always available), [MicrosoftAuth], [InjectedSessionAuth], custom.
+ * Serializable because providers sit on the configuration model
+ * (`RunConfig.auth.provider`) — the config cache round-trips them.
+ * Sessions themselves are never serialized.
  */
-fun interface AuthProvider {
+fun interface AuthProvider : java.io.Serializable {
 
     /** Materialize a session — may prompt or hit the network. */
     fun session(): Session

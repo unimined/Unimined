@@ -1,20 +1,14 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
 import xyz.wagyourtail.commonskt.utils.capitalized
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
-import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
@@ -59,10 +53,10 @@ internal object FabricEnvironmentWiring {
         // runs — the substitution decision must happen after the DSL
         // has evaluated but before spec() snapshots librarySubstitutions
         project.afterDslEval {
-            contributeLibrarySubstitutions(it, environment)
+            FabricDependencyContributions.contributeLibrarySubstitutions(it, environment)
         }
-        contributeIntermediaryMappings(project, environment)
-        contributeLoaderDependency(project, environment)
+        FabricDependencyContributions.contributeIntermediaryMappings(project, environment)
+        FabricDependencyContributions.contributeLoaderDependency(project, environment)
         contributeAccessSteps(project, environment)
         contributeRunMutator(project, environment)
         contributeJarProcessors(project, environment)
@@ -70,191 +64,6 @@ internal object FabricEnvironmentWiring {
 
 
 
-    /**
-     * Prepend `official -> intermediary` to the environment's mapping
-     * chain when a fabric loader is declared — user mappings (e.g. yarn)
-     * then compose `intermediary -> named` on top, and a bare fabric
-     * environment still lands on the `intermediary` dev namespace.
-     * The raw `intermediary` jar is contributed as the source; the
-     * mapping materializer unwraps its `mappings/mappings.tiny`.
-     */
-    /** LWJGL2-era loaders need the patched LWJGL2 builds to run on
-     *  modern JVMs (1.x `replaceLwjglVersion`): `legacyfabric`/`babric`/
-     *  `ornithe` swap `org.lwjgl:*` onto `2.9.4+legacyfabric.8` (the
-     *  1.x LegacyFabric default); BTA-era `flint` follows the 1.x BTA
-     *  rule — `org.lwjgl.lwjgl:*` onto `2.9.4+legacyfabric.10`. Modern
-     *  `fabric`/`quilt` run LWJGL3 and get no swap. */
-    private fun contributeLibrarySubstitutions(
-        project: Project,
-        environment: MinecraftEnvironment
-    ) {
-        val descriptor = environment.loaderSpec.orNull?.name
-            ?.let { LoaderRegistry.resolveBuiltin(it) }
-            ?.takeIf { it.family == "fabric" }
-        descriptor?.capabilities?.get("replaceLwjgl")?.let { target ->
-            val match = descriptor.capabilities["replaceLwjglMatch"] ?: "org.lwjgl"
-            environment.librarySubstitutions += match to target
-        }
-        descriptor?.capabilities?.get("libraryOverlayMeta")?.let { meta ->
-            contributeLibraryOverlay(project, environment, meta)
-        }
-    }
-
-    /** Ornithe-era loaders backport slf4j/log4j + modernized deps onto
-     *  old MC via a per-generation overlay — fetch the meta's versions
-     *  index for the stable intermediary generation, then register the
-     *  `gen{n}/libraries` overlay URL with the environment (1.x never
-     *  hard-coded dep lists; the plan keeps the same shape). Drives off
-     *  the descriptor's `libraryOverlayMeta` capability, not the
-     *  loader name. */
-    private fun contributeLibraryOverlay(
-        project: Project,
-        environment: MinecraftEnvironment,
-        meta: String
-    ) {
-        val gen = try {
-            val index = Json.parseToJsonElement(
-                java.net.URI("$meta/v3/versions").toURL()
-                    .openStream().use { it.readBytes().decodeToString() }
-            ).jsonObject
-            index["intermediaryGenerations"]?.jsonObject
-                ?.get("stableIntermediaryGeneration")?.jsonPrimitive?.int ?: 2
-        } catch (t: Throwable) {
-            project.logger.warn(
-                "[Unimined/Fabric] ornithe meta unreachable, " +
-                    "defaulting library overlay to gen2: ${t.message}"
-            )
-            2
-        }
-        environment.libraryOverlays += "$meta/v3/versions/gen$gen/libraries"
-    }
-
-    private fun contributeIntermediaryMappings(project: Project, environment: MinecraftEnvironment) {
-        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
-        val version = environment.version
-        val dependencies = project.dependencies
-
-        // bound fires before the environment's DSL populates
-        // loaderSpec, so the channel check runs lazily inside
-        // effectiveSources — descriptor rows with
-        // upstreamMappingChannel route through the env's own
-        // mapping DSL, captured as defaultSources
-        environment.mappingsSpec.deferredDefaultSources += {
-            // unobfuscated mc (26.x) has no obfuscation hop to map —
-            // dev namespace is official, skip the whole intermediary hop
-            if (!environment.obfuscated.get()) emptyList()
-            else {
-                val spec = environment.loaderSpec.orNull
-                val descriptor = spec?.name
-                    ?.let { LoaderRegistry.resolveBuiltin(it) }
-                    ?.takeIf { it.family == "fabric" }
-                when (val channel = descriptor?.upstreamMappingChannel) {
-                    null -> emptyList()
-                    "calamus" -> collectDeclared { calamus() }
-                    else -> throw org.gradle.api.GradleException(
-                        "unknown upstreamMappingChannel '$channel'"
-                    )
-                }
-            }
-        }
-        val intermediary = project.configurations.create(
-            "fabricIntermediary${environment.environmentId.capitalized()}"
-        ) { conf ->
-            conf.isCanBeConsumed = false
-            conf.isCanBeResolved = true
-            conf.withDependencies { deps ->
-                if (!environment.obfuscated.get()) return@withDependencies
-                val descriptor = loaderSpec.orNull?.name
-                    ?.let { LoaderRegistry.resolveBuiltin(it) }
-                    ?.takeIf { it.family == "fabric" }
-                if (descriptor?.upstreamMappingChannel == null) {
-                    val coord = descriptor?.intermediaryCoords?.invoke(version.get())
-                    if (coord != null) {
-                        deps.add(dependencies.create(coord))
-                    }
-                }
-            }
-        }
-        val intermediaryJar = project.files(intermediary)
-
-        val files = project.files(project.provider {
-            val spec = loaderSpec.orNull
-            val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
-            // unobfuscated mc needs no intermediary jar at all
-            if (!environment.obfuscated.get() ||
-                descriptor?.family != "fabric" ||
-                descriptor.upstreamMappingChannel != null) {
-                // upstreamMappingChannel rows contribute Maven sources via
-                // defaultSources instead — no coord jar to resolve here
-                emptyList()
-            } else {
-                listOf(intermediaryJar.singleFile)
-            }
-        })
-        environment.mappingsSpec.defaultSources += MappingsSpecImpl.Source.File(files)
-    }
-
-    /** The loader jar is an intermediary-named mod dependency — it rides
-     *  the environment's remapped mod view onto the dev classpath. */
-    private fun contributeLoaderDependency(project: Project, environment: MinecraftEnvironment) {
-        val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
-        val dependencies = project.dependencies
-
-        val loader = project.configurations.create(
-            "fabricLoader${environment.environmentId.capitalized()}"
-        ) { conf ->
-            conf.isCanBeConsumed = false
-            conf.isCanBeResolved = true
-            conf.isTransitive = false
-            conf.withDependencies { deps ->
-                val spec = loaderSpec.orNull
-                val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
-                    ?.takeIf { it.family == "fabric" }
-                if (descriptor != null) {
-                    deps.add(
-                        dependencies.create(
-                            descriptor.loaderCoords(
-                                environment.version.get(), spec!!.version
-                            )
-                        )
-                    )
-                }
-            }
-        }
-        // loader's own runtime libraries — the pom declares none; the jar
-        // embeds fabric-installer.json listing them (asm, sponge-mixin)
-        val loaderFiles = project.files(loader)
-        val loaderLibraries = project.configurations.create(
-            "fabricLoaderLibraries${environment.environmentId.capitalized()}"
-        ) { conf ->
-            conf.isCanBeConsumed = false
-            conf.isCanBeResolved = true
-            conf.isTransitive = false
-            conf.withDependencies { deps ->
-                val spec = loaderSpec.orNull
-                if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric")
-                    return@withDependencies
-                val jar = loaderFiles.singleFile
-                FabricModAnalysis.loaderLibraries(jar.toPath()).forEach {
-                    deps.add(dependencies.create(it))
-                }
-            }
-        }
-        // loom parity: loader + its embedded libraries are
-        // namespace-agnostic — they ride the source-set classpaths
-        // raw so the remapped mod view never transforms them
-        val sourceSet = project.extensions
-            .getByType(JavaPluginExtension::class.java).sourceSets
-            .findByName(environment.environmentId) ?: return
-        listOf(
-            sourceSet.compileClasspathConfigurationName,
-            sourceSet.runtimeClasspathConfigurationName,
-        ).forEach { name ->
-            project.configurations.named(name) { conf ->
-                conf.extendsFrom(loader, loaderLibraries)
-            }
-        }
-    }
 
     /**
      * Contribute the late JAR-surface steps: `apply-class-tweaker` merges
@@ -279,11 +88,14 @@ internal object FabricEnvironmentWiring {
             conf.isCanBeResolved = true
             conf.extendsFrom(
                 project.configurations.getByName(environment.modImplementationConfigurationName),
-                // loom parity: loader + its embedded libraries ride the
-                // same view onto the mod classpath
-                project.configurations.getByName(
-                    "fabricLoader${environment.environmentId.capitalized()}"
-                ),
+                // loom parity: the loader's embedded libraries ride the
+                // same view onto the mod classpath. The loader jar
+                // itself joins below as a *file* dep — the mod buckets
+                // exclude loader coords so mod transitives can't
+                // duplicate the env loader, and conf excludes filter
+                // module coords across an extending conf's whole
+                // graph, so a module dep here would be silently
+                // filtered out of this view
                 project.configurations.getByName(
                     "fabricLoaderLibraries${environment.environmentId.capitalized()}"
                 )
@@ -293,6 +105,14 @@ internal object FabricEnvironmentWiring {
                 ArtifactTypeDefinition.JAR_TYPE
             )
         }
+        project.dependencies.add(
+            modJars.name,
+            project.files(
+                project.configurations.getByName(
+                    "fabricLoader${environment.environmentId.capitalized()}"
+                )
+            )
+        )
         val modJarFiles = project.files(modJars)
         // per-mod-jar keyed extraction — global cache
         val ctCacheDir = UniminedCache.global(project).resolve("fabric/ct")
@@ -325,6 +145,16 @@ internal object FabricEnvironmentWiring {
 
         val applySpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
         applySpec.classTweakerFiles.from(environment.accessWideners)
+        // dep-declared classTweakers use the loader family's generic
+        // `intermediary` header; the tree's prod column may be named
+        // otherwise (Ornithe's is `calamus`) — alias rather than fail.
+        applySpec.namespaceAliases.putAll(project.provider {
+            val descriptor = loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+            if (descriptor?.family == "fabric") {
+                mapOf("intermediary" to descriptor.prodNamespace)
+            } else emptyMap()
+        })
         applySpec.dependencyClassTweakerFiles.from(project.provider {
             // a dependency tweaker without transitive-* rules
             // contributes nothing to dependents — skip it
@@ -356,7 +186,38 @@ internal object FabricEnvironmentWiring {
         })
 
         environmentSpec.contributeStep(RemapSurface.JAR, applySpec)
-        environmentSpec.contributeStep(RemapSurface.JAR, AccessRemapStepSpec())
+        val accessSpec = AccessRemapStepSpec()
+        environmentSpec.contributeStep(RemapSurface.JAR, accessSpec)
+        // loaderSpec/devNamespace are unpopulated until the build
+        // script's loader(...) runs — the plain-class fields fill in
+        // after DSL eval; the contributed instance serializes later,
+        // at transform registration. `namespaceLabels` relabels output
+        // headers to the canonical names the loader's
+        // MappingConfiguration accepts (mirroring the mappings.tiny
+        // export's nsRenamer).
+        project.afterDslEval {
+            val descriptor = loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+                ?.takeIf { it.family == "fabric" }
+            if (descriptor != null) {
+                accessSpec.namespaceAliases =
+                    mapOf("intermediary" to descriptor.prodNamespace)
+                if (environment.obfuscated.get()) {
+                    // the declared dev-namespace override is a cheap
+                    // DSL-property read; the derived name is NOT — it
+                    // parses the mapping tree, so it defers to step
+                    // execution via devNamespaceLabel
+                    val declaredDevNs = environment.devNamespace.orNull
+                    accessSpec.namespaceLabels = buildMap {
+                        put(descriptor.prodNamespace, "intermediary")
+                        declaredDevNs?.let { put(it, "named") }
+                    }
+                    if (declaredDevNs == null) {
+                        accessSpec.devNamespaceLabel = "named"
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -427,7 +288,7 @@ internal object FabricEnvironmentWiring {
             val jar = loaderFiles.singleFile.toPath()
             val side = if (config.name.contains("server", ignoreCase = true)) "server" else "client"
             // loaders that ship fabric-loader unmodified (fabric,
-            // legacyfabric, babric, ornithe, flint) hit the fabric knot
+            // legacyfabric, babric, ornithe) hit the fabric knot
             // path; quilt-loader carries its own knot package plus
             // compat shims that don't cover `impl.launch` — probe the
             // resolved jar rather than hardcoding either
@@ -457,6 +318,26 @@ internal object FabricEnvironmentWiring {
             if (isQuilt) {
                 config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=official"
             }
+            // canonical runtime contract (see exportLoaderMappings):
+            // the supplied game jar + mod jars carry internal column
+            // names, so the loader must be told which canonical label
+            // they map to — `named` in dev, `intermediary` in prod.
+            // Mod jars arrive pre-remapped to the runtime namespace, so
+            // their distribution label is the runtime one.
+            if (environment.obfuscated.get()) {
+                if (config.name.contains("prod", ignoreCase = true)) {
+                    config.jvmArgs += "-Dfabric.gameMappingNamespace=intermediary"
+                } else {
+                    config.jvmArgs += "-Dfabric.gameMappingNamespace=named"
+                    config.jvmArgs += "-Dfabric.defaultModDistributionNamespace=named"
+                }
+            }
+            // the loader otherwise sniffs the version from jar bytecode
+            // — renamed dev jars defeat the analyzer and version
+            // predicates (conditional mixins, mod depends) then evaluate
+            // against an empty version. The raw env version is fine:
+            // McVersionLookup normalizes it internally.
+            config.jvmArgs += "-Dfabric.gameVersion=${environment.version.get()}"
         }
     }
 

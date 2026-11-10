@@ -92,6 +92,14 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
     @get:Input
     abstract val accessModel: Property<String>
 
+    /** Post-remap validation of the emitted production jar — packaging
+     *  footguns (dangling AW/mixin/nested-jar/icon paths, missing
+     *  entrypoint/main classes, wrong namespace marker). Conventions to
+     *  `remap.footgunChecks` at the wiring site; unset means [FootgunCheckLevel.ERROR]. */
+    @get:Optional
+    @get:Input
+    abstract val footgunChecks: Property<xyz.wagyourtail.unimined.remap.FootgunCheckLevel>
+
     override val artifacts: Map<String, Provider<RegularFile>>
         get() = mapOf("jar" to archiveFile)
 
@@ -124,6 +132,22 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
             host = path,
             accessModel = accessModel.orNull?.let(AccessModel::parse)
         )
+
+        val jarPath = jarFile.asFile.toPath()
+        if (surface.get() == RemapSurface.JAR) {
+            stampAndLintProductionJar(
+                jarPath, targetNamespace.get(),
+                footgunChecks.getOrElse(
+                    xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
+                ),
+                logger, path
+            )
+        } else {
+            // sources/other surfaces: still self-describing via the
+            // marker, but metadata/class checks don't apply
+            xyz.wagyourtail.unimined.remap.internal.JarLint
+                .stampNamespace(jarPath, targetNamespace.get())
+        }
     }
 
 }

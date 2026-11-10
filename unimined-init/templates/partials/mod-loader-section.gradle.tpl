@@ -1,1 +1,1 @@
-loader("@@LOADER@@") { }
+loader("@@LOADER@@") {@@LOADER_BODY@@}

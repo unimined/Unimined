@@ -99,6 +99,65 @@ class ProjectGeneratorTest {
     }
 
     @Test
+    fun `generates a paper plugin project`(@TempDir dir: Path) {
+        val written = ProjectGenerator.generate(
+            spec(listOf("paper" to "1.21.8-R0.1-SNAPSHOT")), dir.toString()
+        ).map { dir.relativize(java.nio.file.Path.of(it)).toString() }
+        assertTrue("src/main/resources/paper-plugin.yml" in written)
+        val build = Files.readString(dir.resolve("build.gradle.kts"))
+        assertTrue("loader(\"paper\", \"1.21.8-R0.1-SNAPSHOT\")" in build)
+        assertTrue("repo.papermc.io" in build)
+        val yml = Files.readString(dir.resolve("src/main/resources/paper-plugin.yml"))
+        assertTrue("com.example.mymod.MyMod" in yml && "my-mod" in yml)
+        val main = Files.readString(dir.resolve("src/main/java/com/example/mymod/MyMod.java"))
+        assertTrue("extends JavaPlugin" in main && "onEnable" in main)
+    }
+
+    @Test
+    fun `generates a craftbukkit plugin project`(@TempDir dir: Path) {
+        val written = ProjectGenerator.generate(
+            spec(listOf("craftbukkit" to "1.20.1-R0.1-SNAPSHOT")), dir.toString()
+        ).map { dir.relativize(java.nio.file.Path.of(it)).toString() }
+        assertTrue("src/main/resources/plugin.yml" in written)
+        val yml = Files.readString(dir.resolve("src/main/resources/plugin.yml"))
+        assertTrue("com.example.mymod.MyMod" in yml && "my-mod" in yml)
+        val main = Files.readString(dir.resolve("src/main/java/com/example/mymod/MyMod.java"))
+        assertTrue("extends JavaPlugin" in main)
+    }
+
+    @Test
+    fun `generates a liteloader project with LiteMod entrypoint`(@TempDir dir: Path) {
+        val written = ProjectGenerator.generate(
+            spec(listOf("liteloader" to "1.12.2-SNAPSHOT")), dir.toString()
+        ).map { dir.relativize(java.nio.file.Path.of(it)).toString() }
+        assertTrue(
+            "src/main/java/com/example/mymod/LiteModMyMod.java" in written)
+        val main = Files.readString(
+            dir.resolve("src/main/java/com/example/mymod/LiteModMyMod.java"))
+        assertTrue("implements Tickable" in main)
+        assertTrue("com.mumfrey.liteloader.Tickable" in main)
+        // litemod.json is emitter-generated at build — no stub file
+        assertTrue(written.none { it.endsWith("litemod.json") })
+    }
+
+    @Test
+    fun `generates a rift project with declared entrypoint`(@TempDir dir: Path) {
+        val s = spec(listOf("rift" to "1.13.2"))
+            .copy(metadataFromDsl = true)
+        val written = ProjectGenerator.generate(s, dir.toString())
+            .map { dir.relativize(java.nio.file.Path.of(it)).toString() }
+        val main = Files.readString(
+            dir.resolve("src/main/java/com/example/mymod/MyMod.java"))
+        assertTrue("implements InitializationListener" in main)
+        assertTrue("org.dimdev.riftloader.listener" in main)
+        val build = Files.readString(dir.resolve("build.gradle.kts"))
+        assertTrue(
+            "entrypoint(\"com.example.mymod.MyMod\")" in build,
+            "rift loader section must declare the entrypoint — got:\n$build")
+        assertTrue(written.none { it.endsWith("riftmod.json") })
+    }
+
+    @Test
     fun `refuses a non-empty directory without overwrite`(@TempDir dir: Path) {
         Files.writeString(dir.resolve("existing.txt"), "x")
         assertThrows(IllegalArgumentException::class.java) {

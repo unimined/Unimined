@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.mapping.namedNamespaces
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.commonskt.reader.StringCharReader
@@ -57,10 +58,28 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         if (unknown.isNotEmpty()) {
             throw GradleException("remap-access: unknown format(s): ${unknown.joinToString()}")
         }
+        val targetNs = Namespace(c.spec.targetNamespace)
+        // loader-facing header label: fabric-family runtimes require the
+        // canonical namespace names — resolve the spec's label map with
+        // the same prefix-match the alias path uses for gen columns.
+        // `devNamespaceLabel` defers the dev-ns lookup to now: the tree
+        // is resolved here anyway, so wiring never parses mappings at
+        // configuration time (mirrors devNamespace()'s heuristic)
+        val labels = spec.devNamespaceLabel?.let { label ->
+            val present = tree.namespaces.mapTo(HashSet()) { it.name }
+            val devNs = c.mappings?.namedNamespaces()?.firstOrNull { it in present }
+                ?: tree.namespaces.lastOrNull()?.name
+            if (devNs != null) spec.namespaceLabels + (devNs to label)
+            else spec.namespaceLabels
+        } ?: spec.namespaceLabels
+        val targetLabel = labels.entries
+            .firstOrNull { (k, _) -> targetNs.name == k || targetNs.name.startsWith(k) }
+            ?.value
         rewriteJar(
             input, output, tree,
-            Namespace(c.spec.sourceNamespace), Namespace(c.spec.targetNamespace),
-            formats, spec.paths, spec.legacyAt
+            Namespace(c.spec.sourceNamespace), targetNs,
+            formats, spec.paths, spec.legacyAt, spec.namespaceAliases,
+            targetLabel
         )
         output
     }
@@ -75,7 +94,9 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         targetNs: Namespace,
         formats: Set<String>,
         explicitPaths: Set<String>,
-        legacyAt: Boolean
+        legacyAt: Boolean,
+        namespaceAliases: Map<String, String>,
+        targetLabel: String? = null
     ) {
         JarFile(input.toFile()).use { jar ->
             // FMLAT manifest attr — old-FML custom AT paths
@@ -98,9 +119,19 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
                                 if (entry.name.endsWith(".mod.json")) {
                                     remapModJson(bytes, tree, sourceNs, targetNs)
                                 } else when (kind(entry.name, bytes, explicit, formats)) {
-                                    Kind.AW -> remapAw(bytes, tree, targetNs)
+                                    Kind.AW -> relabelHeader(
+                                        remapAw(
+                                            normalizeNs(bytes, tree, namespaceAliases, sourceNs),
+                                            tree, targetNs
+                                        ), targetNs, targetLabel
+                                    )
                                     Kind.AT -> remapAt(bytes, tree, sourceNs, targetNs, legacyAt)
-                                    Kind.CT -> remapCt(bytes, tree, targetNs)
+                                    Kind.CT -> relabelHeader(
+                                        remapCt(
+                                            normalizeNs(bytes, tree, namespaceAliases, sourceNs),
+                                            tree, targetNs
+                                        ), targetNs, targetLabel
+                                    )
                                     null -> bytes
                                 }
                             } catch (e: Exception) {
@@ -194,6 +225,58 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         return out.toString().toByteArray()
     }
 
+
+    /**
+     * Rewrite the tab-separated namespace column of an AW/CT header when
+     * it isn't a tree namespace — `namespaceAliases` maps the declared
+     * name to the environment's prod channel (`intermediary` →
+     * `calamus`); a column whose name merely *starts with* the alias
+     * target also matches, covering gen-suffixed prod namespaces like
+     * `calamusGen2`.
+     */
+    private fun normalizeNs(
+        bytes: ByteArray, tree: MappingTree, aliases: Map<String, String>,
+        fallback: Namespace
+    ): ByteArray {
+        val text = bytes.toString(Charsets.UTF_8)
+        val nl = text.indexOf('\n')
+        val header = if (nl >= 0) text.substring(0, nl) else text
+        val cols = header.trim().split('\t')
+        if (cols.size < 3) return bytes
+        val declared = cols.last().trim()
+        if (tree.namespaces.any { it.name == declared }) return bytes
+        // embedded files are written in the jar's own (prod) namespace —
+        // when the declared name isn't a tree column, aliases then the
+        // pipeline's source namespace are the right resolution order.
+        val target = aliases[declared]?.let { alias ->
+            tree.namespaces.firstOrNull { it.name == alias || it.name.startsWith(alias) }?.name
+        } ?: fallback.takeIf { f -> tree.namespaces.any { it.name == f.name } }?.name
+          ?: return bytes
+        val rest = if (nl >= 0) text.substring(nl) else ""
+        return (cols.dropLast(1).joinToString("\t") + "\t" + target + rest)
+            .toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * Rewrite the *output* header's declared namespace to the
+     * loader-facing [label] — entries stay in [targetNs] names
+     * (the loader applies rules by name against runtime classes; the
+     * header column is only validated against the runtime namespace).
+     * No-op when [label] is null or already equals the target name.
+     */
+    private fun relabelHeader(
+        bytes: ByteArray, targetNs: Namespace, label: String?
+    ): ByteArray {
+        if (label == null || label == targetNs.name) return bytes
+        val text = bytes.toString(Charsets.UTF_8)
+        val nl = text.indexOf('\n')
+        val header = if (nl >= 0) text.substring(0, nl) else text
+        val cols = header.trim().split('\t')
+        if (cols.size < 3) return bytes
+        val rest = if (nl >= 0) text.substring(nl) else ""
+        return (cols.dropLast(1).joinToString("\t") + "\t" + label + rest)
+            .toByteArray(Charsets.UTF_8)
+    }
 
     private fun remapCt(bytes: ByteArray, tree: MappingTree, targetNs: Namespace): ByteArray {
         val out = StringBuilder()

@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.DisableCacheInKotlinVersion
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import java.net.URI
 
 plugins {
@@ -23,6 +24,15 @@ kotlin {
                     issueUrl = URI("https://github.com/ajalt/clikt/issues/598")
                 )
             }
+            // test links pull clikt.testing → clikt-mordant onto the
+            // classpath — the same duplicate symbol, same workaround
+            // (only a debug test binary exists by default)
+            @OptIn(KotlinNativeCacheApi::class)
+            getTest(NativeBuildType.DEBUG).disableNativeCache(
+                version = DisableCacheInKotlinVersion.`2_4_21`,
+                reason = "clikt/clikt-mordant klib duplicate symbol: selfAndAncestors",
+                issueUrl = URI("https://github.com/ajalt/clikt/issues/598")
+            )
         }
     }
     js {
@@ -37,6 +47,9 @@ kotlin {
             // clikt-core — the core artifact lacks the high-level
             // option/argument/echo API the CLI uses
             implementation("com.github.ajalt.clikt:clikt:5.1.0")
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

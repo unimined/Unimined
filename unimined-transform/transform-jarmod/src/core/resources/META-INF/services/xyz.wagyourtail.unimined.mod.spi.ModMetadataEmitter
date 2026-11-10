@@ -1,2 +1,4 @@
 xyz.wagyourtail.unimined.transform.jarmod.internal.JarModModMetadataEmitter
 xyz.wagyourtail.unimined.transform.jarmod.internal.Fg1ModMetadataEmitter
+xyz.wagyourtail.unimined.transform.jarmod.internal.LiteLoaderModMetadataEmitter
+xyz.wagyourtail.unimined.transform.jarmod.internal.RiftModMetadataEmitter

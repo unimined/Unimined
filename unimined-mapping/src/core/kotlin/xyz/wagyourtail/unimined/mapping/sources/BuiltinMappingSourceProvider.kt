@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.mapping.sink.nsFiltered
 import xyz.wagyourtail.unimined.mapping.tree.impl.fillMissingNames
 import java.nio.file.Files
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.zip.ZipFile
@@ -73,7 +74,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             val sb = StringBuilder()
             write(sb)
             Files.createDirectories(dir)
-            Files.writeString(out, sb)
+            out.writeAtomically { tmp -> Files.writeString(tmp, sb) }
         }
         return out
     }
@@ -289,15 +290,27 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             val tree = MutableMappingTree()
             ZipFile(zip.toFile()).use { file ->
                 val conf = file.entries().asSequence()
-                    .filter { !it.isDirectory && it.name.endsWith("/conf/" + it.name.substringAfterLast('/')) }
+                    .filter {
+                        !it.isDirectory && (
+                                // FG1.2+ userdev: conf/<name> at jar root
+                                it.name.startsWith("conf/") ||
+                                        // FG1.0/1.1 src zip: forge/fml/conf/<name>
+                                        it.name.substringBeforeLast('/')
+                                            .endsWith("/conf")
+                                )
+                    }
                     .associateBy { it.name.substringAfterLast('/') }
                 fun entry(name: String) =
                     conf[name]?.let { file.getInputStream(it).bufferedReader().readText() }
 
                 runBlocking {
-                    val srg = entry("joined.srg") ?: throw IllegalStateException(
-                        "forge src artifact $zip has no forge/fml/conf/joined.srg"
-                    )
+                    // FG1.0/1.1 src zips ship forge/fml/conf/joined.srg;
+                    // FG1.2+ userdev jars ship conf/packaged.srg instead
+                    val srg = entry("joined.srg") ?: entry("packaged.srg")
+                        ?: throw IllegalStateException(
+                            "forge artifact $zip has no conf/joined.srg or " +
+                                    "conf/packaged.srg"
+                        )
                     SrgReader.read(
                         srg, tree,
                         mapOf("source" to "official", "target" to "searge")

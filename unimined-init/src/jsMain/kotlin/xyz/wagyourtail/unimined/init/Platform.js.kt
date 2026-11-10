@@ -32,8 +32,7 @@ internal actual fun setExecutable(path: String) {
     nodeFs().chmodSync(path, 0x1ED)
 }
 
-internal actual fun epochMillis(): Long = js("Date.now()") as Double as? Long
-    ?: (js("Date.now()") as Double).toLong()
+internal actual fun epochMillis(): Long = (js("Date.now()") as Double).toLong()
 
 actual fun cwd(): String = js("process.cwd()") as String
 

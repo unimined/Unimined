@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.mapping
 
 import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.mapping.internal.RetroMCPManifest
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -179,6 +180,21 @@ class MappingsSpecImpl(
      *  `calamus`). Set by [calamus] when it declares the merge hop. */
     var splitMergeNamespace: String? = null
         private set
+
+    /** Mark this spec split-official — called by transform-family
+     *  wiring for loaders whose descriptor declares
+     *  `LoaderDescriptor.splitMerge` (the per-side columns live on a
+     *  contributed artifact, not a `mappings {}` channel, so the
+     *  channel declaration path never sees them). No-op outside a
+     *  merged split-era environment. */
+    fun markSplitOfficial(
+        fromNamespaces: List<String>, mergeNamespace: String
+    ) {
+        if (side.get() != Side.MERGED || !isSplitEra()) return
+        splitOfficial = true
+        splitOfficialNamespaces = fromNamespaces
+        splitMergeNamespace = mergeNamespace
+    }
 
     /** Split-obfuscation era — Minecraft versions before 1.3
      *  (incl. all beta/alpha) have distinct client/server obf
@@ -775,32 +791,6 @@ class MappingsSpecImpl(
         }
     }
 
-    /**
-     * mcphackers artifacts are keyed by the shared obf jar, not the
-     * release id — b1.7.3's mappings live at `versionsV2/b1.7.zip`.
-     * Resolve the version through the BetterJSONs manifest, falling
-     * back to the literal [version] so zip keys like `b1.7` pass
-     * through unchanged.
-     */
-    private fun retroMCPArtifactKey(version: String): String = try {
-        retroMCPManifest.firstOrNull {
-            it.jsonObject["id"]?.jsonPrimitive?.content == version
-        }?.jsonObject?.get("resources")?.jsonPrimitive?.content
-            ?.substringAfterLast('/')?.removeSuffix(".zip")
-            ?: version
-    } catch (e: Exception) {
-        version
-    }
-
-    companion object {
-        private val retroMCPManifest by lazy {
-            kotlinx.serialization.json.Json.parseToJsonElement(
-                java.net.URI("https://mcphackers.org/versionsV3/versions.json")
-                    .toURL().openConnection().apply {
-                        connectTimeout = 15_000; readTimeout = 15_000
-                    }.getInputStream().bufferedReader().readText()
-            ).jsonArray
-        }
-
-    }
+    private fun retroMCPArtifactKey(version: String): String =
+        RetroMCPManifest.artifactKey(version)
 }

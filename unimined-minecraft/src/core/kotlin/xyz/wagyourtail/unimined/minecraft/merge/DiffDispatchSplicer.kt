@@ -265,13 +265,17 @@ internal class DiffDispatchSplicer(
      *  on both sides) or fully inside one gap on its own side. */
     private fun tcbsResolvable(x: Side, y: Side): Boolean {
         for (t in x.method.tryCatchBlocks) {
-            val s = x.labelPos[t.start]!!; val e = x.labelPos[t.end]!!
-            val h = x.labelPos[t.handler]!!
+            val s = x.labelPos[t.start] ?: throw Bail()
+            val e = x.labelPos[t.end] ?: throw Bail()
+            val h = x.labelPos[t.handler] ?: throw Bail()
             val shared = y.method.tryCatchBlocks.any { o ->
                 o.type == t.type &&
-                        posCorresponds(x, s, y, y.labelPos[o.start]!!) &&
-                        posCorresponds(x, e, y, y.labelPos[o.end]!!) &&
-                        posCorresponds(x, h, y, y.labelPos[o.handler]!!)
+                        posCorresponds(x, s, y,
+                            y.labelPos[o.start] ?: throw Bail()) &&
+                        posCorresponds(x, e, y,
+                            y.labelPos[o.end] ?: throw Bail()) &&
+                        posCorresponds(x, h, y,
+                            y.labelPos[o.handler] ?: throw Bail())
             }
             if (shared) continue
             // fully inside one gap — range and handler all unaligned
@@ -606,12 +610,15 @@ internal class DiffDispatchSplicer(
             tcbs += b.method.tryCatchBlocks.filter { t ->
                 a.method.tryCatchBlocks.none { o ->
                     o.type == t.type &&
-                        posCorresponds(b, b.labelPos[t.start]!!, a,
-                            a.labelPos[o.start]!!) &&
-                        posCorresponds(b, b.labelPos[t.end]!!, a,
-                            a.labelPos[o.end]!!) &&
-                        posCorresponds(b, b.labelPos[t.handler]!!, a,
-                            a.labelPos[o.handler]!!)
+                        posCorresponds(b,
+                            b.labelPos[t.start] ?: throw Bail(), a,
+                            a.labelPos[o.start] ?: throw Bail()) &&
+                        posCorresponds(b,
+                            b.labelPos[t.end] ?: throw Bail(), a,
+                            a.labelPos[o.end] ?: throw Bail()) &&
+                        posCorresponds(b,
+                            b.labelPos[t.handler] ?: throw Bail(), a,
+                            a.labelPos[o.handler] ?: throw Bail())
                 }
             }.map { t ->
                 TryCatchBlockNode(mapServerLabel(t.start),
@@ -734,9 +741,11 @@ internal class DiffDispatchSplicer(
                 v.uninitThis ->
                     if (canonPos < sharedInitPos)
                         Opcodes.UNINITIALIZED_THIS
-                    else frameType(v.type!!)
+                    else frameType(requireNotNull(v.type) {
+                        "uninitialized-this value has no type after shared init"
+                    })
                 v.uninit != null && stack ->
-                    anchorAt(uninitClientPos(v.uninit!!))
+                    anchorAt(uninitClientPos(v.uninit))
                 v.type == null -> Opcodes.TOP
                 v.type.sort == Type.OBJECT &&
                     v.type.internalName == "null" -> Opcodes.NULL

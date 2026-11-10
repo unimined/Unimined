@@ -11,7 +11,9 @@ import xyz.wagyourtail.unimined.mapping.element.metadata.EnumExtensionElement
 import xyz.wagyourtail.unimined.mapping.element.metadata.InterfaceElement
 import xyz.wagyourtail.unimined.mapping.formats.FormatReader
 import xyz.wagyourtail.unimined.mapping.formats.FormatReaderSettings
+import xyz.wagyourtail.unimined.mapping.formats.at.ATFormat
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
 import xyz.wagyourtail.unimined.mapping.formats.ct.CTReader
 import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
@@ -258,7 +260,12 @@ class ClassTweaker private constructor(
             return when {
                 CTReader.isFormat(fileName, buffer) -> CTReader
                 AWReader.isFormat(fileName, buffer) -> AWReader
-                ATReader.isFormat(fileName, buffer) -> ATReader
+                ATReader.isFormat(fileName, buffer) ->
+                    // FML-era `cls.member(desc)` joining vs modern
+                    // whitespace-separated syntax — content sniff,
+                    // same dispatch as `remap-access`'s autodetect
+                    if (ATFormat.detect(text) == ATFormat.Kind.LEGACY)
+                        LegacyATReader else ATReader
                 else -> throw IllegalArgumentException(
                     "unrecognized access-file format in '$fileName' " +
                             "(expected an accessWidener/classTweaker header or *_at.cfg name)"

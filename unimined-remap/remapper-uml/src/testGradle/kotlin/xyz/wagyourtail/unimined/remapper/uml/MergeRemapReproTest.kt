@@ -254,6 +254,56 @@ class MergeRemapReproTest {
         }
     }
 
+    /**
+     * Repro for the babric argo corruption — the exact preMerge hook
+     * invocation on the real b1.7.3 client jar + the real composed biny
+     * payload (clientOfficial → intermediary, env=null since
+     * `clientOfficial` carries no `:env` qualifier). The anonymous
+     * `JsonListenerToJdomAdapter$2` declares `a(JsonNodeBuilder)` and
+     * `a(JsonFieldBuilder)` overriding NodeContainer's mapped
+     * `addNode`/`addField`; both must propagate or the impl hits
+     * AbstractMethodError at runtime.
+     */
+    @Test
+    fun babricClientSideArgoImplPropagates() {
+        val inputJar = java.nio.file.Path.of(
+            "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/client.jar")
+        val bundle = java.nio.file.Path.of(
+            "/tmp/unimined-merge-mappings1116059787918761046.zip")
+        val payload = ZipFile(bundle.toFile()).use { z ->
+            z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
+        }
+        val tree = MutableMappingTree()
+        UMFReader.readNonBlocking(
+            input = StringCharReader(payload.decodeToString().replace("\r", "")),
+            context = null, into = tree, nsMapping = emptyMap())
+
+        val out = createTempFile("remap-babric-client-", ".jar")
+        try {
+            UmlJarRemapper().remap(
+                inputJar, out, UmlMappingData(tree),
+                "clientOfficial", "intermediary", null)
+            JarFile(out.toFile()).use { jar ->
+                val e = jar.entries().asSequence()
+                    .firstOrNull { it.name.endsWith("JsonListenerToJdomAdapter\$2.class") }
+                    ?: error("no \$2 in output: ${jar.entries().asSequence().filter { "jdom" in it.name }.toList()}")
+                val node = ClassNode()
+                ClassReader(jar.getInputStream(e)).accept(node, 0)
+                val methods: Map<String, String> = node.methods.associate { it.name to it.desc }
+                // the biny rows store inner classes as `outer$inner` while
+                // the obf jar stores flat names (`lt$pu` ↔ `pu.class`) —
+                // without the flat-inner fallback the interface's rows
+                // never reach the impl's component
+                org.junit.jupiter.api.Assertions.assertEquals("(Largo/jdom/JsonNodeBuilder;)V", methods["addNode"],
+                    "addNode must propagate to the unmapped impl: $methods")
+                org.junit.jupiter.api.Assertions.assertEquals("(Largo/jdom/JsonFieldBuilder;)V", methods["addField"],
+                    "addField must propagate to the unmapped impl: $methods")
+            }
+        } finally {
+            out.deleteIfExists()
+        }
+    }
+
     private fun remapSide(side: String, fromNs: String) {
         val inputJar = java.nio.file.Path.of(
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/$side.jar")

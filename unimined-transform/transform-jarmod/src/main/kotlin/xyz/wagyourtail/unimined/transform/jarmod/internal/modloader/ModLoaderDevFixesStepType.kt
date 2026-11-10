@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.jarmod.internal.modloader
 
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.*
 import java.nio.file.FileSystems
@@ -32,10 +33,10 @@ class ModLoaderDevFixesStepType : RemapStepType<ModLoaderDevFixesStepSpec> {
         val workDir = Files.createDirectories(c.workDir.resolve("jarmod-modloader-fixes"))
         val output = workDir.resolve("fixed.jar")
         if (!Files.exists(output)) {
-            val tmp = workDir.resolve("tmp.jar")
-            Files.copy(input, tmp, StandardCopyOption.REPLACE_EXISTING)
-            FileSystems.newFileSystem(tmp).use { fs -> ModLoaderDevFixes.fix(fs) }
-            Files.move(tmp, output, StandardCopyOption.REPLACE_EXISTING)
+            output.writeAtomically { tmp ->
+                Files.copy(input, tmp, StandardCopyOption.REPLACE_EXISTING)
+                FileSystems.newFileSystem(tmp).use { fs -> ModLoaderDevFixes.fix(fs) }
+            }
         }
         output
     }

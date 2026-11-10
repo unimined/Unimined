@@ -4,6 +4,7 @@ import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunn
 import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredSubpipeline
 import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredTool
 import xyz.wagyourtail.unimined.transform.step.subpipeline.SubStep
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -143,7 +144,8 @@ internal object UserdevSourcesChain {
         if (origin == "a/" && modified == "b/") return userdevJar
 
         val output = cacheDir.resolve("forgePatches.jar")
-        JarOutputStream(output.outputStream()).use { out ->
+        output.writeAtomically { tmp ->
+            JarOutputStream(tmp.outputStream()).use { out ->
             JarFile(userdevJar.toFile()).use { jar ->
                 jar.entries().asSequence()
                     .filter { !it.isDirectory && it.name.endsWith(".patch") }
@@ -164,6 +166,7 @@ internal object UserdevSourcesChain {
                         out.write(text.toByteArray())
                         out.closeEntry()
                     }
+            }
             }
         }
         return output

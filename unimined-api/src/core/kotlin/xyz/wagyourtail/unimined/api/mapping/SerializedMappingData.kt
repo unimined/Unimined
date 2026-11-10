@@ -4,6 +4,7 @@ import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.util.*
 import java.util.zip.ZipEntry
@@ -60,7 +61,7 @@ object SerializedMappingData {
     fun write(data: MappingData, path: Path): List<String> {
         val payloads = collectPayloads(data)
         if (payloads.isEmpty()) return emptyList()
-        path.outputStream().use { writeZip(it, payloads) }
+        path.writeAtomically { tmp -> tmp.outputStream().use { writeZip(it, payloads) } }
         return payloads.map { it.first }
     }
 
@@ -121,15 +122,40 @@ object SerializedMappingData {
     private val ZIP_MAGIC = byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 3, 4)
 
     /**
-     * Read [path] as a [SerializedMappingData] bundle when it is a zip, or
-     * as a legacy row [MappingBundle] otherwise — the single entry point
-     * for mapping-file inputs so either format works transparently.
+     * Read [path] as a [SerializedMappingData] bundle when it is a zip, a
+     * legacy row [MappingBundle] when it is JSON, or any UML-recognized
+     * mapping format (tiny/umf/srg/tsrg/proguard/mcp/...) otherwise —
+     * the single entry point for mapping-file inputs so every supported
+     * format works transparently.
      */
     fun readEither(path: Path): MappingData {
         val head = ByteArray(4)
         Files.newInputStream(path).use { it.readNBytes(head, 0, 4) }
-        return if (head.contentEquals(ZIP_MAGIC)) read(path)
-        else BundleMappingData(MappingBundle.read(path))
+        if (head.contentEquals(ZIP_MAGIC)) return read(path)
+        val text = path.toFile().readText()
+        val trimmed = text.trimStart()
+        var bundleError: Exception? = null
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            try {
+                return BundleMappingData(MappingBundle.read(path))
+            } catch (e: Exception) {
+                // JSON-based UML formats (parchment, ...) land here —
+                // not a bundle, so fall through to UML autodetect
+                bundleError = e
+            }
+        }
+        // UML autodetect — standalone remaps feed raw mapping files
+        // (proguard maps, tinys, umfs) rather than unimined bundles
+        val buf = okio.Buffer().also { it.write(text.encodeToByteArray()) }
+        val provider = xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
+            .autodetectFormat(path.fileName.toString(), buf)
+            ?: throw IllegalArgumentException(
+                "$path is not a SerializedMappingData bundle, MappingBundle, " +
+                        "or any UML-recognized mapping format" +
+                        (bundleError?.let { " (bundle parse: ${it.message})" } ?: "")
+            )
+        val tree = kotlinx.coroutines.runBlocking { provider.read(text) }
+        return UmlMappingData(tree)
     }
 
 }

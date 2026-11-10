@@ -4,6 +4,7 @@ import org.gradle.api.GradleException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
@@ -12,7 +13,6 @@ import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
 import xyz.wagyourtail.unimined.minecraft.metadata.MinecraftMetadataAssembler
 import xyz.wagyourtail.unimined.minecraft.metadata.PlatformInfo
 import xyz.wagyourtail.unimined.minecraft.metadata.ResolvedMinecraftMetadata
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
 import xyz.wagyourtail.commonskt.jvm.tempSibling
@@ -240,17 +240,7 @@ internal object NativeArtifactProduction {
         if (Files.exists(merged) && !rebuild) return merged
 
         Files.createDirectories(merged.parent)
-        val temporary = Files.createTempFile(merged.parent, ".merged-", ".jar")
-        try {
-            JarMerger.merge(client, server, temporary, options)
-            try {
-                Files.move(temporary, merged, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            } catch (_: AtomicMoveNotSupportedException) {
-                Files.move(temporary, merged, StandardCopyOption.REPLACE_EXISTING)
-            }
-        } finally {
-            Files.deleteIfExists(temporary)
-        }
+        merged.writeAtomically { JarMerger.merge(client, server, it, options) }
         return merged
     }
 

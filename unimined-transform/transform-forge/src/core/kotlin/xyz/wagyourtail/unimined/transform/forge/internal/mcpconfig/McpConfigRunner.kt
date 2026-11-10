@@ -5,8 +5,11 @@ import kotlinx.serialization.json.*
 import okio.buffer
 import okio.source
 import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
+import xyz.wagyourtail.unimined.api.util.writeAtomically
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import kotlin.io.path.*
@@ -270,8 +273,10 @@ internal class McpConfigRunner(
     ) : ConfigStep {
         override fun execute(dir: Path): StepResult {
             val output = dir.resolve("$name.txt")
-            output.toFile().bufferedWriter().use { w ->
-                for (lib in env.libraries()) w.write("-e=${lib.toAbsolutePath()}\n")
+            output.writeAtomically { tmp ->
+                tmp.toFile().bufferedWriter().use { w ->
+                    for (lib in env.libraries()) w.write("-e=${lib.toAbsolutePath()}\n")
+                }
             }
             return StepResult(name, output)
         }
@@ -301,18 +306,20 @@ internal class McpConfigRunner(
                 tree.classes.mapNotNull { it.names[src] }.map { it.value }.toSet()
             }
 
-            JarOutputStream(output.outputStream()).use { out ->
-                JarFile(input.toFile()).use { inJar ->
-                    inJar.entries().asSequence()
-                        .filter { !it.isDirectory && it.name.endsWith(".class") }
-                        .forEach { entry ->
-                            val cls = entry.name.removePrefix("/").removeSuffix(".class")
-                            if (cls in classNames) {
-                                out.putNextEntry(java.util.jar.JarEntry("$cls.class"))
-                                inJar.getInputStream(entry).use { it.copyTo(out) }
-                                out.closeEntry()
+            output.writeAtomically { tmp ->
+                JarOutputStream(tmp.outputStream()).use { out ->
+                    JarFile(input.toFile()).use { inJar ->
+                        inJar.entries().asSequence()
+                            .filter { !it.isDirectory && it.name.endsWith(".class") }
+                            .forEach { entry ->
+                                val cls = entry.name.removePrefix("/").removeSuffix(".class")
+                                if (cls in classNames) {
+                                    out.putNextEntry(java.util.jar.JarEntry("$cls.class"))
+                                    inJar.getInputStream(entry).use { it.copyTo(out) }
+                                    out.closeEntry()
+                                }
                             }
-                        }
+                    }
                 }
             }
             return StepResult(name, output)
@@ -326,7 +333,8 @@ internal class McpConfigRunner(
     ) : ConfigStep {
         override fun execute(dir: Path): StepResult {
             val output = dir.resolve("${name}Output.jar")
-            JarOutputStream(output.outputStream()).use { out ->
+            output.writeAtomically { tmp ->
+            JarOutputStream(tmp.outputStream()).use { out ->
                 JarFile(Paths.get(variables.getValue("input").invoke()).toFile()).use { inJar ->
                     inJar.entries().asSequence().forEach { entry ->
                         out.putNextEntry(java.util.jar.JarEntry(entry.name))
@@ -342,6 +350,7 @@ internal class McpConfigRunner(
                     file.inputStream().use { it.copyTo(out) }
                     out.closeEntry()
                 }
+            }
             }
             return StepResult(name, output)
         }
@@ -366,12 +375,17 @@ internal class McpConfigRunner(
                         }
                     }.getOrNull()
                 } ?: error("could not determine main class for ${function.version}")
-                env.exec.exec(
-                    mainClass, classpath,
-                    function.args.mapVariables(output, variables),
-                    function.jvmArgs.mapVariables(output, variables),
-                    function.javaVersion?.toIntOrNull()
-                )
+                // the tool writes {output} — point it at a temp file and
+                // move on success so a killed javaexec can't leave a
+                // partial jar that `!output.exists()` would skip (#78)
+                output.writeAtomically { tmp ->
+                    env.exec.exec(
+                        mainClass, classpath,
+                        function.args.mapVariables(tmp, variables),
+                        function.jvmArgs.mapVariables(tmp, variables),
+                        function.javaVersion?.toIntOrNull()
+                    )
+                }
             }
             return StepResult(name, output)
         }

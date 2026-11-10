@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.runs
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -23,7 +24,8 @@ import javax.inject.Inject
  */
 @UntrackedTask(because = "runs the game — a side-effecting process fork, not a build output")
 abstract class MinecraftRunTask @Inject constructor(
-    private val execOperations: ExecOperations
+    private val execOperations: ExecOperations,
+    private val objects: org.gradle.api.model.ObjectFactory
 ) : DefaultTask() {
 
     private companion object {
@@ -125,6 +127,35 @@ abstract class MinecraftRunTask @Inject constructor(
     @get:Input
     abstract val username: Property<String>
 
+    /** [RunConfig.auth] kind — session resolution happens in
+     *  [session] at execution time; nothing token-shaped is an input. */
+    @get:Input
+    abstract val authKind: Property<AuthSpec.Kind>
+
+    /** `CUSTOM` auth provider — internal-only: it runs at execution
+     *  and must never reach inputs or the config cache. */
+    @get:Internal
+    abstract val authProvider: Property<xyz.wagyourtail.unimined.mclauncher.AuthProvider>
+
+    /** `MICROSOFT` credential-store file — the store is read at
+     *  execution (0600'd under the unimined global cache). Path only
+     *  is an input; contents never are. */
+    @get:Input
+    @get:Optional
+    abstract val authStorePath: Property<String>
+
+    /** `unimined.auth.encrypt` — opt-in AES store (OS keyring key,
+     *  resolved at execution; explicit failure, never plaintext
+     *  fallback). */
+    @get:Input
+    abstract val authEncrypt: Property<Boolean>
+
+    /** `unimined.auth.storeCredentials` — when `false`, refreshed
+     *  sessions are used in memory only and never written back to the
+     *  store (defaults to true). */
+    @get:Input
+    abstract val authStoreCredentials: Property<Boolean>
+
     @get:Input
     @get:Optional
     abstract val width: Property<Int>
@@ -191,6 +222,9 @@ abstract class MinecraftRunTask @Inject constructor(
         mutatedLaunchProperties.convention(emptyMap())
         features.convention(emptySet())
         username.convention("Dev")
+        authKind.convention(AuthSpec.Kind.OFFLINE)
+        authEncrypt.convention(false)
+        authStoreCredentials.convention(true)
         downloadAssets.convention(true)
         offline.convention(false)
         dryRun.convention(false)
@@ -315,7 +349,7 @@ abstract class MinecraftRunTask @Inject constructor(
             exec.workingDir = runDirectory.get().asFile
             javaExecutable.orNull?.let { exec.executable = it }
             exec.mainClass.set(resolvedMainClass)
-            exec.classpath = project.files(dedupedClasspath)
+            exec.classpath = objects.fileCollection().from(dedupedClasspath)
             exec.jvmArgs(
                 subst.resolveLaunchArgs(
                     plan.jvmArgs +
@@ -369,7 +403,30 @@ abstract class MinecraftRunTask @Inject constructor(
     ): Map<String, String> =
         values.mapValues { (_, v) -> resolveLaunchArgs(listOf(v)).single() }
 
-    private fun session(): Session = OfflineAuth(username.get()).session()
+    private fun session(): Session = when (authKind.get()) {
+        AuthSpec.Kind.OFFLINE -> OfflineAuth(username.get()).session()
+        AuthSpec.Kind.CUSTOM -> authProvider.get().session()
+        AuthSpec.Kind.MICROSOFT -> try {
+            val path = java.nio.file.Path.of(authStorePath.get())
+            val store: xyz.wagyourtail.unimined.mclauncher.SessionStore =
+                if (authEncrypt.get()) {
+                    xyz.wagyourtail.unimined.mclauncher.EncryptedCredentialStore(
+                        path,
+                        xyz.wagyourtail.unimined.mclauncher
+                            .EncryptedCredentialStore.JavaKeyringProvider()
+                            .key()
+                    )
+                } else {
+                    xyz.wagyourtail.unimined.mclauncher.CredentialStore(path)
+                }
+            xyz.wagyourtail.unimined.mclauncher.MicrosoftAuth(
+                store, username.get(),
+                storeOnRefresh = authStoreCredentials.get()
+            ).session()
+        } catch (e: IllegalStateException) {
+            throw GradleException(e.message!!)
+        }
+    }
 
     /**
      * Beta/alpha-era games fetched their resources through betacraft's

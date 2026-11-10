@@ -16,12 +16,30 @@ class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         target.pluginManager.apply(xyz.wagyourtail.unimined.remap.GradlePlugin::class.java)
-        target.extensions.getByType(
+        val remap = target.extensions.getByType(
             xyz.wagyourtail.unimined.remap.RemapExtension::class.java
-        ).registerDslVerb("unpick") { spec ->
+        )
+        remap.registerDslVerb("unpick") { spec ->
             spec.stepVerb(UnpickSourceStepSpec::class.java) { step, defs ->
                 step.defs.from(*defs.toTypedArray())
             }
+        }
+        for (verb in listOf(
+            "nester" to NesterStepSpec::class.java,
+            "raven" to RavenStepSpec::class.java,
+            "sparrow" to SparrowStepSpec::class.java,
+        )) {
+            remap.registerDslVerb(verb.first) { spec ->
+                spec.stepVerb(verb.second) { step, files ->
+                    step.dataFiles.from(*files.toTypedArray())
+                }
+            }
+        }
+        remap.registerDslVerb("condor") { spec ->
+            spec.stepVerb(CondorStepSpec::class.java)
+        }
+        remap.registerDslVerb("preen") { spec ->
+            spec.stepVerb(PreenStepSpec::class.java)
         }
     }
 

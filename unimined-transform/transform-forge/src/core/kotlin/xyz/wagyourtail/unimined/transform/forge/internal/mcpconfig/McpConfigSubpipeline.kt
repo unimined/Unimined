@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
 import xyz.wagyourtail.unimined.transform.step.subpipeline.*
 import java.io.File
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.jar.JarFile
@@ -166,9 +167,11 @@ private object ListLibrariesFunction : PipelineFunction {
         val output = ctx.workDir.resolve("${step.name}.txt")
         val libs = ctx.listBinding("libraries").map { it.toPath() }
             .ifEmpty { ctx.stepContext?.classpath ?: emptyList() }
-        output.toFile().bufferedWriter().use { w ->
-            for (lib in libs) {
-                w.write("-e=${lib.toAbsolutePath()}\n")
+        output.writeAtomically { tmp ->
+            tmp.toFile().bufferedWriter().use { w ->
+                for (lib in libs) {
+                    w.write("-e=${lib.toAbsolutePath()}\n")
+                }
             }
         }
         return output
@@ -194,19 +197,21 @@ private object StripFunction : PipelineFunction {
             val src = tree.namespaces.first()
             tree.classes.mapNotNull { it.names[src] }.map { it.value }.toSet()
         }
-        JarOutputStream(output.outputStream()).use { out ->
-            JarFile(input.toFile()).use { inJar ->
-                inJar.entries().asSequence()
-                    .filter { !it.isDirectory && it.name.endsWith(".class") }
-                    .forEach { entry ->
-                        val cls = entry.name.removePrefix("/")
-                            .removeSuffix(".class")
-                        if (cls in classNames) {
-                            out.putNextEntry(java.util.jar.JarEntry("$cls.class"))
-                            inJar.getInputStream(entry).use { it.copyTo(out) }
-                            out.closeEntry()
+        output.writeAtomically { tmp ->
+            JarOutputStream(tmp.outputStream()).use { out ->
+                JarFile(input.toFile()).use { inJar ->
+                    inJar.entries().asSequence()
+                        .filter { !it.isDirectory && it.name.endsWith(".class") }
+                        .forEach { entry ->
+                            val cls = entry.name.removePrefix("/")
+                                .removeSuffix(".class")
+                            if (cls in classNames) {
+                                out.putNextEntry(java.util.jar.JarEntry("$cls.class"))
+                                inJar.getInputStream(entry).use { it.copyTo(out) }
+                                out.closeEntry()
+                            }
                         }
-                    }
+                }
             }
         }
         return output
@@ -218,7 +223,8 @@ private object InjectFunction : PipelineFunction {
     override val name = "mcpconfig:inject"
     override fun run(step: SubStep, ctx: SubpipelineContext): Path {
         val output = ctx.workDir.resolve("${step.name}Output.jar")
-        JarOutputStream(output.outputStream()).use { out ->
+        output.writeAtomically { tmp ->
+        JarOutputStream(tmp.outputStream()).use { out ->
             JarFile(Paths.get(ctx.vars.getValue("input")).toFile())
                 .use { inJar ->
                     inJar.entries().asSequence().forEach { entry ->
@@ -239,6 +245,7 @@ private object InjectFunction : PipelineFunction {
                 file.inputStream().use { it.copyTo(out) }
                 out.closeEntry()
             }
+        }
         }
         return output
     }

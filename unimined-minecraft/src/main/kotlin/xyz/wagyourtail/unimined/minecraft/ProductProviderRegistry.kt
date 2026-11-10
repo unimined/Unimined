@@ -44,4 +44,10 @@ class ProductProviderRegistry {
     fun select(spec: ProductSpec, override: String? = null): ProductProvider =
         selector.select(spec, override)
 
+    /** First-capability probe — `null` when no provider claims [spec]
+     *  (ambiguity still throws). Used to give loader-aware providers
+     *  first claim before falling back to the loader-agnostic view. */
+    fun probe(spec: ProductSpec): ProductProvider? =
+        selector.probe(spec)
+
 }

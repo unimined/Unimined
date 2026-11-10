@@ -60,6 +60,17 @@ abstract class ApplyClassTweakerStepSpec : DevArtifactOnlyStepSpec {
     @get:Input
     abstract val headerlessNamespace: Property<String>
 
+    /**
+     * Namespace renames consulted when a file's *declared* namespace is
+     * absent from the mapping tree — e.g. Ornithe's OSL classTweakers
+     * say `intermediary` while the environment's calamus column is
+     * named `calamus`. Env wiring binds `intermediary` to the loader
+     * descriptor's prod namespace; identity entries are never consulted.
+     */
+    @get:Optional
+    @get:Input
+    abstract val namespaceAliases: org.gradle.api.provider.MapProperty<String, String>
+
 }
 
 /**

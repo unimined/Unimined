@@ -39,6 +39,26 @@ class ForgeLoaderDescriptorsTest {
             "net.neoforged:neoforge:21.0.0-beta",
             LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21", "0-beta")
         )
+        // 26.x era: mc is directly the neoforge series — `.0` pad
+        // produces the published `26.3.0.*` shape; a 3-segment mc
+        // needs no pad; bare build tails prepend the derived base
+        assertEquals(
+            "net.neoforged:neoforge:26.3.0.93",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.3", "93")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:26.1.2.126",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.1.2", "126")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:21.1.265",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21.1", "265")
+        )
+        // complete versions pass through verbatim
+        assertEquals(
+            "net.neoforged:neoforge:21.1.265",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21.1", "21.1.265")
+        )
     }
 
     @Test

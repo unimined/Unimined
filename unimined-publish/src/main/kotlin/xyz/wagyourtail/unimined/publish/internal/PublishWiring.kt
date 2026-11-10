@@ -31,32 +31,15 @@ internal object PublishWiring {
         val factory = project.objects.newInstance(ComponentFactoryHolder::class.java).factory
         val component = factory.adhoc(componentName)
 
-        // the env's standard outgoing configurations — dev/prod jars,
-        // sources, and mod-support data variants land on their own
-        // configurations upstream; we surface every existing one.
-        // `main` confs are unprefixed (apiElements, not mainApiElements)
-        val outgoing = listOf(
-            sourceSet.apiElementsConfigurationName,
-            sourceSet.runtimeElementsConfigurationName,
-            if (sourceSet.name == "main") "sourcesElements"
-            else "${sourceSet.name}SourcesElements",
-            if (sourceSet.name == "main") "javadocElements"
-            else "${sourceSet.name}JavadocElements",
-        )
-        for (confName in outgoing) {
-            project.configurations.findByName(confName)?.let { conf ->
-                component.addVariantsFromConfiguration(conf) { details ->
-                    // keep the environment variant semantics — no
-                    // remapping to a different usage/category here
-                }
-            }
-        }
+        // dev/prod/sources/javadoc/data variants per envPub toggles —
+        // see PublishVariantWiring (plan §11)
+        PublishVariantWiring.wire(project, environment, sourceSet, envPub, component)
 
         project.components.add(component)
 
         // stash the per-env settings on the component's convention
-        // object so adapters (publish-maven / -modpublisher) can read
-        // coordinates + variant toggles at publication time
+        // object so adapters (modpublisher, custom destinations) can
+        // read coordinates + variant toggles at publication time
         project.extensions.extraProperties.set(
             "uniminedPublish.$env",
             envPub

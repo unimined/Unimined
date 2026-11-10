@@ -24,6 +24,7 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             api(libs.kotlinx.serialization.json)
+            implementation(libs.minecraftauth)
         }
         jvmTest.dependencies {
             implementation(kotlin("test"))

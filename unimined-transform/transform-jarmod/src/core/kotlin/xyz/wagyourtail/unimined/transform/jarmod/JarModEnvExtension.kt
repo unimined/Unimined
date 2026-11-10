@@ -52,4 +52,50 @@ class JarModEnvExtension(private val env: MinecraftEnvironment) {
     fun deleteMetaInf(disable: Boolean = true) {
         JarModEnvState.deleteMetaInf(env.environmentId, disable)
     }
+
+    /** Register a refmap resource (`jma.refmaps`) — a classpath-resource
+     *  name like `examplemod.refmap.json`; the agent merges all listed
+     *  refmaps per transformer. */
+    fun jarmodRefmap(refmap: String) {
+        JarModEnvState.addRefmaps(env.environmentId, listOf(refmap))
+    }
+
+    /** Declare a set of refmap resources. */
+    fun jarmodRefmaps(refmaps: List<String>) {
+        JarModEnvState.addRefmaps(env.environmentId, refmaps)
+    }
+
+    /** Register a `JMAInitializer` class (`jma.initializers`) —
+     *  system-property initializers run before manifest-declared ones;
+     *  list order is load order. */
+    fun jarmodInitializer(initializer: String) {
+        JarModEnvState.addInitializers(env.environmentId, listOf(initializer))
+    }
+
+    /** Declare an ordered set of `JMAInitializer` classes. */
+    fun jarmodInitializers(initializers: List<String>) {
+        JarModEnvState.addInitializers(env.environmentId, initializers)
+    }
+
+    /** `jma.failStrategy` — ClassTransform `FailStrategy` for transformer
+     *  failures: CONTINUE, CANCEL, EXIT or THROW (case-insensitive;
+     *  requires agent ≥ 0.1.5). */
+    fun jarmodFailStrategy(strategy: String) {
+        val normalized = strategy.uppercase()
+        require(normalized in FAIL_STRATEGIES) {
+            "jarmodFailStrategy: '$strategy' is not a ClassTransform " +
+                    "FailStrategy (expected one of $FAIL_STRATEGIES)"
+        }
+        JarModEnvState.failStrategy(env.environmentId, normalized)
+    }
+
+    /** `jma.debug` — dump patched classes under `.jma/patched` for
+     *  transformer debugging. */
+    fun jarmodDebug() {
+        JarModEnvState.debug(env.environmentId, true)
+    }
+
+    private companion object {
+        val FAIL_STRATEGIES = setOf("CONTINUE", "CANCEL", "EXIT", "THROW")
+    }
 }

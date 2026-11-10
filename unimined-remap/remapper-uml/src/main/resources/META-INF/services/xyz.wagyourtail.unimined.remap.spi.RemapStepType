@@ -2,3 +2,8 @@ xyz.wagyourtail.unimined.remapper.uml.UmlRemapStepType
 xyz.wagyourtail.unimined.remapper.uml.UmlSourceRemapStepType
 xyz.wagyourtail.unimined.remapper.uml.UnpickSourceStepType
 xyz.wagyourtail.unimined.remapper.uml.UmlModArtifactsStepType
+xyz.wagyourtail.unimined.remapper.uml.NesterStepType
+xyz.wagyourtail.unimined.remapper.uml.RavenStepType
+xyz.wagyourtail.unimined.remapper.uml.SparrowStepType
+xyz.wagyourtail.unimined.remapper.uml.CondorStepType
+xyz.wagyourtail.unimined.remapper.uml.PreenStepType

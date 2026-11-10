@@ -6,6 +6,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.TypeInsnNode
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
 import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
@@ -13,7 +14,6 @@ import java.io.InputStream
 import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
@@ -56,8 +56,7 @@ internal class FG1FixForgeProcessor : JarProcessor {
                 if (dyn.any { it.contains("bcprov") }) add("org/bouncycastle/")
             }
             if (strips.isEmpty()) return
-            val tmp = Files.createTempFile(jar.parent, "fg1-fix", ".jar")
-            try {
+            jar.writeAtomically { tmp ->
                 val emitted = mutableSetOf<String>()
                 ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
                     zip.entries().asSequence().filter { !it.isDirectory }.forEach { e ->
@@ -72,9 +71,6 @@ internal class FG1FixForgeProcessor : JarProcessor {
                         }
                     }
                 }
-                Files.move(tmp, jar, StandardCopyOption.REPLACE_EXISTING)
-            } finally {
-                Files.deleteIfExists(tmp)
             }
         }
     }

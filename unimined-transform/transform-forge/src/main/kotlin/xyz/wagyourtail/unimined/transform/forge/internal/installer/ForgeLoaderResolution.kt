@@ -70,7 +70,10 @@ internal class ResolvedForge(
      *  classifier for classpath deps (bare `g:a:v` jars don't
      *  exist for FG2-era Forge — only `-universal`/`-userdev`). */
     val notation: String,
-    val jar: Path
+    val jar: Path,
+    /** `jarmod:merge` inputs — `[jar]` except sided FG1 forms on a
+     *  MERGED env, where the client and server zips both merge. */
+    val mergeJars: List<Path> = listOf(jar)
 )
 
 /**
@@ -78,9 +81,12 @@ internal class ResolvedForge(
  * (plan §5 era axis):
  * 1. `$base:userdev` — FG3+ `config.json`, or the FG2 `dev.json`
  *    dev-package (becomes `Binpatches.devPackage`)
- * 2. `$base:universal` — FG2 binpatches / FG1 jar patches
- * 3. `$base` bare — sided/`@zip` FG1-era forms are resolved by the
- *    ZipPatches pipeline when it lands
+ * 2. `$base:universal` / `$base:universal@zip` — FG2 binpatches /
+ *    FG1 jar patches (FG1 universal ships as `.zip`)
+ * 3. `$base` bare / `$base@zip` — bare-artifact forms
+ * 4. sided FG1-era zips — pre-1.3 ships only `:$side@zip`
+ *    (`client`/`server`, env-side picked, both on MERGED); the
+ *    `jarmod:merge` input mirrors jarmod's own fg1 logic
  *
  * Resolution failures on a candidate fall through to the next —
  * the `userdev`/`universal` classifiers don't exist for all
@@ -105,11 +111,38 @@ internal fun contributeLoaderResolution(
     }.getOrNull()
 
     var notation: String? = null
+    var mergeJars: List<Path>? = null
     val jar = tryResolve("$base:userdev")?.also { notation = "$base:userdev" }
         ?: run {
             val universal = tryResolve("$base:universal")
                 ?.also { notation = "$base:universal" }
+                // FG1-era universal ships as `.zip` (pom-less dir feed)
+                ?: tryResolve("$base:universal@zip")
+                    ?.also { notation = "$base:universal@zip" }
                 ?: tryResolve(base)?.also { notation = base }
+                ?: tryResolve("$base@zip")?.also { notation = "$base@zip" }
+                ?: run {
+                    // pre-1.3 FG1 — only per-side `:$side@zip` zips
+                    // exist; MERGED merges client+server like the
+                    // base MC merge (jarmod's fg1 classifier logic)
+                    val minor = Regex("^1\\.(\\d+)").find(mc)
+                        ?.groupValues?.get(1)?.toIntOrNull()
+                    if (minor == null || minor >= 3) return@run null
+                    val classifiers = when (environment.side.get()) {
+                        xyz.wagyourtail.unimined.api.spec.Side.SERVER ->
+                            listOf("server")
+                        xyz.wagyourtail.unimined.api.spec.Side.MERGED ->
+                            listOf("client", "server")
+                        else -> listOf("client")
+                    }
+                    val jars = classifiers.mapNotNull {
+                        tryResolve("$base:$it@zip")
+                    }
+                    if (jars.size != classifiers.size) return@run null
+                    notation = "$base:${classifiers.first()}@zip"
+                    mergeJars = jars
+                    jars.first()
+                }
             // 1.x `userdevClassifier`: a universal carrying
             // `binpatches.pack.lzma` pairs with the `userdev3`
             // classifier (FG3-era config.json dev metadata
@@ -123,9 +156,13 @@ internal fun contributeLoaderResolution(
         }
         ?: error(
             "Unable to resolve forge loader artifact at $base " +
-                    "(:userdev/:universal classifiers and bare artifact all failed)"
+                    "(:userdev/:universal classifiers, bare artifact, " +
+                    "and sided @zip forms all failed)"
         )
-    ResolvedForge(descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar)
+    ResolvedForge(
+        descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar,
+        mergeJars ?: listOf(jar)
+    )
 }
 
 /**

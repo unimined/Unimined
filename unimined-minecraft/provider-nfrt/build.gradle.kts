@@ -4,6 +4,9 @@ plugins {
 
 dependencies {
     api(project(":unimined-minecraft"))
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 gradlePlugin {

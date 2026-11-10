@@ -38,6 +38,14 @@ class UnobfCompletionPostProcessor : MappingPostProcessor {
 private fun MutableMappingTree.completeUnchangedCells() {
     val allNs = namespaces.toList()
     if (allNs.size < 2) return
+    // env columns (`ns:env`) mark side-presence — an empty cell means
+    // "absent on that side", not "same name", so they must never be
+    // filled: fabricating `official:server` from `official:client`
+    // would declare members the other side's jar doesn't have.
+    // Likewise a row whose only present cells are env-qualified
+    // carries no "unchanged" evidence — a single-sided obf name can't
+    // prove the member is un-obfuscated, so env-only rows don't fill.
+    val unqualified = allNs.filter { it.splitEnv().second == null }
     val remappers = mutableMapOf<Pair<Namespace, Namespace>, NamespaceRemapper>()
     fun descRemapper(from: Namespace, to: Namespace): NamespaceRemapper =
         remappers.getOrPut(from to to) { remapper(from, to) }
@@ -45,10 +53,11 @@ private fun MutableMappingTree.completeUnchangedCells() {
     /** name-only rows: fill missing cells iff all present names equal. */
     fun <T> completeNames(names: Map<Namespace, T>): Map<Namespace, T> {
         if (names.isEmpty() || names.size == allNs.size) return names
+        if (names.keys.none { it.splitEnv().second == null }) return names
         val present = names.values.toSet()
         if (present.size != 1) return names
         val out = names.toMutableMap()
-        for (ns in allNs) {
+        for (ns in unqualified) {
             if (ns !in out) out[ns] = present.single()
         }
         return out
@@ -64,12 +73,13 @@ private fun MutableMappingTree.completeUnchangedCells() {
             if (field !is MutableFieldMapping) continue
             val entries = field.entries
             if (entries.isEmpty() || entries.size == allNs.size) continue
+            if (entries.keys.none { it.splitEnv().second == null }) continue
             val present = entries.values.mapTo(mutableSetOf()) { it.name }
             if (present.size != 1) continue
             val name = present.single()
             val donor = entries.entries.first()
             val out = entries.toMutableMap()
-            for (ns in allNs) {
+            for (ns in unqualified) {
                 if (ns in out) continue
                 val desc = donor.value.descriptor
                     ?.let { descRemapper(donor.key, ns).map(it) }
@@ -83,12 +93,13 @@ private fun MutableMappingTree.completeUnchangedCells() {
             if (method !is MutableMethodMapping) continue
             val entries = method.entries
             if (entries.isEmpty() || entries.size == allNs.size) continue
+            if (entries.keys.none { it.splitEnv().second == null }) continue
             val present = entries.values.mapTo(mutableSetOf()) { it.name }
             if (present.size != 1) continue
             val name = present.single()
             val donor = entries.entries.first()
             val out = entries.toMutableMap()
-            for (ns in allNs) {
+            for (ns in unqualified) {
                 if (ns in out) continue
                 val desc = donor.value.descriptor
                     ?.let { descRemapper(donor.key, ns).map(it) }

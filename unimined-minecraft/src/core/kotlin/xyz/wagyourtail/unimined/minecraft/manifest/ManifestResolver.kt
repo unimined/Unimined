@@ -41,6 +41,15 @@ class ManifestResolver(
         return json.decodeFromString(Files.readString(file))
     }
 
+    /** The manifest entry for [id] — null when no manifest lists it.
+     *  Carries [VersionManifest.VersionRef.releaseTime] for chronological
+     *  version ordering (overlay `maxGameVersion` bounds are version ids,
+     *  not parseable semver). */
+    fun versionRef(id: String): VersionManifest.VersionRef? =
+        manifestUrls.firstNotNullOfOrNull { url ->
+            manifest(url).versions.firstOrNull { it.id == id }
+        }
+
     /** Per-version metadata, cached at [versionJsonTtl]. */
     fun versionJson(id: String): VersionJson {
         val document = versionJsonDocument(id)

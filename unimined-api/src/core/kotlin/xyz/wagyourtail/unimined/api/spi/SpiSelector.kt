@@ -25,6 +25,14 @@ interface SpiSelector<T : Supports<S>, S> {
      */
     fun select(spec: S, override: String? = null): T
 
+    /**
+     * Capability check without selection: `null` when no candidate
+     * supports [spec]. Ambiguous matches still throw
+     * [SpiSelectionException] — a host that probes must not silently
+     * mask a real conflict. Overrides do not apply here.
+     */
+    fun probe(spec: S): T?
+
 }
 
 /**

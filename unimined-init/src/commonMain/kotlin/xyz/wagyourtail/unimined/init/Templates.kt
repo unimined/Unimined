@@ -53,19 +53,24 @@ internal object Templates {
         return when {
             l in listOf("babric", "bta") -> plusTail("biny")
                 ?.let { listOf("biny(\"$it\")") }
+            // ornithe uses feather even on b1.x — checked before
+            // the b1-era nostalgia fallback; the v3 feather axis is
+            // the gen-2 series so the gen var is pinned alongside
+            l == "osl" || l == "ornithe" -> buildTail("feather")
+                ?.let { listOf("ornitheGenVersion = 2", "feather($it)") }
             mc.startsWith("b1.") -> buildTail("nostalgia")
                 ?.let { listOf("nostalgia($it)") }
             l == "legacyfabric" -> buildTail("legacyyarn")
                 // current builds are gen-2 (`net.legacyfabric.v2`)
                 ?.let { listOf("legacyYarn($it, 2)") }
-            l == "osl" -> buildTail("feather")
-                ?.let { listOf("feather($it)") }
             l == "quilt" -> buildTail("quilt-mappings")
                 ?.let { listOf("quilt($it)") }
             l == "fabric" -> listOfNotNull(
                 "intermediary()",
                 buildTail("yarn")?.let { "yarn($it)" })
-            l in listOf("forge", "fml", "lexforge", "cleanroom") -> baked("mcp")?.let {
+            l == "rift" -> listOf("searge()")
+            l in listOf("forge", "fml", "lexforge", "cleanroom",
+                "liteloader") -> baked("mcp")?.let {
                 val p = it.split('_', limit = 2)
                 // searge supplies the obf->srg class/member layer
                 // mcp alone can't rename merged-obf classes
@@ -106,6 +111,17 @@ internal object Templates {
                         "https://maven.minecraftforge.net/"
 
                     it.contains("neo") -> "https://maven.neoforged.net/releases"
+                    it == "paper" ->
+                        "https://repo.papermc.io/repository/maven-public/"
+                    it in listOf("bukkit", "craftbukkit", "spigot") ->
+                        "https://hub.spigotmc.org/nexus/content/groups/public/"
+                    // direct Nexus — dl.liteloader.com 302s through an
+                    // insecure http redirector Gradle hard-fails on
+                    it == "liteloader" ->
+                        "https://repo.mumfrey.com/content/repositories/liteloader/"
+                    // rift + dimdev mixin — dimdev.org offline,
+                    // wagyourtail releases mirrors org.dimdev
+                    it == "rift" -> "https://maven.wagyourtail.xyz/releases/"
                     else -> null
                 }
             }.distinct()
@@ -207,7 +223,13 @@ internal object Templates {
                 "VERSION" to spec.version,
                 "LOADER_SECTIONS" to spec.loaders.joinToString("\n") { (l, _) ->
                     "    " + render("partials/mod-loader-section.gradle", mapOf(
-                        "LOADER" to l
+                        "LOADER" to l,
+                        // rift's riftmod.json carries entrypoints.main —
+                        // the DSL route declares the class here
+                        "LOADER_BODY" to if (l == "rift")
+                            "\n        entrypoint(\"${spec.basePackage}." +
+                                    "${entrypointClassName(spec, l)}\")\n    "
+                        else ""
                     ))
                 },
             )
@@ -393,6 +415,11 @@ internal object Templates {
             "neoforge" -> if (neoforgeForgeEra(spec.mcVersion)) "forge"
                           else "neoforge"
             "fabric", "quilt" -> loader.lowercase()
+            // bukkit is the family name; the descriptors are
+            // craftbukkit/spigot/paper — all JavaPlugin entrypoints
+            "bukkit", "craftbukkit", "spigot", "paper" -> "bukkit"
+            // liteloader = Tickable impl, rift = InitializationListener
+            "liteloader", "rift" -> loader.lowercase()
             else -> "generic"
         }
         return render("entrypoint/$file.java", mapOf(
@@ -438,9 +465,12 @@ internal object Templates {
             forgeEra(spec.mcVersion) == "forge-modloader"
 
     /** Entrypoint class name for [loader] — `mod_<modid>` (default
-     *  package) for ModLoader-era, PascalCase otherwise. */
+     *  package) for ModLoader-era, `LiteMod<Pascal>` for liteloader
+     *  (its own convention), PascalCase otherwise. */
     fun entrypointClassName(spec: InitSpec, loader: String): String =
         if (isModLoaderEra(spec, loader)) "mod_${spec.modId}"
+        else if (loader.equals("liteloader", true))
+            "LiteMod${mainClassName(spec)}"
         else mainClassName(spec)
 
     /**
@@ -468,6 +498,15 @@ internal object Templates {
             )
             "forge" -> listOf(
                 "META-INF/mods.toml" to render("metadata/mods.toml", tokens)
+            )
+            // user-authored stubs merge with the descriptors the
+            // transform plugin emits (api-version etc. are stamped
+            // there) — minimal fields only
+            "bukkit", "craftbukkit", "spigot" -> listOf(
+                "plugin.yml" to render("metadata/plugin.yml", tokens)
+            )
+            "paper" -> listOf(
+                "paper-plugin.yml" to render("metadata/paper-plugin.yml", tokens)
             )
             else -> emptyList()
         }

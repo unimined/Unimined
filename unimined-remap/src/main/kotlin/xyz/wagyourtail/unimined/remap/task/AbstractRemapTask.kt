@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.remap.task
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -10,6 +11,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import xyz.wagyourtail.unimined.remap.internal.NamespaceDetect
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -44,9 +46,22 @@ abstract class AbstractRemapTask : DefaultTask() {
     @get:Nested
     abstract val stepSpecs: ListProperty<StepSpec>
 
+    /**
+     * Source namespace. Optional only for standalone artifact remaps —
+     * when unset it is autodetected at execution from the input jar's
+     * class names against the mapping tree (requires [mappingFile]/
+     * [mappingData] carrying a `MappingTree` view).
+     */
+    @get:Optional
     @get:Input
     abstract val sourceNamespace: Property<String>
 
+    /**
+     * Target namespace. Optional only for standalone artifact remaps —
+     * when unset it resolves to the single namespace remaining after the
+     * source; ambiguity fails with an actionable error.
+     */
+    @get:Optional
     @get:Input
     abstract val targetNamespace: Property<String>
 
@@ -73,6 +88,14 @@ abstract class AbstractRemapTask : DefaultTask() {
      * orchestration). `@Internal`: arbitrary `MappingData` impls are not
      * configuration-cache serializable, so prefer [mappingFile].
      */
+    /** Post-remap validation of the emitted production jar — packaging
+     *  footguns (dangling AW/mixin/nested-jar/icon paths, missing
+     *  entrypoint/main classes, wrong namespace marker). Unset means
+     *  [xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR]. */
+    @get:Optional
+    @get:Input
+    abstract val footgunChecks: Property<xyz.wagyourtail.unimined.remap.FootgunCheckLevel>
+
     @get:Internal
     abstract val mappingData: Property<MappingData>
 
@@ -92,14 +115,31 @@ abstract class AbstractRemapTask : DefaultTask() {
             ?.let { SerializedMappingData.readEither(it.asFile.toPath()) }
             ?: mappingData.orNull
 
+        var srcNs = sourceNamespace.orNull
+        var tgtNs = targetNamespace.orNull
+        if (srcNs == null || tgtNs == null) {
+            // standalone remap: autodetect against the mapping tree
+            val tree = mappings?.view(xyz.wagyourtail.unimined.mapping.MappingTree::class.java)
+                ?: throw GradleException(
+                    "$path: sourceNamespace/targetNamespace are required — the " +
+                    "supplied mapping data has no MappingTree to autodetect " +
+                    "namespaces from"
+                )
+            val detected = NamespaceDetect.detect(
+                inputArtifact.get().asFile.toPath(), tree, srcNs, tgtNs
+            )
+            srcNs = detected.first
+            tgtNs = detected.second
+        }
+
         PipelineRunner.run(
             input = inputArtifact.get().asFile.toPath(),
             output = outputArtifact.get().asFile.toPath(),
             surface = surface.get(),
             stepSpecs = stepSpecs.get(),
             spec = RuntimeRemapSpec(
-                sourceNamespace.get(),
-                targetNamespace.get(),
+                srcNs,
+                tgtNs,
                 remapClasspath.files.map({ it.toPath() })
             ),
             mappings = mappings,
@@ -109,6 +149,20 @@ abstract class AbstractRemapTask : DefaultTask() {
             host = path,
             accessModel = accessModel.orNull?.let(AccessModel::parse)
         )
+
+        val outPath = outputArtifact.get().asFile.toPath()
+        if (surface.get() == RemapSurface.JAR) {
+            stampAndLintProductionJar(
+                outPath, tgtNs,
+                footgunChecks.getOrElse(
+                    xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
+                ),
+                logger, path
+            )
+        } else {
+            xyz.wagyourtail.unimined.remap.internal.JarLint
+                .stampNamespace(outPath, tgtNs)
+        }
     }
 
 }

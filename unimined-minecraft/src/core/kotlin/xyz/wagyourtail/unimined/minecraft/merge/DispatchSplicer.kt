@@ -118,7 +118,7 @@ private fun <T : AnnotationNode> unionAnnotations(
     val merged = dst ?: mutableListOf()
     for (a in extra) {
         if (merged.none {
-                ClassMerger.areAnnotationNodesEqual(it, a) }) {
+                ClassNodeEquality.areAnnotationNodesEqual(it, a) }) {
             merged.add(a)
         }
     }

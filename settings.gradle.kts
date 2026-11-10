@@ -25,6 +25,10 @@ dependencyResolutionManagement {
         maven("https://maven.minecraftforge.net/")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.firstdark.dev/releases")
+        maven("https://maven.kikugie.dev/releases") {
+            // stonecutter — adapter-stonecutter's compileOnly dep
+            content { includeGroup("dev.kikugie") }
+        }
         gradlePluginPortal()
     }
 }

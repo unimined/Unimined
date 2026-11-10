@@ -8,10 +8,11 @@ import xyz.wagyourtail.unimined.transform.spi.TransformerSource
 
 /**
  * bukkit-family transform claim — claims envs whose descriptor
- * `family` is `bukkit` (craftbukkit/spigot/paper rows), declares
- * classpath mod discovery (plugins ride the classpath plugin
- * loader), and delegates dist/patch/run wiring to
- * [BukkitEnvironmentWiring].
+ * `family` is `bukkit` (craftbukkit/spigot/paper rows), defaults
+ * mod discovery to `plugins/` staging (native server discovery;
+ * opt back into the classpath plugin loader with
+ * `features { modDiscovery("classpath") }`), and delegates
+ * dist/patch/run wiring to [BukkitEnvironmentWiring].
  */
 class BukkitTransformerClaim : TransformerClaim {
 
@@ -19,7 +20,9 @@ class BukkitTransformerClaim : TransformerClaim {
 
     override fun transformer(env: TransformerClaim.TransformerEnvContext)
             : MinecraftTransformer {
-        env.env.features.binding("modDiscovery", "classpath")
+        if (env.env.features.bindings["modDiscovery"] == null) {
+            env.env.features.binding("modDiscovery", "plugins")
+        }
 
         env.minecraft?.let { BukkitEnvironmentWiring.wire(env.project, it) }
 

@@ -154,54 +154,68 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         val classpathKey = classpathJars
             .map { Triple(it, Files.size(it), Files.getLastModifiedTime(it).toMillis()) }
             .sortedBy { it.first }
-        val index = scanCache.getOrPut(classpathKey) {
+        // computeIfAbsent (not getOrPut) — the map's put must be atomic:
+        // non-atomic get-then-put raced N first-access transforms into
+        // N parallel index builds of the same 113-jar classpath
+        val index = scanCache.computeIfAbsent(classpathKey) {
             slog.lifecycle(
                 "indexing classpath (${classpathJars.size} jars) for lazy inheritance"
             )
             LazyASMInheritanceTree.index(classpathJars.toSet())
         }
-        val inputScan = ASMInheritanceTree.scan(setOf(input))
+        // per-remap peak live set = the lazy tree's parsed classpath
+        // ClassInfos (propagation mutates them, so trees can't be
+        // shared) — unbounded transform parallelism × multi-GB trees
+        // GC-thrashes the daemon (fabric-api's ~50 nested jars at
+        // -Xmx6G). Bound concurrency by heap headroom.
+        remapPermits.acquire()
+        try {
+            val inputScan = ASMInheritanceTree.scan(setOf(input))
 
-        // inline progress — the callback fires per class from UML's parallel
-        // workers; the gate turns it into a throttled lifecycle line so the
-        // log shows movement instead of a multi-second stall
-        var phase = "remap"
-        var total = 0
-        val gate = ProgressGate { elapsed, done ->
-            slog.info {
-                "${input.fileName} ${spec.sourceNamespace}->${spec.targetNamespace}: " +
-                        "$phase $done/$total classes " +
-                        "(${done * 100 / total.coerceAtLeast(1)}%) in ${elapsed}ms"
+            // inline progress — the callback fires per class from UML's
+            // parallel workers; the gate turns it into a throttled
+            // lifecycle line so the log shows movement instead of a
+            // multi-second stall
+            var phase = "remap"
+            var total = 0
+            val gate = ProgressGate { elapsed, done ->
+                slog.info {
+                    "${input.fileName} ${spec.sourceNamespace}->${spec.targetNamespace}: " +
+                            "$phase $done/$total classes " +
+                            "(${done * 100 / total.coerceAtLeast(1)}%) in ${elapsed}ms"
+                }
             }
-        }
-        runBlocking {
-            AsmRemapper.remap(
-                input,
-                target,
-                listOf(view) + listOfNotNull(overlay),
-                fns,
-                tns,
-                LazyASMInheritanceTree(fns, inputScan, index),
-                // FIX — package-private members of classes whose package
-                // the mappings relocate get widened (tiny's
-                // checkPackageAccess+fixPackageAccess equivalent)
-                options = Options(
-                    packageAccess = PackageAccess.FIX,
-                    // decompiler/obf synthetic param names ($$0, $$1…)
-                    // are valid identifiers — flag them via pattern so
-                    // renameInvalidLocals replaces them
-                    invalidLvNamePattern = Regex(".*\\$\\$.*"),
-                    // JSR-305 annotation descriptors -> JetBrains.
-                    // mod-artifact extensions (kotlin metadata, mixin
-                    // refmaps, JMA refmaps) run as the follow-on
-                    // `modArtifacts` step — engine-agnostic so tiny or
-                    // remapped-view pipelines get identical treatment
-                    extensions = BuiltinAsmExtensions.defaults() +
-                        (if (jsr305) listOf(Jsr305AsmExtension.factory())
-                         else emptyList()),
-                    onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
+            runBlocking {
+                AsmRemapper.remap(
+                    input,
+                    target,
+                    listOf(view) + listOfNotNull(overlay),
+                    fns,
+                    tns,
+                    LazyASMInheritanceTree(fns, inputScan, index),
+                    // FIX — package-private members of classes whose package
+                    // the mappings relocate get widened (tiny's
+                    // checkPackageAccess+fixPackageAccess equivalent)
+                    options = Options(
+                        packageAccess = PackageAccess.FIX,
+                        // decompiler/obf synthetic param names ($$0, $$1…)
+                        // are valid identifiers — flag them via pattern so
+                        // renameInvalidLocals replaces them
+                        invalidLvNamePattern = Regex(".*\\$\\$.*"),
+                        // JSR-305 annotation descriptors -> JetBrains.
+                        // mod-artifact extensions (kotlin metadata, mixin
+                        // refmaps, JMA refmaps) run as the follow-on
+                        // `modArtifacts` step — engine-agnostic so tiny or
+                        // remapped-view pipelines get identical treatment
+                        extensions = BuiltinAsmExtensions.defaults() +
+                            (if (jsr305) listOf(Jsr305AsmExtension.factory())
+                             else emptyList()),
+                        onProgress = { p, d, t -> phase = p; total = t; gate.tickTo(d.toLong()) }
+                    )
                 )
-            )
+            }
+        } finally {
+            remapPermits.release()
         }
         // output verification — expected renames that never appear mean
         // the dst layer produced an identity copy (the forge-1.2.5
@@ -236,6 +250,21 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
          *  one listing. */
         val scanCache = java.util.concurrent.ConcurrentHashMap<
                 List<Triple<Path, Long, Long>>, Map<InternalName, Path>>()
+
+        /**
+         * Daemon-wide bound on concurrent ASM remap passes. Each pass
+         * retains a private lazy inheritance tree whose parsed classpath
+         * ClassInfo set can reach ~1–2 GiB on a full MC classpath; at
+         * `max-workers` parallelism this GC-thrashes the daemon
+         * (observed: fabric-api's ~50 nested module jars, -Xmx2G and
+         * -Xmx6G both thrash). Permits scale with max heap — ~1.5 GiB
+         * assumed peak per pass — 2G→1, 4G→2, 6G+→4. Serialized at
+         * small heaps: slower, but it finishes.
+         */
+        val remapPermits = java.util.concurrent.Semaphore(
+            (Runtime.getRuntime().maxMemory() / (1536L * 1024 * 1024))
+                .toInt().coerceIn(1, 4)
+        )
     }
 
 }

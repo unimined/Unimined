@@ -11,6 +11,8 @@ import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepPipeline
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
+import xyz.wagyourtail.commonskt.jvm.tempSibling
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -97,7 +99,15 @@ object PipelineRunner {
         )
         if (out != output) {
             output.parent?.createDirectories()
-            Files.copy(out, output, StandardCopyOption.REPLACE_EXISTING)
+            // temp + atomic move — a killed pipeline must not leave a
+            // partial jar at the artifact path (#78)
+            val tmp = output.tempSibling()
+            try {
+                Files.copy(out, tmp, StandardCopyOption.REPLACE_EXISTING)
+                tmp.moveAtomicTo(output)
+            } finally {
+                Files.deleteIfExists(tmp)
+            }
         }
     }
 

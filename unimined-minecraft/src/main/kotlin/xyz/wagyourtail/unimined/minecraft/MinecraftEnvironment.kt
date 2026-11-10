@@ -20,8 +20,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
-import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
-import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
+import xyz.wagyourtail.unimined.minecraft.internal.EnvironmentInheritance
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
@@ -40,7 +39,7 @@ import javax.inject.Inject
  */
 abstract class MinecraftEnvironment @Inject internal constructor(
     val environmentId: String,
-    private val project: Project,
+    internal val project: Project,
     objects: ObjectFactory
 ) : Named, ExtensionAware {
 
@@ -173,7 +172,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         if (environmentId == parentEnvId) return
         if (!inheritParent.get()) return
         val ref = EnvironmentReference(project.path, parentEnvId)
-        if (ref !in combinedWithReferences) combineWith(parentEnvId)
+        // SIDE/PROVIDER ride the lazy constructor conventions (same
+        // mechanism as VERSION's own provider) — copying them here
+        // would install a *later* convention than the transform
+        // wirings' bound-env conventions (bukkit → SERVER side, fabric
+        // → provider), and the last convention wins. Explicit
+        // `combineWith`/`copyFrom` calls still copy all sections.
+        if (ref !in inheritance.references) combineWith(
+            ref,
+            EnvironmentSection.COMBINE_DEFAULT - EnvironmentSection.SIDE -
+                EnvironmentSection.PROVIDER,
+            false
+        )
         // aux envs (datagen/gametest) launch through the parent's
         // loader and test the parent's mods — without LOADER their
         // classpaths never get the loader jar, and without
@@ -204,15 +214,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         // api) — see MinecraftEnvironmentCopyHandler.wireDependencies
     }
 
-    /** Sources this env copied VERSION from — checked at bind so
-     *  pinned-mismatching envs error instead of silently inheriting
-     *  version-sensitive sections. */
-    private val versionCopySources = linkedSetOf<EnvironmentReference>()
-
     /** Environments sharing sections must resolve the same mc version. */
     internal fun checkVersionConflicts() {
         val target = version.orNull ?: return
-        for (source in combinedWithReferences + versionCopySources) {
+        for (source in inheritance.references + inheritance.versionCopySources) {
             val other = project.extensions
                 .getByType(MinecraftExtension::class.java)
                 .environment(source).version.orNull ?: continue
@@ -238,11 +243,29 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                 .environments.findByName(parentEnvId)?.version?.orNull
         })
 
-    /** Client/server/merged side for this source set; defaults to merged. */
-    val side: Property<Side> = objects.property(Side::class.java).convention(Side.MERGED)
+    /** Client/server/merged side for this source set. Convention
+     *  inherits the implicit parent's side lazily — same mechanism as
+     *  [version]: transform wirings install family conventions on bound
+     *  envs (bukkit-family → SERVER), and a copy-time convention would
+     *  clobber them since the last convention wins. An explicit
+     *  `combineWith`/`copyFrom` SIDE still replaces this convention. */
+    val side: Property<Side> = objects.property(Side::class.java)
+        .convention(project.provider {
+            if (environmentId == parentEnvId || !inheritParent.get()) Side.MERGED
+            else project.extensions.getByType(MinecraftExtension::class.java)
+                .environments.findByName(parentEnvId)?.side?.orNull
+                ?: Side.MERGED
+        })
 
-    /** Optional provider override for this source set. */
+    /** Optional provider override for this source set. Convention
+     *  inherits the implicit parent's provider lazily — see [side] for
+     *  why convention-install order matters. */
     val provider: Property<String> = objects.property(String::class.java)
+        .convention(project.provider {
+            if (environmentId == parentEnvId || !inheritParent.get()) null
+            else project.extensions.getByType(MinecraftExtension::class.java)
+                .environments.findByName(parentEnvId)?.provider?.orNull
+        })
 
     /**
      * Product this environment produces, scoped by game family —
@@ -451,12 +474,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             // fires on maybeCreate before the configure block runs, so
             // `inheritParent` can't be read in bindSourceSet
             applyImplicitParent()
-            return combinedWithReferences
+            return inheritance.references
         }
 
-    private val combinedWithReferences = linkedSetOf<EnvironmentReference>()
-    private val wiredOutputReferences = mutableSetOf<EnvironmentReference>()
-    private var boundSourceSet: SourceSet? = null
+    /** Copy/combine bookkeeping + composition wiring — see
+     *  [EnvironmentInheritance]. Public `copyFrom`/`combineWith` verbs
+     *  delegate here. */
+    internal val inheritance = EnvironmentInheritance(this)
 
     /**
      * This environment's declared mapping sources — the object
@@ -818,8 +842,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         // `combinedWith` read (bind fires before the configure block,
         // so `inheritParent` can't be honored here)
         checkVersionConflicts()
-        boundSourceSet = sourceSet
-        combinedWithReferences.forEach(::wireSourceOutput)
+        inheritance.boundSourceSet = sourceSet
+        inheritance.references.forEach(inheritance::wireSourceOutput)
         wireJavaCompatibility(sourceSet)
         wireEnvJar(sourceSet)
     }
@@ -896,7 +920,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                 throw GradleException(
                     "unimined: environment '$environmentId' requires " +
                         "Java $required but toolchains are disabled " +
-                        "and the build JVM is ${JavaVersion.current()}")
+                        "and the build JVM is ${JavaVersion.current()} — " +
+                        "either run Gradle on Java $required+ or re-enable " +
+                        "toolchains (minecraft.useToolchains)")
             }
         }
     }
@@ -958,7 +984,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                         throw GradleException(
                             "unimined: environment '$environmentId' requires " +
                                 "Java $required but toolchains are disabled " +
-                                "and the build JVM is ${JavaVersion.current()}")
+                                "and the build JVM is ${JavaVersion.current()} — " +
+                                "either run Gradle on Java $required+ or " +
+                                "re-enable toolchains (minecraft.useToolchains)")
                     }
                 }
             }
@@ -987,99 +1015,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         source: EnvironmentReference,
         sections: Set<EnvironmentSection>,
         requireHandlers: Boolean
-    ) {
-        checkSelfReference(source)
-        if (EnvironmentSection.VERSION in sections)
-            versionCopySources.add(source)
-        EnvironmentCopyRegistry.record(
-            project,
-            EnvironmentCopyRequest(
-                source = source,
-                target = EnvironmentReference(project.path, environmentId),
-                sections = sections
-            ),
-            requireHandlers
-        )
-    }
+    ) = inheritance.copySections(source, sections, requireHandlers)
 
     private fun combineWith(
         source: EnvironmentReference,
         sections: Set<EnvironmentSection>,
         requireHandlers: Boolean
-    ) {
-        checkSelfReference(source)
-        copySections(source, sections, requireHandlers)
-        if (combinedWithReferences.add(source)) {
-            boundSourceSet?.let { wireSourceOutput(source, it) }
-        }
-    }
+    ) = inheritance.combineWith(source, sections, requireHandlers)
 
-    private fun checkSelfReference(source: EnvironmentReference) {
-        if (source.projectPath == project.path && source.environmentId == environmentId) {
-            throw GradleException(
-                "Minecraft environment '$environmentId' cannot copy or combine with itself"
-            )
-        }
-    }
-
-    private fun wireSourceOutput(source: EnvironmentReference, target: SourceSet = boundSourceSet!!) {
-        if (!wiredOutputReferences.add(source)) return
-        // the source env's COMBINED output, not just its own
-        // sourceSet's — composition is transitive (a gametest env
-        // combining `fabric` must also see `main`, which `fabric`
-        // itself combines). combinedOutputs resolves lazily, so
-        // sources wired after this call still land.
-        val output = project.files().apply {
-            from(project.provider { sourceSet(source).output })
-            from(project.provider {
-                project.extensions.getByType(MinecraftExtension::class.java)
-                    .environment(source).combinedOutputs
-            })
-        }
-        // Gradle 9 marks resolvable compile/runtime classpaths non-declarable.
-        // Adding the output to compileOnly+runtimeOnly places it on both
-        // classpaths without mutating the resolvable configurations directly.
-        // Compile gets classesDirs only — resources on the compile
-        // classpath would pull processResources (and anything it
-        // consumes, e.g. generateModMetadata → aux-env compile tasks)
-        // into the compile graph and can cycle; runtime keeps the full
-        // output so resources (fmj etc.) still ship.
-        project.dependencies.add(
-            target.compileOnlyConfigurationName,
-            project.files(project.provider { sourceSet(source).output.classesDirs })
-        )
-        project.dependencies.add(target.runtimeOnlyConfigurationName, output)
-        combinedOutputs.from(output)
-        combinedSources.from(project.provider { sourceSet(source).allSource })
-    }
-
-    private fun sourceSet(source: EnvironmentReference): SourceSet {
-        val sourceProject = if (source.projectPath == project.path) {
-            project
-        } else {
-            project.project(source.projectPath)
-        }
-        val sourceSets = sourceProject.extensions.findByType(
-            org.gradle.api.tasks.SourceSetContainer::class.java
-        ) ?: throw GradleException(
-            "Cannot combine '${project.path}:$environmentId' with " +
-                    "'${source.projectPath}:${source.environmentId}': the source " +
-                    "project has no Java source sets"
-        )
-        return sourceSets.getByName(source.environmentId)
-    }
-
-    private fun parseEnvironmentPath(path: String): EnvironmentReference {
-        if (!path.contains(":")) {
-            return EnvironmentReference(project.path, path)
-        }
-        val projectPath = path.substringBeforeLast(":").ifEmpty { ":" }
-        val environmentId = path.substringAfterLast(":")
-        require(environmentId.isNotEmpty()) {
-            "Environment path '$path' must end with a source-set name"
-        }
-        return EnvironmentReference(projectPath, environmentId)
-    }
+    private fun parseEnvironmentPath(path: String): EnvironmentReference =
+        parseEnvironmentPath(project.path, path)
 
 }
 

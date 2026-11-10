@@ -64,7 +64,10 @@ class PaperPatchProcessorTest {
             .forEachIndexed { i, entry ->
             val jar = dir.resolve("server-$i.jar")
             Files.write(jar, vanilla)
-            val processor = PaperPatchProcessor { distJar(entry, patch) }
+            val processor = PaperPatchProcessor(
+                distJar = { distJar(entry, patch) },
+                outputNamespace = { "spigot" }
+            )
             val spec = processor.buildSpec(specCtx)
             val roundTrip = processor.deserializeSpec(processor.serializeSpec(spec))
 
@@ -75,7 +78,10 @@ class PaperPatchProcessorTest {
 
     @Test
     fun `dist jar without a patch entry fails loudly`() {
-        val processor = PaperPatchProcessor { distJar("META-INF/MANIFEST.MF", byteArrayOf(1)) }
+        val processor = PaperPatchProcessor(
+            distJar = { distJar("META-INF/MANIFEST.MF", byteArrayOf(1)) },
+            outputNamespace = { "spigot" }
+        )
         val error = assertThrows<IllegalStateException> {
             processor.buildSpec(specCtx)
         }

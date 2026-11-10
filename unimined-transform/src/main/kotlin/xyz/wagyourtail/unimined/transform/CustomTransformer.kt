@@ -12,6 +12,8 @@ import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformContext
 import xyz.wagyourtail.unimined.transform.spi.TransformerClaim
 import xyz.wagyourtail.unimined.transform.feature.EnvironmentFeature
+import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
+import xyz.wagyourtail.commonskt.jvm.tempSibling
 import java.nio.file.Files
 
 /**
@@ -95,11 +97,19 @@ abstract class PassthroughTransformTask : TransformMinecraftTask() {
 
     @TaskAction
     fun run() {
-        Files.copy(
-            inputArtifact.get().asFile.toPath(),
-            outputArtifact.get().asFile.toPath(),
-            java.nio.file.StandardCopyOption.REPLACE_EXISTING
-        )
+        // temp + atomic move — a killed task must not leave a partial
+        // jar at the artifact path (#78)
+        val out = outputArtifact.get().asFile.toPath()
+        val tmp = out.tempSibling()
+        try {
+            Files.copy(
+                inputArtifact.get().asFile.toPath(), tmp,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING
+            )
+            tmp.moveAtomicTo(out)
+        } finally {
+            Files.deleteIfExists(tmp)
+        }
     }
 
 }

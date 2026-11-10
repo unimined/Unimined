@@ -52,8 +52,17 @@ class GradlePlugin : Plugin<Project> {
                     }, { environment })
                         // per-env `forge` DSL object — `env.forge {
                         // srgRuntime = true }` and friends
+                        val forgeExt = ForgeEnvExtension(spec)
                         (environment as org.gradle.api.plugins.ExtensionAware)
-                            .extensions.add("forge", ForgeEnvExtension(spec))
+                            .extensions.add("forge", forgeExt)
+                        // replay `env.forge {}` calls that ran while
+                        // the extension didn't exist yet (lazy apply)
+                        @Suppress("UNCHECKED_CAST")
+                        (environment.extensions.extraProperties
+                            .takeIf { it.has(PENDING_FORGE_ACTIONS) }
+                            ?.get(PENDING_FORGE_ACTIONS)
+                            as? List<org.gradle.api.Action<in ForgeEnvExtension>>
+                            )?.forEach { it.execute(forgeExt) }
                         ForgeEnvironmentWiring.wire(target, environment)
                     }
                 }

@@ -69,15 +69,17 @@ object NestedJarsFeature : EnvironmentFeature {
 }
 
 /**
- * `modDiscovery("classpath"|"dli"|"modClasses")` — how the runtime
- * finds dev mods. A custom loader row declaring no discovery binding
- * fails at selection rather than running silently mod-less.
+ * `modDiscovery("classpath"|"dli"|"modClasses"|"plugins")` — how the
+ * runtime finds dev mods. A custom loader row declaring no discovery
+ * binding fails at selection rather than running silently mod-less.
+ * `plugins` stages mod jars into the run dir's `plugins/` for
+ * native server discovery; `classpath` uses the CPL java agent.
  */
 object ModDiscoveryFeature : EnvironmentFeature {
     override val id = "modDiscovery"
     override val surfaces = setOf(EnvironmentFeature.Surface.RUN_CONFIG)
 
-    private val mechanisms = setOf("classpath", "dli", "modClasses")
+    private val mechanisms = setOf("classpath", "dli", "modClasses", "plugins")
 
     override fun applies(context: EnvironmentFeature.FeatureContext): Boolean =
         context.bindingValue in mechanisms

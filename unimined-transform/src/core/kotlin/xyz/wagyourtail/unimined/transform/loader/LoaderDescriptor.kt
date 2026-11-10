@@ -64,6 +64,15 @@ data class LoaderDescriptor(
      *  [intermediaryCoords] when present. */
     val upstreamMappingChannel: String? = null,
 
+    /** Split-era merge declaration — loaders targeting pre-1.3
+     *  Minecraft ship client/server jars whose obfuscated name sets
+     *  are disjoint, so the merged environment can't pair classes by
+     *  filename: each side's jar is first remapped from its per-side
+     *  column into [SplitMergeSpec.mergeNamespace], then merged.
+     *  `null` for loaders whose targets postdate the obf merge
+     *  (or whose upstream channel declares the split itself). */
+    val splitMerge: SplitMergeSpec? = null,
+
     /** Mod-metadata conventions (metadata file name, where AT/CT files
      *  and injected-interface/nested-jar declarations live). */
     val metadata: LoaderMetadataSpec = LoaderMetadataSpec(),
@@ -116,6 +125,20 @@ data class LoaderDescriptor(
             ?: (product == ProductSpec.PRODUCT_NATIVE)
 
 }
+
+/** Split-era merge columns — see [LoaderDescriptor.splitMerge]. */
+data class SplitMergeSpec(
+
+    /** Per-side official columns `[client, server]` in the composed
+     *  mapping tree — e.g. `clientOfficial`/`serverOfficial`. */
+    val fromNamespaces: List<String>,
+
+    /** Shared column both sides remap into before the member-level
+     *  merge — the intermediary column of the loader's upstream
+     *  mapping artifact (e.g. `intermediary`). */
+    val mergeNamespace: String,
+
+    )
 
 /** Loader-declared access-file (AW/CT/AT) discovery mechanisms. */
 enum class AccessDiscovery {

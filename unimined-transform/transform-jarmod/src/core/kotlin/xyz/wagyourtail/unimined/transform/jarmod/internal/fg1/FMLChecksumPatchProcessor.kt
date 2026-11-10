@@ -35,8 +35,14 @@ internal class FMLChecksumPatchProcessor(
 
     class Spec(val sums: Map<String, String>) : JarProcessor.JarProcessorSpec, Serializable
 
-    override fun buildSpec(context: JarProcessor.SpecContext) =
-        Spec(artifacts().mapValues { sha1(it.value) })
+    // empty artifacts → no spec: envs where the era wiring scanned no
+    // dyn-libs (jarmod substrate on forge-family envs) must not enter
+    // `entries` at all — its no-op processJar would still stamp the
+    // run-once marker and `isApplied`-skip the real sums-carrying
+    // instance later in the flattened list
+    override fun buildSpec(context: JarProcessor.SpecContext): Spec? =
+        artifacts().takeIf { it.isNotEmpty() }
+            ?.let { Spec(it.mapValues { e -> sha1(e.value) }) }
 
     override fun serializeSpec(spec: JarProcessor.JarProcessorSpec) =
         (spec as Spec).sums.entries.joinToString(";") { "${it.key}=${it.value}" }

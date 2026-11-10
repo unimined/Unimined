@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.transform.forge
 import xyz.wagyourtail.unimined.transform.PipelinePreset
 import xyz.wagyourtail.unimined.transform.PipelinePresetSource
 import xyz.wagyourtail.unimined.transform.PipelineSpec
-import xyz.wagyourtail.unimined.transform.jarmod.ChecksumPatchStepSpec
 import xyz.wagyourtail.unimined.transform.jarmod.FG1FixStepSpec
 import xyz.wagyourtail.unimined.transform.jarmod.JarModMergeStepSpec
 
@@ -44,10 +43,9 @@ object BinpatchesEraPreset : PipelinePreset {
  * a zip of patched classes merged into the MC jar. Composes jarmod's
  * step types rather than duplicating merge mechanics — the merge
  * reads env-bound jars via `SpecContext.envArtifacts("jarmod:merge")`,
- * supplied by forge's spec-context factory once ZipPatches jar
- * resolution lands (sided/`@zip` FG1 forms in
- * `ForgeLoaderResolution`). Until then the merge is a no-op and the
- * FG1 fix/checksum steps carry the era's behavior.
+ * bound to the probed loader jar(s) by `ForgeEnvironmentWiring`
+ * (`:universal@zip` on 1.3+, sided `:client`/`:server@zip` pre-1.3 —
+ * see `ForgeLoaderResolution`).
  */
 object ZipPatchesEraPreset : PipelinePreset {
 
@@ -56,7 +54,12 @@ object ZipPatchesEraPreset : PipelinePreset {
     override fun expand(pipeline: PipelineSpec) {
         pipeline.step("jarmod:merge", JarModMergeStepSpec::class.java) { }
         pipeline.step("jarmod:fg1Fix", FG1FixStepSpec::class.java) { }
-        pipeline.step("jarmod:checksumPatch", ChecksumPatchStepSpec::class.java) { }
+        // no `jarmod:checksumPatch` step here — a declared step's spec
+        // artifacts default empty, and its processor would stamp the
+        // run-once marker before ForgeEnvironmentWiring's sums-carrying
+        // postPipelineJarProcessors instance ever ran (isApplied skip).
+        // The checksum patch is wiring-owned: FG1DynLibWiring registers
+        // it post-pipeline so it sees the merged CoreFMLLibraries.
     }
 
 }

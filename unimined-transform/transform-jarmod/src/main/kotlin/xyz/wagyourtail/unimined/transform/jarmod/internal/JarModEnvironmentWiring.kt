@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.jarmod.FG1DynLibWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 
@@ -21,6 +22,8 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
  *    compile-time transforms/run wiring (phase b).
  */
 internal object JarModEnvironmentWiring {
+
+    private const val WIRED_FLAG = "unimined.jarmod.loaderWired"
 
     /** Create the `jarMod*` configurations — called at env
      *  registration (before the script's `dependencies {}` block
@@ -42,16 +45,37 @@ internal object JarModEnvironmentWiring {
         ).apply { isCanBeConsumed = false }
     }
 
+    /**
+     * Wire an environment — idempotent across the bound-time and
+     * transform-claim invocations. The umbrella plugin applies this
+     * plugin eagerly, so the bound-time call lands *before* the
+     * `minecraft {}` DSL populates `loaderSpec`; the loader-dependent
+     * dispatch is deferred to afterEvaluate. Claim-time calls arrive
+     * post-evaluation and execute immediately.
+     */
     fun wire(project: Project, environment: MinecraftEnvironment) {
-        // variant products (liteloader) don't ride the jarMod
+        val extra = environment.extensions.extraProperties
+        if (extra.has(WIRED_FLAG)) return
+        extra.set(WIRED_FLAG, true)
+        project.afterDslEval { wireLoader(project, environment) }
+    }
+
+    private fun wireLoader(project: Project, environment: MinecraftEnvironment) {
+        // variant products (liteloader, rift) don't ride the jarMod
         // merge/agent — their artifact is a library dep +
         // versions.json wiring, dispatched via the descriptor's
         // wiringVariant rather than a loader-name check
         val variant = environment.loaderSpec.orNull
             ?.let { LoaderRegistry().resolve(it.name) }?.wiringVariant
-        if (variant == "liteloader") {
-            LiteLoaderWiring.wire(project, environment)
-            return
+        when (variant) {
+            "liteloader" -> {
+                LiteLoaderWiring.wire(project, environment)
+                return
+            }
+            "rift" -> {
+                RiftWiring.wire(project, environment)
+                return
+            }
         }
         // envs can now bind inside the same environments.all pass that
         // declared them — before the plugin-level createConfigurations
@@ -249,18 +273,27 @@ internal object JarModEnvironmentWiring {
                         },
                         mapOf(
                             "version" to project.provider {
-                                val dep = forge.dependencies.firstOrNull()
-                                val v = dep?.version ?: dep?.name?.substringAfterLast('-')
-                                val mc = environment.version.get()
-                                v?.substringAfter("$mc-") ?: ""
+                                // fg1's loader spec carries the bare
+                                // forge version (`loader("fg1", v)`);
+                                // scraping `forge` deps breaks on the
+                                // files() dep the wiring itself adds
+                                environment.loaderSpec.orNull?.version ?: ""
                             }
                         )
                     )
             }
             // dyn-lib handling runs for ANY jarmod-family env whose
             // forge zips carry CoreFMLLibraries — self-gates on the
-            // class's presence, so covers fg1 and 1.6.4-era FML alike
-            wireForgeDynLibs(envSpec, project, environment, forge)
+            // class's presence, so covers fg1 and 1.6.4-era FML alike.
+            // `forge` itself also joins `minecraftLibraries` — the era
+            // zip ships FML (cpw.mods.fml.*) that mods compile against;
+            // forgeDeps only carries the zip's bundled *libraries*
+            FG1DynLibWiring.wire(
+                project, environment, envSpec,
+                project.provider { forge.files.filter { it.isFile }.toSet() },
+                compileClasspathJars = listOf(forge),
+                useAsm52 = JarModEnvState.useAsm52(envId),
+            )
         }
         // modloader-only: ModLoader dev fixes (URI/package patches)
         // — exists-gated internally, so harmless on plain jarmod envs
@@ -292,192 +325,92 @@ internal object JarModEnvironmentWiring {
                 config.jvmArgs += "-Djma.transformers=" +
                     transforms.joinToString(java.io.File.pathSeparator)
             }
-            val priority = JarModEnvState.priorityClasspath(envId)
-            if (priority.isNotEmpty()) {
-                config.jvmArgs += "-Djma.priorityClasspath=" +
-                    priority.joinToString(java.io.File.pathSeparator)
+            val refmaps = JarModEnvState.refmaps(envId)
+            if (refmaps.isNotEmpty()) {
+                config.jvmArgs += "-Djma.refmaps=" +
+                    refmaps.joinToString(java.io.File.pathSeparator)
             }
+            val initializers = JarModEnvState.initializers(envId)
+            if (initializers.isNotEmpty()) {
+                config.jvmArgs += "-Djma.initializers=" +
+                    initializers.joinToString(java.io.File.pathSeparator)
+            }
+            JarModEnvState.failStrategy(envId)?.let {
+                config.jvmArgs += "-Djma.failStrategy=$it"
+            }
+            if (JarModEnvState.debug(envId)) {
+                config.jvmArgs += "-Djma.debug=true"
+            }
+            // jma.priorityClasspath is the agent's OVERRIDE classpath:
+            // classes here win over -cp and carry the transform/refmap
+            // resources `jma.transformers` resolves. It must NOT contain
+            // the MC artifact or libraries — a class that exists ONLY on
+            // priority (as everything would if the whole run classpath
+            // were listed) loads raw with NO transform applied, which
+            // silently disables the agent. Correct contents:
+            //   dev  = the env's own sourceSet outputs (mod classes may
+            //          override MC classes; resources carry *.transform)
+            //   prod = remapJar output + *Direct mod-dep views (the
+            //          remapped env jar + shipped mod jars)
+            // MC stays on -cp where `hasRuntimePatches` routes it
+            // through transformerManager.
+            config.properties["jma_priority_classpath"] = {
+                val dslEntries = JarModEnvState.priorityClasspath(envId)
+                val files = if (config.prod) {
+                    val remapJar = project.tasks.findByName(
+                        if (envId == "main") "remapJar"
+                        else "remap${
+                            envId.replaceFirstChar(Char::uppercase)
+                        }Jar")
+                    buildList {
+                        project.configurations.findByName(
+                            "${environment.modImplementationConfigurationName}Direct"
+                        )?.let { addAll(it.files) }
+                        project.configurations.findByName(
+                            "${environment.modRuntimeOnlyConfigurationName}Direct"
+                        )?.let { addAll(it.files) }
+                        remapJar?.outputs?.files?.let { addAll(it) }
+                    }
+                } else {
+                    project.extensions.getByType(
+                        org.gradle.api.tasks.SourceSetContainer::class.java
+                    ).findByName(envId)?.output?.let {
+                        it.classesDirs.files + setOfNotNull(it.resourcesDir)
+                    } ?: emptySet()
+                }
+                (dslEntries + files.map { it.absolutePath })
+                    .joinToString(java.io.File.pathSeparator)
+            }
+            config.jvmArgs += "-Djma.priorityClasspath=" +
+                "\${jma_priority_classpath}"
             }
         }
-    }
-
-    /** FML's dyn-lib rename: the resolved bcprov jar names gain a dot
-     *  that `CoreFMLLibraries` never asks for. */
-    private val depNameMap = mapOf(
-        "bcprov-jdk15on-1.47.jar" to "bcprov-jdk15on-147.jar",
-        "bcprov-jdk15on-1.48.jar" to "bcprov-jdk15on-148.jar",
-    )
-
-    /**
-     * Port of 1.x `FG1MinecraftTransformer.dynLibs`/`resolveDynLibs`:
-     * scan `cpw/mods/fml/relauncher/CoreFMLLibraries.class` in the forge
-     * zips for the library names FML downloads at runtime; matching
-     * names become real dependencies on a `forgeDeps<env>` configuration
-     * (extended into the env's `minecraftLibraries`), bundled fmllibs
-     * resources are extracted to `localCache/fmllibs` and
-     * added as file deps, and a run mutator copies the resolved files
-     * to `runDir/lib` under FML's expected names.
-     */
-    private fun wireForgeDynLibs(
-        envSpec: xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec,
-        project: Project,
-        environment: MinecraftEnvironment,
-        forge: org.gradle.api.artifacts.Configuration
-    ) {
-        val envId = environment.environmentId
-        val forgeDeps = project.configurations.maybeCreate(
-            if (envId == "main") "forgeDeps" else
-                "forgeDeps${envId.replaceFirstChar { it.uppercaseChar() }}"
-        ).apply { isCanBeConsumed = false }
-        project.configurations.matching {
-            it.name == environment.minecraftLibrariesConfigurationName
-        }.all {
-            // `forge` itself goes on too — the era zip ships FML
-            // (cpw.mods.fml.*) that mods compile against; forgeDeps
-            // only carries the zip's bundled *libraries* (argo/asm).
-            it.extendsFrom(forgeDeps, forge)
-        }
-
-        // maven-resolvable fmllibs — the checksum patch rewrites
-        // CoreFMLLibraries.checksums to whatever we ship, so the
-        // resolved jars needn't be FML's exact hosted copies
-        val mavenDeps = mapOf(
-            "argo-2.25.jar" to "net.sourceforge.argo:argo:2.25",
-            "guava-12.0.1.jar" to "com.google.guava:guava:12.0.1",
-            "guava-14.0-rc3.jar" to "com.google.guava:guava:14.0-rc3",
-            "asm-all-4.0.jar" to "org.ow2.asm:asm-all:4.0",
-            "asm-all-4.1.jar" to "org.ow2.asm:asm-all:4.1",
-            "scala-library.jar" to "org.scala-lang:scala-library:2.9.1-1",
-            "bcprov-jdk15on-148.jar" to "org.bouncycastle:bcprov-jdk15on:1.48",
-            "bcprov-jdk15on-147.jar" to "org.bouncycastle:bcprov-jdk15on:1.47",
-            // argo-small is FML's slim build of argo 3.2 — never
-            // published; the full jar is a superset and the checksum
-            // patch covers the hash
-            "argo-small-3.2.jar" to "net.sourceforge.argo:argo:3.2",
-        )
-        // generated content — no maven home; and its joined.srg is
-        // NOT the src bundle's conf/joined.srg (1586245 vs 1425098
-        // bytes), so it can't be regenerated. Stays bundled.
-        val bundled = setOf("deobfuscation_data_1.5.2.zip")
-
-        val wanted = project.provider {
-            val out = mutableSetOf<String>()
-            for (zip in forge.files.filter { it.isFile }) {
-                java.util.zip.ZipFile(zip).use { z ->
-                    z.getEntry("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
-                        ?.let { e -> z.getInputStream(e).use { out += dynLibs(it) } }
+        // JarModAgent-* manifest attrs on the env jar — the built-
+        // time counterpart of the run sysprops: `modArtifacts` gates
+        // its ClassTransform refmap emission on -Refmaps, and users
+        // dropping the jar into a real mods folder get the attrs read
+        // by the agent's boostrapModJar path. NOTE the agent splits
+        // manifest attrs on ' ' — NOT the sysprops' pathSeparator.
+        // Emitted at task-config so the values ride the config cache.
+        if (environment.loaderSpec.orNull?.name == "jarmod") {
+            project.extensions.getByType(
+                org.gradle.api.tasks.SourceSetContainer::class.java
+            ).findByName(envId)?.let { src ->
+                project.tasks.named(
+                    src.jarTaskName, org.gradle.jvm.tasks.Jar::class.java
+                ).configure { jar ->
+                    jar.manifest.attributes(buildMap {
+                        JarModEnvState.transforms(envId)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { put("JarModAgent-Transforms", it.joinToString(" ")) }
+                        JarModEnvState.refmaps(envId)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { put("JarModAgent-Refmaps", it.joinToString(" ")) }
+                        JarModEnvState.initializers(envId)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { put("JarModAgent-Initializers", it.joinToString(" ")) }
+                    })
                 }
-            }
-            out.toSet()
-        }
-
-        // `wanted.get()` resolves `forge` — defer to afterDslEval so a
-        // user-declared `forge(...)` dep (the 1.x `forge { loader }`
-        // model) lands in `dependencies {}` first; otherwise the config
-        // is observed at bind time and `dependencies { forge(...) }`
-        // fails "cannot mutate after resolved"
-        project.afterDslEval {
-            val names = wanted.get()
-            val asm52 = JarModEnvState.useAsm52(envId)
-            val wantedAsm = names.firstOrNull { it.startsWith("asm-all-") }
-            if (wantedAsm != null) {
-                // 1.x libraryFilter — FML supplies its own asm-all, so the
-                // MC-declared ow2 libs must not reach the classpath
-                environment.libraryFilters += { it.group != "org.ow2.asm" }
-            }
-            // fmllibs jars whose FML-pinned sha1 no maven coord
-            // matches (FML's own repackaged asm-all-4.0, etc.) —
-            // fetched as exact copies from the wag flat fmllibs
-            // store so the checksum passes unpatched
-            val wagFmlLibs = setOf("asm-all-4.0.jar")
-            for ((name, coord) in mavenDeps) {
-                if (name !in names) continue
-                when {
-                    asm52 && name.startsWith("asm-all-") ->
-                        project.dependencies.add(forgeDeps.name, "org.ow2.asm:asm-all:5.2")
-                    name in wagFmlLibs ->
-                        project.dependencies.add(forgeDeps.name,
-                            project.files(project.provider {
-                                resolveFmlLib(project, name).toFile() }))
-                    else ->
-                        project.dependencies.add(forgeDeps.name, coord)
-                }
-            }
-            val fmllibs = project.layout.buildDirectory.dir("unimined/fmllibs/$envId")
-            for (name in bundled) {
-                if (name !in names) continue
-                if (asm52 && name.startsWith("asm-all-")) {
-                    project.dependencies.add(forgeDeps.name, "org.ow2.asm:asm-all:5.2")
-                    continue
-                }
-                val target = fmllibs.get().asFile.resolve(name)
-                if (!target.exists()) {
-                    target.parentFile.mkdirs()
-                    JarModEnvironmentWiring::class.java
-                        .getResourceAsStream("/fmllibs/$name")!!
-                        .use { it.copyTo(target.outputStream()) }
-                }
-                project.dependencies.add(forgeDeps.name, project.files(target))
-            }
-
-            // resolved jars land in lib/ under FML's expected names —
-            // asm-5.2 is copied under the wanted asm-all-4.x name
-            val renames = depNameMap +
-                (if (asm52 && wantedAsm != null)
-                    mapOf("asm-all-5.2.jar" to wantedAsm) else emptyMap()) +
-                (if ("argo-small-3.2.jar" in names)
-                    mapOf("argo-3.2.jar" to "argo-small-3.2.jar") else emptyMap())
-
-            // checksum patch + run mutator also depend on the scan
-            wireChecksumPatch(envSpec, project, envId, forgeDeps, renames, names)
-        }
-    }
-
-    /** fg1 checksum-patch processor + run mutators — the pieces of
-     *  `wireForgeDynLibs` that consume the scanned dyn-lib names. */
-    private fun wireChecksumPatch(
-        envSpec: xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec,
-        project: Project,
-        envId: String,
-        forgeDeps: org.gradle.api.artifacts.Configuration,
-        renames: Map<String, String>,
-        names: Set<String>
-    ) {
-        // patch CoreFMLLibraries.checksums to the SHA1s of the jars we
-        // actually ship (lazily — resolves forgeDeps at spec build)
-        envSpec.jarProcessors +=
-            xyz.wagyourtail.unimined.transform.jarmod.internal.fg1
-                .FMLChecksumPatchProcessor {
-                    forgeDeps.resolve()
-                        .associate { (renames[it.name] ?: it.name) to it }
-                        .filterKeys { it in names }
-                }
-
-        val transform = project.extensions.getByType(TransformExtension::class.java)
-        transform.sourceSet(envId).runMutators += org.gradle.api.Action { config ->
-            config.jvmArgs += "-Dminecraft.applet.TargetDirectory=${'$'}{game_dir}"
-            // per-run lib sums — CoreFMLLibraries loads from the
-            // (tx-patched) forge zip; the spliced helper reads this
-            // property and rewrites `checksums[]` to match what we stage
-            val sums = forgeDeps.resolve()
-                .associate { (renames[it.name] ?: it.name) to it }
-                .filterKeys { it in names }
-            if (sums.isNotEmpty()) {
-                val prop = sums.entries.joinToString(";") { (n, f) ->
-                    "$n=${sha1Hex(f)}"
-                }
-                config.jvmArgs += "-Dunimined.fg1.libSums=$prop"
-            }
-        }
-        // prepareTaskMutators stage the run dir — copy forgeDeps into
-        // runDirectory/lib before the run task executes (FML's dyn-lib dir)
-        transform.sourceSet(envId).prepareTaskMutators += org.gradle.api.Action { task ->
-            task.doFirst { t ->
-                val dir = (t.property("runDirectory") as? org.gradle.api.file.DirectoryProperty)
-                    ?.get()?.asFile ?: return@doFirst
-                val lib = java.io.File(dir, "lib").apply { mkdirs() }
-                for (f in forgeDeps.resolve().filter { it.isFile && it.extension != "pom" })
-                    f.copyTo(lib.resolve(renames[f.name] ?: f.name), overwrite = true)
             }
         }
     }
@@ -557,75 +490,4 @@ internal object JarModEnvironmentWiring {
         }
         return zip
     }
-
-    /** Flat-file fetch for the exact FML-pinned fmllibs jars that
-     *  maven can't supply a checksum-matching copy of (FML's own
-     *  repackaged asm-all-4.0, etc.) — hosted as a flat store at
-     *  `releases/fmllibs/<name>` on the wag maven (1.x shipped these
-     *  as bundled `/fmllibs/` resources). Honors --offline/refresh. */
-    private fun resolveFmlLib(
-        project: Project,
-        name: String
-    ): java.nio.file.Path {
-        val dest = UniminedCache.global(project)
-            .resolve("fmllibs").resolve(name)
-        val refresh = project.gradle.startParameter.isRefreshDependencies
-        if (java.nio.file.Files.exists(dest) && !refresh) return dest
-        if (project.gradle.startParameter.isOffline) {
-            if (java.nio.file.Files.exists(dest)) return dest
-            throw org.gradle.api.GradleException(
-                "offline and no cached fmllib $name under $dest")
-        }
-        java.nio.file.Files.createDirectories(dest.parent)
-        try {
-            java.net.URI.create(
-                "https://maven.wagyourtail.xyz/releases/fmllibs/$name")
-                .toURL().openStream().use {
-                java.nio.file.Files.copy(it, dest,
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-            }
-        } catch (e: Exception) {
-            throw org.gradle.api.GradleException(
-                "could not fetch fmllib $name from the wag fmllibs store", e)
-        }
-        return dest
-    }
-
-    private fun sha1Hex(f: java.io.File): String {
-        val md = java.security.MessageDigest.getInstance("SHA-1")
-        f.inputStream().use { s ->
-            val buf = ByteArray(8192)
-            while (true) {
-                val n = s.read(buf); if (n < 0) break
-                md.update(buf, 0, n)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it) }
-    }
-
-    /** Read the dyn-lib names out of `CoreFMLLibraries.<clinit>` —
-     *  the String-array LDCs stored into `libraries`
-     *  (1.x `FG1MinecraftTransformer.getDynLibs`). */
-    private fun dynLibs(stream: java.io.InputStream): Set<String> {
-        val cn = org.objectweb.asm.tree.ClassNode().also {
-            org.objectweb.asm.ClassReader(stream).accept(it, 0)
-        }
-        val clInit = cn.methods.firstOrNull { it.name == "<clinit>" } ?: return emptySet()
-        val out = mutableSetOf<String>()
-        var inArray = false
-        for (insn in clInit.instructions) {
-            if (insn is org.objectweb.asm.tree.TypeInsnNode &&
-                insn.opcode == org.objectweb.asm.Opcodes.ANEWARRAY &&
-                insn.desc == "java/lang/String") inArray = true
-            if (inArray && insn is org.objectweb.asm.tree.LdcInsnNode && insn.cst is String)
-                out.add(insn.cst as String)
-            if (insn is org.objectweb.asm.tree.FieldInsnNode &&
-                insn.opcode == org.objectweb.asm.Opcodes.PUTSTATIC) {
-                if (insn.name == "libraries") break
-                inArray = false; out.clear()
-            }
-        }
-        return out
-    }
-
 }

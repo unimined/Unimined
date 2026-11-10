@@ -38,7 +38,7 @@ internal object IdeModelResolver {
         environmentId: String,
         run: RunConfig
     ): Provider<MutableRunConfigSpec> = project.provider {
-        MutableRunConfigSpec(run.name).also { spec ->
+        MutableRunConfigSpec(run.name, run.prod.get()).also { spec ->
             transform.sourceSet(environmentId)
                 .effectiveRunMutators().forEach { it.execute(spec) }
         }

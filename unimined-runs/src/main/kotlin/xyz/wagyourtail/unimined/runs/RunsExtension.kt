@@ -22,8 +22,29 @@ abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
      *  default as an intended binding. */
     internal val runEnvironments = mutableMapOf<String, String>()
 
+    /**
+     * Default auth for every run — `runs { auth { microsoft() } }`
+     * applies to all runs unless the run sets its own. Explicit
+     * `run.auth`/`run.username` values always win; the env-level spec
+     * is only a convention layer.
+     */
+    val auth: AuthSpec = objects.newInstance(AuthSpec::class.java)
+
+    /** Configure the default [auth] applied to all runs. */
+    fun auth(action: Action<AuthSpec>) = action.execute(auth)
+
     val runs: NamedDomainObjectContainer<RunConfig> =
         objects.domainObjectContainer(RunConfig::class.java)
+
+    init {
+        runs.configureEach { rc ->
+            rc.auth.kind.convention(auth.kind)
+            // composite preserves the `username` back-compat bridge —
+            // run.username > extension auth.username > AuthSpec's "Dev"
+            rc.auth.username.convention(rc.username.orElse(auth.username))
+            rc.auth.provider.convention(auth.provider)
+        }
+    }
 
     /** Configure a run by name — creates it if absent. */
     fun named(name: String, action: Action<RunConfig>) {

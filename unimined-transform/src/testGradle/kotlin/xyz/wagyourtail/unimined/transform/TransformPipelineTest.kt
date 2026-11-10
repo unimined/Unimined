@@ -140,6 +140,7 @@ class TransformPipelineTest {
 
         val cfg = object : RunConfigSpec {
             override val name = "client"
+            override val prod = false
             override var mainClass: String? = null
             override val jvmArgs = mutableListOf<String>()
             override val javaagents = mutableListOf<Path>()

@@ -2,7 +2,7 @@ site_name: Unimined Docs
 site_description: Unified Minecraft modding environment — modern and legacy
 site_url: https://wagyourtail.github.io/unimined/docs/
 repo_url: https://github.com/wagyourtail/unimined
-edit_uri: edit/feature/2.0/docs/
+edit_uri: edit/develop/docs/
 
 theme:
   name: material
@@ -59,15 +59,39 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Usage:
-    - Setup: setup.md
-    - Mappings: mappings.md
-    - Modloaders: modloaders.md
-    - Remapping: remapping.md
-    - Standard Libraries: standard-libraries.md
-    - Multi-SourceSet & Multi-Project: multi-sourceset-multi-project.md
-    - Migrating 1.x to 2.0: migration-1x-to-2.0.md
-    - Run Config:
-      - run-config.md
-      - Auth: auth.md
-  - API Reference: api-reference.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - First Project: getting-started/first-project.md
+    - unimined-cli: getting-started/cli.md
+  - Guide:
+    - Environments: guide/environments.md
+    - Sources: guide/sources.md
+    - Loaders: guide/loaders.md
+    - Mappings: guide/mappings.md
+    - Dependencies: guide/dependencies.md
+    - Remap Pipeline: guide/remap-pipeline.md
+    - Transform & Migrate: guide/transform-migrate.md
+    - Products: guide/products.md
+    - Run Configs: guide/run-configs.md
+    - Auth: guide/auth.md
+    - Datagen: guide/datagen.md
+    - Gametests: guide/gametest.md
+    - Mod Metadata: guide/metadata.md
+    - Multiple Source Sets & Projects: guide/multi-project.md
+    - Publishing: guide/publishing.md
+  - Adapters:
+    - Overview: adapters/index.md
+    - JvmDowngrader: adapters/jvmdg.md
+    - ModPublisher: adapters/modpublisher.md
+    - PatchBase: adapters/patchbase.md
+    - Forgix: adapters/forgix.md
+    - Stonecutter: adapters/stonecutter.md
+    - ExpectPlatform: adapters/expectplatform.md
+  - Migrating 1.x to 2.0: migration-1x-to-2.0.md
+  - Reference:
+    - DSL Index: reference/index.md
+    - API: reference/api.md
+    - CLI: reference/cli.md
+
+not_in_nav: |
+  generated/*

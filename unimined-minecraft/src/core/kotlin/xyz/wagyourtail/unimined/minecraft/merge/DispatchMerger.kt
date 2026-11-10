@@ -96,7 +96,7 @@ class DispatchMerger(
             // (that's STRICT's failure report) — for dispatch, a
             // thrown inequality is just a splice candidate
             val equal = try {
-                ClassMerger.areMethodNodesEqual(client, server)
+                ClassNodeEquality.areMethodNodesEqual(client, server)
             } catch (e: IllegalStateException) {
                 false
             }

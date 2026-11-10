@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
@@ -141,7 +142,8 @@ internal object UserdevExtract {
                 mainAttributes.putValue(
                     java.util.jar.Attributes.Name.MANIFEST_VERSION.toString(), "1.0")
             }
-            java.util.jar.JarOutputStream(outJar.outputStream(), manifest).use { out ->
+            outJar.writeAtomically { tmp ->
+            java.util.jar.JarOutputStream(tmp.outputStream(), manifest).use { out ->
                 inJar.entries().asSequence()
                     .filter { !it.isDirectory }
                     .filter {
@@ -153,6 +155,7 @@ internal object UserdevExtract {
                         inJar.getInputStream(entry).use { it.copyTo(out) }
                         out.closeEntry()
                     }
+            }
             }
         }
     }
