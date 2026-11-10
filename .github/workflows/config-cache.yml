@@ -48,6 +48,9 @@ jobs:
             8
             21
             17
+      - name: native link deps (unimined-cli K/N links libcurl)
+        if: matrix.gen != ''
+        run: sudo apt-get install -y libcurl4-openssl-dev
       - name: build CLI jar + generate fixture
         if: matrix.gen != ''
         run: |

@@ -18,6 +18,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: native link deps (unimined-cli K/N links libcurl)
+        run: sudo apt-get install -y libcurl4-openssl-dev
+
       - name: Publish
         run: ./gradlew publish :unimined-cli:linkReleaseExecutableLinuxX64 -Pversion_snapshot -Pmvn.user=${{ secrets.MAVEN_USER }} -Pmvn.key=${{ secrets.MAVEN_TOKEN }} -x test
 
@@ -68,6 +71,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - name: native link deps (unimined-cli K/N links libcurl)
+        run: sudo apt-get install -y libcurl4-openssl-dev
       - name: build the CLI jar
         run: ./gradlew :unimined-cli:linkReleaseExecutableLinuxX64 -q
       - name: materialize deploy key

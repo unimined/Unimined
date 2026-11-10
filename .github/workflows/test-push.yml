@@ -20,6 +20,8 @@ jobs:
             8
             17
       - uses: gradle/actions/setup-gradle@v4
+      - name: native link deps (unimined-cli K/N links libcurl)
+        run: sudo apt-get install -y libcurl4-openssl-dev
       - run: ./gradlew build --stacktrace
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
