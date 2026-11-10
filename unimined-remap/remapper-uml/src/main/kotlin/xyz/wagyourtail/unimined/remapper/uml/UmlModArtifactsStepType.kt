@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform.ClassTransformExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExtension
-import xyz.wagyourtail.unimined.mapping.remapper.ext.liteloader.LiteloaderObfTableExtension
+import xyz.wagyourtail.unimined.remapper.uml.ext.LiteloaderObfTableExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
