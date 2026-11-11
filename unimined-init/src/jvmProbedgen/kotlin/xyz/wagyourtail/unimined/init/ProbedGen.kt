@@ -33,7 +33,26 @@ private fun compress(vs: List<String>): String {
 
 fun main(args: Array<String>) {
     val p = linkedMapOf<String, List<String>>()
-    for (probe in PROBES) runCatching { probe.run(::http, p) }
+    for ((i, probe) in PROBES.withIndex()) {
+        // swallow-and-retry per probe: a metadata endpoint hiccup must
+        // not silently bake an empty axis into the shipped CLI, but
+        // one dead maven shouldn't kill the whole table either
+        var err: Throwable? = null
+        var ok = false
+        for (attempt in 1..3) {
+            runCatching { probe.run(::http, p) }
+                .onSuccess { ok = true }
+                .onFailure { err = it }
+            if (ok) break
+            Thread.sleep(1000L * attempt)
+        }
+        if (!ok) println(
+            "[genProbedVersions] WARN probe#$i " +
+            "(${probe.javaClass.simpleName}) failed after 3 attempts: ${err?.message}")
+    }
+    check(p.isNotEmpty()) {
+        "genProbedVersions: every probe failed — no metadata transport?"
+    }
     File(args[0]).resolve("ProbedVersions.kt").run {
         parentFile.mkdirs()
         writeText(buildString {
