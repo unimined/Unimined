@@ -26,6 +26,11 @@ data class InitSpec(
     val dsl: Dsl = Dsl.KOTLIN,
     /** Unimined plugin version — pinned. */
     val pluginVersion: String,
+    /** Route versions through `gradle.properties` keys
+     *  (`minecraft_version`, `<loader>_version`, `*_mappings`,
+     *  `fabric_api_version`) — generated scripts read them via
+     *  `providers.gradleProperty`. Off → baked literals. */
+    val versionProps: Boolean = true,
     /** Gradle wrapper version string (for wrapper.properties). */
     val gradleVersion: String? = null,
     /**

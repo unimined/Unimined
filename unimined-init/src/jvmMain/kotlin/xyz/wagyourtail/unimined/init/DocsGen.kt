@@ -16,8 +16,17 @@ fun main(args: Array<String>) {
         }.getOrDefault("1.20.1+build.10")}\")"),
     )
 
-    put("flat-fabric.gradle.kts", Templates.build(base))
-    put("settings.gradle.kts", Templates.settings(base.copy(dsl = InitSpec.Dsl.KOTLIN)))
+    /** Emits both DSL variants — `<name>.gradle.kts` + `<name>.gradle`
+     *  (Groovy) — so pages can tab them via `--8<--` pairs. */
+    fun putBoth(name: String, spec: InitSpec, render: (InitSpec) -> String) {
+        put("$name.gradle.kts", render(spec))
+        put("$name.gradle", render(spec.copy(dsl = InitSpec.Dsl.GROOVY)))
+    }
+
+    putBoth("flat-fabric", base, Templates::build)
+    putBoth("settings", base, Templates::settings)
+    // DSL-agnostic — shown alongside the build scripts it feeds
+    put("gradle.properties", Templates.gradleProperties(base))
 
     // forge eras — same flag, different env shapes
     for ((tag, mc) in listOf("170" to "1.7.10", "112" to "1.12.2", "modern" to "1.20.1")) {
@@ -26,35 +35,42 @@ fun main(args: Array<String>) {
             mc == "1.12.2" -> "mcp(\"stable\", \"39\")"
             else -> "mojmap()"
         }
-        put("flat-forge-$tag.gradle.kts", Templates.build(base.copy(
+        putBoth("flat-forge-$tag", base.copy(
             mcVersion = mc, loaders = listOf("forge" to if (mc == "1.7.10") "10.13.4.1614"
             else if (mc == "1.12.2") "14.23.5.2860" else "47.2.0"),
-            mappings = listOf(mcpVer))))
+            mappings = listOf(mcpVer)), Templates::build)
     }
 
     val multi = base.copy(loaders = listOf("fabric" to "0.16.0", "forge" to "47.2.0"),
         layout = InitSpec.Layout.MULTILOADER)
-    put("multiloader-settings.gradle.kts", Templates.settings(multi))
-    put("multiloader-common.gradle.kts", Templates.multiloaderModule(multi, null))
-    put("multiloader-fabric.gradle.kts", Templates.multiloaderModule(multi, "fabric"))
-    put("multiloader-forge.gradle.kts", Templates.multiloaderModule(multi, "forge"))
+    putBoth("multiloader-settings", multi, Templates::multiloaderSettings)
+    putBoth("multiloader-common", multi,
+        { Templates.multiloaderModule(it, null) })
+    putBoth("multiloader-fabric", multi,
+        { Templates.multiloaderModule(it, "fabric") })
+    putBoth("multiloader-forge", multi,
+        { Templates.multiloaderModule(it, "forge") })
 
-    put("product-bta.gradle.kts", Templates.buildProduct(base.copy(
+    putBoth("product-bta", base.copy(
         mcVersion = runCatching { VersionResolver().latestLoader("bta", "") }.getOrDefault("1.7.7.0_02"), loaders = listOf("bta-babric" to "1.7.6"),
-        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "bta")))
-    put("product-custom.gradle.kts", Templates.buildProduct(base.copy(
+        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "bta"),
+        Templates::buildProduct)
+    putBoth("product-custom", base.copy(
         loaders = listOf("fabric" to "0.16.0"),
-        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "custom:mymodpack")))
+        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "custom:mymodpack"),
+        Templates::buildProduct)
 
-    put("side-server.gradle.kts", Templates.build(base.copy(
-        loaders = listOf("forge" to "47.2.0"), side = "server")))
-    put("jarmod.gradle.kts", Templates.build(base.copy(
-        mcVersion = "b1.7.3", loaders = emptyList(), jarmod = true)))
-    put("jars-split.gradle.kts", Templates.build(base.copy(splitJars = true)))
-    put("jars-merged.gradle.kts", Templates.build(base.copy(splitJars = false)))
+    putBoth("side-server", base.copy(
+        loaders = listOf("forge" to "47.2.0"), side = "server"),
+        Templates::build)
+    putBoth("jarmod", base.copy(
+        mcVersion = "b1.7.3", loaders = emptyList(), jarmod = true),
+        Templates::build)
+    putBoth("jars-split", base.copy(splitJars = true), Templates::build)
+    putBoth("jars-merged", base.copy(splitJars = false), Templates::build)
 
-    put("mod-metadata.gradle.kts", Templates.build(base.copy(
-        metadataFromDsl = true)).substringAfter("unimined {"))
+    putBoth("mod-metadata", base.copy(metadataFromDsl = true),
+        { Templates.build(it).substringAfter("unimined {") })
 
     // registry tables — curated here (unimined-init can't see the
     // frontend registries); flag drift in code review.

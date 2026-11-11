@@ -1,5 +1,5 @@
 sourceSet("@@LOADER@@") {
 @@SIDE@@
-    loader("@@LOADER_VERSION@@")
+    loader(@@LOADER_VERSION@@)
 @@MAPPINGS@@
 }

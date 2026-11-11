@@ -58,6 +58,9 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         help = "jarmod jar sides: split (default) or merged")
     private val noWrapper by option("--no-wrapper",
         help = "don't emit gradlew/wrapper").flag()
+    private val noVersionProps by option("--no-version-props",
+        help = "bake version literals into the build scripts instead " +
+                "of gradle.properties keys").flag()
     private val includeBuild by option("--include-build",
         help = "emit includeBuild(path) in pluginManagement")
     private val toolchain by option("--toolchain",
@@ -286,6 +289,7 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
             gradleVersion = gradle,
             templateName = template,
             metadataFromDsl = metadata == "dsl",
+            versionProps = !noVersionProps,
             layout = when {
                 modules -> InitSpec.Layout.MULTILOADER
                 product != null -> InitSpec.Layout.CUSTOM_PRODUCT

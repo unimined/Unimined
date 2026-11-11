@@ -1,4 +1,4 @@
-version = "@@MC_VERSION@@"
+@@MC_VERSION@@
 @@SIDE@@
 @@LOADER_LINES@@
 @@MAPPINGS@@

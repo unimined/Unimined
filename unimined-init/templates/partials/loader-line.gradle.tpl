@@ -1,1 +1,1 @@
-loader("@@LOADER@@", "@@LOADER_VERSION@@")
+loader("@@LOADER@@", @@LOADER_VERSION@@)

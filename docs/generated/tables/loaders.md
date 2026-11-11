@@ -8,7 +8,7 @@
 || `neoforge` | |
 || `cleanroom` | CleanroomMC |
 || `flint` | removed — maven.flintloader.net offline |
-|| `rift` | |
+|| `rift` | DimDev's 1.13-era LaunchWrapper loader — versions MC-keyed (`org.dimdev:rift:<mc>`) |
 || `foxloader` | ReIndev's loader |
 || `liteloader` | |
 || `craftbukkit`, `spigot`, `paper` | server-side |

@@ -12,11 +12,11 @@ repositories {
 
 unimined {
     minecraft {
-        version = "1.20.1"
+        version = providers.gradleProperty("minecraft_version").get()
 
-        loader("fabric", "0.16.0")
+        loader("fabric", providers.gradleProperty("fabric_version").get())
         mappings {
-            yarn("1.20.1+build.10")
+            yarn(providers.gradleProperty("yarn_mappings").get())
         }
     }
 }

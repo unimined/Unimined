@@ -78,14 +78,33 @@ class ProjectGeneratorTest {
         assertTrue("\r\n" in Files.readString(dir.resolve("gradlew.bat")),
             "gradlew.bat not CRLF-normalized")
         val build = Files.readString(dir.resolve("build.gradle.kts"))
-        assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
-        assertTrue("yarn(10)" in build)
+        assertTrue("loader(\"fabric\", providers.gradleProperty(" +
+                "\"fabric_version\").get())" in build)
+        assertTrue("yarn(providers.gradleProperty(\"yarn_mappings\")" +
+                ".get().toInt())" in build)
+        val props = Files.readString(dir.resolve("gradle.properties"))
+        assertTrue("minecraft_version=1.20.1" in props)
+        assertTrue("fabric_version=0.16.0" in props)
+        assertTrue(Regex("yarn_mappings=").containsMatchIn(props))
         assertTrue("xyz.wagyourtail.unimined" in build)
         val fm = Files.readString(dir.resolve("src/main/resources/fabric.mod.json"))
         assertTrue("\"my_mod\"" in fm)
         assertTrue("com.example.mymod.MyMod" in fm)
         val wrapperJar = dir.resolve("gradle/wrapper/gradle-wrapper.jar")
         assertTrue(Files.size(wrapperJar) > 10_000, "wrapper jar is real")
+    }
+
+    @Test
+    fun `no-version-props bakes literals`(@TempDir dir: Path) {
+        ProjectGenerator.generate(
+            spec().copy(versionProps = false), dir.toString())
+        val build = Files.readString(dir.resolve("build.gradle.kts"))
+        assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
+        assertTrue("yarn(10)" in build)
+        assertTrue("version = \"1.20.1\"" in build)
+        assertTrue("gradleProperty" !in build)
+        val props = Files.readString(dir.resolve("gradle.properties"))
+        assertTrue("minecraft_version" !in props)
     }
 
     @Test
@@ -107,7 +126,10 @@ class ProjectGeneratorTest {
         ).map { dir.relativize(java.nio.file.Path.of(it)).toString() }
         assertTrue("src/main/resources/paper-plugin.yml" in written)
         val build = Files.readString(dir.resolve("build.gradle.kts"))
-        assertTrue("loader(\"paper\", \"1.21.8-R0.1-SNAPSHOT\")" in build)
+        assertTrue("loader(\"paper\", providers.gradleProperty(" +
+                "\"paper_version\").get())" in build)
+        assertTrue("paper_version=1.21.8-R0.1-SNAPSHOT" in
+            Files.readString(dir.resolve("gradle.properties")))
         assertTrue("repo.papermc.io" in build)
         val yml = Files.readString(dir.resolve("src/main/resources/paper-plugin.yml"))
         assertTrue("com.example.mymod.MyMod" in yml && "my-mod" in yml)
@@ -183,8 +205,10 @@ class ProjectGeneratorTest {
         assertTrue("sourceSet(\"forge\")" in build)
         // implicit parent inheritance means no explicit combineWith
         assertTrue("combineWith(" !in build)
-        assertTrue("loader(\"0.16.0\")" in build)
-        assertTrue("loader(\"47.2.0\")" in build)
+        assertTrue("loader(providers.gradleProperty(\"fabric_version\")" +
+                ".get())" in build)
+        assertTrue("loader(providers.gradleProperty(\"forge_version\")" +
+                ".get())" in build)
         assertTrue(Files.exists(dir.resolve("src/fabric/resources/fabric.mod.json")))
         assertTrue(Files.exists(dir.resolve("src/forge/resources/META-INF/mods.toml")))
         assertTrue(Files.exists(dir.resolve("src/fabric/java/com/example/mymod/MyMod.java")))
@@ -244,7 +268,8 @@ class ProjectGeneratorTest {
                 "\"forge\"" in settings)
         val forgeBuild = (files["forge/build.gradle.kts"] as
                 ProjectGenerator.Render.Text).content
-        assertTrue("loader(\"forge\", \"47.2.0\")" in forgeBuild)
+        assertTrue("loader(\"forge\", providers.gradleProperty(" +
+                "\"forge_version\").get())" in forgeBuild)
         assertTrue("project(\":common\")" in forgeBuild)
         assertTrue("fabric/src/main/java/com/example/mymod/MyMod.java" in files)
     }
@@ -259,8 +284,9 @@ class ProjectGeneratorTest {
         val build = (files["build.gradle.kts"] as ProjectGenerator.Render.Text)
             .content
         assertTrue("bta {" in build)
-        assertTrue("version = \"1.20.1\"" in build)
-        assertTrue("minecraft" !in build)
+        assertTrue("version = providers.gradleProperty(" +
+                "\"minecraft_version\").get()" in build)
+        assertTrue("minecraft {" !in build)
     }
 
     @Test

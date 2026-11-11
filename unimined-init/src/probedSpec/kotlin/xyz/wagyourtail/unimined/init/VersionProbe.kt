@@ -223,6 +223,10 @@ val PROBES: List<VersionProbe> = listOf(
     VersionProbe.MavenMulti("@plugin",
         listOf(VersionProbe.PLUGIN_SNAPSHOTS, VersionProbe.PLUGIN_RELEASES)),
     VersionProbe.FabricAll("yarn", "yarn"),
+    // fabric-api isn't on fabric-meta — maven axis, mc is the
+    // `+<mc>` version suffix (filtered at use site)
+    VersionProbe.Maven("fabric-api",
+        "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml"),
     VersionProbe.FlatJson("fabric",
         "https://meta.fabricmc.net/v2/versions/loader"),
     VersionProbe.Ornithe("feather"), VersionProbe.Ornithe("raven"),

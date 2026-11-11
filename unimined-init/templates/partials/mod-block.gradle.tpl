@@ -1,6 +1,4 @@
 mod {
-    id = "@@MODID@@"
-    name = "@@NAME@@"
-    version = "@@VERSION@@"
+@@PROP_LINES@@
 @@LOADER_SECTIONS@@
 }

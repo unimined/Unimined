@@ -36,7 +36,8 @@ internal object Templates {
     /** Baked era-default mapping lines for [loader] on spec.mcVersion —
      *  deterministic (baked lists only, no runtime probe); empty on
      *  unobfuscated 26.x or unknown loaders. */
-    private fun defaultMappingLines(loader: String, mc: String): List<String> {
+    private fun defaultMappingLines(spec: InitSpec, loader: String): List<MappingLine> {
+        val mc = spec.mcVersion
         fun baked(axis: String): String? =
             Probed.expand("$axis:$mc").firstOrNull()
                 ?: Probed.expand(axis).firstOrNull()
@@ -50,46 +51,89 @@ internal object Templates {
         fun plusTail(axis: String): String? = Probed.expand(axis)
             .firstOrNull { it.startsWith("$mc+") }
             ?.substringAfter('+')
+        /** [verb] with its version arg as a gradle.properties ref
+         *  (full coordinate) — or the literal [litArg] when
+         *  [InitSpec.versionProps] is off. */
+        fun versioned(verb: String, propKey: String, full: String?,
+                      litArg: String): List<MappingLine> =
+            if (spec.versionProps && full != null) listOf(MappingLine(
+                "$verb(${verRef(spec, propKey, "\"$full\"")})",
+                listOf(propKey to full)))
+            else listOf(MappingLine("$verb($litArg)"))
         return when {
             // 26.x unobfuscated ships no mappings — checked before
             // any loader branch (fabric would emit `intermediary()`
             // unconditionally otherwise)
             InitSpec.isUnobfEra(mc) -> emptyList()
-            l in listOf("babric", "bta") -> plusTail("biny")
-                ?.let { listOf("biny(\"$it\")") }
+            l in listOf("babric", "bta") ->
+                versioned("biny", "biny_mappings",
+                    plusTail("biny")?.let { "$mc+$it" },
+                    plusTail("biny")?.let { "\"$it\"" } ?: return emptyList())
             // ornithe uses feather even on b1.x — checked before
             // the b1-era nostalgia fallback; the v3 feather axis is
             // the gen-2 series so the gen var is pinned alongside
-            l == "osl" || l == "ornithe" -> buildTail("feather")
-                ?.let { listOf("ornitheGenVersion = 2", "feather($it)") }
-            mc.startsWith("b1.") -> buildTail("nostalgia")
-                ?.let { listOf("nostalgia($it)") }
-            l == "legacyfabric" -> buildTail("legacyyarn")
-                // current builds are gen-2 (`net.legacyfabric.v2`)
-                ?.let { listOf("legacyYarn($it, 2)") }
-            l == "quilt" -> buildTail("quilt-mappings")
-                ?.let { listOf("quilt($it)") }
+            l == "osl" || l == "ornithe" ->
+                Probed.expand("feather").firstOrNull {
+                    it.startsWith("$mc+build.") }?.let { full ->
+                    listOf(MappingLine("ornitheGenVersion = 2")) +
+                        versioned("feather", "feather_mappings", full,
+                            full.substringAfterLast("build.").toIntOrNull()
+                                ?.toString() ?: return emptyList())
+                } ?: emptyList()
+            mc.startsWith("b1.") ->
+                versioned("nostalgia", "nostalgia_mappings",
+                    Probed.expand("nostalgia").firstOrNull {
+                        it.startsWith("$mc+build.") },
+                    buildTail("nostalgia")?.toString() ?: return emptyList())
+            l == "legacyfabric" ->
+                Probed.expand("legacyyarn").firstOrNull {
+                    it.startsWith("$mc+build.") }?.let { full ->
+                    // current builds are gen-2 (`net.legacyfabric.v2`)
+                    if (spec.versionProps) listOf(MappingLine(
+                        "legacyYarn(${verRef(spec, "legacyyarn_mappings",
+                            "\"$full\"")}, 2)",
+                        listOf("legacyyarn_mappings" to full)))
+                    else listOf(MappingLine("legacyYarn(" +
+                            "${full.substringAfterLast("build.")}, 2)"))
+                } ?: emptyList()
+            l == "quilt" ->
+                versioned("quilt", "quilt_mappings",
+                    Probed.expand("quilt-mappings").firstOrNull {
+                        it.startsWith("$mc+build.") },
+                    buildTail("quilt-mappings")?.toString() ?: return emptyList())
             l == "fabric" -> listOfNotNull(
-                "intermediary()",
-                buildTail("yarn")?.let { "yarn($it)" })
-            l == "rift" -> listOf("searge()")
+                MappingLine("intermediary()"),
+                Probed.expand("yarn").firstOrNull {
+                    it.startsWith("$mc+build.") }?.let { full ->
+                    if (spec.versionProps) MappingLine(
+                        "yarn(${verRef(spec, "yarn_mappings",
+                            "\"$full\"")})",
+                        listOf("yarn_mappings" to full))
+                    else MappingLine("yarn(${
+                        full.substringAfterLast("build.")})")
+                })
+            l == "rift" -> listOf(MappingLine("searge()"))
             l in listOf("forge", "fml", "lexforge", "cleanroom",
                 "liteloader") -> baked("mcp")?.let {
                 val p = it.split('_', limit = 2)
                 // searge supplies the obf->srg class/member layer
                 // mcp alone can't rename merged-obf classes
-                listOf("searge()", "mcp(\"${p[0]}\", \"${p[1]}\")")
+                listOf(MappingLine("searge()"),
+                    if (spec.versionProps) propifyLine(spec,
+                        "mcp(\"${p[0]}\", \"${p[1]}\")")
+                    else MappingLine("mcp(\"${p[0]}\", \"${p[1]}\")"))
             }
             else -> null
         } ?: listOfNotNull(
-            if (Probed.expand("mojmap").contains(mc)) "mojmap()" else null)
+            if (Probed.expand("mojmap").contains(mc))
+                MappingLine("mojmap()") else null)
     }
 
     private fun mappingsBlock(spec: InitSpec, indent: String,
                               loader: String? = null): String {
         val lines = spec.vars.map { (k, v) -> "$k = $v" } +
-            spec.mappings.ifEmpty {
-                loader?.let { defaultMappingLines(it, spec.mcVersion) }
+            spec.mappings.map { propifyLine(spec, it).text }.ifEmpty {
+                loader?.let { defaultMappingLines(spec, it).map { l -> l.text } }
                     ?: emptyList() }
         return if (lines.isEmpty()) "" else
             render("partials/mappings-block.gradle", mapOf(
@@ -97,12 +141,91 @@ internal object Templates {
             )).indented(indent)
     }
 
+    /** gradle.properties entries the emitted build scripts resolve —
+     *  mirrors exactly what `mappingsBlock`/`loader-line`/`version`
+     *  emissions reference. */
+    private fun versionPropEntries(spec: InitSpec): List<Pair<String, String>> {
+        if (!spec.versionProps) return emptyList()
+        val mappingProps = if (spec.mappings.isNotEmpty())
+            spec.mappings.flatMap { propifyLine(spec, it).props }
+        else spec.loaders.map { defaultMappingLines(spec, it.first) }
+            .firstOrNull { it.isNotEmpty() }
+            ?.flatMap { it.props } ?: emptyList()
+        return listOf("minecraft_version" to spec.mcVersion) +
+            spec.loaders.map { (l, v) ->
+                "${l.lowercase().replace('-', '_')}_version" to v } +
+            mappingProps +
+            spec.loaders.filter { it.first == "fabric" }.mapNotNull {
+                Probed.expand("fabric-api").firstOrNull { v ->
+                    v.endsWith("+${spec.mcVersion}") }
+                    ?.let { v -> "fabric_api_version" to v }
+            }
+    }
+
+    /** `name = "v"` (kotlin) / `name.set("v")` (groovy) — `Property`
+     *  targets need `.set` under Groovy; plain `var` targets keep `=`. */
+    private fun propSet(spec: InitSpec, name: String, value: String) =
+        if (spec.dsl == InitSpec.Dsl.KOTLIN) "$name = $value"
+        else "$name.set($value)"
+
+    /** `providers.gradleProperty("k").get()` — identical in both DSLs;
+     *  falls back to [literal] when [InitSpec.versionProps] is off. */
+    private fun verRef(spec: InitSpec, key: String, literal: String) =
+        if (spec.versionProps) "providers.gradleProperty(\"$key\").get()"
+        else literal
+
+    /** One emitted mappings-block line + the gradle.properties entries
+     *  its version args resolve through (empty → literal). */
+    private data class MappingLine(val text: String,
+        val props: List<Pair<String, String>> = emptyList())
+
+    /** Mapping verbs whose version args can ride gradle.properties —
+     *  prop key per arg position; `null` position stays literal
+     *  (gen ints are constants, not versions). */
+    private val MAPPING_ARG_PROPS: Map<String, List<String?>> = mapOf(
+        "yarn" to listOf("yarn_mappings"),
+        "quilt" to listOf("quilt_mappings"),
+        "feather" to listOf("feather_mappings", null),
+        "legacyYarn" to listOf("legacyyarn_mappings", null),
+        "nostalgia" to listOf("nostalgia_mappings"),
+        "biny" to listOf("biny_mappings"),
+        "searge" to listOf("searge_mappings"),
+        "mcp" to listOf("mcp_channel", "mcp_version"),
+    )
+
+    private val MAPPING_LINE_RE = Regex("""^(\w+)\((.*)\)$""")
+
+    /** Rewrites a literal `verb(args)` line into a [MappingLine] —
+     *  quoted args keep the String overload, bare ints get `.toInt()`.
+     *  Unrecognized/arg-less verbs stay literal. */
+    private fun propifyLine(spec: InitSpec, line: String): MappingLine {
+        val m = MAPPING_LINE_RE.matchEntire(line.trim())
+            ?: return MappingLine(line)
+        val (verb, argsStr) = m.destructured
+        val keys = MAPPING_ARG_PROPS[verb]
+            ?: return MappingLine(line)
+        val args = Regex("""("[^"]*"|\d+)""").findAll(argsStr)
+            .map { it.value }.toList()
+        if (!spec.versionProps || args.isEmpty() || args.size > keys.size)
+            return MappingLine(line)
+        val props = mutableListOf<Pair<String, String>>()
+        val newArgs = args.mapIndexed { i, a ->
+            val key = keys[i] ?: return@mapIndexed a
+            props += key to a.removeSurrounding("\"")
+            verRef(spec, key, a) +
+                if (a.matches(Regex("\\d+"))) ".toInt()" else ""
+        }
+        return MappingLine("$verb(${newArgs.joinToString(", ")})", props)
+    }
+
     /** `side = ...` line (empty when unset); enum values are emitted
      *  fully-qualified — generated scripts have no unimined imports. */
     private fun sideLine(spec: InitSpec): String = spec.side?.let {
-        if (it in setOf("MERGED", "CLIENT", "SERVER"))
-            "side = xyz.wagyourtail.unimined.api.spec.Side.$it"
-        else "side = $it"
+        val up = it.uppercase()
+        propSet(spec, "side",
+            if (up in setOf("MERGED", "CLIENT", "SERVER"))
+                "xyz.wagyourtail.unimined.api.spec.Side.$up"
+            else it)
     } ?: ""
 
     /** Loader-specific Maven repos needed for metadata resolution. */
@@ -144,10 +267,15 @@ internal object Templates {
                 else " version '${spec.pluginVersion}'")
     }
 
-    /** `java { toolchain }` pin (empty when unset). */
+    /** `java { toolchain }` pin (empty when unset). Kotlin DSL
+     *  auto-imports `JavaLanguageVersion`; Groovy needs the FQN. */
     private fun toolchainBlock(spec: InitSpec): String =
-        spec.toolchain?.let { """java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of($it))
+        spec.toolchain?.let {
+            val jlv = if (spec.dsl == InitSpec.Dsl.KOTLIN)
+                "JavaLanguageVersion"
+            else "org.gradle.jvm.toolchain.JavaLanguageVersion"
+            """java {
+    toolchain.languageVersion.set($jlv.of($it))
 }
 """ } ?: ""
 
@@ -180,12 +308,15 @@ internal object Templates {
                     add("intermediary()")
                 if (Probed.expand("mojmap").contains(mc)) add("mojmap()")
                 else addAll(
-                    spec.loaders.map { defaultMappingLines(it.first, mc) }
-                        .firstOrNull { it.isNotEmpty() } ?: emptyList())
+                    spec.loaders.map { defaultMappingLines(spec, it.first) }
+                        .firstOrNull { it.isNotEmpty() }?.map { it.text }
+                        ?: emptyList())
             }
             // top-level minecraft{} IS the main env — shared
             // version/mappings live there; loader envs combineWith it
-            val sharedLines = mutableListOf("version = \"$mc\"")
+            val sharedLines = mutableListOf(
+                propSet(spec, "version",
+                    verRef(spec, "minecraft_version", "\"$mc\"")))
             sideLine(spec).takeIf { it.isNotEmpty() }
                 ?.let { sharedLines.add(it) }
             if (sharedMappings.isNotEmpty()) {
@@ -197,35 +328,58 @@ internal object Templates {
             spec.loaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
                 render("partials/source-set-env.gradle", mapOf(
                     "LOADER" to loader,
-                    "LOADER_VERSION" to version,
+                    "LOADER_VERSION" to verRef(spec,
+                        "${loader.lowercase().replace('-', '_')}_version",
+                        "\"$version\""),
                     "MC_VERSION" to "combined from common",
                     "SIDE" to "",
                     "MAPPINGS" to "",
                 )).replace(
-                    "version = \"combined from common\"",
+                    propSet(spec, "version", "\"combined from common\""),
                     "combineWith(\"main\")")
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(
-                "MC_VERSION" to spec.mcVersion,
+                "MC_VERSION" to propSet(spec, "version",
+                    verRef(spec, "minecraft_version",
+                        "\"${spec.mcVersion}\"")),
                 "SIDE" to sideLine(spec),
                 "LOADER_LINES" to spec.loaders.joinToString("\n") { (l, v) ->
                     render("partials/loader-line.gradle", mapOf(
-                        "LOADER" to l, "LOADER_VERSION" to v
+                        "LOADER" to l, "LOADER_VERSION" to verRef(spec,
+                            "${l.lowercase().replace('-', '_')}_version",
+                            "\"$v\"")
                     ))
                 },
                 "MAPPINGS" to mappingsBlock(spec, ""),
             ))
         }.indented("        ")
 
+    /** `(\"fabric\", ...) — coords` trailing the `loaderApi` dep
+     *  comment — prop ref + concrete coords when a fabric-api axis
+     *  is baked, generic example otherwise. */
+    private fun loaderApiComment(spec: InitSpec): String {
+        val v = Probed.expand("fabric-api").firstOrNull {
+            it.endsWith("+${spec.mcVersion}") }
+            ?: return "(\"fabric\", \"0.92.2+1.20.1\")"
+        return if (spec.versionProps)
+            "(\"fabric\", providers.gradleProperty(" +
+                    "\"fabric_api_version\").get())"
+        else "(\"fabric\", \"$v\")"
+    }
+
     /** `mod { }` block — metadata generated per env instead of files. */
     private fun modBlock(spec: InitSpec): String =
         // scoped under minecraft { } — per-env metadata
         if (!spec.metadataFromDsl) "" else "\n" + render(
             "partials/mod-block.gradle", mapOf(
-                "MODID" to spec.modId,
-                "NAME" to spec.name,
-                "VERSION" to spec.version,
+                "PROP_LINES" to listOf(
+                    propSet(spec, "id",
+                        verRef(spec, "modid", "\"${spec.modId}\"")),
+                    propSet(spec, "name", "\"${spec.name}\""),
+                    propSet(spec, "version",
+                        verRef(spec, "version", "\"${spec.version}\"")),
+                ).joinToString("\n") { "    $it" },
                 "LOADER_SECTIONS" to spec.loaders.joinToString("\n") { (l, _) ->
                     "    " + render("partials/mod-loader-section.gradle", mapOf(
                         "LOADER" to l,
@@ -251,6 +405,7 @@ internal object Templates {
             },
             "MINECRAFT_BODY" to minecraftBody(spec),
             "MOD_BLOCK" to modBlock(spec),
+            "LOADER_API" to loaderApiComment(spec),
             "EXTRAS" to extras(spec),
         ))
     }
@@ -261,7 +416,9 @@ internal object Templates {
      */
     fun extras(spec: InitSpec): String {
         val jarmodBlock = if (!spec.jarmod) "" else "\n" + render(
-            "partials/jarmod.gradle", mapOf("MODID" to spec.modId))
+            if (spec.dsl == InitSpec.Dsl.KOTLIN) "partials/jarmod.gradle"
+            else "partials/jarmod-groovy.gradle",
+            mapOf("MODID" to spec.modId))
         val extra = if (spec.extraLines.isEmpty()) ""
             else "\n" + spec.extraLines.joinToString("\n")
         return jarmodBlock + extra
@@ -304,19 +461,26 @@ internal object Templates {
             },
             "MINECRAFT_BODY" to if (loader == null) {
                 render("partials/minecraft-env.gradle", mapOf(
-                    "MC_VERSION" to spec.mcVersion,
+                    "MC_VERSION" to propSet(spec, "version",
+                        verRef(spec, "minecraft_version",
+                            "\"${spec.mcVersion}\"")),
                     "SIDE" to sideLine(spec),
                     "LOADER_LINES" to "",
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
             } else {
                 render("partials/minecraft-env.gradle", mapOf(
-                    "MC_VERSION" to spec.mcVersion,
+                    "MC_VERSION" to propSet(spec, "version",
+                        verRef(spec, "minecraft_version",
+                            "\"${spec.mcVersion}\"")),
                     "SIDE" to sideLine(spec),
                     "LOADER_LINES" to render("partials/loader-line.gradle",
                         mapOf("LOADER" to loader,
-                            "LOADER_VERSION" to spec.loaders.first {
-                                it.first == loader }.second)),
+                            "LOADER_VERSION" to verRef(spec,
+                                "${loader.lowercase().replace('-', '_')}" +
+                                        "_version",
+                                "\"${spec.loaders.first {
+                                    it.first == loader }.second}\""))),
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
             }.indented("        "),
@@ -343,9 +507,9 @@ internal object Templates {
         val fileCall = spec.distFile?.let {
             if (kts) "\n    file(\"$it\")" else "\n    file('$it')"
         } ?: ""
-        val versionLine = spec.mcVersion.let {
-            if (kts) "    version = \"$it\"" else "    version = '$it'"
-        }
+        val versionLine = "    " + propSet(spec, "version",
+            verRef(spec, "minecraft_version",
+                if (kts) "\"$spec.mcVersion\"" else "'${spec.mcVersion}'"))
         val loaderLines = spec.loaders.joinToString("\n") { (l, v) ->
             if (v.isEmpty()) "    loader(\"$l\")"
             else "    loader(\"$l\", \"$v\")"
@@ -387,6 +551,9 @@ internal object Templates {
         "GROUP" to spec.group,
         "VERSION" to spec.version,
         "MODID" to spec.modId,
+        "VERSION_PROPS" to versionPropEntries(spec).joinToString("\n") {
+            (k, v) -> "$k=$v"
+        },
     ))
 
     /** `.gitignore` — standard Gradle/JDK/IDE entries (static). */
