@@ -87,7 +87,7 @@ class RemappedViewFunctionalTest {
                 maven { url = uri('${repo.toUri()}') }
             }
 
-            def remapped = remap.remappedViews("mods") {
+            def remapped = uniminedRemap.remappedViews("mods") {
                 targetNamespace.set("named")
                 namespace("official", "officialMods")
                 namespace("intermediary", "intermediaryMods")
@@ -131,14 +131,14 @@ class RemappedViewFunctionalTest {
                 maven { url = uri('${repo.toUri()}') }
             }
 
-            remap {
+            uniminedRemap {
                 jar { remap("tiny") }
             }
 
             configurations.create("deps")
             dependencies { deps "com.example:lib:1.0" }
 
-            def remapped = remap.remappedView("deps", "depsRemapped") {
+            def remapped = uniminedRemap.remappedView("deps", "depsRemapped") {
                 it.sourceNamespace.set("official")
                 it.targetNamespace.set("named")
                 it.mappingFile.fileValue(file('mappings.json'))
