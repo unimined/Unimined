@@ -58,7 +58,11 @@ abstract class PublishExtension {
         name: String,
         @DelegatesTo(EnvironmentPublication::class) action: groovy.lang.Closure<*>
     ) {
-        environment(name, Action { action.delegate = it; action.call() })
+        environment(name, Action {
+            action.delegate = it
+            action.resolveStrategy = groovy.lang.Closure.DELEGATE_FIRST
+            action.call()
+        })
     }
 
     /**

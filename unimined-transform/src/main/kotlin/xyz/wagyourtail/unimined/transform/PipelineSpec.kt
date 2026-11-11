@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.transform
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.transform.step.StepType
 import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
 import javax.inject.Inject
@@ -57,12 +60,26 @@ abstract class PipelineSpec @Inject constructor(
         return spec
     }
 
+    /** Groovy DSL overload — `step("binpatches", BinpatchesStepSpec) { ... }`. */
+    fun <T : Any> step(
+        typeId: String, specClass: Class<T>,
+        @DelegatesTo(genericTypeIndex = 0, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): T = step(typeId, specClass, Action { action.delegatingTo(it) })
+
     /** `select(key)` — branches keyed by probe result or declared pin. */
     fun select(key: String, action: Action<in SelectorNode>) {
         val node = SelectorNode(key, declaredSteps.size)
         selectors += node
         action.execute(node)
     }
+
+    /** Groovy DSL overload — `select("era") { branch("userdev") { ... } }`. */
+    fun select(
+        key: String,
+        @DelegatesTo(value = SelectorNode::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = select(key, Action { action.delegatingTo(it) })
 
     /**
      * `era("name")` — expand a named [PipelinePreset]'s canonical
@@ -79,6 +96,13 @@ abstract class PipelineSpec @Inject constructor(
     fun execute(name: String, action: Action<in PipelineExecutionScope>) {
         inlineActions += NamedAction(name, declaredSteps.size, action)
     }
+
+    /** Groovy DSL overload — `execute("name") { ... }`. */
+    fun execute(
+        name: String,
+        @DelegatesTo(value = PipelineExecutionScope::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = execute(name, Action { action.delegatingTo(it) })
 
     /**
      * Realize the declared pipeline into an ordered step list:
@@ -134,6 +158,13 @@ abstract class PipelineSpec @Inject constructor(
             action.execute(nested)
             branches[pin] = nested.declaredSteps
         }
+
+        /** Groovy DSL overload — `branch("userdev") { era("userdev") }`. */
+        fun branch(
+            pin: String,
+            @DelegatesTo(value = PipelineSpec::class, strategy = Closure.DELEGATE_FIRST)
+            action: Closure<*>
+        ) = branch(pin, Action { action.delegatingTo(it) })
 
         fun branch(result: String?): List<DeclaredStep> =
             branches[result]

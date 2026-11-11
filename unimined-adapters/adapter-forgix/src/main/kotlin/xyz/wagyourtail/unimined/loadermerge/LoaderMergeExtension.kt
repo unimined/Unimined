@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.loadermerge
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.file.RegularFile
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.provider.Provider
 import java.io.File
 
@@ -56,6 +59,12 @@ abstract class LoaderMergeExtension {
             override fun input(name: String, source: Any) = this@LoaderMergeExtension.input(name, source)
         })
     }
+
+    /** Groovy DSL overload — `uniminedLoaderMerge { from { input("k", v) } }`. */
+    fun from(
+        @DelegatesTo(value = InputsSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = from(Action { action.delegatingTo(it) })
 
     interface InputsSpec {
         fun input(name: String, source: Any)

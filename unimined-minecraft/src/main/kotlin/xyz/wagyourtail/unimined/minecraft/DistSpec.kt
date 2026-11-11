@@ -1,8 +1,11 @@
 package xyz.wagyourtail.unimined.minecraft
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 
 /**
  * Configuration surface for the dist preset verbs
@@ -71,5 +74,11 @@ class DistSpec internal constructor(
      *  is equally valid inside a dist block. */
     fun legacydist(action: Action<LegacyDistSpec>) =
         action.execute(env.legacyDist)
+
+    /** Groovy DSL overload — `legacydist { file(...) }`. */
+    fun legacydist(
+        @DelegatesTo(value = LegacyDistSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(env.legacyDist)
 
 }

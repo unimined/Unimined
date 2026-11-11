@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.migrate
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.mapping.MappingExtension
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -28,6 +31,14 @@ abstract class MigrateExtension @Inject constructor(
      * release — configure the target inside [action] via
      * `target { yarn(...) }` / `target { mcp(...) }` / `target { maven(...) }`.
      */
+    /** Groovy DSL overload —
+     *  `migrateMappings("main") { target { yarn(...) } }`. */
+    fun migrateMappings(
+        environmentId: String,
+        @DelegatesTo(value = MigrateMappingsTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = migrateMappings(environmentId, Action { action.delegatingTo(it) })
+
     fun migrateMappings(environmentId: String, action: Action<MigrateMappingsTask>) {
         val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
         val mapping = project.extensions.getByType(MappingExtension::class.java)

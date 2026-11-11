@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.transform
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.model.ObjectFactory
 import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
 import xyz.wagyourtail.unimined.transform.feature.FeatureRegistry
@@ -38,6 +41,12 @@ class TransformEnvironmentSpec internal constructor(
         action.execute(pipeline)
     }
 
+    /** Groovy DSL overload — `pipeline { binpatches { } }`. */
+    fun pipeline(
+        @DelegatesTo(value = PipelineSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(pipeline)
+
     /** Declared capability bindings — `features { nestedJars("jarjar") }`. */
     val features = FeaturesSpec(FeatureRegistry())
 
@@ -45,6 +54,12 @@ class TransformEnvironmentSpec internal constructor(
     fun features(action: Action<in FeaturesSpec>) {
         action.execute(features)
     }
+
+    /** Groovy DSL overload — `features { nestedJars("jarjar") }`. */
+    fun features(
+        @DelegatesTo(value = FeaturesSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(features)
 
     /** Declared transformers in execution order. */
     val transformers: MutableList<MinecraftTransformer> = mutableListOf()

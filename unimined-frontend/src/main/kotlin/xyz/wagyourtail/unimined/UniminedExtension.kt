@@ -8,6 +8,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.Deprecations
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.deps.LoaderApi
 import xyz.wagyourtail.unimined.mod.ModExtension
@@ -232,6 +233,13 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
      * the `unimined-migrate` plugin's `migrate` extension (see
      * `MigrateMappingsTask` / plan.md §6).
      */
+    /** Groovy DSL overload — `unimined.migrateMappings("main") { target { ... } }`. */
+    fun migrateMappings(
+        environmentId: String,
+        @DelegatesTo(value = MigrateMappingsTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = migrateMappings(environmentId, Action { action.delegatingTo(it) })
+
     fun migrateMappings(environmentId: String, action: Action<MigrateMappingsTask>) {
         project.extensions.getByType(MigrateExtension::class.java)
             .migrateMappings(environmentId, action)

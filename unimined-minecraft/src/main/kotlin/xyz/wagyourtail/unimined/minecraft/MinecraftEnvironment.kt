@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.minecraft
 import groovy.lang.MissingMethodException
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
@@ -132,6 +133,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             }
     }
 
+    /** Groovy DSL overload — `datagen("data", true) { ... }`. */
+    @JvmOverloads
+    fun datagen(
+        name: String = if (environmentId == "main") "data"
+                       else "${environmentId}Data",
+        client: Boolean = false,
+        @DelegatesTo(value = MinecraftEnvironment::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): MinecraftEnvironment = datagen(name, client, Action { action.delegatingTo(it) })
+
     /** Declare a gametest source-set env ([name] defaults to
      *  `<env>Gametest`). Inherits like [datagen]; the runs module wires
      *  the loader's JUnit launch artifact + a `Test`-task integration
@@ -148,6 +159,15 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         gametestEnvs += it
     }
 
+    /** Groovy DSL overload — `gametest("gametest") { ... }`. */
+    @JvmOverloads
+    fun gametest(
+        name: String = if (environmentId == "main") "gametest"
+                       else "${environmentId}Gametest",
+        @DelegatesTo(value = MinecraftEnvironment::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): MinecraftEnvironment = gametest(name, Action { action.delegatingTo(it) })
+
     /** Datagen envs: client-side pack flag (fabric `--client` arg). */
     var clientDatagen: Boolean = false
 
@@ -160,6 +180,15 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     ): MinecraftEnvironment =
         project.extensions.getByType(MinecraftExtension::class.java)
             .sourceSetInternal(sourceSetName, environmentId, action)
+
+    /** Groovy DSL overload — `sourceSet("a") { sourceSet("b") { } }`. */
+    @JvmOverloads
+    fun sourceSet(
+        sourceSetName: String,
+        @DelegatesTo(value = MinecraftEnvironment::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): MinecraftEnvironment =
+        sourceSet(sourceSetName, Action { action.delegatingTo(it) })
 
     /** Apply the recorded implicit-parent combine, unless opted out or
      *  the parent was already combined/copied explicitly. Deferred so

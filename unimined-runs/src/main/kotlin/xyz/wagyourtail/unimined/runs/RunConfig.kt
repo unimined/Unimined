@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.runs
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.file.ConfigurableFileCollection
@@ -9,6 +11,7 @@ import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.SourceSet
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import javax.inject.Inject
 
 /** Which side a run targets. */
@@ -84,6 +87,12 @@ abstract class RunConfig @Inject constructor(
 
     /** Configure this run's [auth]. */
     fun auth(action: Action<AuthSpec>) = action.execute(auth)
+
+    /** Groovy DSL overload — `auth { microsoft() }` on one run. */
+    fun auth(
+        @DelegatesTo(value = AuthSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(auth)
 
     /** Rule features to enable (`is_demo_user`, `has_custom_resolution`). */
     abstract val features: SetProperty<String>

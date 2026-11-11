@@ -5,6 +5,7 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import javax.inject.Inject
 
 /**
@@ -33,6 +34,12 @@ abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
     /** Configure the default [auth] applied to all runs. */
     fun auth(action: Action<AuthSpec>) = action.execute(auth)
 
+    /** Groovy DSL overload — `runs { auth { microsoft() } }`. */
+    fun auth(
+        @DelegatesTo(value = AuthSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(auth)
+
     val runs: NamedDomainObjectContainer<RunConfig> =
         objects.domainObjectContainer(RunConfig::class.java)
 
@@ -51,10 +58,24 @@ abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
         runs.maybeCreate(name).let(action::execute)
     }
 
+    /** Groovy DSL overload — `runs { named("client") { ... } }`. */
+    fun named(
+        name: String,
+        @DelegatesTo(value = RunConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(runs.maybeCreate(name))
+
     /** Declare a custom run configuration. */
     fun create(name: String, action: Action<RunConfig>) {
         action.execute(runs.create(name))
     }
+
+    /** Groovy DSL overload — `runs { create("ci") { ... } }`. */
+    fun create(
+        name: String,
+        @DelegatesTo(value = RunConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(runs.create(name))
 
     /** `runs { named(...) { ... } }` — configure the run container. */
     fun runs(action: Action<NamedDomainObjectContainer<RunConfig>>) =

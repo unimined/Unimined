@@ -34,6 +34,18 @@ present).
 
 - **Plugin ids**: `xyz.wagyourtail.unimined.<name>`; adapters:
   `xyz.wagyourtail.unimined.adapter-<name>`.
+- **Init version props**: generated projects route versions through
+  `gradle.properties` (`providers.gradleProperty("k").get()` — never
+  `properties["k"]`) when `InitSpec.versionProps` (default on, CLI
+  `--no-version-props` opts out). Prop keys: `minecraft_version`,
+  `<loader>_version`, `<verb>_mappings`, `mcp_channel`/`mcp_version`,
+  `fabric_api_version`. New version-bearing emissions must go through
+  `verRef`/`propSet` in `Templates.kt`.
+- **Groovy DSL parity**: every DSL verb taking `Action<T>` or a Kotlin
+  fn-type gets a `@DelegatesTo(T) Closure<*>` twin delegating via
+  `action.delegatingTo(target)`
+  (`unimined-api/.../util/GroovyDsl.kt`) — SAM coercion alone leaves
+  the closure's delegate on the script.
 - **Extension names**: project-level extensions register top-level as
   `unimined<X>` (`uniminedMinecraft`, `uniminedRemap`, …) — never bare
   `minecraft`/`runs`/`remap`. With the frontend applied they self-adopt
@@ -68,6 +80,10 @@ present).
   (`PK 05 06` EOCD stub) — see FabricEnvironmentWiringTest's `serve()`.
 - **Docs**: `docs/` (MkDocs Material, `mkdocs build --strict` must stay
   clean), nav in `mkdocs.yml`. User-facing DSL changes need doc updates.
+  DSL examples are Kotlin/Groovy tab pairs (`=== "Kotlin ..."` /
+  `=== "Groovy ..."`); `docs/generated/*.gradle` Groovy twins come from
+  `:unimined-init:genDocSnippets` — don't hand-edit them, fix
+  `Templates.kt`'s `spec.dsl` branches.
 
 ## Verify
 

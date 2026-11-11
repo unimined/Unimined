@@ -1,6 +1,9 @@
 package xyz.wagyourtail.unimined.mapping
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.mapping.internal.RetroMCPManifest
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
@@ -113,11 +116,23 @@ class MappingsSpecImpl(
             .apply(action)
     }
 
+    /** Groovy DSL overload — `file("x") { named("n") }`. */
+    fun file(path: Any,
+             @DelegatesTo(value = Source::class, strategy = Closure.DELEGATE_FIRST)
+             action: Closure<*>) =
+        file(path) { action.delegatingTo(this) }
+
     /** Declare a maven-coordinate mapping source — resolved lazily. */
     @JvmOverloads
     fun maven(notation: String, action: Source.() -> Unit = {}) {
         maven(fileCollectionFactory.property(String::class.java).apply { set(notation) }, action)
     }
+
+    /** Groovy DSL overload — `maven("g:a:v") { ... }`. */
+    fun maven(notation: String,
+              @DelegatesTo(value = Source::class, strategy = Closure.DELEGATE_FIRST)
+              action: Closure<*>) =
+        maven(notation) { action.delegatingTo(this) }
 
     /** Declare a maven-coordinate mapping source from a provider — the
      *  coordinate resolves at materialization time. */
@@ -125,6 +140,12 @@ class MappingsSpecImpl(
     fun maven(notation: Provider<String>, action: Source.() -> Unit = {}) {
         sources += Source.Maven(notation).apply(action)
     }
+
+    /** Groovy DSL overload — `maven(provider) { ... }`. */
+    fun maven(notation: Provider<String>,
+              @DelegatesTo(value = Source::class, strategy = Closure.DELEGATE_FIRST)
+              action: Closure<*>) =
+        maven(notation) { action.delegatingTo(this) }
 
     /** Declare a provider builtin channel such as `official()`. */
     @JvmOverloads
@@ -135,6 +156,15 @@ class MappingsSpecImpl(
     ) {
         sources += Source.Builtin(const(name), params).apply(action)
     }
+
+    /** Groovy DSL overload — `builtin("official") { ... }`. */
+    @JvmOverloads
+    fun builtin(
+        name: String,
+        params: Map<String, Provider<String>> = emptyMap(),
+        @DelegatesTo(value = Source::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = builtin(name, params) { action.delegatingTo(this) }
 
     private fun const(value: String): Provider<String> =
         fileCollectionFactory.property(String::class.java).apply { set(value) }

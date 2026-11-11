@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.migrate.task
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
@@ -168,6 +171,12 @@ abstract class MigrateMappingsTask @Inject constructor(
         spec.action()
         targetSpec = spec
     }
+
+    /** Groovy DSL overload — `target { yarn(...) }`. */
+    fun target(
+        @DelegatesTo(value = MappingsSpecImpl::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = target { action.delegatingTo(this) }
 
     @TaskAction
     fun run() {
