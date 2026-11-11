@@ -11,11 +11,11 @@ repositories {
 
 unimined {
     minecraft {
-        version = "1.20.1"
-        side = server
-        loader("forge", "47.2.0")
+        version = providers.gradleProperty("minecraft_version").get()
+        side = xyz.wagyourtail.unimined.api.spec.Side.SERVER
+        loader("forge", providers.gradleProperty("forge_version").get())
         mappings {
-            yarn("1.20.1+build.10")
+            yarn(providers.gradleProperty("yarn_mappings").get())
         }
     }
 
@@ -25,6 +25,6 @@ dependencies {
     // mods on the classpath — remapped onto your mappings
     // modImplementation("maven:coord")
     // modCompileOnly(...) / modLocalRuntime(...)
-    // unimined.loaderApi("fabric", "0.92.2+1.20.1") — loader api coords
+    // unimined.loaderApi("fabric", providers.gradleProperty("fabric_api_version").get()) — loader api coords
     // (also records the api modid into mod { depends } automatically)
 }

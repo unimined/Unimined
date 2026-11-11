@@ -1,16 +1,16 @@
 minecraft {
-        version = "1.20.1"
+        version = providers.gradleProperty("minecraft_version").get()
 
-        loader("fabric", "0.16.0")
+        loader("fabric", providers.gradleProperty("fabric_version").get())
         mappings {
-            yarn("1.20.1+build.10")
+            yarn(providers.gradleProperty("yarn_mappings").get())
         }
     }
 
     mod {
-        id = "examplemod"
+        id = providers.gradleProperty("modid").get()
         name = "examplemod"
-        version = "1.0.0"
+        version = providers.gradleProperty("version").get()
         loader("fabric") {}
 
     }
@@ -20,6 +20,6 @@ dependencies {
     // mods on the classpath — remapped onto your mappings
     // modImplementation("maven:coord")
     // modCompileOnly(...) / modLocalRuntime(...)
-    // unimined.loaderApi("fabric", "0.92.2+1.20.1") — loader api coords
+    // unimined.loaderApi("fabric", providers.gradleProperty("fabric_api_version").get()) — loader api coords
     // (also records the api modid into mod { depends } automatically)
 }

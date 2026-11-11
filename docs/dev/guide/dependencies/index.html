@@ -1526,12 +1526,26 @@
 <h2 id="mod-dependencies-artifacts">Mod dependencies (artifacts)<a class="headerlink" href="#mod-dependencies-artifacts" title="Permanent link">&para;</a></h2>
 <p>Each env exposes <code>mod*</code> configurations scoped to its source set —
 mod jars land remapped onto your mappings:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">modLocalRuntime</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">modImplementation</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">modLocalRuntime</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="loader-apis">Loader apis<a class="headerlink" href="#loader-apis" title="Permanent link">&para;</a></h2>
 <p><code>unimined.loaderApi(name, version)</code> resolves a loader's api artifact
 bundle; <code>loaderApiModule(name, module, version)</code> resolves one

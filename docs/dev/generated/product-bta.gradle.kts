@@ -11,7 +11,7 @@ repositories {
 
 unimined {
     bta {
-        version = "8.0.1"
+        version = providers.gradleProperty("minecraft_version").get()
         loader("bta-babric", "1.7.6")
     }
 

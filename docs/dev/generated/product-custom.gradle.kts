@@ -11,7 +11,7 @@ repositories {
 
 unimined {
     custom("mymodpack") {
-        version = "1.20.1"
+        version = providers.gradleProperty("minecraft_version").get()
         loader("fabric", "0.16.0")
     }
 

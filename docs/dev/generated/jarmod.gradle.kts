@@ -11,11 +11,11 @@ repositories {
 
 unimined {
     minecraft {
-        version = "b1.7.3"
+        version = providers.gradleProperty("minecraft_version").get()
 
 
         mappings {
-            yarn("1.20.1+build.10")
+            yarn(providers.gradleProperty("yarn_mappings").get())
         }
     }
 

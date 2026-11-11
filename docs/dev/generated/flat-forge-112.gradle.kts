@@ -11,11 +11,11 @@ repositories {
 
 unimined {
     minecraft {
-        version = "1.12.2"
+        version = providers.gradleProperty("minecraft_version").get()
 
-        loader("forge", "14.23.5.2860")
+        loader("forge", providers.gradleProperty("forge_version").get())
         mappings {
-            mcp("stable", "39")
+            mcp(providers.gradleProperty("mcp_channel").get(), providers.gradleProperty("mcp_version").get())
         }
     }
 

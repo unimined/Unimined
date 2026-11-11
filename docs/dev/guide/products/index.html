@@ -1415,6 +1415,9 @@
 <p>The <em>product</em> is which Minecraft distribution an env runs — orthogonal
 to the loader. <code>minecraft { }</code> is the native product; others get their
 own blocks:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label><label for="__tabbed_1_3">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_4">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">bta</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">loader</span><span class="p">(</span><span class="s">"bta-babric"</span><span class="p">,</span><span class="w"> </span><span class="s">"1.7.6"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">       </span><span class="c1">// Better Than Adventure</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">reindev</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">loader</span><span class="p">(</span><span class="s">"foxloader"</span><span class="p">,</span><span class="w"> </span><span class="s">"…"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">        </span><span class="c1">// ReIndev + FoxLoader</span>
@@ -1422,6 +1425,26 @@ own blocks:</p>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">custom</span><span class="p">(</span><span class="s">"myproduct"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="s">"custom.jar"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// arbitrary dist</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">bta</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">loader</span><span class="o">(</span><span class="s2">"bta-babric"</span><span class="o">,</span><span class="w"> </span><span class="s2">"1.7.6"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w">       </span><span class="c1">// Better Than Adventure</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">reindev</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">loader</span><span class="o">(</span><span class="s2">"foxloader"</span><span class="o">,</span><span class="w"> </span><span class="s2">"…"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w">        </span><span class="c1">// ReIndev + FoxLoader</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">nsss</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">file</span><span class="o">(</span><span class="s2">"dist.jar"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w">                   </span><span class="c1">// Not So Seecret Saturday</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">custom</span><span class="o">(</span><span class="s2">"myproduct"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">file</span><span class="o">(</span><span class="s2">"custom.jar"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w">  </span><span class="c1">// arbitrary dist</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>
+</code></pre></div>
+</div>
+</div>
+</div>
 <p>Products nest their loader inside the product env — the loader axis
 stays the same either way.</p>
 
