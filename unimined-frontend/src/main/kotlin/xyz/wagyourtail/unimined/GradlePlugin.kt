@@ -15,6 +15,12 @@ class GradlePlugin : Plugin<Project> {
             target.pluginManager.apply(id)
         }
         warnOnLowDaemonHeap(target)
+        // Created AFTER the stack: UniminedExtension's managed-property
+        // init calls the `javaVersion` getter, which delegates to
+        // MinecraftExtension — it must already exist. Sub-plugin
+        // extensions still nest under `unimined` via their
+        // `withPlugin("xyz.wagyourtail.unimined")` adopt hooks, which
+        // fire once this plugin finishes applying.
         target.extensions.create("unimined", UniminedExtension::class.java, target)
     }
 

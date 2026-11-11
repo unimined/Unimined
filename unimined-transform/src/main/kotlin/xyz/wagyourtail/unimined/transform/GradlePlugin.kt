@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.internal.EnvironmentClasspathWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
@@ -12,7 +13,11 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        target.extensions.create("transform", TransformExtension::class.java, target)
+        target.extensions.create("uniminedTransform", TransformExtension::class.java, target)
+        target.uniminedAdopt("transform", TransformExtension::class.java)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            target.uniminedAdopt("transform", TransformExtension::class.java)
+        }
 
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {

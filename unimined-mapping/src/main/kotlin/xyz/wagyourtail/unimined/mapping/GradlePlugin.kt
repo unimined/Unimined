@@ -6,6 +6,7 @@ import org.gradle.api.initialization.Settings
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.PluginAware
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 
 /**
  * Plugin ids `xyz.wagyourtail.unimined.mapping` and
@@ -29,7 +30,7 @@ class GradlePlugin : Plugin<PluginAware> {
         // classloaders, which Gradle does not dedupe) are no-ops
         UniminedRepos(target)
         if (target is Project) {
-            val extension = target.extensions.create("mapping", MappingExtension::class.java)
+            val extension = target.extensions.create("uniminedMapping", MappingExtension::class.java)
             extension.cacheDir.convention(
                 target.layout.projectDirectory.dir(".gradle/unimined/mapping-cache")
             )
@@ -38,6 +39,10 @@ class GradlePlugin : Plugin<PluginAware> {
                     UniminedCache.global(target).resolve("mapping-cache").toFile()
                 })
             )
+            target.uniminedAdopt("mapping", MappingExtension::class.java)
+            target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+                target.uniminedAdopt("mapping", MappingExtension::class.java)
+            }
         }
     }
 

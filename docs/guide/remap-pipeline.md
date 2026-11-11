@@ -42,7 +42,7 @@ remapped between namespaces with `remap.artifact(...)`, which registers
 a `remap<Name>Artifact` task:
 
 ```kotlin
-remap {
+uniminedRemap {
     artifact("baritone") {
         input.set(layout.projectDirectory.file("baritone.jar"))
         mappings.set(layout.projectDirectory.file("mapping.txt"))

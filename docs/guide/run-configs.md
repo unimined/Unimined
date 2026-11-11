@@ -20,15 +20,17 @@ artifact with your remapped mod jar — the shipped-runtime check
 ## Reaching runs
 
 ```kotlin
-runs {
-    named("client") {           // creates if absent
-        jvmArgs.add("-Xmx4G")
-    }
-    create("ciClient") {        // a custom variant
-        prod.set(false)
-    }
-    runs.configureEach {        // every run
-        environmentVariables.put("MC_DEBUG", "1")
+unimined {
+    runs {
+        named("client") {           // creates if absent
+            jvmArgs.add("-Xmx4G")
+        }
+        create("ciClient") {        // a custom variant
+            prod.set(false)
+        }
+        runs.configureEach {        // every run
+            environmentVariables.put("MC_DEBUG", "1")
+        }
     }
 }
 ```

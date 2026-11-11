@@ -68,7 +68,7 @@ Three sources feed the merge, in increasing precedence:
    standard case:
 
 ```kotlin
-loaderMerge {
+uniminedLoaderMerge {
     from(
         "quilt" to tasks.named("remapQuiltJar").flatMap { it.archiveFile },
     )

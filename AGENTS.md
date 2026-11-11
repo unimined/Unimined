@@ -34,6 +34,14 @@ present).
 
 - **Plugin ids**: `xyz.wagyourtail.unimined.<name>`; adapters:
   `xyz.wagyourtail.unimined.adapter-<name>`.
+- **Extension names**: project-level extensions register top-level as
+  `unimined<X>` (`uniminedMinecraft`, `uniminedRemap`, …) — never bare
+  `minecraft`/`runs`/`remap`. With the frontend applied they self-adopt
+  as `unimined.<short>` children via `uniminedAdopt` +
+  `withPlugin("xyz.wagyourtail.unimined")`
+  (`unimined-api/.../util/UniminedExt.kt`). Env-scoped adapter
+  extensions (`jvmdowngrader`, `expectPlatform`, `patchBase`) stay
+  nested inside env objects.
 - **Config-cache contract** (`../Docs/plan.md` §CC): no `Project`/
   `Configuration` held by tasks; task inputs via providers only; no
   `tasks.create` (use `register`); no `System.getenv` captured at

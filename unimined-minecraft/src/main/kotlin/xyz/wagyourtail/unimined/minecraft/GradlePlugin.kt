@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.minecraft
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.task.PruneUniminedCacheTask
 
 /**
@@ -12,7 +13,11 @@ class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         target.pluginManager.apply(xyz.wagyourtail.unimined.mapping.GradlePlugin::class.java)
-        target.extensions.create("minecraft", MinecraftExtension::class.java, target)
+        target.extensions.create("uniminedMinecraft", MinecraftExtension::class.java, target)
+        target.uniminedAdopt("minecraft", MinecraftExtension::class.java)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            target.uniminedAdopt("minecraft", MinecraftExtension::class.java)
+        }
 
         target.tasks.register(
             "pruneUniminedCache", PruneUniminedCacheTask::class.java

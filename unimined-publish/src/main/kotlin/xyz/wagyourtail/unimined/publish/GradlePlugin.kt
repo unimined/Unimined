@@ -4,6 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.component.AdhocComponentWithVariants
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.publish.internal.MavenPublicationWiring
 import xyz.wagyourtail.unimined.publish.internal.PublishWiring
@@ -34,6 +35,10 @@ class GradlePlugin : Plugin<Project> {
         )
         ext.javaPublication.convention(false)
         ext.mavenPublications.convention(true)
+        target.uniminedAdopt("publish", PublishExtension::class.java)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            target.uniminedAdopt("publish", PublishExtension::class.java)
+        }
 
         // applied eagerly so the `publishing { }` extension (repositories,
         // publication customization) exists while the build script runs;

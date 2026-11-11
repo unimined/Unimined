@@ -23,9 +23,11 @@ environment with no provider-supplied sources:
 default; engine options can override it:
 
 ```kotlin
-source {
-    engine.set("vineflower")
-    options.put("bsm", "1")
+unimined {
+    source {
+        engine.set("vineflower")
+        options.put("bsm", "1")
+    }
 }
 ```
 

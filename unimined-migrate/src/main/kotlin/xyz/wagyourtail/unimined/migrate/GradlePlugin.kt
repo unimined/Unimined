@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.migrate
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.migrate` — source-migration
@@ -14,7 +15,11 @@ import org.gradle.api.Project
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        target.extensions.create("migrate", MigrateExtension::class.java, target)
+        target.extensions.create("uniminedMigrate", MigrateExtension::class.java, target)
+        target.uniminedAdopt("migrate", MigrateExtension::class.java)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            target.uniminedAdopt("migrate", MigrateExtension::class.java)
+        }
     }
 
 }

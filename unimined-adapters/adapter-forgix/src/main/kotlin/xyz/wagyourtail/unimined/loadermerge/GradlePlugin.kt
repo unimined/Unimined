@@ -8,6 +8,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.attributes.Usage
 import org.gradle.api.provider.Provider
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.loadermerge.task.MergeLoaderJarsTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import java.io.File
@@ -35,8 +36,12 @@ class GradlePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         val ext = project.extensions.create(
-            "loaderMerge", LoaderMergeExtension::class.java
+            "uniminedLoaderMerge", LoaderMergeExtension::class.java
         )
+        project.uniminedAdopt("loaderMerge", LoaderMergeExtension::class.java)
+        project.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            project.uniminedAdopt("loaderMerge", LoaderMergeExtension::class.java)
+        }
 
         // env-bound auto-feed — collected during configuration, read
         // lazily inside the task input providers below so explicit

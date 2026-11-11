@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.source
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.source.internal.GenModSourcesWiring
 import xyz.wagyourtail.unimined.source.internal.GenSourcesWiring
@@ -14,7 +15,11 @@ import xyz.wagyourtail.unimined.source.internal.GenSourcesWiring
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
-        target.extensions.create("source", SourceExtension::class.java)
+        target.extensions.create("uniminedSource", SourceExtension::class.java)
+        target.uniminedAdopt("source", SourceExtension::class.java)
+        target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
+            target.uniminedAdopt("source", SourceExtension::class.java)
+        }
 
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {

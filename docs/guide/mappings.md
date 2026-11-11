@@ -4,12 +4,14 @@ Each env declares a `mappings { }` chain — the sequence of mapping
 namespaces the env's MC jar and mod deps get remapped through.
 
 ```kotlin
-minecraft {
-    mappings {
-        yarn(10)              // fabric yarn
-        // official()         // mojang official names
-        // mcp("stable", "60") // MCP
-        // searge()           // srg names
+unimined {
+    minecraft {
+        mappings {
+            yarn(10)              // fabric yarn
+            // official()         // mojang official names
+            // mcp("stable", "60") // MCP
+            // searge()           // srg names
+        }
     }
 }
 ```

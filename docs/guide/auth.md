@@ -6,12 +6,14 @@ per-run, provider-backed, and nothing token-shaped ever lands on the
 configuration model or in the config cache.
 
 ```kotlin
-runs {
-    named("client") {
-        auth { microsoft() }
-    }
-    named("server") {
-        auth { offline("DevServer") }
+unimined {
+    runs {
+        named("client") {
+            auth { microsoft() }
+        }
+        named("server") {
+            auth { offline("DevServer") }
+        }
     }
 }
 ```
@@ -34,10 +36,12 @@ runs {
 per-run `auth`/`username` values always win:
 
 ```kotlin
-runs {
-    auth { microsoft() }         // everything logs in...
-    named("server") {
-        auth { offline("Srv") }  // ...except the server
+unimined {
+    runs {
+        auth { microsoft() }         // everything logs in...
+        named("server") {
+            auth { offline("Srv") }  // ...except the server
+        }
     }
 }
 ```
