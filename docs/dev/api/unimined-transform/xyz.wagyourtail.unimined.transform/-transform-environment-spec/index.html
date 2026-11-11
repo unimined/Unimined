@@ -100,7 +100,22 @@
     <div class="tabs-section-body">
       <div data-togglable="PROPERTY">
         <h2 class="tableheader">Properties</h2>
-        <div class="table"><a data-name="-1567507963%2FProperties%2F-1569051040" anchor-label="decorators" id="-1567507963%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+        <div class="table"><a data-name="450461658%2FProperties%2F-1569051040" anchor-label="bundledResources" id="450461658%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="bundled-resources.html"><span>bundled</span><wbr><span><span>Resources</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="450461658%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="bundled-resources.html">bundledResources</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform/-bundled-resource/index.html">BundledResource</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Embedded-classpath artifacts the contributing transform declares for this env (<code class="lang-kotlin">BundledResourceChannel.materialize</code> turns each into a file dep) — provider-facing channel for payload jars with no maven home (FG1's <code class="lang-kotlin">/fmllibs/</code> set).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1567507963%2FProperties%2F-1569051040" anchor-label="decorators" id="-1567507963%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -201,6 +216,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="pipeline.html">pipeline</a><span class="token operator">: </span><a href="../-pipeline-spec/index.html">PipelineSpec</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Declared step pipeline — <code class="lang-kotlin">pipeline { binpatches { } … }</code>. Empty for environments driven by <a href="transformers.html">transformers</a> (the monolith path still resolves while modules port to declared steps).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1657468989%2FProperties%2F-1569051040" anchor-label="postPipelineJarProcessors" id="-1657468989%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="post-pipeline-jar-processors.html"><span>post</span><wbr><span>Pipeline</span><wbr><span>Jar</span><wbr><span><span>Processors</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1657468989%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="post-pipeline-jar-processors.html">postPipelineJarProcessors</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/index.html">JarProcessor</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Jar processors that run <strong>after</strong> declared-pipeline step contributions — for loader wiring that must patch the merged output (e.g. the FG1 checksum patch needs the forge zip's <code class="lang-kotlin">CoreFMLLibraries</code> already merged in). Registered eagerly like <a href="jar-processors.html">jarProcessors</a>, flattened last in <a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform/-transform-environment-spec/effective-jar-processors.html">effectiveJarProcessors</a>.</p></div></div></div>
                 </div>
               </div>
             </div>

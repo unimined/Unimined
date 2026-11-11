@@ -1,6 +1,19 @@
 $dokka.format:html-v1
 $dokka.linkExtension:html
 
+module:adapter-expectplatform
+xyz.wagyourtail.unimined.adapter.expectplatform
+module:adapter-forgix
+xyz.wagyourtail.unimined.loadermerge
+xyz.wagyourtail.unimined.loadermerge.task
+module:adapter-jvmdg
+xyz.wagyourtail.unimined.jvmdg
+module:adapter-modpublisher
+xyz.wagyourtail.unimined.publish.modpublisher
+module:adapter-patchbase
+xyz.wagyourtail.unimined.adapter.patchbase
+module:adapter-stonecutter
+xyz.wagyourtail.unimined.adapter.stonecutter
 module:unimined-api
 xyz.wagyourtail.unimined.api.environment
 xyz.wagyourtail.unimined.api.mapping
@@ -42,17 +55,8 @@ xyz.wagyourtail.unimined.provider.nfrt
 module:unimined-mod
 xyz.wagyourtail.unimined.mod
 xyz.wagyourtail.unimined.mod.task
-module:unimined-mod-loader-merge
-xyz.wagyourtail.unimined.loadermerge
-xyz.wagyourtail.unimined.loadermerge.task
-module:mod-loader-merge-forgix
-xyz.wagyourtail.unimined.loadermerge.forgix
 module:unimined-publish
 xyz.wagyourtail.unimined.publish
-module:publish-maven
-xyz.wagyourtail.unimined.publish.maven
-module:publish-modpublisher
-xyz.wagyourtail.unimined.publish.modpublisher
 module:unimined-remap
 xyz.wagyourtail.unimined.remap
 xyz.wagyourtail.unimined.remap.task

@@ -1,0 +1,366 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>PublishAttributes</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-publish/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-publish/main" data-filter=":unimined-publish/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-publish::xyz.wagyourtail.unimined.publish/PublishAttributes///PointingToDeclaration//-104082621">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-publish</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.publish</a><span class="delimiter">/</span><span class="current">PublishAttributes</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Publish</span><wbr><span><span>Attributes</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="index.html">PublishAttributes</a></div><p class="paragraph">Variant attributes stamped on <code class="lang-kotlin">unimined&lt;Env&gt;</code> component variants so consumers can select dev/prod/sources/data artifacts (plan §11).</p><p class="paragraph">Attribute values reflect <i>declared</i> environment metadata only — namespace resolution stays lazy, so <a href="-n-a-m-e-s-p-a-c-e.html">NAMESPACE</a> is present only when the env declares <code class="lang-kotlin">devNamespace</code>/<code class="lang-kotlin">modSourceNamespaces</code> explicitly.</p><ul><li><p class="paragraph"><a href="-e-n-v-i-r-o-n-m-e-n-t.html">ENVIRONMENT</a> — environment id (<code class="lang-kotlin">fabric</code>, <code class="lang-kotlin">main</code>, ...)</p></li><li><p class="paragraph"><a href="-l-o-a-d-e-r.html">LOADER</a> — loader family name (<code class="lang-kotlin">fabric</code>, <code class="lang-kotlin">forge</code>, ...) when declared</p></li><li><p class="paragraph"><a href="-n-a-m-e-s-p-a-c-e.html">NAMESPACE</a> — the artifact's mapping namespace when declared</p></li><li><p class="paragraph"><a href="-c-h-a-n-n-e-l.html">CHANNEL</a> — <code class="lang-kotlin">"dev"</code> or <code class="lang-kotlin">"prod"</code> (absent on data files)</p></li><li><p class="paragraph"><a href="-a-r-t-i-f-a-c-t_-r-o-l-e.html">ARTIFACT_ROLE</a> — <code class="lang-kotlin">"jar"</code>, <code class="lang-kotlin">"sources"</code>, <code class="lang-kotlin">"javadoc"</code>, or <code class="lang-kotlin">"data"</code></p></li></ul><p class="paragraph">Dev-channel variants carry a custom <span data-unresolved-link="org.gradle.api.attributes/Usage///PointingToDeclaration/">org.gradle.api.attributes.Usage</span> value instead of <code class="lang-kotlin">java-api</code>/<code class="lang-kotlin">java-runtime</code> so ordinary consumers resolve the production variants unambiguously; consumers that want a dev artifact request the matching USAGE_DEV_* value explicitly:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">dependencies {<br>    implementation("com.example:mymod-fabric:1.0") {<br>        attributes {<br>            attribute(Usage.USAGE_ATTRIBUTE,<br>                objects.named(Usage::class.java, PublishAttributes.USAGE_DEV_API))<br>        }<br>    }<br>}</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="1337248909%2FProperties%2F-104082621" anchor-label="ARTIFACT_ROLE" id="1337248909%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-a-r-t-i-f-a-c-t_-r-o-l-e.html"><span>ARTIFACT_</span><wbr><span>ROLE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1337248909%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-a-r-t-i-f-a-c-t_-r-o-l-e.html">ARTIFACT_ROLE</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.attributes/Attribute///PointingToDeclaration/">Attribute</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-913123155%2FProperties%2F-104082621" anchor-label="CHANNEL" id="-913123155%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-c-h-a-n-n-e-l.html"><span><span>CHANNEL</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-913123155%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-c-h-a-n-n-e-l.html">CHANNEL</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.attributes/Attribute///PointingToDeclaration/">Attribute</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1139404233%2FProperties%2F-104082621" anchor-label="CHANNEL_DEV" id="-1139404233%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-c-h-a-n-n-e-l_-d-e-v.html"><span>CHANNEL_</span><wbr><span>DEV</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1139404233%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-c-h-a-n-n-e-l_-d-e-v.html">CHANNEL_DEV</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1715845463%2FProperties%2F-104082621" anchor-label="CHANNEL_PROD" id="1715845463%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-c-h-a-n-n-e-l_-p-r-o-d.html"><span>CHANNEL_</span><wbr><span>PROD</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1715845463%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-c-h-a-n-n-e-l_-p-r-o-d.html">CHANNEL_PROD</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1734771683%2FProperties%2F-104082621" anchor-label="ENVIRONMENT" id="-1734771683%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-e-n-v-i-r-o-n-m-e-n-t.html"><span><span>ENVIRONMENT</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1734771683%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-e-n-v-i-r-o-n-m-e-n-t.html">ENVIRONMENT</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.attributes/Attribute///PointingToDeclaration/">Attribute</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2063616055%2FProperties%2F-104082621" anchor-label="LOADER" id="2063616055%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-a-d-e-r.html"><span><span>LOADER</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2063616055%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-a-d-e-r.html">LOADER</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.attributes/Attribute///PointingToDeclaration/">Attribute</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1916649835%2FProperties%2F-104082621" anchor-label="NAMESPACE" id="-1916649835%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-n-a-m-e-s-p-a-c-e.html"><span><span>NAMESPACE</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1916649835%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-n-a-m-e-s-p-a-c-e.html">NAMESPACE</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.attributes/Attribute///PointingToDeclaration/">Attribute</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1154253571%2FProperties%2F-104082621" anchor-label="ROLE_DATA" id="-1154253571%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-o-l-e_-d-a-t-a.html"><span>ROLE_</span><wbr><span>DATA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1154253571%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-r-o-l-e_-d-a-t-a.html">ROLE_DATA</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2112592696%2FProperties%2F-104082621" anchor-label="ROLE_JAR" id="2112592696%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-o-l-e_-j-a-r.html"><span>ROLE_</span><wbr><span>JAR</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2112592696%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-r-o-l-e_-j-a-r.html">ROLE_JAR</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2135161565%2FProperties%2F-104082621" anchor-label="ROLE_JAVADOC" id="2135161565%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-o-l-e_-j-a-v-a-d-o-c.html"><span>ROLE_</span><wbr><span>JAVADOC</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2135161565%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-r-o-l-e_-j-a-v-a-d-o-c.html">ROLE_JAVADOC</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="451686715%2FProperties%2F-104082621" anchor-label="ROLE_SOURCES" id="451686715%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-o-l-e_-s-o-u-r-c-e-s.html"><span>ROLE_</span><wbr><span>SOURCES</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="451686715%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-r-o-l-e_-s-o-u-r-c-e-s.html">ROLE_SOURCES</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1296821186%2FProperties%2F-104082621" anchor-label="USAGE_DATA" id="1296821186%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-s-a-g-e_-d-a-t-a.html"><span>USAGE_</span><wbr><span>DATA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1296821186%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-u-s-a-g-e_-d-a-t-a.html">USAGE_DATA</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="878358590%2FProperties%2F-104082621" anchor-label="USAGE_DEV_API" id="878358590%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-s-a-g-e_-d-e-v_-a-p-i.html"><span>USAGE_</span><wbr><span>DEV_</span><wbr><span>API</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="878358590%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-u-s-a-g-e_-d-e-v_-a-p-i.html">USAGE_DEV_API</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Custom <code class="lang-kotlin">org.gradle.usage</code> values on dev-channel variants — see class kdoc for the consumer-side selection snippet.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="613787778%2FProperties%2F-104082621" anchor-label="USAGE_DEV_JAVADOC" id="613787778%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-s-a-g-e_-d-e-v_-j-a-v-a-d-o-c.html"><span>USAGE_</span><wbr><span>DEV_</span><wbr><span>JAVADOC</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="613787778%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-u-s-a-g-e_-d-e-v_-j-a-v-a-d-o-c.html">USAGE_DEV_JAVADOC</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1492487872%2FProperties%2F-104082621" anchor-label="USAGE_DEV_RUNTIME" id="1492487872%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-s-a-g-e_-d-e-v_-r-u-n-t-i-m-e.html"><span>USAGE_</span><wbr><span>DEV_</span><wbr><span>RUNTIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1492487872%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-u-s-a-g-e_-d-e-v_-r-u-n-t-i-m-e.html">USAGE_DEV_RUNTIME</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1069687072%2FProperties%2F-104082621" anchor-label="USAGE_DEV_SOURCES" id="-1069687072%2FProperties%2F-104082621" data-filterable-set=":unimined-publish/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-publish/main" data-filterable-set=":unimined-publish/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-s-a-g-e_-d-e-v_-s-o-u-r-c-e-s.html"><span>USAGE_</span><wbr><span>DEV_</span><wbr><span>SOURCES</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1069687072%2FProperties%2F-104082621"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-publish/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-u-s-a-g-e_-d-e-v_-s-o-u-r-c-e-s.html">USAGE_DEV_SOURCES</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

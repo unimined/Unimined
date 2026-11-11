@@ -119,7 +119,22 @@
       </div>
       <div data-togglable="PROPERTY">
         <h2 class="tableheader">Properties</h2>
-        <div class="table"><a data-name="320734312%2FProperties%2F-584358979" anchor-label="engine" id="320734312%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+        <div class="table"><a data-name="2077678306%2FProperties%2F-584358979" anchor-label="devNamespaceLabel" id="2077678306%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="dev-namespace-label.html"><span>dev</span><wbr><span>Namespace</span><wbr><span><span>Label</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2077678306%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">var </span><a href="dev-namespace-label.html">devNamespaceLabel</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Canonical label for the environment's <i>dev</i> namespace, derived from the mapping tree at execution (<code class="lang-kotlin">namedNamespaces</code> hit, else the last column — the same heuristic as <code class="lang-kotlin">MinecraftExtension.devNamespace</code>). A user-declared <code class="lang-kotlin">env.devNamespace</code> lands in <a href="namespace-labels.html">namespaceLabels</a> directly instead; this field exists so wiring never resolves mapping data at configuration time.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="320734312%2FProperties%2F-584358979" anchor-label="engine" id="320734312%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -160,6 +175,36 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">var </span><a href="legacy-at.html">legacyAt</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">AT files use the legacy <code class="lang-kotlin">cls.member(desc)</code> syntax (forge 1.3–1.6.4) — they round-trip through the legacy reader/writer so era runtimes can still parse them.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="936719463%2FProperties%2F-584358979" anchor-label="namespaceAliases" id="936719463%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="namespace-aliases.html"><span>namespace</span><wbr><span><span>Aliases</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="936719463%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">var </span><a href="namespace-aliases.html">namespaceAliases</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Namespace renames consulted when an embedded AW/CT file's declared namespace is absent from the mapping tree — e.g. OSL classTweakers say <code class="lang-kotlin">intermediary</code> while an Ornithe environment's calamus column is <code class="lang-kotlin">calamusGen2</code>. Values also prefix-match tree columns, so wiring can bind <code class="lang-kotlin">intermediary</code> to the loader's prod channel name.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-695013962%2FProperties%2F-584358979" anchor-label="namespaceLabels" id="-695013962%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="namespace-labels.html"><span>namespace</span><wbr><span><span>Labels</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-695013962%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">var </span><a href="namespace-labels.html">namespaceLabels</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loader-facing labels for the <i>output</i> header's namespace column, keyed by target-namespace name (prefix-matched for gen-suffixed columns like <code class="lang-kotlin">featherGen2</code>). Fabric-family runtimes only accept canonical names (<code class="lang-kotlin">named</code>, <code class="lang-kotlin">intermediary</code>, <code class="lang-kotlin">official</code>, <code class="lang-kotlin">clientOfficial</code>/<code class="lang-kotlin">serverOfficial</code>) — the environment's internal column names must be rewritten before launch. Unmapped targets emit their own name unchanged.</p></div></div></div>
                 </div>
               </div>
             </div>
