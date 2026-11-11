@@ -22,37 +22,71 @@ my-mod/
 
 ## build.gradle.kts
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("com.hypherionmc.modutils.modpublisher") version "2.2.4"
-    id("xyz.wagyourtail.unimined.publish-modpublisher") version "..."
-}
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("com.hypherionmc.modutils.modpublisher") version "2.2.4"
+        id("xyz.wagyourtail.unimined.publish-modpublisher") version "..."
+    }
 
-unimined {
-    minecraft {
-        version = "1.20.1"
-        loader("fabric", "0.16.0")
-
-        sourceSet("forge") {
+    unimined {
+        minecraft {
             version = "1.20.1"
-            loader("forge", "47.2.0")
+            loader("fabric", "0.16.0")
+
+            sourceSet("forge") {
+                version = "1.20.1"
+                loader("forge", "47.2.0")
+            }
         }
     }
-}
 
-// artifacts + loaders + gameVersions + version already conventioned —
-// write publisher{} only for creds, platform ids, and release metadata
-publisher {
-    apiKeys {
-        curseforge(providers.environmentVariable("CURSE_TOKEN").get())
-        modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+    // artifacts + loaders + gameVersions + version already conventioned —
+    // write publisher{} only for creds, platform ids, and release metadata
+    publisher {
+        apiKeys {
+            curseforge(providers.environmentVariable("CURSE_TOKEN").get())
+            modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+        }
+        curseID.set("1234")
+        modrinthID.set("abc")
+        versionType.set("release")
     }
-    curseID.set("1234")
-    modrinthID.set("abc")
-    versionType.set("release")
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'com.hypherionmc.modutils.modpublisher' version '2.2.4'
+        id 'xyz.wagyourtail.unimined.publish-modpublisher' version '...'
+    }
+
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+
+            sourceSet("forge") {
+                version.set("1.20.1")
+                loader("forge", "47.2.0")
+            }
+        }
+    }
+
+    // artifacts + loaders + gameVersions + version already conventioned —
+    // write publisher{} only for creds, platform ids, and release metadata
+    publisher {
+        apiKeys {
+            curseforge(providers.environmentVariable("CURSE_TOKEN").get())
+            modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+        }
+        curseID.set("1234")
+        modrinthID.set("abc")
+        versionType.set("release")
+    }
+    ```
 
 ## What conventions in
 

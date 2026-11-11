@@ -5,13 +5,23 @@
 Each env exposes `mod*` configurations scoped to its source set —
 mod jars land remapped onto your mappings:
 
-```kotlin
-dependencies {
-    modImplementation("maven:coord")
-    modCompileOnly("maven:coord")
-    modLocalRuntime("maven:coord")
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    dependencies {
+        modImplementation("maven:coord")
+        modCompileOnly("maven:coord")
+        modLocalRuntime("maven:coord")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    dependencies {
+        modImplementation("maven:coord")
+        modCompileOnly("maven:coord")
+        modLocalRuntime("maven:coord")
+    }
+    ```
 
 ## Loader apis
 

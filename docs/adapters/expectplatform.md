@@ -44,33 +44,63 @@ my-mod/
 
 ## build.gradle.kts
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("xyz.wagyourtail.unimined.expect-platform") version "1.2.0"
-    id("xyz.wagyourtail.unimined.adapter-expectplatform") version "..."
-}
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("xyz.wagyourtail.unimined.expect-platform") version "1.2.0"
+        id("xyz.wagyourtail.unimined.adapter-expectplatform") version "..."
+    }
 
-unimined {
-    minecraft {
-        version = "1.20.1"
-        loader("fabric", "0.16.0")
-        expectPlatform {
-            platform("fabric") // the @ExpectPlatform platform name
-        }
-
-        sourceSet("forge") {
+    unimined {
+        minecraft {
             version = "1.20.1"
-            loader("forge", "47.2.0")
-            expectPlatform { platform("forge") }
+            loader("fabric", "0.16.0")
+            expectPlatform {
+                platform("fabric") // the @ExpectPlatform platform name
+            }
+
+            sourceSet("forge") {
+                version = "1.20.1"
+                loader("forge", "47.2.0")
+                expectPlatform { platform("forge") }
+            }
         }
     }
-}
 
-dependencies {
-    "mainImplementation"(expectPlatform.annotationsDep)
-}
-```
+    dependencies {
+        "mainImplementation"(expectPlatform.annotationsDep)
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'xyz.wagyourtail.unimined.expect-platform' version '1.2.0'
+        id 'xyz.wagyourtail.unimined.adapter-expectplatform' version '...'
+    }
+
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+            expectPlatform {
+                platform("fabric") // the @ExpectPlatform platform name
+            }
+
+            sourceSet("forge") {
+                version.set("1.20.1")
+                loader("forge", "47.2.0")
+                expectPlatform { platform("forge") }
+            }
+        }
+    }
+
+    dependencies {
+        mainImplementation(expectPlatform.annotationsDep)
+    }
+    ```
 
 ## Code
 
@@ -146,11 +176,19 @@ convention (vanilla, jarmod, modloader, bukkit family) get none.
 The same static transform is declared as a JAR-surface verb when
 you want it on a specific product instead of env-wide:
 
-```kotlin
-jar {
-    expectPlatform { platformName.set("fabric") }
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    jar {
+        expectPlatform { platformName.set("fabric") }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    jar {
+        expectPlatform { platformName.set("fabric") }
+    }
+    ```
 
 ## Requirements
 

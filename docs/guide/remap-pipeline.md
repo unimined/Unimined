@@ -3,16 +3,29 @@
 `unimined { remap { } }` configures the remapping steps — the verbs are
 ordered pipeline steps applied to the MC jar and remapped mod deps:
 
-```kotlin
-unimined {
-    remap {
-        unpick("path/to.unpick")
-        applyClassTweaker { /* custom bytecode transform */ }
-        sourceRemap { /* UML source remapper — the default engine */ }
-        jst { /* explicit opt-in: Java Source Transform */ }
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        remap {
+            unpick("path/to.unpick")
+            applyClassTweaker { /* custom bytecode transform */ }
+            sourceRemap { /* UML source remapper — the default engine */ }
+            jst { /* explicit opt-in: Java Source Transform */ }
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        remap {
+            unpick("path/to.unpick")
+            applyClassTweaker { /* custom bytecode transform */ }
+            sourceRemap { /* UML source remapper — the default engine */ }
+            jst { /* explicit opt-in: Java Source Transform */ }
+        }
+    }
+    ```
 
 Source remapping runs through UML's source remapper by default;
 `jst { }` remains as an explicit engine opt-in for verification or
@@ -41,18 +54,33 @@ skipped on identity remaps and on jars without the relevant resources.
 remapped between namespaces with `remap.artifact(...)`, which registers
 a `remap<Name>Artifact` task:
 
-```kotlin
-uniminedRemap {
-    artifact("baritone") {
-        input.set(layout.projectDirectory.file("baritone.jar"))
-        mappings.set(layout.projectDirectory.file("mapping.txt"))
-        from.set("target")   // optional — see autodetection below
-        to.set("source")
-        // output defaults to build/remapped/baritone-remapped.jar
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    uniminedRemap {
+        artifact("baritone") {
+            input.set(layout.projectDirectory.file("baritone.jar"))
+            mappings.set(layout.projectDirectory.file("mapping.txt"))
+            from.set("target")   // optional — see autodetection below
+            to.set("source")
+            // output defaults to build/remapped/baritone-remapped.jar
+        }
     }
-}
-// ./gradlew remapBaritoneArtifact
-```
+    // ./gradlew remapBaritoneArtifact
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    uniminedRemap {
+        artifact("baritone") {
+            input.set(layout.projectDirectory.file("baritone.jar"))
+            mappings.set(layout.projectDirectory.file("mapping.txt"))
+            from.set("target")   // optional — see autodetection below
+            to.set("source")
+            // output defaults to build/remapped/baritone-remapped.jar
+        }
+    }
+    // ./gradlew remapBaritoneArtifact
+    ```
 
 The mapping file is autodetected from its contents at execution time —
 no format flag is needed:
@@ -110,13 +138,23 @@ mistakes that compile fine but fail at runtime:
 Findings default to `ERROR` — the task fails. The level is a
 `remap`-block property:
 
-```kotlin
-unimined {
-    remap {
-        footgunChecks.set(FootgunCheckLevel.WARN) // log and continue; OFF disables
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        remap {
+            footgunChecks.set(FootgunCheckLevel.WARN) // log and continue; OFF disables
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        remap {
+            footgunChecks.set(FootgunCheckLevel.WARN) // log and continue; OFF disables
+        }
+    }
+    ```
 
 Sources jars get the marker but skip metadata/class checks (a sources
 jar legitimately lacks `.class` files). Only unimined-produced

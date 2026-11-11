@@ -5,17 +5,31 @@ generation — separate sources, its own classpath, but sharing the
 parent env's Minecraft/loader/mappings via implicit-parent
 inheritance:
 
-```kotlin
-unimined {
-    minecraft {
-        version = "1.20.1"
-        loader("fabric", "0.16.0")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            version = "1.20.1"
+            loader("fabric", "0.16.0")
 
-        datagen()                          // env "data" → runData
-        // or: datagen(client = true)      // client-side pack
+            datagen()                          // env "data" → runData
+            // or: datagen(client = true)      // client-side pack
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+
+            datagen()                          // env "data" → runData
+            // or: datagen("data", true)       // client-side pack
+        }
+    }
+    ```
 
 ## What it wires
 

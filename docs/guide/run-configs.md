@@ -19,21 +19,39 @@ artifact with your remapped mod jar — the shipped-runtime check
 
 ## Reaching runs
 
-```kotlin
-unimined {
-    runs {
-        named("client") {           // creates if absent
-            jvmArgs.add("-Xmx4G")
-        }
-        create("ciClient") {        // a custom variant
-            prod.set(false)
-        }
-        runs.configureEach {        // every run
-            environmentVariables.put("MC_DEBUG", "1")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        runs {
+            named("client") {           // creates if absent
+                jvmArgs.add("-Xmx4G")
+            }
+            create("ciClient") {        // a custom variant
+                prod.set(false)
+            }
+            runs.configureEach {        // every run
+                environmentVariables.put("MC_DEBUG", "1")
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        runs {
+            named("client") {           // creates if absent
+                jvmArgs.add("-Xmx4G")
+            }
+            create("ciClient") {        // a custom variant
+                prod.set(false)
+            }
+            runs.configureEach {        // every run
+                environmentVariables.put("MC_DEBUG", "1")
+            }
+        }
+    }
+    ```
 
 Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 `runFabricData`, …

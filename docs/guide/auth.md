@@ -5,18 +5,33 @@ how its session is produced. 2.0 has no project-global `runs.auth`:
 per-run, provider-backed, and nothing token-shaped ever lands on the
 configuration model or in the config cache.
 
-```kotlin
-unimined {
-    runs {
-        named("client") {
-            auth { microsoft() }
-        }
-        named("server") {
-            auth { offline("DevServer") }
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        runs {
+            named("client") {
+                auth { microsoft() }
+            }
+            named("server") {
+                auth { offline("DevServer") }
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        runs {
+            named("client") {
+                auth { microsoft() }
+            }
+            named("server") {
+                auth { offline("DevServer") }
+            }
+        }
+    }
+    ```
 
 ## Verbs
 
@@ -35,16 +50,29 @@ unimined {
 `runs { auth { } }` configures the default applied to *all* runs —
 per-run `auth`/`username` values always win:
 
-```kotlin
-unimined {
-    runs {
-        auth { microsoft() }         // everything logs in...
-        named("server") {
-            auth { offline("Srv") }  // ...except the server
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        runs {
+            auth { microsoft() }         // everything logs in...
+            named("server") {
+                auth { offline("Srv") }  // ...except the server
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        runs {
+            auth { microsoft() }         // everything logs in...
+            named("server") {
+                auth { offline("Srv") }  // ...except the server
+            }
+        }
+    }
+    ```
 
 ## Microsoft login
 
@@ -67,9 +95,15 @@ Store: `<unimined global cache>/auth/credentials.json`, written
 
 ## CI / headless
 
-```kotlin
-runs.named("client") { auth { injected() } }
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined.runs.named("client") { auth { injected() } }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined.runs.named("client") { auth { injected() } }
+    ```
 
 reads `UNIMINED_AUTH_ACCESS_TOKEN` (required) plus optional
 `UNIMINED_AUTH_USERNAME`/`_UUID`/`_XUID`/`_USER_TYPE` at execution —

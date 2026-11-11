@@ -19,24 +19,45 @@ my-mod/
 
 ## build.gradle.kts
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("xyz.wagyourtail.unimined.adapter-forgix") version "..."
-}
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("xyz.wagyourtail.unimined.adapter-forgix") version "..."
+    }
 
-unimined {
-    minecraft {
-        version = "1.20.1"
-        loader("fabric", "0.16.0")
-
-        sourceSet("forge") {
+    unimined {
+        minecraft {
             version = "1.20.1"
-            loader("forge", "47.2.0")
+            loader("fabric", "0.16.0")
+
+            sourceSet("forge") {
+                version = "1.20.1"
+                loader("forge", "47.2.0")
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'xyz.wagyourtail.unimined.adapter-forgix' version '...'
+    }
+
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+
+            sourceSet("forge") {
+                version.set("1.20.1")
+                loader("forge", "47.2.0")
+            }
+        }
+    }
+    ```
 
 That's the whole configuration — `mergeLoaderJars` discovers every
 bound non-auxiliary environment's production jar automatically.
@@ -67,13 +88,23 @@ Three sources feed the merge, in increasing precedence:
    extra inputs or key collisions — the env feed already covers the
    standard case:
 
-```kotlin
-uniminedLoaderMerge {
-    from(
-        "quilt" to tasks.named("remapQuiltJar").flatMap { it.archiveFile },
-    )
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    uniminedLoaderMerge {
+        from(
+            "quilt" to tasks.named("remapQuiltJar").flatMap { it.archiveFile },
+        )
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    uniminedLoaderMerge {
+        from {
+            input("quilt", tasks.named("remapQuiltJar").flatMap { it.archiveFile })
+        }
+    }
+    ```
 
 Inputs may be `File`s, task references, or providers — task-output
 providers carry their producer, so inputs always build before the

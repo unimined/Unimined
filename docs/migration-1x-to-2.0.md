@@ -54,14 +54,25 @@ provider declare the artifact directly instead of shipping a bespoke
 provider — BTA/ReIndev-style jars, pre-1.8 bukkit, offline/air-gapped
 artifacts:
 
-```kotlin
-unimined.minecraft.main.legacydist {
-    file("libs/bta-7.3-client.jar")      // or maven("g:a:v"),
-    // url("https://...", sha256 = "..."), producer("tool", "...")
-    namespace = "official"               // jar's production namespace
-    format = "obf"                       // optional — raw->dev remap view
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined.minecraft.main.legacydist {
+        file("libs/bta-7.3-client.jar")      // or maven("g:a:v"),
+        // url("https://...", sha256 = "..."), producer("tool", "...")
+        namespace = "official"               // jar's production namespace
+        format = "obf"                       // optional — raw->dev remap view
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined.minecraft.main.legacydist {
+        file("libs/bta-7.3-client.jar")      // or maven("g:a:v"),
+        // url("https://...", "..."), producer("tool", "...")
+        namespace = "official"               // jar's production namespace
+        format = "obf"                       // optional — raw->dev remap view
+    }
+    ```
 
 `legacydist {}` selects `provider("legacydist")` implicitly; the jar
 is cached by content hash and reported with the declared

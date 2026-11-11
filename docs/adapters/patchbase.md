@@ -27,30 +27,57 @@ my-patchbase/
 
 ## build.gradle.kts (authoring)
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("xyz.wagyourtail.unimined.adapter-patchbase") version "..."
-}
-
-unimined {
-    minecraft {
-        version = "1.7.10"
-        patchBaseCreator()
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("xyz.wagyourtail.unimined.adapter-patchbase") version "..."
     }
-}
-```
+
+    unimined {
+        minecraft {
+            version = "1.7.10"
+            patchBaseCreator()
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'xyz.wagyourtail.unimined.adapter-patchbase' version '...'
+    }
+
+    unimined {
+        minecraft {
+            version.set("1.7.10")
+            patchBaseCreator()
+        }
+    }
+    ```
 
 ## Consuming patch sets
 
-```kotlin
-unimined {
-    minecraft {
-        version = "1.7.10"
-        patchBase("com.example:my-patches:1.0")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            version = "1.7.10"
+            patchBase("com.example:my-patches:1.0")
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            version.set("1.7.10")
+            patchBase("com.example:my-patches:1.0")
+        }
+    }
+    ```
 
 Resolves the dep onto the env's `patchBaseMain` configuration and
 applies its class patches to the environment's MC jar before
@@ -61,11 +88,19 @@ verbatim.
 
 ## Authoring a patch set
 
-```kotlin
-sourceSet("main") {
-    patchBaseCreator()
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    sourceSet("main") {
+        patchBaseCreator()
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    sourceSet("main") {
+        patchBaseCreator()
+    }
+    ```
 
 Wires three tasks per environment:
 

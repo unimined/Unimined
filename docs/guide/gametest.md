@@ -4,16 +4,29 @@
 JUnit tests — real game launches orchestrated per test, not a plain
 JVM `test` run:
 
-```kotlin
-unimined {
-    minecraft {
-        version = "1.20.1"
-        loader("fabric", "0.16.0")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            version = "1.20.1"
+            loader("fabric", "0.16.0")
 
-        gametest()                         // env "gametest"
+            gametest()                         // env "gametest"
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+
+            gametest()                         // env "gametest"
+        }
+    }
+    ```
 
 ## What it wires
 

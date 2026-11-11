@@ -4,8 +4,15 @@
 metadata, emitted into the loader's descriptor (fabric.mod.json,
 mods.toml, …) at build time:
 
---8<-- "generated/mod-metadata.gradle.kts"
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/mod-metadata.gradle.kts"
+    ```
 
+=== "Groovy `build.gradle`"
+    ```groovy
+    --8<-- "generated/mod-metadata.gradle"
+    ```
 - `id`, `name`, `version`, `description`, `authors`, `license`, `url`, `icon`
 - `depend(modId, versionRange)` — metadata deps
 - `loader("fabric") { }` / `fabric { }` — loader-specific sections

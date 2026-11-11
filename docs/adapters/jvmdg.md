@@ -17,23 +17,43 @@ my-mod/
 
 ## build.gradle.kts
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("xyz.wagyourtail.unimined.jvmdg") version "..."
-}
-
-unimined {
-    minecraft {
-        version = "1.7.10"
-        loader("forge", "10.13.4.1614")
-        // downgrading is already on — only write jvmdowngrader {}
-        // to change the inferred target or opt this env out
-        jvmdowngrader(8)
-        // or jvmdowngrader { enabled.set(false) }
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("xyz.wagyourtail.unimined.jvmdg") version "..."
     }
-}
-```
+
+    unimined {
+        minecraft {
+            version = "1.7.10"
+            loader("forge", "10.13.4.1614")
+            // downgrading is already on — only write jvmdowngrader {}
+            // to change the inferred target or opt this env out
+            jvmdowngrader(8)
+            // or jvmdowngrader { enabled.set(false) }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'xyz.wagyourtail.unimined.jvmdg' version '...'
+    }
+
+    unimined {
+        minecraft {
+            version.set("1.7.10")
+            loader("forge", "10.13.4.1614")
+            // downgrading is already on — only write jvmdowngrader {}
+            // to change the inferred target or opt this env out
+            jvmdowngrader { target.set(8) }
+            // or jvmdowngrader { enabled.set(false) }
+        }
+    }
+    ```
 
 Downgrading is **on by default for every environment** — applying
 the plugin is the opt-in. `target` conventions to each env's own

@@ -22,14 +22,25 @@ environment with no provider-supplied sources:
 `bsm=1` (bytecode source mapping — the linemap extras) is on by
 default; engine options can override it:
 
-```kotlin
-unimined {
-    source {
-        engine.set("vineflower")
-        options.put("bsm", "1")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        source {
+            engine.set("vineflower")
+            options.put("bsm", "1")
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        source {
+            engine.set("vineflower")
+            options.put("bsm", "1")
+        }
+    }
+    ```
 
 Artifacts land in the env's generated local-repo as
 `minecraft-<env>-<version>-sources.jar` and `-linemapped.jar`.

@@ -5,29 +5,52 @@ bound environment's outgoing artifacts into an adhoc component named
 `unimined<Env>` (`uniminedMain` for `main`). Destination adapters pick
 those components up; none of them auto-publish `components.java`.
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined")
-    id("xyz.wagyourtail.unimined.publish")
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined")
+        id("xyz.wagyourtail.unimined.publish")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined'
+        id 'xyz.wagyourtail.unimined.publish'
+    }
+    ```
 
 Auxiliary environments (`datagen()`/`gametest()`) are test harnesses —
 they never produce components or publications.
 
 ## uniminedPublish { }
 
-```kotlin
-uniminedPublish {
-    javaPublication()                 // opt-in ordinary `java` component
-    mavenPublications.set(false)      // opt out of all Maven publications
-    environment("main") {
-        groupId = "com.example"
-        artifactId = "examplemod"
-        version = "1.0.0"
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    uniminedPublish {
+        javaPublication()                 // opt-in ordinary `java` component
+        mavenPublications.set(false)      // opt out of all Maven publications
+        environment("main") {
+            groupId = "com.example"
+            artifactId = "examplemod"
+            version = "1.0.0"
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    uniminedPublish {
+        javaPublication()                 // opt-in ordinary `java` component
+        mavenPublications.set(false)      // opt out of all Maven publications
+        environment("main") {
+            groupId.set("com.example")
+            artifactId.set("examplemod")
+            version.set("1.0.0")
+        }
+    }
+    ```
 
 `mavenPublications` is on by default: the host applies `maven-publish`
 and creates one `MavenPublication` per `unimined<Env>` component.
@@ -45,16 +68,29 @@ binds — `uniminedMain` → `uniminedMain`, `uniminedFabric` →
 `uniminedFabric`, etc. Repositories and credentials are plain Gradle
 `publishing {}` config:
 
-```kotlin
-publishing {
-    repositories {
-        maven {
-            url = uri("https://maven.example/releases")
-            credentials(PasswordCredentials::class)
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    publishing {
+        repositories {
+            maven {
+                url = uri("https://maven.example/releases")
+                credentials(PasswordCredentials::class)
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    publishing {
+        repositories {
+            maven {
+                url = uri("https://maven.example/releases")
+                credentials(PasswordCredentials)
+            }
+        }
+    }
+    ```
 
 Coordinates default per environment: `main` publishes as
 `<project.name>`; every other environment as `<project.name>-<env>`
@@ -83,18 +119,33 @@ stays `compileOnly` — no ModPublisher classes load unless you apply
 it). There is no adapter DSL — `publisher { }` is the single surface
 for what can't be inferred, and anything you set there wins:
 
-```kotlin
-publisher {
-    apiKeys {
-        curseforge(providers.environmentVariable("CURSE_TOKEN").get())
-        modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    publisher {
+        apiKeys {
+            curseforge(providers.environmentVariable("CURSE_TOKEN").get())
+            modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+        }
+        curseID.set("1234")
+        modrinthID.set("abc")
+        versionType.set("release")
+        debug.set(true)   // dry-run: builds the upload plan, uploads nothing
     }
-    curseID.set("1234")
-    modrinthID.set("abc")
-    versionType.set("release")
-    debug.set(true)   // dry-run: builds the upload plan, uploads nothing
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    publisher {
+        apiKeys {
+            curseforge(providers.environmentVariable("CURSE_TOKEN").get())
+            modrinth(providers.environmentVariable("MODRINTH_TOKEN").get())
+        }
+        curseID.set("1234")
+        modrinthID.set("abc")
+        versionType.set("release")
+        debug.set(true)   // dry-run: builds the upload plan, uploads nothing
+    }
+    ```
 
 Conventions supplied automatically: `artifact` (the forgix
 `mergedElements` jar when `adapter-forgix` is applied, else the first
@@ -125,11 +176,19 @@ The `adapter-forgix` adapter (plugin id
 `xyz.wagyourtail.unimined.adapter-forgix`) merges per-loader
 production jars with Forgix's engine:
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined.adapter-forgix") version "..."
-}
-```
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined.adapter-forgix") version "..."
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined.adapter-forgix' version '...'
+    }
+    ```
 
 Every bound environment's production jar feeds `mergeLoaderJars`
 automatically (`remap<Env>Jar`, or `jar` for non-remapping envs;

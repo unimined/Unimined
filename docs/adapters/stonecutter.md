@@ -28,19 +28,35 @@ my-mod/
 
 ## settings.gradle.kts
 
-```kotlin
-plugins {
-    id("dev.kikugie.stonecutter") version "0.9.8"
-}
-
-stonecutter {
-    shared {
-        versions("1.20.4", "1.21.1")
-        vcsVersion.set("1.21.1")
+=== "Kotlin `settings.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("dev.kikugie.stonecutter") version "0.9.8"
     }
-    kotlinController.set(true)
-}
-```
+
+    stonecutter {
+        shared {
+            versions("1.20.4", "1.21.1")
+            vcsVersion = "1.21.1"
+        }
+        kotlinController = true
+    }
+    ```
+
+=== "Groovy `settings.gradle`"
+    ```groovy
+    plugins {
+        id 'dev.kikugie.stonecutter' version '0.9.8'
+    }
+
+    stonecutter {
+        shared {
+            versions("1.20.4", "1.21.1")
+            vcsVersion = "1.21.1"
+        }
+        kotlinController = true
+    }
+    ```
 
 ## build.gradle.kts (central script)
 
@@ -48,31 +64,59 @@ Applied to every version project — the adapter supplies
 `env.version` from the chiseled version, so this script stays
 version-free:
 
-```kotlin
-plugins {
-    id("xyz.wagyourtail.unimined") version "..."
-    id("xyz.wagyourtail.unimined.adapter-stonecutter") version "..."
-    kotlin("jvm") version "..."
-}
-
-group = "com.example.mymod"
-
-unimined {
-    minecraft {
-        // env.version conventions to stonecutter.current.version —
-        // "1.20.4" when building that project, "1.21.1" for the other
-        loader("fabric", "0.16.0")
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    plugins {
+        id("xyz.wagyourtail.unimined") version "..."
+        id("xyz.wagyourtail.unimined.adapter-stonecutter") version "..."
+        kotlin("jvm") version "..."
     }
-}
 
-dependencies {
-    // per-version dep versions come from each version's
-    // gradle.properties — stonecutter exposes them as `deps.*`
-    // project properties
-    modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
-}
-```
+    group = "com.example.mymod"
+
+    unimined {
+        minecraft {
+            // env.version conventions to stonecutter.current.version —
+            // "1.20.4" when building that project, "1.21.1" for the other
+            loader("fabric", "0.16.0")
+        }
+    }
+
+    dependencies {
+        // per-version dep versions come from each version's
+        // gradle.properties — stonecutter exposes them as `deps.*`
+        // project properties
+        modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
+        modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    plugins {
+        id 'xyz.wagyourtail.unimined' version '...'
+        id 'xyz.wagyourtail.unimined.adapter-stonecutter' version '...'
+        id 'org.jetbrains.kotlin.jvm' version '...' // TODO-groovy: kotlin plugin alias
+    }
+
+    group = "com.example.mymod"
+
+    unimined {
+        minecraft {
+            // env.version conventions to stonecutter.current.version —
+            // "1.20.4" when building that project, "1.21.1" for the other
+            loader("fabric", "0.16.0")
+        }
+    }
+
+    dependencies {
+        // per-version dep versions come from each version's
+        // gradle.properties — stonecutter exposes them as `deps.*`
+        // project properties
+        modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
+        modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
+    }
+    ```
 
 ## versions/1.20.4/gradle.properties
 
@@ -104,18 +148,33 @@ versions/1.20.4/
     └── forge/               # per-version, per-loader overrides
 ```
 
-```kotlin
-// central build.gradle.kts
-unimined {
-    minecraft {
-        loader("fabric", "0.16.0")            // main env
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    // central build.gradle.kts
+    unimined {
+        minecraft {
+            loader("fabric", "0.16.0")            // main env
 
-        sourceSet("forge") {
-            loader("forge", "47.2.0")         // forge env — also
-        }                                     //   chiseled per version
+            sourceSet("forge") {
+                loader("forge", "47.2.0")         // forge env — also
+            }                                     //   chiseled per version
+        }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    // central build.gradle
+    unimined {
+        minecraft {
+            loader("fabric", "0.16.0")            // main env
+
+            sourceSet("forge") {
+                loader("forge", "47.2.0")         // forge env — also
+            }                                     //   chiseled per version
+        }
+    }
+    ```
 
 Each version project then produces `jar` + `remapFabricJar` +
 `remapForgeJar` for its own version — the full version×loader

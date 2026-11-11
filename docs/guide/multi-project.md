@@ -15,18 +15,33 @@ Two shapes cover the 1.x use cases:
 Each `minecraft { sourceSet(...) { } }` block is an independent
 environment — its own product, loader, mappings, runs:
 
-```kotlin
-unimined {
-    minecraft {
-        loader("fabric", "0.16.0")            // env "main"
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            loader("fabric", "0.16.0")            // env "main"
 
-        sourceSet("forge") {
-            version = "1.20.1"
-            loader("forge", "47.2.0")
+            sourceSet("forge") {
+                version = "1.20.1"
+                loader("forge", "47.2.0")
+            }
         }
     }
-}
-```
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            loader("fabric", "0.16.0")            // env "main"
+
+            sourceSet("forge") {
+                version.set("1.20.1")
+                loader("forge", "47.2.0")
+            }
+        }
+    }
+    ```
 
 ### Sharing between envs
 
@@ -51,13 +66,27 @@ Sibling `sourceSet` envs at `minecraft {}` top level don't share —
 This is what `unimined new mymod --modules --loader fabric=…
 --loader forge=…` emits. Settings includes every module:
 
---8<-- "generated/multiloader-settings.gradle.kts"
+=== "Kotlin `settings.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/multiloader-settings.gradle.kts"
+    ```
 
+=== "Groovy `settings.gradle`"
+    ```groovy
+    --8<-- "generated/multiloader-settings.gradle"
+    ```
 A loader module applies unimined, declares its env on `main`, and
 depends on `:common` for shared code:
 
---8<-- "generated/multiloader-fabric.gradle.kts"
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/multiloader-fabric.gradle.kts"
+    ```
 
+=== "Groovy `build.gradle`"
+    ```groovy
+    --8<-- "generated/multiloader-fabric.gradle"
+    ```
 `common` gets a loader-less env (MC classpath + mappings only); the
 loader jars land as `modImplementation` deps in each loader module.
 Cross-project inheritance uses the `<project>:<env>` path form —
