@@ -10,5 +10,6 @@ internal class RuntimeMaterializedMappingSource(
     override val formatHint: String?,
     override val nsMap: Map<String, String> = declaration.nsMap,
     override val namedNamespaces: Set<String> = declaration.namedNamespaces,
-    override val attachments: Map<String, Path> = emptyMap()
+    override val attachments: Map<String, Path> = emptyMap(),
+    override val trusted: Boolean = false
 ) : MaterializedMappingSource

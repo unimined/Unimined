@@ -10,6 +10,7 @@ dependencies {
     "coreApi"(libs.unimined.mapping.library)
     "coreApi"(libs.commons.core)
     "coreApi"(libs.commons.kt)
+    "coreImplementation"(libs.commons.compress)
     "coreApi"(libs.kotlinx.serialization.json)
     "testFixturesApi"(libs.unimined.mapping.library)
     "testFixturesApi"(libs.asm)

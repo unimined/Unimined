@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mapping.task
 
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -20,7 +21,7 @@ import xyz.wagyourtail.unimined.mapping.internal.MappingResolver
  * [xyz.wagyourtail.unimined.api.mapping.MappingViewSerializer] covers the
  * resolved views, else the row-only [MappingBundle].
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class ProduceMappingBundleTask : DefaultTask() {
 
     /** The environment this bundle serves — drives provider context. */

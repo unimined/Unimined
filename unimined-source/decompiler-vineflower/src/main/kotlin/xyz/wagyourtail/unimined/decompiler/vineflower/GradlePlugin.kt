@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.decompiler.vineflower
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.decompiler.vineflower` — supplies
@@ -13,6 +14,7 @@ import org.gradle.api.Project
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         target.pluginManager.apply(xyz.wagyourtail.unimined.source.GradlePlugin::class.java)
     }
 

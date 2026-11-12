@@ -61,6 +61,8 @@ Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 | Field | Purpose |
 |---|---|
 | `environment` | which env's classpath/dirs the run launches (convention: the env it was registered for) |
+| `enabled` | `false` = the `run<Name>` task exists but fails with a "disabled" message — gate runs on env/CI conditions |
+| `beforeRun(task)` / `beforeRun { }` | task deps/actions wired ahead of launch (e.g. build a datapack first) |
 | `side` | `CLIENT`/`SERVER` — defaults from the run name |
 | `prod` | `true` = production-namespace MC artifact + remapped jar |
 | `mainClass` | launch main class (loader-provided by default) |

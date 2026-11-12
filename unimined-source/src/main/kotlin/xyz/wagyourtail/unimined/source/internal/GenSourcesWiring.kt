@@ -129,6 +129,14 @@ internal object GenSourcesWiring {
                 // bsm=1 emits vineflower linemap extras (0x4646) for the
                 // -linemapped jar; user options override
                 get() = mapOf("bsm" to "1") + source.options.get()
+            override val jvmArgs: List<String>
+                get() = source.jvmArgs.get()
+            override val javaVersion: String?
+                get() = source.javaVersion.orNull?.takeIf { it.isNotBlank() }
+            override val args: List<String>
+                get() = source.args.get()
+            override val dependency: String?
+                get() = source.dependency.orNull
         }
 
         val engine = DecompilerRegistry().select(spec, source.engine.orNull)

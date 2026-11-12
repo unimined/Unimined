@@ -20,4 +20,22 @@ interface DecompileSpec {
     /** Engine-specific options (vineflower prefs, CFR flags, ...). */
     val options: Map<String, String>
 
+    /** JVM args for the decompiler's forked JVM. */
+    val jvmArgs: List<String>
+        get() = emptyList()
+
+    /** Java major version the forked JVM resolves through the toolchain
+     *  service — `null`/blank runs on the build JVM. */
+    val javaVersion: String?
+        get() = null
+
+    /** Raw CLI args appended after the `-key=value` options. */
+    val args: List<String>
+        get() = emptyList()
+
+    /** The external engine's decompiler coordinate — set by
+     *  `source { generator(...) }`/`dependency.set(...)`. */
+    val dependency: String?
+        get() = null
+
 }

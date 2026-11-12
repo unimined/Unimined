@@ -151,12 +151,24 @@ class SideOnlyMarkers(
     private val sideMarkers: List<JarMerger.SideMarker>,
 ) : MergeExtension {
 
+    /** 1.x `isAnonClass` — anonymous classes carry an InnerClasses
+     *  self-entry with no `innerName`; stamping them was skipped
+     *  (the marker is only meaningful on named types). */
+    private fun isAnonClass(node: ClassNode): Boolean =
+        node.innerClasses?.firstOrNull { it.name == node.name }
+            .let { it != null && it.innerName == null }
+
     private fun mark(annotations: MutableList<AnnotationNode>?,
                      set: (MutableList<AnnotationNode>) -> Unit,
                      side: EnvType) {
+        // JOINED provenance = content from both sides — unmarked
+        if (side == EnvType.JOINED) return
         val target = annotations
             ?: mutableListOf<AnnotationNode>().also(set)
         for (marker in sideMarkers) {
+            // already carries this marker — never stamp a duplicate
+            // (1.x `actualSideMarker` presence check)
+            if (target.any { it.desc == "L${marker.annotation};" }) continue
             target.add(AnnotationNode("L${marker.annotation};").apply {
                 values = listOf("value", arrayOf(
                     "L${marker.enumType};",
@@ -171,8 +183,10 @@ class SideOnlyMarkers(
     ) {
         if (sideMarkers.isEmpty()) return
         ctx.provenance.classSide?.let { side ->
-            mark(node.visibleAnnotations,
-                { node.visibleAnnotations = it }, side)
+            if (!isAnonClass(node)) {
+                mark(node.visibleAnnotations,
+                    { node.visibleAnnotations = it }, side)
+            }
         }
         for (field in node.fields) {
             ctx.provenance.fields[field.name + field.desc]?.let { side ->

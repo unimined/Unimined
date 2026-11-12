@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.BuiltinMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingContext
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFB
 import xyz.wagyourtail.unimined.mapping.formats.umf.UMFReader
+import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.sources.BuiltinMappingSourceProvider
 import java.nio.file.Files
@@ -89,17 +91,35 @@ class BuiltinMappingSourceProviderTest {
         """.trimIndent() + "\n"
     )
 
+    /** reads a materialized document — derived files are UMFB binary now;
+     *  dispatch on magic so text UMF fixtures still parse */
+    private fun readDoc(path: Path): MutableMappingTree {
+        val bytes = Files.readAllBytes(path)
+        val tree = MutableMappingTree()
+        if (bytes.size >= 4 && bytes[0] == 'U'.code.toByte() &&
+            bytes[1] == 'M'.code.toByte() && bytes[2] == 'F'.code.toByte() &&
+            bytes[3] == 'B'.code.toByte()
+        ) {
+            UMFB.read(bytes, tree)
+        } else {
+            runBlocking { UMFReader.read(bytes.decodeToString(), tree) }
+        }
+        return tree
+    }
+
     @Test
     fun `official materializes an identity document`() {
         val out = provider.materialize(source("official"), ctx)
-        assertEquals("umf\t1\t3\nofficial", Files.readString(out.files.single()).trim())
+        val tree = readDoc(out.files.single())
+        assertEquals(listOf("official"), tree.namespaces.map { it.name })
+        assertTrue(!tree.classes.iterator().hasNext())
     }
 
     @Test
     fun `mojmap re-emits proguard official-first`() {
         channelFiles["mojmap"] = listOf(file("client_mappings.txt", mojmapTxt))
         val out = provider.materialize(source("mojmap"), ctx)
-        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
+        val tree = readDoc(out.files.single())
         assertEquals(listOf("official", "mojmap"), tree.namespaces.map { it.name })
         val cls = tree.getClass(Namespace("official"), InternalName.read("net/minecraft/a"))
         assertEquals("net/minecraft/Named", cls?.names?.get(Namespace("mojmap"))?.toString())
@@ -110,7 +130,7 @@ class BuiltinMappingSourceProviderTest {
         channelFiles["mojmap"] = listOf(file("client_mappings.txt", mojmapTxt))
         channelFiles["searge"] = listOf(mcpConfigZip())
         val out = provider.materialize(source("searge", "version" to "1.20.1"), ctx)
-        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
+        val tree = readDoc(out.files.single())
         assertEquals(
             listOf("official", "mojmap", "searge"),
             tree.namespaces.map { it.name }
@@ -133,7 +153,7 @@ class BuiltinMappingSourceProviderTest {
     fun `searge before 1-16-5 keeps srg class names`() {
         channelFiles["searge"] = listOf(mcpConfigZip())
         val out = provider.materialize(source("searge", "version" to "1.15.2"), ctx)
-        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
+        val tree = readDoc(out.files.single())
         assertEquals(listOf("official", "searge"), tree.namespaces.map { it.name })
         val cls = tree.getClass(Namespace("official"), InternalName.read("net/minecraft/a"))!!
         assertEquals("net/minecraft/src/C_1_", cls.names[Namespace("searge")]?.toString())
@@ -180,7 +200,7 @@ class BuiltinMappingSourceProviderTest {
         val out = provider.materialize(
             source("forgeBuiltinMCP", "version" to "6.6.2.534"), ctx
         )
-        val tree = runBlocking { UMFReader.read(Files.readString(out.files.single())) }
+        val tree = readDoc(out.files.single())
         assertEquals(
             listOf("official", "searge", "forgeMCP"),
             tree.namespaces.map { it.name }
@@ -214,9 +234,7 @@ class BuiltinMappingSourceProviderTest {
             val out = provider.materialize(
                 source("forgeBuiltinMCP", "version" to v.substringAfter('-')), ctx
             )
-            val tree = runBlocking {
-                UMFReader.read(Files.readString(out.files.single()))
-            }
+            val tree = readDoc(out.files.single())
             assertEquals(
                 listOf("official", "searge", "forgeMCP"),
                 tree.namespaces.map { it.name }, "ns order for $v"

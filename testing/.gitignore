@@ -1,4 +1,11 @@
 *
 !launch-verify.sh
 !interop-verify.sh
+!perf-bench.sh
 !.gitignore
+!perf/
+!perf/**
+perf/**/.gradle/
+perf/**/build/
+perf/**/run/
+perf/.cold-guh/

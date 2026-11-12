@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
 import xyz.wagyourtail.unimined.api.util.writeAtomically
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
@@ -135,7 +136,19 @@ internal object UserdevExtract {
      * the modfile gets `minecraft` and the raw union stays unnamed.
      */
     fun writeClientExtra(clientJar: Path, outJar: Path) {
-        if (outJar.toFile().isFile) return
+        // content-stamp sidecar — a rebuilt client jar (same version)
+        // must still refresh the extract; jar bytes would change only
+        // on content change
+        val stamp = outJar.resolveSibling("${outJar.fileName}.sha")
+        val inputSha = runCatching {
+            java.security.MessageDigest.getInstance("SHA-1")
+                .digest(Files.readAllBytes(clientJar))
+                .joinToString("") { "%02x".format(it) }
+        }.getOrNull()
+        if (outJar.toFile().isFile && inputSha != null &&
+            stamp.toFile().isFile &&
+            Files.readString(stamp) == inputSha
+        ) return
         outJar.parent.createDirectories()
         JarFile(clientJar.toFile()).use { inJar ->
             val manifest = java.util.jar.Manifest().apply {
@@ -158,5 +171,6 @@ internal object UserdevExtract {
             }
             }
         }
+        if (inputSha != null) Files.writeString(stamp, inputSha)
     }
 }

@@ -295,13 +295,13 @@ internal object Templates {
      */
     private fun minecraftBody(spec: InitSpec): String =
         if (spec.loaders.size > 1) {
-            // loader-less `common` env carries version/side and the MC
-            // classpath; each loader env `combineWith`s it so shared code
-            // sees Minecraft and flows into every loader jar
+            // loader-less top-level env carries version/side/mappings;
+            // sourceSet envs inherit it via implicit parent (no explicit
+            // combineWith — applyImplicitParent covers non-aux envs)
             val mc = spec.mcVersion
             // shared namespace for common code — loader envs inherit
-            // it via combineWith; intermediary rides along only when a
-            // fabric-family env needs the runtime chain
+            // it via implicit parent; intermediary rides along only when
+            // a fabric-family env needs the runtime chain
             val sharedMappings = buildList {
                 if (spec.loaders.any { it.first.contains("fabric") } &&
                         !InitSpec.isUnobfEra(mc))
@@ -331,12 +331,9 @@ internal object Templates {
                     "LOADER_VERSION" to verRef(spec,
                         "${loader.lowercase().replace('-', '_')}_version",
                         "\"$version\""),
-                    "MC_VERSION" to "combined from common",
                     "SIDE" to "",
                     "MAPPINGS" to "",
-                )).replace(
-                    propSet(spec, "version", "\"combined from common\""),
-                    "combineWith(\"main\")")
+                ))
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(
@@ -505,7 +502,14 @@ internal object Templates {
         val p = spec.product ?: error("CUSTOM_PRODUCT requires product")
         val kts = spec.dsl == InitSpec.Dsl.KOTLIN
         val fileCall = spec.distFile?.let {
-            if (kts) "\n    file(\"$it\")" else "\n    file('$it')"
+            // `maven:`/`url:` prefixes emit the matching declared-source
+            // verb; a bare path is a local `file(...)`
+            val (verb, arg) = when {
+                it.startsWith("maven:") -> "maven" to it.removePrefix("maven:")
+                it.startsWith("url:") -> "url" to it.removePrefix("url:")
+                else -> "file" to it
+            }
+            if (kts) "    $verb(\"$arg\")\n" else "    $verb('$arg')\n"
         } ?: ""
         val versionLine = "    " + propSet(spec, "version",
             verRef(spec, "minecraft_version",

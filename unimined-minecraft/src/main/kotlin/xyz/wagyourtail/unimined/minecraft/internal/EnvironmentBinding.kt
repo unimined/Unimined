@@ -77,6 +77,14 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             isCanBeConsumed = false
             isCanBeResolved = false
         }
+        // resolvable — the production-jar JiJ post-pass resolves its
+        // artifacts for embedded file+coordinate pairs
+        project.configurations.maybeCreate(
+            environment.includeConfigurationName
+        ).apply {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+        }
     }
 
     /**
@@ -194,18 +202,42 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
         // unless the env's JAR pipeline carries env-scoped work (jar
         // processors, contributed/declared steps): the raw→dev transform
         // is the only host for it, so the dev artifact must materialize.
-        val contribution = objects.fileCollection().from(providers.provider {
-            val devView = ext.devViewConfigurations[environmentId] ?: return@provider rawView
+        //
+        // Provider shape matters under the configuration cache:
+        // `fileCollection.from(provider { conf })` (a CallableProvider
+        // yielding a Configuration) resolves to EMPTY on CC-restore
+        // runs — Gradle loses the conf's resolution link and the view's
+        // transform outputs never materialize. The working idiom is a
+        // provider chain of domain-object providers: a Boolean decision
+        // provider (its snapshot is stable — the namespace mode can't
+        // change between runs) flat-mapped onto `configurations.named`
+        // branches so each branch stays a first-class conf reference
+        // resolved at execution.
+        val useRawView = providers.provider {
+            if (ext.devViewConfigurations[environmentId] == null) return@provider true
             val providerArtifacts = ext.artifacts(environmentId).get()
             if (ext.materializeDevArtifact[environmentId]?.orNull != true) {
                 if (providerArtifacts.namespaceMode.get() == NamespaceMode.IDENTITY) {
-                    return@provider rawView
+                    return@provider true
                 }
                 val dev = ext.devNamespace(environmentId).orNull
                 val source = ext.sourceNamespace(environmentId).orNull
-                if (dev != null && dev == source) rawView else devView
-            } else devView
-        })
+                dev != null && dev == source
+            } else false
+        }
+        // devView's Configuration name is only stable after transform
+        // wiring registers it — resolve the name lazily inside a
+        // provider so the pick still works when this binding runs first
+        val devViewName = providers.provider {
+            ext.devViewConfigurations[environmentId]?.name ?: rawView.name
+        }
+        val contribution = objects.fileCollection().from(
+            useRawView.flatMap { useRaw ->
+                devViewName.flatMap { name ->
+                    project.configurations.named(if (useRaw) rawView.name else name)
+                }
+            }
+        )
         sourceSet.compileClasspath += contribution
         sourceSet.runtimeClasspath += contribution
 
@@ -283,6 +315,7 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 p.mergeIncludeGlobs.set(environment.mergeIncludeGlobs)
                 p.mergeExcludeGlobs.set(environment.mergeExcludeGlobs)
                 p.stripBundledServerLibraries.set(environment.stripBundledServerLibraries)
+                p.sideMarkers.set(environment.sideMarkers)
                 // split-side merged env: remap each side into the
                 // shared (mod-source) namespace before merging — the
                 // raw merge can't pair disjoint obf namespaces.
@@ -309,23 +342,25 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                         environment.mappingsSpec.splitOfficialNamespaces
                     } else null
                 })
-                p.mergeMappings.set(providers.provider {
-                    if (environment.mappingsSpec.splitOfficial) {
-                        ext.mappingBundleJson(
-                            environmentId,
-                            ext.artifacts(environmentId).map {
-                                it.mappings.orNull?.namespaces?.firstOrNull()?.name
-                                    ?: throw GradleException(
-                                        "unimined: environment " +
-                                        "'$environmentId' produced no " +
-                                        "mapping tree"
-                                    )
-                            },
-                            ext.modSourceNamespaces(environmentId)
-                                .map { it.single() }
-                        ).get()
-                    } else null
-                })
+                p.mergeMappingsFile.set(
+                    ext.project.layout.file(providers.provider {
+                        if (environment.mappingsSpec.splitOfficial) {
+                            ext.mappingBundleFile(
+                                environmentId,
+                                ext.artifacts(environmentId).map {
+                                    it.mappings.orNull?.namespaces?.firstOrNull()?.name
+                                        ?: throw GradleException(
+                                            "unimined: environment " +
+                                            "'$environmentId' produced no " +
+                                            "mapping tree"
+                                        )
+                                },
+                                ext.modSourceNamespaces(environmentId)
+                                    .map { it.single() }
+                            ).orNull?.asFile
+                        } else null
+                    }.map { it!! })
+                )
             }
         }
     }

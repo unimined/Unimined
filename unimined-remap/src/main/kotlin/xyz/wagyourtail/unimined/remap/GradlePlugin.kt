@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.remap
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.remap` — remapper SPI host for
@@ -12,6 +13,7 @@ import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         target.extensions.create("uniminedRemap", RemapExtension::class.java, target)
         target.uniminedAdopt("remap", RemapExtension::class.java)
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {

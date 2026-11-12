@@ -9,6 +9,7 @@ import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mod.ModExtension
+import xyz.wagyourtail.unimined.mod.ModMetadataEmitterRegistry
 import xyz.wagyourtail.unimined.mod.task.GenerateModMetadataTask
 
 /**
@@ -107,8 +108,37 @@ internal object ModPackagingWiring {
                         }
             })
             t.declaredAccessFiles.from(
-                environment.accessWideners, environment.accessTransformers
+                environment.accessWideners, environment.accessTransformers,
+                environment.accessFileOverrides.map { specs ->
+                    specs.map { java.io.File(it.path) }
+                }
             )
+            t.customAccessFiles.set(environment.accessFileOverrides)
+            // loader packaging facts — version feeds manifest attrs
+            // (`Fabric-Loader-Version`), manifestAttributes carries
+            // loader-contributed extras (ornithe `Calamus-Generation`)
+            t.loaderVersion.set(
+                environment.loaderSpec.map { it.version })
+            t.manifestAttributes.set(environment.manifestAttributes)
+            val emitters = ModMetadataEmitterRegistry()
+            // AT→AW conversion needs the dev-namespace tree — attach
+            // the env's mapping bundle only when the loader consumes
+            // AW AND AT-family inputs are declared, so the common
+            // AW-on-fabric shape never pays for mapping resolution at
+            // processResources
+            val consumesAw = environment.loaderSpec.orNull?.name?.let {
+                emitters.has(it) && emitters.select(it).accessFormat == "aw"
+            } ?: false
+            if (consumesAw && (!environment.accessTransformers.isEmpty ||
+                    environment.accessFileOverrides.get().isNotEmpty())) {
+                t.accessBundle.from(
+                    minecraft.mappingBundle(
+                        environmentId, "access-at2aw",
+                        minecraft.devNamespace(environmentId),
+                        minecraft.devNamespace(environmentId)
+                    )
+                )
+            }
         }
 
         // publish the env's resolved mod id for run-config `{modid}`

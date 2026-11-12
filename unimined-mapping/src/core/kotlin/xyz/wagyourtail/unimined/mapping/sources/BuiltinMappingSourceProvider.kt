@@ -3,15 +3,18 @@ package xyz.wagyourtail.unimined.mapping.sources
 import kotlinx.coroutines.runBlocking
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.*
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6FieldReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6MethodReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6PackageReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6ParamReader
+import xyz.wagyourtail.unimined.mapping.formats.FormatReaderSettings
 import xyz.wagyourtail.unimined.mapping.formats.proguard.ProguardReader
 import xyz.wagyourtail.unimined.mapping.formats.srg.SrgReader
-import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
+import okio.BufferedSink
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFB
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Reader
 import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV2Reader
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
@@ -55,11 +58,31 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
             "forgeBuiltinMCP" -> forgeBuiltinMCPSource(source, ctx, params)
             "parchment" -> parchmentSource(source, ctx, params)
             "spigot" -> spigotSource(source, ctx, params)
+            "yarnv1" -> yarnv1Source(source, ctx, params)
             else -> throw IllegalStateException(
                 "mappings { ${source.channel}() }: unknown builtin channel; " +
-                        "expected one of official, mojmap, searge, forgeBuiltinMCP, parchment, spigot"
+                        "expected one of official, mojmap, searge, forgeBuiltinMCP, parchment, spigot, yarnv1"
             )
         }
+    }
+
+    /**
+     * `yarnv1()` — the environment host resolves the yarn jar, runs
+     * stitch `proposeFieldNames`, and hands back the filled tiny-v1
+     * document; it reads verbatim (no derived rewrite needed — the
+     * document's own `intermediary`/`named` labels already compose).
+     */
+    private fun yarnv1Source(
+        source: BuiltinMappingSource,
+        ctx: MappingContext,
+        params: Map<String, String>
+    ): MaterializedMappingSource {
+        val files = ctx.resolveChannel("yarnv1", params)
+        if (files.isEmpty()) throw IllegalStateException(
+            "mappings { yarnv1() }: the environment's provider did not " +
+                    "resolve a stitch-filled tiny document"
+        )
+        return RuntimeMaterializedMappingSource(source, files, null)
     }
 
     private fun channelCacheDir(ctx: MappingContext, channel: String): Path {
@@ -68,13 +91,21 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         return base.resolve("builtin/$channel/${ctx.environmentId}")
     }
 
-    private fun writeDerived(dir: Path, name: String, write: (StringBuilder) -> Unit): Path {
+    // derived documents are machine-generated and machine-consumed — they
+    // carry UMFB (binary event stream) rather than text UMF so the
+    // same-run re-read hydrates via the unchecked binary path instead of
+    // re-parsing syntax the writer just proved well-formed
+    private fun writeDerived(dir: Path, name: String, write: (BufferedSink) -> Unit): Path {
         val out = dir.resolve(name)
         if (!Files.exists(out)) {
-            val sb = StringBuilder()
-            write(sb)
+            val buf = okio.Buffer()
+            // source-format read + tree emit — the dominant cold-cache cost
+            // inside mappings.resolve; kept dark before attribution
+            Perf.span("mappings.materialize.derive", "file" to name) {
+                write(buf)
+            }
             Files.createDirectories(dir)
-            out.writeAtomically { tmp -> Files.writeString(tmp, sb) }
+            out.writeAtomically { tmp -> Files.write(tmp, buf.readByteArray()) }
         }
         return out
     }
@@ -103,13 +134,18 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         source: BuiltinMappingSource,
         ctx: MappingContext
     ): MaterializedMappingSource {
-        val out = writeDerived(channelCacheDir(ctx, "official"), "official.umf") {
-            it.append("umf\t1\t3\nofficial\n")
+        val out = writeDerived(channelCacheDir(ctx, "official"), "official.umfb") {
+            UMFB.write(it).apply {
+                header(listOf(Namespace("official")))
+                end()
+            }
         }
         // `official` is the raw (obf) side — not a named namespace;
         // an official-only tree still resolves it via the last-ns
         // fallback
-        return RuntimeMaterializedMappingSource(source, listOf(out), null)
+        return RuntimeMaterializedMappingSource(
+            source, listOf(out), null, trusted = true
+        )
     }
 
     /**
@@ -129,20 +165,27 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val official = Namespace("official")
         val mojmap = Namespace("mojmap")
         val out = writeDerived(
-            channelCacheDir(ctx, "mojmap"), "mojmap-${contentTag(downloaded)}.umf"
-        ) { sb ->
+            channelCacheDir(ctx, "mojmap"), "mojmap-${contentTag(downloaded)}.umfb"
+        ) { sink ->
             val tree = MutableMappingTree()
             runBlocking {
-                ProguardReader.read(
-                    Files.readString(downloaded), tree,
-                    mapOf("source" to "mojmap", "target" to "official")
-                )
+                Perf.span("mappings.materialize.read", "fmt" to "proguard") {
+                    ProguardReader.read(
+                        Files.readString(downloaded), tree,
+                        mapOf("source" to "mojmap", "target" to "official"),
+                        FormatReaderSettings(unchecked = true)
+                    )
+                }
             }
-            tree.emit(UMFWriter.write(sb::append, false), nsFilter = listOf(official, mojmap))
+            Perf.span("mappings.materialize.emit") {
+                tree.emit(
+                    UMFB.write(sink),
+                    nsFilter = listOf(official, mojmap))
+            }
         }
         return RuntimeMaterializedMappingSource(
             source, listOf(out), null,
-            namedNamespaces = setOf("mojmap")
+            namedNamespaces = setOf("mojmap"), trusted = true
         )
     }
 
@@ -181,8 +224,8 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
 
         val out = writeDerived(
             channelCacheDir(ctx, "searge"),
-            "searge-$version-${contentTag(zip)}.umf"
-        ) { sb ->
+            "searge-$version-${contentTag(zip)}.umfb"
+        ) { sink ->
             val tree = MutableMappingTree()
             runBlocking {
                 if (layered) {
@@ -193,55 +236,74 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                                     "this environment's provider did not supply"
                         )
                     val mojmapNs = Namespace("mojmap")
-                    ProguardReader.read(
-                        Files.readString(mojmap), tree,
-                        mapOf("source" to "mojmap", "target" to "official")
-                    )
+                    Perf.span("mappings.materialize.read", "fmt" to "proguard") {
+                        ProguardReader.read(
+                            Files.readString(mojmap), tree,
+                            mapOf("source" to "mojmap", "target" to "official"),
+                            FormatReaderSettings(unchecked = true)
+                        )
+                    }
                     // tsrg's `id` column carries numeric srg ids, not
                     // names — filter it so it never enters the tree (it
                     // trips init/clinit name invariants on fill/merge)
-                    TsrgV2Reader.read(
-                        tsrg, tree,
-                        tree.nsFiltered(setOf(Namespace("id")), inverted = true),
-                        mapOf("obf" to "official")
-                    )
+                    Perf.span("mappings.materialize.read", "fmt" to "tsrg") {
+                        TsrgV2Reader.read(
+                            tsrg, tree,
+                            tree.nsFiltered(setOf(Namespace("id")), inverted = true),
+                            mapOf("obf" to "official"),
+                            FormatReaderSettings(unchecked = true)
+                        )
+                    }
                     // classes take the mojmap name so srg class names can't
                     // scatter the tree across MCP-style packages; members
                     // keep srg names via the fill below
-                    for (cls in tree.classes.toList()) {
-                        val off = cls.names[official] ?: continue
-                        val moj = cls.names[mojmapNs] ?: continue
-                        // clazz() registers the searge namespace and merges
-                        // the name onto the class matched by its official name
-                        tree.clazz(mapOf(official to off, searge to moj))
+                    Perf.span("mappings.materialize.layer") {
+                        for (cls in tree.classes.toList()) {
+                            val off = cls.names[official] ?: continue
+                            val moj = cls.names[mojmapNs] ?: continue
+                            // clazz() registers the searge namespace and merges
+                            // the name onto the class matched by its official name
+                            tree.clazz(mapOf(official to off, searge to moj))
+                        }
                     }
-                    tree.fillMissingNames(srg to setOf(searge))
-                    tree.emit(
-                        UMFWriter.write(sb::append, false),
-                        nsFilter = listOf(official, mojmapNs, searge)
-                    )
+                    Perf.span("mappings.materialize.fill") {
+                        tree.fillMissingNames(srg to setOf(searge))
+                    }
+                    Perf.span("mappings.materialize.emit") {
+                        tree.emit(
+                            UMFB.write(sink),
+                            nsFilter = listOf(official, mojmapNs, searge))
+                    }
                 } else if (tsrgV1) {
                     // mcpconfig ≤1.12.x ships headerless tsrg v1
                     // (`a FIELD` entries — no `id` column to filter);
                     // UMF carries desc-less field rows that tiny v2 drops
-                    TsrgV1Reader.read(
-                        tsrg, tree,
-                        mapOf("source" to "official", "target" to "searge")
-                    )
-                    tree.emit(
-                        UMFWriter.write(sb::append, false),
-                        nsFilter = listOf(official, searge)
-                    )
+                    Perf.span("mappings.materialize.read", "fmt" to "tsrg") {
+                        TsrgV1Reader.read(
+                            tsrg, tree,
+                            mapOf("source" to "official", "target" to "searge"),
+                            FormatReaderSettings(unchecked = true)
+                        )
+                    }
+                    Perf.span("mappings.materialize.emit") {
+                        tree.emit(
+                            UMFB.write(sink),
+                            nsFilter = listOf(official, searge))
+                    }
                 } else {
-                    TsrgV2Reader.read(
-                        tsrg, tree,
-                        tree.nsFiltered(setOf(Namespace("id")), inverted = true),
-                        mapOf("obf" to "official", "srg" to "searge")
-                    )
-                    tree.emit(
-                        UMFWriter.write(sb::append, false),
-                        nsFilter = listOf(official, searge)
-                    )
+                    Perf.span("mappings.materialize.read", "fmt" to "tsrg") {
+                        TsrgV2Reader.read(
+                            tsrg, tree,
+                            tree.nsFiltered(setOf(Namespace("id")), inverted = true),
+                            mapOf("obf" to "official", "srg" to "searge"),
+                            FormatReaderSettings(unchecked = true)
+                        )
+                    }
+                    Perf.span("mappings.materialize.emit") {
+                        tree.emit(
+                            UMFB.write(sink),
+                            nsFilter = listOf(official, searge))
+                    }
                 }
             }
         }
@@ -252,7 +314,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         // fallback
         return RuntimeMaterializedMappingSource(
             source, listOf(out), null,
-            namedNamespaces = emptySet()
+            namedNamespaces = emptySet(), trusted = true
         )
     }
 
@@ -285,8 +347,8 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
 
         val out = writeDerived(
             channelCacheDir(ctx, "forgeBuiltinMCP"),
-            "forgeBuiltinMCP-$version-${contentTag(zip)}.umf"
-        ) { sb ->
+            "forgeBuiltinMCP-$version-${contentTag(zip)}.umfb"
+        ) { sink ->
             val tree = MutableMappingTree()
             ZipFile(zip.toFile()).use { file ->
                 val conf = file.entries().asSequence()
@@ -313,7 +375,8 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                         )
                     SrgReader.read(
                         srg, tree,
-                        mapOf("source" to "official", "target" to "searge")
+                        mapOf("source" to "official", "target" to "searge"),
+                        FormatReaderSettings(unchecked = true)
                     )
                     // csv readers are context formats — they attach
                     // searge-keyed names onto the srg-populated tree
@@ -332,7 +395,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                 }
             }
             tree.emit(
-                UMFWriter.write(sb::append, false),
+                UMFB.write(sink),
                 // env-aware csv emit lands sided rows under `ns:env` —
                 // keep the env columns or those members lose their names
                 nsFilter = listOf(
@@ -344,7 +407,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         }
         return RuntimeMaterializedMappingSource(
             source, listOf(out), null,
-            namedNamespaces = setOf("forgeMCP")
+            namedNamespaces = setOf("forgeMCP"), trusted = true
         )
     }
 
@@ -389,8 +452,8 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         val spigot = Namespace("spigot")
         val out = writeDerived(
             channelCacheDir(ctx, "spigot"),
-            "spigot-$version-${contentTag(zip)}.umf"
-        ) { sb ->
+            "spigot-$version-${contentTag(zip)}.umfb"
+        ) { sink ->
             val tree = MutableMappingTree()
             runBlocking {
                 for (name in listOfNotNull(classMap, memberMap)) {
@@ -398,15 +461,17 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                         ?: throw IllegalStateException(
                             "BuildData $zip missing mapping file $name")
                     SrgReader.read(doc, tree,
-                        mapOf("left" to "official", "right" to "spigot"))
+                        mapOf("left" to "official", "right" to "spigot"),
+                        FormatReaderSettings(unchecked = true))
                 }
             }
-            tree.emit(UMFWriter.write(sb::append, false),
+            tree.emit(
+                UMFB.write(sink),
                 nsFilter = listOf(official, spigot))
         }
         return RuntimeMaterializedMappingSource(
             source, listOf(out), null,
-            namedNamespaces = setOf("spigot")
+            namedNamespaces = setOf("spigot"), trusted = true
         )
     }
 

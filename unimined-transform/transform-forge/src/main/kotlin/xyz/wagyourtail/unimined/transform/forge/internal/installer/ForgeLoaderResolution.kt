@@ -73,7 +73,14 @@ internal class ResolvedForge(
     val jar: Path,
     /** `jarmod:merge` inputs — `[jar]` except sided FG1 forms on a
      *  MERGED env, where the client and server zips both merge. */
-    val mergeJars: List<Path> = listOf(jar)
+    val mergeJars: List<Path> = listOf(jar),
+    /** The jar `SideMarker.detectSideMarker` scans — the *runtime*
+     *  forge artifact shipping the `SideOnly`/`OnlyIn` annotation
+     *  (1.x `actualSideMarker` read `forge.dependencies.last()`).
+     *  Defaults to [jar]; the FG2 `userdev3` dev package overrides it
+     *  with the universal jar it was resolved alongside — userdev3
+     *  carries no loader classes. */
+    val markerJar: Path = jar
 )
 
 /**
@@ -112,6 +119,7 @@ internal fun contributeLoaderResolution(
 
     var notation: String? = null
     var mergeJars: List<Path>? = null
+    var markerJar: Path? = null
     val jar = tryResolve("$base:userdev")?.also { notation = "$base:userdev" }
         ?: run {
             val universal = tryResolve("$base:universal")
@@ -151,7 +159,12 @@ internal fun contributeLoaderResolution(
                 ForgeInstallerProbe.hasEntry(universal, "binpatches.pack.lzma")
             ) {
                 tryResolve("$base:userdev3")
-                    ?.also { notation = "$base:userdev3" } ?: universal
+                    ?.also {
+                        notation = "$base:userdev3"
+                        // the marker annotation ships in the runtime
+                        // universal jar, not the dev package
+                        markerJar = universal
+                    } ?: universal
             } else universal
         }
         ?: error(
@@ -161,7 +174,7 @@ internal fun contributeLoaderResolution(
         )
     ResolvedForge(
         descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar,
-        mergeJars ?: listOf(jar)
+        mergeJars ?: listOf(jar), markerJar ?: jar
     )
 }
 

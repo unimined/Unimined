@@ -38,11 +38,36 @@ internal object FabricDependencyContributions {
         val descriptor = environment.loaderSpec.orNull?.name
             ?.let { LoaderRegistry.resolveBuiltin(it) }
             ?.takeIf { it.family == "fabric" }
-        descriptor?.capabilities?.get("replaceLwjgl")?.let { target ->
+        if (descriptor == null) return
+        descriptor.capabilities["replaceLwjgl"]?.let { target ->
             val match = descriptor.capabilities["replaceLwjglMatch"] ?: "org.lwjgl"
             environment.librarySubstitutions += match to target
         }
-        descriptor?.capabilities?.get("libraryOverlayMeta")?.let { meta ->
+        // 1.x `FabricLikeMinecraftTransformer` dropped org.ow2.asm:asm-all
+        // from MC's libraries — fabric-family loaders ship their own asm
+        // and the duplicate lands a second ASM on the launch classpath
+        environment.libraryFilters += { dep ->
+            !(dep.group == "org.ow2.asm" && dep.name == "asm-all")
+        }
+        descriptor.capabilities["mergeIncludeGlobs"]?.let { globs ->
+            environment.mergeIncludeGlobs.addAll(globs.split(' '))
+        }
+        // `manifestAttr.<Key>` capabilities → env manifest channel —
+        // 1.x `jarTask.manifest` attrs ride the packaging merge file
+        descriptor.capabilities.forEach { (k, v) ->
+            if (k.startsWith("manifestAttr.")) {
+                environment.manifestAttributes.put(
+                    k.removePrefix("manifestAttr."), v)
+            }
+        }
+        // merged-env side markers — every fabric-family loader ships
+        // `net.fabricmc.api.Environment`; the merge stamps it on
+        // single-side classes/members (1.x FabricLike `merger`)
+        environment.sideMarkers.add(
+            xyz.wagyourtail.unimined.minecraft.merge.JarMerger
+                .SideMarker.FABRIC
+        )
+        descriptor.capabilities["libraryOverlayMeta"]?.let { meta ->
             contributeLibraryOverlay(project, environment, meta)
         }
     }
@@ -74,6 +99,9 @@ internal object FabricDependencyContributions {
             2
         }
         environment.libraryOverlays += "$meta/v3/versions/gen$gen/libraries"
+        // 1.x OrnitheFabricMinecraftTransformer's `Calamus-Generation`
+        // manifest attr — the resolved gen, not a descriptor constant
+        environment.manifestAttributes.put("Calamus-Generation", gen.toString())
     }
 
     /**
@@ -97,7 +125,9 @@ internal object FabricDependencyContributions {
         environment.mappingsSpec.deferredDefaultSources += {
             // unobfuscated mc (26.x) has no obfuscation hop to map —
             // dev namespace is official, skip the whole intermediary hop
-            if (!environment.obfuscated.get()) emptyList()
+            if (!environment.obfuscated.get() ||
+                environment.mappingsSpec.customIntermediaries
+            ) emptyList()
             else {
                 val spec = environment.loaderSpec.orNull
                 val descriptor = spec?.name
@@ -118,7 +148,9 @@ internal object FabricDependencyContributions {
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
-                if (!environment.obfuscated.get()) return@withDependencies
+                if (!environment.obfuscated.get() ||
+                    environment.mappingsSpec.customIntermediaries
+                ) return@withDependencies
                 val descriptor = loaderSpec.orNull?.name
                     ?.let { LoaderRegistry.resolveBuiltin(it) }
                     ?.takeIf { it.family == "fabric" }
@@ -137,6 +169,7 @@ internal object FabricDependencyContributions {
             val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
             // unobfuscated mc needs no intermediary jar at all
             if (!environment.obfuscated.get() ||
+                environment.mappingsSpec.customIntermediaries ||
                 descriptor?.family != "fabric" ||
                 descriptor.upstreamMappingChannel != null) {
                 // upstreamMappingChannel rows contribute Maven sources via
@@ -237,7 +270,10 @@ internal object FabricDependencyContributions {
                 if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric")
                     return@withDependencies
                 val jar = loaderFiles.singleFile
-                FabricModAnalysis.loaderLibraries(jar.toPath()).forEach {
+                FabricModAnalysis.loaderLibraries(
+                    jar.toPath(),
+                    environment.side.orNull?.name?.lowercase()
+                ).forEach {
                     deps.add(dependencies.create(it))
                 }
             }

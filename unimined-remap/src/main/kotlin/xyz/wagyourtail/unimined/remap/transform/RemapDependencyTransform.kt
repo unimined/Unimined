@@ -9,12 +9,14 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.BundleMappingData
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
+import xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
@@ -86,6 +88,26 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         val classpath: ConfigurableFileCollection
 
         /**
+         * Jars whose classes live in a foreign namespace — scanned and
+         * name-translated into [sourceNamespace] by the remap engine
+         * rather than remapped as artifacts
+         * ([xyz.wagyourtail.unimined.api.spec.RemapSpec.scanAliases]).
+         */
+        @get:Optional
+        @get:InputFiles
+        @get:Classpath
+        val scanAliasJars: ConfigurableFileCollection
+
+        @get:Optional
+        @get:Input
+        val scanAliasFromNs: Property<String>
+
+        @get:Optional
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
+        val scanAliasMappingFile: RegularFileProperty
+
+        /**
          * Serialized [AccessModel] — the merged AW/AT/CT rules of the
          * whole remap batch, identical across invocations, fed to
          * `needsAccessModel` steps as the analysis overlay. A string
@@ -115,16 +137,33 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
     abstract val inputArtifact: Provider<FileSystemLocation>
 
     override fun transform(outputs: TransformOutputs) {
+        val t0 = System.nanoTime()
         val input = inputArtifact.get().asFile.toPath()
         val spec = RuntimeRemapSpec(
             parameters.sourceNamespace.get(),
             parameters.targetNamespace.get(),
-            parameters.classpath.files.map { it.toPath() }
+            parameters.classpath.files.map { it.toPath() },
+            scanAliases = if (parameters.scanAliasFromNs.isPresent) {
+                val fromNs = parameters.scanAliasFromNs.get()
+                val aliasMappings = parameters.scanAliasMappingFile.get().asFile.toPath()
+                parameters.scanAliasJars.files.map {
+                    ClasspathScanAlias(it.toPath(), fromNs, aliasMappings)
+                }
+            } else emptyList()
         )
         val mappings = parameters.mappingBundleJson.orNull
             ?.let { json -> dataCache.computeIfAbsent(json, ::decodeMappingData) }
             ?: parameters.mappingFile.orNull
-                ?.let { SerializedMappingData.readEither(it.asFile.toPath()) }
+                ?.let { f ->
+                    // key on path+mtime — environment bundles are
+                    // content-addressed (immutable), but a user-supplied
+                    // file can change under a stable path
+                    val path = f.asFile.toPath()
+                    val key = "file:$path:${Files.getLastModifiedTime(path).toMillis()}"
+                    dataCache.computeIfAbsent(key) {
+                        SerializedMappingData.readEither(path)
+                    }
+                }
 
         val output = outputs.file(
             "${input.toFile().nameWithoutExtension}-${spec.targetNamespace}.jar"
@@ -147,6 +186,9 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             } finally {
                 Files.deleteIfExists(tmp)
             }
+            Perf.emit("transform", "input" to input.fileName.toString(),
+                "label" to parameters.label.orNull, "passedThrough" to true,
+                "ms" to (System.nanoTime() - t0) / 1_000_000)
             return
         }
         val workDir = Files.createTempDirectory("unimined-remap-")
@@ -167,6 +209,9 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             )
         } finally {
             workDir.toFile().deleteRecursively()
+            Perf.emit("transform", "input" to input.fileName.toString(),
+                "label" to parameters.label.orNull, "passedThrough" to false,
+                "ms" to (System.nanoTime() - t0) / 1_000_000)
         }
     }
 

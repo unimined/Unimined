@@ -9,10 +9,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Duration
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import xyz.wagyourtail.commonskt.utils.toHex
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 
 /**
@@ -26,6 +28,11 @@ class Downloader(
     private val refreshCache: Boolean = false,
     private val metadataTtl: Duration = Duration.ofHours(24),
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val retryBackoffMs: (Int) -> Long = { attempt ->
+        // jittered exponential backoff: 250ms * 2^(attempt-1) + [0, base]
+        val base = 250L shl (attempt - 1).coerceAtMost(5)
+        base + ThreadLocalRandom.current().nextLong(base + 1)
+    },
     private val fetch: (String) -> ByteArray = { url ->
         val response = client.send(
             HttpRequest.newBuilder(URI.create(url)).GET().build(),
@@ -64,15 +71,24 @@ class Downloader(
     fun fetch(url: String, name: String, sha1: String? = null): Path {
         val dest = cachePath(name)
         val cachedValid = dest.exists() && (sha1 == null || digest(dest, sha1) == sha1)
-        if (cachedValid && (offline || !refreshCache)) return dest
+        if (cachedValid && (offline || !refreshCache)) {
+            Perf.emit("download", "name" to name, "cached" to true)
+            return dest
+        }
         if (offline) throw missingCache(url, dest)
 
         return try {
-            val bytes = fetch(url)
+            val bytes = Perf.span("download", "name" to name, "url" to url) {
+                fetchWithRetry(url)
+            }
             if (sha1 != null && digest(bytes, sha1) != sha1) {
+                // permanent validation failure — the transport delivered a
+                // complete body, the upstream just isn't what was expected;
+                // retrying serves wrong bytes N times, don't
                 throw IOException("checksum mismatch for $url — expected $sha1")
             }
             writeAtomically(dest, bytes)
+            Perf.emit("download.write", "name" to name, "bytes" to bytes.size)
             dest
         } catch (e: Exception) {
             if (e is InterruptedException) {
@@ -93,14 +109,20 @@ class Downloader(
     fun fetchMetadata(url: String, name: String, ttl: Duration = metadataTtl): Path {
         require(!ttl.isNegative) { "metadata TTL must not be negative" }
         val dest = cachePath(name)
-        if (dest.exists() && (offline || (!refreshCache && isFresh(dest, ttl)))) return dest
+        if (dest.exists() && (offline || (!refreshCache && isFresh(dest, ttl)))) {
+            Perf.emit("metadata", "name" to name, "cached" to true)
+            return dest
+        }
         if (offline) {
             if (dest.exists()) return dest
             throw missingCache(url, dest)
         }
 
         return try {
-            writeAtomically(dest, fetch(url))
+            writeAtomically(
+                dest,
+                Perf.span("metadata", "name" to name, "url" to url) { fetchWithRetry(url) }
+            )
             dest
         } catch (e: Exception) {
             if (e is InterruptedException) {
@@ -111,6 +133,29 @@ class Downloader(
             onRefreshFallback(dest, e)
             dest
         }
+    }
+
+    /**
+     * [fetch] with bounded retries on transport failures (IO errors,
+     * non-2xx responses) — parallelized callers fan out enough requests
+     * that transient resets/429s become likely, not exceptional. Jittered
+     * exponential backoff between attempts; [InterruptedException] and
+     * non-[IOException] failures propagate immediately.
+     */
+    private fun fetchWithRetry(url: String, maxAttempts: Int = 4): ByteArray {
+        var lastError: IOException? = null
+        for (attempt in 1..maxAttempts) {
+            try {
+                return fetch(url)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw e
+            } catch (e: IOException) {
+                lastError = e
+                if (attempt < maxAttempts) Thread.sleep(retryBackoffMs(attempt))
+            }
+        }
+        throw IOException("fetch failed for $url after $maxAttempts attempts", lastError)
     }
 
     private fun cachePath(name: String): Path {

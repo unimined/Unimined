@@ -46,7 +46,8 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
             "sonatypeStaging", "spongeMaven", "jitpack", "spigot",
             "flintMaven", "cleanroomRepos", "arcseekersMaven",
             "fox2codeMaven", "signalumMaven", "modrinthMaven",
-            "curseMaven", "liteloaderMaven"
+            "curseMaven", "liteloaderMaven", "legacyLiteloaderMaven",
+            "paperMaven", "babricMaven"
         ).forEach { this[it] = repos }
     }
 
@@ -58,7 +59,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
                 "unimined.minecraft(<sourceSet>) { } moved in Unimined 2.0 — " +
                 "use `unimined.minecraft { }` and configure the source-set " +
                 "environment inside (`minecraft { sourceSet(<name>) { } }`). " +
-                "See Writerside/topics/Migration-1x-to-2.0.md for the 2.0 migration notes."
+                "See docs/migration-1x-to-2.0.md for the 2.0 migration notes."
             )
         }
         removed1xVerbs[name]?.let {
@@ -243,6 +244,29 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
     fun migrateMappings(environmentId: String, action: Action<MigrateMappingsTask>) {
         project.extensions.getByType(MigrateExtension::class.java)
             .migrateMappings(environmentId, action)
+    }
+
+    /**
+     * `unimined.exportMappings("main") { export { ... } }` — registers
+     * the `exportMappings<SS>` task writing the environment's resolved
+     * mappings through UML writers (1.x `exportMappings` parity) —
+     * delegates to `unimined-minecraft`'s extension.
+     */
+    /** Groovy DSL overload — `unimined.exportMappings("main") { export { ... } }`. */
+    fun exportMappings(
+        environmentId: String,
+        @DelegatesTo(
+            value = xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) = exportMappings(environmentId, Action { action.delegatingTo(it) })
+
+    fun exportMappings(
+        environmentId: String,
+        action: Action<xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask>
+    ) {
+        project.extensions.getByType(MinecraftExtension::class.java)
+            .exportMappings(environmentId, action)
     }
 
     /** `unimined.migrate { }` → the `unimined-migrate` extension. */

@@ -81,6 +81,40 @@ internal object ForgeEnvironmentWiring {
             }
         )
         val resolved = contributeLoaderResolution(project, environment)
+        // merged-env side markers — 1.x `actualSideMarker`: whichever
+        // SideOnly annotation the loader jar itself ships is the era
+        // its runtime reads; absent → no stamping (warn, like 1.x).
+        // NeoForge `Userdev` is invariant (net.neoforged.api.distmarker
+        // .OnlyIn) — no jar scan. Forge `Userdev` spans both eras:
+        // FG2's userdev3 jar probes as Userdev too, so scan markerJar
+        // (the universal pair) for a shipped FML-era marker first —
+        // modern universals ship none, which falls back to FORGE_MODERN.
+        // FG1-era artifacts get detected from the runtime jar with a
+        // warn-on-empty, like 1.x `actualSideMarker`.
+        environment.sideMarkers.addAll(resolved.map { r ->
+            r?.let {
+                when {
+                    it.profile is ForgeProfile.Userdev -> when {
+                        it.descriptor.id.contains("neo") ->
+                            listOf(xyz.wagyourtail.unimined.minecraft
+                                .merge.JarMerger.SideMarker.NEOFORGE)
+                        it.descriptor.id == "forge" -> listOf(
+                            xyz.wagyourtail.unimined.minecraft.merge
+                                .JarMerger.SideMarker
+                                .detectSideMarker(it.markerJar) { }
+                                ?: xyz.wagyourtail.unimined.minecraft
+                                    .merge.JarMerger.SideMarker
+                                    .FORGE_MODERN)
+                        else -> emptyList()
+                    }
+                    else -> xyz.wagyourtail.unimined.minecraft.merge
+                        .JarMerger.SideMarker
+                        .detectSideMarker(it.markerJar) { msg ->
+                            project.logger.warn(msg)
+                        }?.let(::listOf) ?: emptyList()
+                }
+            } ?: emptyList()
+        })
         // forge-era probe — `select("era")` pins resolve against the
         // probed packaging profile (preset names: "forge-userdev",
         // "forge-binpatches"); declared pins override per plan
@@ -181,6 +215,28 @@ internal object ForgeEnvironmentWiring {
         // detached resolution that must land after the env DSL body
         project.afterDslEval {
             val r = resolved.orNull
+            // cleanroom replaces vanilla 1.12.2's platform libs with
+            // modern forks (lwjgl3, netty 4.2, oshi-ffm, icu4j, jna 5)
+            // declared in its userdev `libraries` — the vanilla copies
+            // must not reach the classpath alongside them
+            // (1.x `CleanroomMinecraftTransformer.vanillaExcludesSet`)
+            if (r?.descriptor?.id == "cleanroom") {
+                val dropPrefixes = listOf(
+                    "com.mojang:patchy:",
+                    "oshi-project:oshi-core:",
+                    "com.ibm.icu:icu4j-core-mojang:",
+                    "net.java.jutils:",
+                    "org.lwjgl.lwjgl:",
+                    "io.netty:netty-all:",
+                    "net.java.dev.jna:platform:",
+                )
+                environment.libraryFilters += { dep ->
+                    val coord = "${dep.group}:${dep.name}:${dep.version}"
+                    dropPrefixes.none { coord.startsWith(it) } &&
+                        !(coord.startsWith("org.lwjgl") &&
+                                (dep.version ?: "").startsWith("2"))
+                }
+            }
             if (r?.profile is ForgeProfile.ZipPatches) {
                 project.extensions.getByType(TransformExtension::class.java)
                     .sourceSet(environment.environmentId)
@@ -221,6 +277,20 @@ internal object ForgeEnvironmentWiring {
         contributeMinecraftModuleName(project, environment, resolved)
         contributeDevSources(project, environment, resolved)
         contributeRunMutators(project, environment, resolved)
+        // neoforge >1.20.1 (real neoforge): prod runs at mojmap — the
+        // searge-era refmap is dead weight. 1.x forced
+        // `disableRefmap()` on the remap task; here it lands as a
+        // convention on the auto-appended ModArtifactsStepSpec — an
+        // explicit `modArtifacts {}` declaration overrides it
+        project.extensions.getByType(RemapExtension::class.java)
+            .sourceSet(environment.environmentId)
+            .modArtifactsConventions += org.gradle.api.Action { spec ->
+                val r = resolved.orNull ?: return@Action
+                if (r.descriptor.id == "neoforge" &&
+                    environment.version.get() != "1.20.1") {
+                    spec.emitRefmap = false
+                }
+            }
     }
 
     /**

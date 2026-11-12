@@ -10,6 +10,8 @@ import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
 import xyz.wagyourtail.unimined.mapping.jvms.four.ElementType
 import xyz.wagyourtail.unimined.mapping.remapper
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
+import xyz.wagyourtail.unimined.remap.spi.FusedJarEntry
+import xyz.wagyourtail.unimined.remap.spi.FusibleJarStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
@@ -37,42 +39,52 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
 
     override fun supports(spec: RemapSpec) = true
 
-    override fun create(spec: ApplyClassTweakerStepSpec, ctx: StepContext) = ArtifactStep { input, c ->
-        val files = spec.classTweakerFiles.files.filter { it.isFile }
-        val depFiles = spec.dependencyClassTweakerFiles.files.filter { it.isFile }
-        if (files.isEmpty() && depFiles.isEmpty()) return@ArtifactStep input
+    override fun create(spec: ApplyClassTweakerStepSpec, ctx: StepContext): ArtifactStep =
+        object : FusibleJarStep {
+            private var translated: List<ClassTweaker> = emptyList()
+            private var depTranslated: List<ClassTweaker> = emptyList()
 
-        val tree = c.mappings?.view<MappingTree>()
-            ?: throw GradleException(
-                "apply-class-tweaker requires mapping data exposing a MappingTree view"
-            )
+            override fun prepareFused(input: Path, c: StepContext) {
+                val files = spec.classTweakerFiles.files.filter { it.isFile }
+                val depFiles = spec.dependencyClassTweakerFiles.files.filter { it.isFile }
+                if (files.isEmpty() && depFiles.isEmpty()) return
 
-        // `source` = the anonymous namespace of headerless AT files —
-        // the spec binds it to the ns the file's names are actually in
-        val nsMapping = spec.headerlessNamespace.orNull
-            ?.let { mapOf("source" to it) } ?: emptyMap()
-        val tweakers = files.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
-        val depTweakers = depFiles.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
-        val output = Files.createTempDirectory(c.workDir, "ct")
-            .resolve(input.fileName.toString())
-        apply(
-            input, output, tweakers, depTweakers, tree, c.spec.targetNamespace,
-            spec.namespaceAliases.getOrElse(emptyMap())
-        )
-        output
-    }
+                val tree = c.mappings?.view<MappingTree>()
+                    ?: throw GradleException(
+                        "apply-class-tweaker requires mapping data exposing a MappingTree view"
+                    )
 
-    internal fun apply(
-        input: Path,
-        output: Path,
+                // `source` = the anonymous namespace of headerless AT
+                // files — the spec binds it to the ns the file's names
+                // are actually in
+                val nsMapping = spec.headerlessNamespace.orNull
+                    ?.let { mapOf("source" to it) } ?: emptyMap()
+                val tweakers = files.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
+                val depTweakers = depFiles.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
+                translate(
+                    tweakers, depTweakers, tree, c.spec.targetNamespace,
+                    spec.namespaceAliases.getOrElse(emptyMap())
+                ).let { (t, d) -> translated = t; depTranslated = d }
+            }
+
+            override fun visitEntry(entry: FusedJarEntry, c: StepContext): FusedJarEntry {
+                if (translated.isEmpty() && depTranslated.isEmpty()) return entry
+                if (!entry.name.endsWith(".class")) return entry
+                return FusedJarEntry(
+                    entry.name, applyToClass(entry.bytes, translated, depTranslated)
+                )
+            }
+        }
+
+    /** Rebase each file's directives onto the target namespace so
+     *  bytecode members can be looked up under their own names. */
+    internal fun translate(
         tweakers: List<ClassTweaker>,
         dependencyTweakers: List<ClassTweaker>,
         tree: MappingTree,
         targetNamespace: String,
         namespaceAliases: Map<String, String> = emptyMap()
-    ) {
-        // Rebase each file's directives onto the target namespace so
-        // bytecode members can be looked up under their own names.
+    ): Pair<List<ClassTweaker>, List<ClassTweaker>> {
         fun translate(tweaker: ClassTweaker) =
             if (tweaker.namespace == targetNamespace) tweaker
             else {
@@ -98,8 +110,21 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 tweaker.remap(tree.remapper(src, dst))
             }
 
-        val translated = tweakers.map(::translate)
-        val depTranslated = dependencyTweakers.map(::translate)
+        return tweakers.map(::translate) to dependencyTweakers.map(::translate)
+    }
+
+    internal fun apply(
+        input: Path,
+        output: Path,
+        tweakers: List<ClassTweaker>,
+        dependencyTweakers: List<ClassTweaker>,
+        tree: MappingTree,
+        targetNamespace: String,
+        namespaceAliases: Map<String, String> = emptyMap()
+    ) {
+        val (translated, depTranslated) = translate(
+            tweakers, dependencyTweakers, tree, targetNamespace, namespaceAliases
+        )
 
         JarFile(input.toFile()).use { jar ->
             JarOutputStream(Files.newOutputStream(output)).use { out ->

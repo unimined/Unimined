@@ -60,10 +60,29 @@ internal fun contributeBinpatchStep(
     val spec = objects.newInstance(UserdevBinpatchStepSpec::class.java)
     spec.installerJar.set(project.layout.file(resolved.map { r ->
         ((r.profile as? ForgeProfile.Userdev) ?: return@map null)
-            .let { r.jar.toFile() }
+            .let {
+                if (environment.side.get() == Side.MERGED) r.jar.toFile()
+                else {
+                    // split-side envs: userdev ships only the joined
+                    // pack — per-side packs live in the installer jar
+                    // (1.x read `data/<side>.lzma` from `:$base:installer`)
+                    val base = r.descriptor.loaderCoords(
+                        environment.version.get(),
+                        environment.loaderSpec.get().version
+                    )
+                    project.configurations.detachedConfiguration(
+                        project.dependencies.create("$base:installer")
+                    ).apply { isTransitive = false }.files.single()
+                }
+            }
     }))
     spec.binpatchesKey.set(resolved.map {
-        (it.profile as? ForgeProfile.Userdev)?.config?.binpatches
+        val p = it.profile as? ForgeProfile.Userdev ?: return@map null
+        when (environment.side.get()) {
+            Side.MERGED -> p.config.binpatches
+            Side.CLIENT -> "data/client.lzma"
+            Side.SERVER -> "data/server.lzma"
+        }
     })
     // in-process patcher — the userdev `binpatcher` tool spec
     // (binarypatcher JVM + args) is not consulted

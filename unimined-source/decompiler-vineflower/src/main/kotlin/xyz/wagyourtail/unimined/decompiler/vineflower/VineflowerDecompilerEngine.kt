@@ -31,6 +31,19 @@ class VineflowerDecompilerEngine : DecompilerEngine {
             t.inputJar.set(spec.input)
             t.classpath.from(spec.classpath)
             t.options.set(spec.options)
+            t.jvmArgs.set(spec.jvmArgs)
+            t.args.set(spec.args)
+            spec.javaVersion?.takeIf { it.isNotBlank() }?.let { v ->
+                t.javaVersion.set(v)
+                t.javaLauncher.set(
+                    project.extensions.getByType(
+                        org.gradle.jvm.toolchain.JavaToolchainService::class.java
+                    ).launcherFor {
+                        it.languageVersion.set(
+                            org.gradle.jvm.toolchain.JavaLanguageVersion.of(v))
+                    }.map { it.executablePath }
+                )
+            }
             t.decompilerClasspath.from(decompilerClasspath(project))
         }
     }

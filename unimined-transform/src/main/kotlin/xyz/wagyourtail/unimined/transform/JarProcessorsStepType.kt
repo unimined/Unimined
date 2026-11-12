@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logging
-import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
@@ -11,13 +10,13 @@ import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessorRegistry
-import xyz.wagyourtail.commonskt.compress.CONSTANT_TIME_FOR_ZIP_ENTRIES
-import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.FileTime
 import java.util.jar.JarFile
 import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 import kotlin.reflect.KClass
 
 /**
@@ -82,18 +81,15 @@ class JarProcessorsStepType : RemapStepType<JarProcessorsStepSpec> {
         ZipFile(jar.toFile()).use { it.getEntry(markerPath(name)) != null }
 
     private fun markApplied(jar: Path, name: String) {
-        jar.writeAtomically { tmp ->
-            ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
-                val dirs = mutableSetOf<String>()
-                ZipFile(jar.toFile()).use { zip ->
-                    zip.entries().asSequence().filter { !it.isDirectory }.forEach { e ->
-                        out.putEntryWithDirs(e.name, dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) { o ->
-                            zip.getInputStream(e).use { it.copyTo(o) }
-                        }
-                    }
-                }
-                out.putEntryWithDirs(markerPath(name), dirs, CONSTANT_TIME_FOR_ZIP_ENTRIES) {}
-            }
+        // append the marker through zipfs — a full-jar rewrite just to add
+        // one entry costs a serial deflate pass per processor (~2 s on the
+        // ~50 MB MC jar). The fixed mtime keeps output byte-deterministic.
+        FileSystems.newFileSystem(jar, emptyMap<String, Any>()).use { fs ->
+            val marker = fs.getPath(markerPath(name))
+            Files.createDirectories(marker.parent)
+            Files.write(marker, byteArrayOf(), StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING)
+            Files.setLastModifiedTime(marker, FileTime.fromMillis(0))
         }
     }
 

@@ -27,6 +27,14 @@ class FabricTransformerClaim : TransformerClaim {
         env.env.features.binding("nestedJars", "fabric")
         env.env.features.binding("modDiscovery", "dli")
         env.env.features.binding("mainClass", "net.fabricmc.loader.impl.launch.knot.KnotClient")
+        // fabric-loader >=0.15 bundles mixinextras — declare the
+        // capability so the env's feature set reflects it (1.x parity:
+        // enableMixinExtra); other family loaders never ship it
+        env.minecraft?.loaderSpec?.orNull?.let { spec ->
+            if (spec.name == "fabric" && xyz.wagyourtail.unimined
+                    .transform.internal.versionAtLeast(spec.version, "0.15.0")
+            ) env.env.features.binding("mixinExtras")
+        }
 
         // env-level wiring (loader dep, intermediary hop, AW steps,
         // Knot launch) — consumed at environment binding

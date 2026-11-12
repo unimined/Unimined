@@ -79,7 +79,10 @@ abstract class LinemappedJarTask : DefaultTask() {
         ZipOutputStream(out.outputStream().buffered()).use { zo ->
             ZipFile(binaryJar.get().asFile).use { zf ->
                 zf.entries().asSequence().forEach { e ->
-                    zo.putNextEntry(ZipEntry(e.name))
+                    // epoch-pinned — the linemapped jar rides downstream
+                    // task/transform fingerprints, so output bytes must
+                    // be reproducible per input
+                    zo.putNextEntry(ZipEntry(e.name).apply { time = 0L })
                     val bytes = zf.getInputStream(e).readBytes()
                     if (!e.name.endsWith(".class")) {
                         zo.write(bytes); zo.closeEntry(); return@forEach

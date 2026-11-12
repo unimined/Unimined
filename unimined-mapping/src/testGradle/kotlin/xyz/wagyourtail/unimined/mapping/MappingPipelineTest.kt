@@ -92,6 +92,25 @@ class MappingPipelineTest {
     }
 
     @Test
+    fun `yarnv1 declares the stitch-fill builtin channel`() {
+        val spec = MappingsSpecImpl(
+            objects(),
+            mcVersion = objects().property(String::class.java)
+                .apply { set("1.20.1") }
+        )
+        spec.yarnv1(10)
+        val source = spec.effectiveSources().single()
+            as MappingsSpecImpl.Source.Builtin
+        assertEquals("yarnv1", source.channel)
+        assertEquals(
+            mapOf("version" to "1.20.1", "build" to "10"),
+            source.params.mapValues { it.value() }
+        )
+        assertEquals(setOf("yarnv1"), source.namedNamespaces)
+        assertEquals(mapOf("named" to "yarnv1"), source.nsMap)
+    }
+
+    @Test
     fun `composer merges chained sources through UML views`() {
         val first = umlData("tiny\t2\t0\tofficial\tintermediary\nc\ta/A\ti/A\n")
         val second = umlData("tiny\t2\t0\tintermediary\tnamed\nc\ti/A\tn/A\n")
@@ -288,6 +307,44 @@ class MappingPipelineTest {
             tree.getClass(off, InternalName.unchecked("a/A"))
                 ?.names?.get(named)?.value
         )
+    }
+
+    @Test
+    fun `stubs layer inline rows through the source pipeline`() {
+        val base = tinyFile(
+            "base.tiny",
+            "tiny\t2\t0\tofficial\tnamed\nc\ta/A\tn/A\n")
+        val spec = MappingsSpecImpl(objects())
+        spec.file(base)
+        spec.stubs("official", "named") {
+            c("a/B", "n/Stub") {
+                f("x;I", "stubField")
+                m("a;()V", "stubbed")
+            }
+        }
+        assertTrue(spec.hasStubs())
+
+        // service-loaded uml provider reads both the file source and
+        // the stubs source's materialized tiny-v2 document
+        val data = MappingResolver.resolve(spec, ctx)
+        val tree = data.view<MappingTree>()!!
+        val off = tree.namespaces.first { it.name == "official" }
+        val named = tree.namespaces.first { it.name == "named" }
+
+        // base rows survive; stub rows compose alongside them
+        assertEquals(
+            "n/A",
+            tree.getClass(off, InternalName.unchecked("a/A"))
+                ?.names?.get(named)?.value
+        )
+        val stub = tree.getClass(off, InternalName.unchecked("a/B"))!!
+        assertEquals("n/Stub", stub.names[named]?.value)
+        val stubField = stub.fields.single()
+        assertEquals("x", stubField.names[off]!!.value)
+        assertEquals("stubField", stubField.names[named]!!.value)
+        val stubMethod = stub.methods.single()
+        assertEquals("a", stubMethod.names[off]!!.value)
+        assertEquals("stubbed", stubMethod.names[named]!!.value)
     }
 
 }

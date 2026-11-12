@@ -11,10 +11,12 @@ import xyz.wagyourtail.unimined.mapping.inheritance.ASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.inheritance.LazyASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
+import xyz.wagyourtail.unimined.mapping.remapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.BuiltinAsmExtensions
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Jsr305AsmExtension
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.asm.PackageAccess
+import xyz.wagyourtail.unimined.mapping.remapper.asm.RemapBatch
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
@@ -22,7 +24,6 @@ import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.collections.getOrPut
 import kotlin.io.path.exists
 import kotlin.reflect.KClass
 
@@ -61,9 +62,14 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
     override val priority: Int = 1
 
     override fun create(spec: RemapStepSpec, ctx: StepContext): ArtifactStep =
-        ArtifactStep { input, c -> remap(input, c, spec.jsr305ToJetbrains) }
+        ArtifactStep { input, c ->
+            remap(input, c, spec.jsr305ToJetbrains, spec.fixInnerClasses)
+        }
 
-    private fun remap(input: Path, ctx: StepContext, jsr305: Boolean): Path {
+    private fun remap(
+        input: Path, ctx: StepContext,
+        jsr305: Boolean, fixInnerClasses: Boolean?
+    ): Path {
         val spec = ctx.spec
         val slog = ctx.log.subLogger("uml:remap")
 
@@ -95,28 +101,25 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         )
 
         val referenceTree = ctx.mappings?.view<MappingTree>()
-        // remap-analysis overlay: AW/AT/CT rules declared by the batch
-        // ride the trees list as a synthetic AccessElement-bearing layer,
-        // folded into the inheritance scan before propagation
-        val overlay = ctx.accessModel
-            ?.entries(spec.sourceNamespace, referenceTree)
-            ?.takeUnless { it.isEmpty() }
-            ?.let { accessModelOverlay(it, fns, referenceTree) }
 
         // fail loudly when the input jar is in the TARGET namespace
         // already — a wrong-layer artifact upstream — but pass through
         // jars foreign to the tree entirely (non-MC library deps like
         // realms/authlib carry zero mapped classes; the identity remap
         // they produce is correct)
-        val probe = java.util.zip.ZipFile(input.toFile()).use { z ->
-            val names = z.entries().asSequence()
-                .filter { !it.isDirectory && it.name.endsWith(".class") }
-                .map { it.name.removeSuffix(".class") }
-                .toList()
-            // stride-sample — merged/unmapped classes legitimately
-            // absent from the tree cluster at the front of the jar
-            val stride = (names.size / 64).coerceAtLeast(1)
-            names.filterIndexed { i, _ -> i % stride == 0 }
+        val probe = xyz.wagyourtail.unimined.api.util.Perf.span(
+            "uml:remap.probe", "input" to input.fileName.toString()
+        ) {
+            java.util.zip.ZipFile(input.toFile()).use { z ->
+                val names = z.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.endsWith(".class") }
+                    .map { it.name.removeSuffix(".class") }
+                    .toList()
+                // stride-sample — merged/unmapped classes legitimately
+                // absent from the tree cluster at the front of the jar
+                val stride = (names.size / 64).coerceAtLeast(1)
+                names.filterIndexed { i, _ -> i % stride == 0 }
+            }
         }
         // skip when the fns layer carries no classes at all (nothing to
         // validate against) or the jar is too small to infer a mismatch
@@ -150,10 +153,26 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         // the classpath — are never opened); propagation mutates ClassInfo,
         // so each remap gets a fresh tree over the shared index + this
         // input's own eager scan
-        val classpathJars = ctx.classpath.filter { it.exists() }
+        // scan aliases: a jar natively in the live namespace just joins
+        // the classpath index; a foreign-namespace jar contributes its
+        // scanned class info name-translated into fns — folded into the
+        // batch graph below (the modsource-MC path: the official merged
+        // jar's intermediary analysis data without a jar remap)
+        val (sameNsJars, foreignAliases) = ctx.spec.scanAliases
+            .partition { Namespace(it.sourceNs) == fns }
+        val classpathJars = (ctx.classpath + sameNsJars.map { it.jar })
+            .filter { it.exists() }
         val classpathKey = classpathJars
             .map { Triple(it, Files.size(it), Files.getLastModifiedTime(it).toMillis()) }
             .sortedBy { it.first }
+        val scanAliasKey = foreignAliases.map {
+            ScanAliasKey(
+                Triple(it.jar, Files.size(it.jar), Files.getLastModifiedTime(it.jar).toMillis()),
+                it.sourceNs,
+                Triple(it.mappingsFile, Files.size(it.mappingsFile),
+                    Files.getLastModifiedTime(it.mappingsFile).toMillis())
+            )
+        }
         // computeIfAbsent (not getOrPut) — the map's put must be atomic:
         // non-atomic get-then-put raced N first-access transforms into
         // N parallel index builds of the same 113-jar classpath
@@ -161,16 +180,66 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
             slog.lifecycle(
                 "indexing classpath (${classpathJars.size} jars) for lazy inheritance"
             )
-            LazyASMInheritanceTree.index(classpathJars.toSet())
+            xyz.wagyourtail.unimined.api.util.Perf.span(
+                "classpath.index", "jars" to classpathJars.size
+            ) {
+                LazyASMInheritanceTree.index(classpathJars.toSet())
+            }
         }
-        // per-remap peak live set = the lazy tree's parsed classpath
-        // ClassInfos (propagation mutates them, so trees can't be
-        // shared) — unbounded transform parallelism × multi-GB trees
-        // GC-thrashes the daemon (fabric-api's ~50 nested jars at
-        // -Xmx6G). Bound concurrency by heap headroom.
-        remapPermits.acquire()
+        // a pass claims heap units by INPUT SIZE — a 200 KiB mod jar
+        // and the 60 MiB MC artifact do not have the same marginal
+        // footprint (input scan + output/extension buffers scale with
+        // input; merged tree, member groups and the classpath graph are
+        // all shared via the batch below, so the old multi-GB-per-pass
+        // accounting is gone). The clamp keeps a huge input schedulable
+        // on heaps where its tier exceeds the unit count.
+        val permitCost = remapPermitCost(Files.size(input))
+            .coerceAtMost(REMAP_PERMIT_UNITS)
+        remapPermits.acquire(permitCost)
         try {
-            val inputScan = ASMInheritanceTree.scan(setOf(input))
+            // merged tree + propagated member groups depend only on
+            // (mappings, classpath, namespaces, access model) — constant
+            // across a mod-view batch, so they are shared via a
+            // RemapBatch instead of being rebuilt (~500k rows) per jar.
+            // SoftReference: under heap pressure GC may reclaim the
+            // batch and the next jar pays one rebuild rather than the
+            // whole batch OOMing the daemon.
+            val batch = remapBatch(
+                BatchKey(
+                    System.identityHashCode(ctx.mappings), classpathKey,
+                    scanAliasKey,
+                    fns, tns, ctx.accessModel?.serialize()?.hashCode() ?: 0
+                )
+            ) {
+                slog.lifecycle("preparing shared remap batch " +
+                    "(${classpathJars.size}-jar classpath, " +
+                    "${foreignAliases.size} scan aliases) for $fns -> $tns")
+                // foreign-namespace classpath members enter the graph as
+                // translated scans — the batch sees the same ClassInfos a
+                // remapped jar would carry, without the jar remap
+                val extraScans = foreignAliases.map { translatedScan(it, fns, slog) }
+                // remap-analysis overlay: AW/AT/CT rules declared by the
+                // batch ride the trees list as a synthetic
+                // AccessElement-bearing layer, folded into the
+                // inheritance scan before propagation. Built inside the
+                // prepare thunk so cache hits skip the entries() walk.
+                val overlay = ctx.accessModel
+                    ?.entries(spec.sourceNamespace, referenceTree)
+                    ?.takeUnless { it.isEmpty() }
+                    ?.let { accessModelOverlay(it, fns, referenceTree) }
+                runBlocking {
+                    AsmRemapper.prepareBatch(
+                        listOf(view) + listOfNotNull(overlay),
+                        fns, tns, index = index,
+                        extraScans = extraScans
+                    )
+                }
+            }
+            val inputScan = xyz.wagyourtail.unimined.api.util.Perf.span(
+                "uml:remap.scan", "input" to input.fileName.toString()
+            ) {
+                ASMInheritanceTree.scan(setOf(input))
+            }
 
             // inline progress — the callback fires per class from UML's
             // parallel workers; the gate turns it into a throttled
@@ -186,18 +255,19 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                 }
             }
             runBlocking {
-                AsmRemapper.remap(
+                batch.remap(
                     input,
                     target,
-                    listOf(view) + listOfNotNull(overlay),
-                    fns,
-                    tns,
-                    LazyASMInheritanceTree(fns, inputScan, index),
+                    inputScan,
                     // FIX — package-private members of classes whose package
                     // the mappings relocate get widened (tiny's
                     // checkPackageAccess+fixPackageAccess equivalent)
                     options = Options(
                         packageAccess = PackageAccess.FIX,
+                        // 1.x `fixInners` — env-artifact pipelines inject
+                        // obf && mc<1.8.2; unset (mod jars, dep views) is
+                        // off, matching 1.x never running it there
+                        fixInnerClasses = fixInnerClasses ?: false,
                         // decompiler/obf synthetic param names ($$0, $$1…)
                         // are valid identifiers — flag them via pattern so
                         // renameInvalidLocals replaces them
@@ -215,17 +285,21 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                 )
             }
         } finally {
-            remapPermits.release()
+            remapPermits.release(permitCost)
         }
         // output verification — expected renames that never appear mean
         // the dst layer produced an identity copy (the forge-1.2.5
         // official->mcp bug: an exists-but-empty layer "remapped" nothing)
         if (expectedRenames.isNotEmpty()) {
-            val produced = java.util.zip.ZipFile(target.toFile()).use { z ->
-                z.entries().asSequence()
-                    .filter { !it.isDirectory && it.name.endsWith(".class") }
-                    .map { it.name.removeSuffix(".class") }
-                    .toHashSet()
+            val produced = xyz.wagyourtail.unimined.api.util.Perf.span(
+                "uml:remap.verify", "input" to input.fileName.toString()
+            ) {
+                java.util.zip.ZipFile(target.toFile()).use { z ->
+                    z.entries().asSequence()
+                        .filter { !it.isDirectory && it.name.endsWith(".class") }
+                        .map { it.name.removeSuffix(".class") }
+                        .toHashSet()
+                }
             }
             if (produced.none { it in expectedRenames }) {
                 throw GradleException(
@@ -251,20 +325,146 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
         val scanCache = java.util.concurrent.ConcurrentHashMap<
                 List<Triple<Path, Long, Long>>, Map<InternalName, Path>>()
 
-        /**
-         * Daemon-wide bound on concurrent ASM remap passes. Each pass
-         * retains a private lazy inheritance tree whose parsed classpath
-         * ClassInfo set can reach ~1–2 GiB on a full MC classpath; at
-         * `max-workers` parallelism this GC-thrashes the daemon
-         * (observed: fabric-api's ~50 nested module jars, -Xmx2G and
-         * -Xmx6G both thrash). Permits scale with max heap — ~1.5 GiB
-         * assumed peak per pass — 2G→1, 4G→2, 6G+→4. Serialized at
-         * small heaps: slower, but it finishes.
-         */
-        val remapPermits = java.util.concurrent.Semaphore(
-            (Runtime.getRuntime().maxMemory() / (1536L * 1024 * 1024))
-                .toInt().coerceIn(1, 4)
+        /** Identity of one remap batch — same mappings payload, same
+         *  classpath fingerprint, same translated-scan aliases, same
+         *  namespaces and access model means the merged tree +
+         *  propagated groups are identical and can be shared. The
+         *  mappings instance is daemon-shared via the transform's
+         *  data cache, so identity hash is stable within a build. */
+        internal data class BatchKey(
+            val mappingsId: Int,
+            val classpathKey: List<Triple<Path, Long, Long>>,
+            val scanAliasKey: List<ScanAliasKey>,
+            val fns: Namespace,
+            val tns: Namespace,
+            val accessModelHash: Int,
         )
+
+        /** Fingerprint of one translated-scan alias — the jar bytes,
+         *  the namespace it scans from and the bundle it translates
+         *  through (path+size+mtime so a rebuilt file re-keys). */
+        internal data class ScanAliasKey(
+            val jar: Triple<Path, Long, Long>,
+            val sourceNs: String,
+            val mappingsFile: Triple<Path, Long, Long>,
+        )
+
+        /** Daemon-lifetime cache of name-translated alias scans —
+         *  [ASMInheritanceTree.ScanData] is immutable and shareable, so
+         *  one official->intermediary MC scan serves every batch in the
+         *  env (modImplementation + modRuntime views). SoftReference:
+         *  same GC-pressure escape hatch as [batchCache]. */
+        internal val aliasScanCache = java.util.concurrent.ConcurrentHashMap<
+                ScanAliasKey, java.lang.ref.SoftReference<ASMInheritanceTree.ScanData>>()
+
+        /** Scan [alias]'s jar and rename the result
+         *  `alias.sourceNs -> fns` through its mapping bundle — the
+         *  class-info view a modsource-namespace remapped jar would
+         *  have carried, produced without a bytecode pass. Cached on
+         *  [aliasScanCache] so repeat batches across views pay the
+         *  scan once per env. */
+        internal fun translatedScan(
+            alias: xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias,
+            fns: Namespace,
+            log: xyz.wagyourtail.commons.core.logger.Logger
+        ): ASMInheritanceTree.ScanData {
+            val key = ScanAliasKey(
+                Triple(alias.jar, Files.size(alias.jar),
+                    Files.getLastModifiedTime(alias.jar).toMillis()),
+                alias.sourceNs,
+                Triple(alias.mappingsFile, Files.size(alias.mappingsFile),
+                    Files.getLastModifiedTime(alias.mappingsFile).toMillis())
+            )
+            var scan = aliasScanCache[key]?.get()
+            if (scan == null) {
+                synchronized(aliasScanCache) {
+                    scan = aliasScanCache[key]?.get()
+                    if (scan == null) {
+                        log.lifecycle(
+                            "scanning ${alias.jar.fileName} " +
+                            "(${alias.sourceNs} -> ${fns.name} names) " +
+                            "for lazy inheritance"
+                        )
+                        val t0 = System.nanoTime()
+                        val data = xyz.wagyourtail.unimined.api.mapping
+                            .SerializedMappingData.readEither(alias.mappingsFile)
+                        val tree = data.view<MappingTree>()
+                            ?: throw GradleException(
+                                "scan-alias mappings $alias.mappingsFile " +
+                                "expose no UML MappingTree view"
+                            )
+                        scan = xyz.wagyourtail.unimined.api.util.Perf.span(
+                            "classpath.scanAlias", "jar" to alias.jar.fileName.toString()
+                        ) {
+                            ASMInheritanceTree.scan(setOf(alias.jar)).renamed(
+                                tree.remapper(Namespace(alias.sourceNs), fns)
+                            )
+                        }
+                        log.lifecycle(
+                            "scan-alias ${alias.jar.fileName}: " +
+                            "${scan!!.classes.size} classes in " +
+                            "${(System.nanoTime() - t0) / 1_000_000}ms"
+                        )
+                        aliasScanCache[key] = java.lang.ref.SoftReference(scan)
+                    }
+                }
+            }
+            return scan!!
+        }
+
+        /** Daemon-lifetime shared remap batches — a soft reference keeps
+         *  a GC-pressure escape hatch (rebuild on demand rather than
+         *  pinning multi-GB merged trees). Internal so `modArtifacts`
+         *  (same batch, same keying) shares the remap step's prepared
+         *  state instead of rebuilding it. */
+        internal val batchCache = java.util.concurrent.ConcurrentHashMap<
+                BatchKey, java.lang.ref.SoftReference<RemapBatch>>()
+
+        /** Double-checked soft-ref lookup over [batchCache]; [prepare]
+         *  runs at most once per key even under concurrent first access.
+         *  Keep [prepare] self-contained — anything expensive it needs
+         *  (e.g. the access-model overlay) should be built inside it so
+         *  cache hits skip the work entirely. */
+        internal fun remapBatch(key: BatchKey, prepare: () -> RemapBatch): RemapBatch {
+            var batch = batchCache[key]?.get()
+            if (batch == null) {
+                synchronized(batchCache) {
+                    batch = batchCache[key]?.get()
+                    if (batch == null) {
+                        batch = prepare()
+                        batchCache[key] = java.lang.ref.SoftReference(batch)
+                    }
+                }
+            }
+            return batch!!
+        }
+
+        /**
+         * Daemon-wide bound on concurrent ASM remap passes, in ~192 MiB
+         * heap units. With the batch-shared merged tree/groups/graph,
+         * a pass's marginal footprint is its input scan + buffered
+         * output — roughly proportional to input size — so the unit
+         * count is min(cores×4, heap÷192 MiB) with a floor of 12, and
+         * each pass claims units by input size (see
+         * [remapPermitCost]): ~8 small-mod passes per 8 cores as
+         * before, but an MC-scale input claims ~6× a mod jar's units
+         * instead of running alongside a full wave. The batch's own
+         * multi-GB shared state is not permit-bounded; heaps too small
+         * to hold it fail regardless.
+         */
+        val REMAP_PERMIT_UNITS = minOf(
+            Runtime.getRuntime().availableProcessors() * 4,
+            (Runtime.getRuntime().maxMemory() / (192L * 1024 * 1024)).toInt()
+        ).coerceAtLeast(12)
+
+        val remapPermits = java.util.concurrent.Semaphore(REMAP_PERMIT_UNITS)
+
+        /** heap units a remap pass claims for an input of [inputBytes] */
+        fun remapPermitCost(inputBytes: Long): Int = when {
+            inputBytes < 4L * 1024 * 1024 -> 4    // ≤~768 MiB — a mod jar
+            inputBytes < 32L * 1024 * 1024 -> 8   // ~1.5 GiB
+            else -> 24                            // MC-scale: ~4 GiB
+        }
     }
 
 }

@@ -29,8 +29,41 @@ abstract class RunConfig @Inject constructor(
 
     override fun getName(): String = name
 
+    /** Opt this run out — the materialized `run<Name>`/`prepare*`
+     *  tasks skip when false. Conventions to `runs.enabled` (1.x
+     *  task-level `enabled` parity). */
+    abstract val enabled: Property<Boolean>
+
     /** The environment (`SourceSet` name) this run launches. */
     abstract val environment: Property<String>
+
+    /**
+     * Depend on [task] before this run — `beforeRun(preBuildTask)`
+     * adds `run<Name>.dependsOn(task)`.
+     */
+    fun beforeRun(task: org.gradle.api.tasks.TaskProvider<*>) {
+        beforeRunDeps += task
+    }
+
+    /** Register an ad-hoc `preRun<Name><i>` task configured by
+     *  [action] and run it before this run. */
+    fun beforeRun(action: Action<org.gradle.api.Task>) {
+        beforeRunActions += action
+    }
+
+    /** Groovy DSL twin of [beforeRun]. */
+    fun beforeRun(
+        @DelegatesTo(
+            value = org.gradle.api.Task::class,
+            strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        beforeRunActions += Action { t -> action.delegatingTo(t) }
+    }
+
+    internal val beforeRunDeps =
+        mutableListOf<org.gradle.api.tasks.TaskProvider<*>>()
+    internal val beforeRunActions =
+        mutableListOf<Action<org.gradle.api.Task>>()
 
     abstract val side: Property<RunSide>
 

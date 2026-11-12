@@ -48,7 +48,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
     private val product by option("--product",
         help = "non-native product: bta, reindev, nsss, custom:<name>")
     private val dist by option("--dist",
-        help = "dist jar for custom:/nsss product envs")
+        help = "dist artifact for custom:/nsss product envs — " +
+               "path, maven:<coord>, or url:<url>")
     private val modules by option("--modules",
         help = "emit common + per-loader subprojects").flag()
     private val jarmod by option("--jarmod",

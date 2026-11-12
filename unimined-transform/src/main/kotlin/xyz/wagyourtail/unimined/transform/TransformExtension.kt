@@ -9,6 +9,7 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
+import xyz.wagyourtail.unimined.minecraft.TransformExtensionFacade
 import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.transform.internal.DefaultTransformContext
 import xyz.wagyourtail.unimined.transform.internal.RuntimeTransformOutput
@@ -27,7 +28,7 @@ import javax.inject.Inject
  */
 abstract class TransformExtension @Inject constructor(
     private val project: Project
-) {
+) : TransformExtensionFacade {
 
     private val environments = mutableMapOf(
         "main" to TransformEnvironmentSpec("main", project.path, project.objects)
@@ -47,6 +48,12 @@ abstract class TransformExtension @Inject constructor(
     /** The default `main` environment's decorators. */
     val decorators: MutableList<TransformDecorator>
         get() = sourceSet("main").decorators
+
+    /** Env-facing facade — the `minecraft { sourceSet("x") {
+     *  loader(n, v) { } } }` closure resolves through this so the
+     *  minecraft module never class-depends on this extension. */
+    override fun environmentSpec(environmentId: String): Any =
+        sourceSet(environmentId)
 
     /** Get or create this source-set environment's transform configuration. */
     fun sourceSet(environmentId: String): TransformEnvironmentSpec =

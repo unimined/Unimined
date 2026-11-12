@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined` — the frontend aggregation facade.
@@ -11,6 +12,7 @@ import org.gradle.api.Project
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         for (id in DEFAULT_STACK) {
             target.pluginManager.apply(id)
         }

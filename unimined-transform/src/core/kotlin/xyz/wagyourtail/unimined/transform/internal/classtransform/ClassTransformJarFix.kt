@@ -33,6 +33,14 @@ object ClassTransformJarFix {
     ) {
         val provider = LenientClassProvider(FileSystemClassProvider(fs, BasicClassProvider()))
         val manager = TransformerManager(provider)
+        // classtransform's default FailStrategy is EXIT — it System.exit()s
+        // the host JVM on any unresolved method pattern, which inside a
+        // Gradle daemon kill-switch is fatal (cleanroom's rewritten
+        // CoreModManager lacks discoverCoreMods and took the daemon with
+        // it). CONTINUE logs the failure and keeps going — the 1.x
+        // FixFG2* visitors' "absent methods no-op" semantics.
+        manager.failStrategy =
+            net.lenni0451.classtransform.utils.FailStrategy.CONTINUE
         manager.addInjectionTarget("SUPER_SELF", SelfSuperTarget())
         manager.addCustomAnnotationHandler(CSuperOverrideAnnotationHandler(), HandlerPosition.PRE)
         manager.addCustomAnnotationHandler(CSurgeryStubStripHandler(), HandlerPosition.PRE)

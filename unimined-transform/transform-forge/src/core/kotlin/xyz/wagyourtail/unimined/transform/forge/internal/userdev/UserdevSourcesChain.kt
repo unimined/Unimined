@@ -71,7 +71,10 @@ internal object UserdevSourcesChain {
             decompileIdx,
             SubStep(
                 "applyAts", "forge:applyAts",
-                mapOf("input" to "{renameOutput}")
+                // decompile's own input — descriptor shapes without a
+                // `rename` step (26.x unobf) feed `{mergeOutput}` etc.
+                mapOf("input" to (steps[decompileIdx].args["input"]
+                    ?: "{renameOutput}"))
             )
         )
         steps[decompileIdx + 1] = steps[decompileIdx + 1].copy(

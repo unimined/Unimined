@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.remap.task
 
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.CacheableTask
+import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
 
 /**
@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
  * produced by another task — the decompile fork, the sources-surface
  * remap of a generated sources jar.
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class RemapArtifactTask : AbstractRemapTask(), ProducesArtifacts {
 
     override val artifacts: Map<String, Provider<RegularFile>>

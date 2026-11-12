@@ -307,6 +307,32 @@ internal object JarModEnvironmentWiring {
             },
             xyz.wagyourtail.unimined.remap.spi.StepScope.ENVIRONMENT_ARTIFACT
         )
+        // 1.x `JarModAgentPatcher.compiletimeTransforms` — forked
+        // JarModAgent main pass over the mod jar before the namespace
+        // remap. Pre-step so it runs on the original-namespace input;
+        // ModArtifactOnly keeps it out of the MC dev-artifact pipeline
+        // and dep views never consume pre-steps. Deferred — the flag
+        // and transforms list aren't final until after DSL eval.
+        remap.sourceSet(envId).contributeDeferredSteps(project.provider {
+            if (environment.loaderSpec.orNull?.name != "jarmod" ||
+                !JarModEnvState.compiletimeTransforms(envId) ||
+                JarModEnvState.transforms(envId).isEmpty()
+            ) emptyList()
+            else listOf(
+                xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution(
+                    xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
+                    project.objects.newInstance(
+                        JmaCompileTransformStepSpec::class.java
+                    ).apply {
+                        transforms.set(JarModEnvState.transforms(envId))
+                        agentJar.set(jarModAgent.resolve()
+                            .first { it.extension == "jar" }.absolutePath)
+                        debug.set(true)
+                    },
+                    pre = true
+                )
+            )
+        })
         // JarModAgent on the run classpath: -javaagent + system props
         // (1.x JarModAgentMinecraftTransformer run config). Jarmod-
         // loader envs only — fg1/modloader reuse this wiring as a

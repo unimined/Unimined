@@ -1,18 +1,22 @@
 package xyz.wagyourtail.unimined.transform.internal
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.SourceSet
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.MavenCoords
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
+import xyz.wagyourtail.unimined.remap.internal.NestedJarsAppender
 import xyz.wagyourtail.unimined.remap.spi.DevArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.unimined.remap.task.RemapJarTask
+import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 
 /**
  * Production-artifact wiring for one bound environment + source set —
@@ -45,17 +49,19 @@ internal object ProductionJarWiring {
     fun wire(
         project: Project,
         environment: MinecraftEnvironment,
-        sourceSet: SourceSet
+        sourceSet: SourceSet,
+        nestedJars: NestedJarsPlan? = null
     ) {
         project.afterEvaluate {
-            wireProductionJar(project, environment, sourceSet)
+            wireProductionJar(project, environment, sourceSet, nestedJars)
         }
     }
 
     private fun wireProductionJar(
         project: Project,
         environment: MinecraftEnvironment,
-        sourceSet: SourceSet
+        sourceSet: SourceSet,
+        nestedJars: NestedJarsPlan?
     ) {
         if (!environment.defaultRemapJar.get()) return
         val jarTaskName = sourceSet.jarTaskName
@@ -74,12 +80,22 @@ internal object ProductionJarWiring {
 
         val devNamespace = minecraft.devNamespace(environmentId)
         val prodNamespace = minecraft.modSourceNamespaces(environmentId).map { namespaces ->
-            require(namespaces.size == 1) {
-                "environment '$environmentId' declares ${namespaces.size} mod " +
-                        "source namespaces — default production remap needs exactly " +
-                        "one; use remap.remappedViews(...) for mixed inputs"
+            if (namespaces.size == 1) namespaces.single() else {
+                // multi-source envs (bukkit: "spigot" + "spigotProd")
+                // — the loader's declared prodNamespace is the
+                // production target when it's one of the env's mod
+                // sources (1.x defaultProdNamespace); anything else
+                // stays ambiguous
+                environment.loaderSpec.orNull
+                    ?.let { LoaderRegistry.resolveBuiltin(it.name)?.prodNamespace }
+                    ?.takeIf { it in namespaces }
+                    ?: throw GradleException(
+                        "environment '$environmentId' declares " +
+                                "${namespaces.size} mod source namespaces — " +
+                                "default production remap needs exactly one; " +
+                                "use remap.remappedViews(...) for mixed inputs"
+                    )
             }
-            namespaces.single()
         }
 
         // task-produced bundle (producer task dep flows through
@@ -148,6 +164,14 @@ internal object ProductionJarWiring {
             // feeds inheritance/propagation for engines that need it
             t.remapClasspath.from(sourceSet.compileClasspath)
             t.footgunChecks.set(remap.footgunChecks)
+            nestedJars?.let { p ->
+                t.nestedJars.from(p.files)
+                t.nestedJarEntries.set(p.entries)
+                t.nestedJarsFormat.set(p.format)
+                t.nestedJarsRecompress.set(p.recompress)
+                t.nestedJarsMetadataFile.set(p.metadataFile)
+                t.nestedJarsKey.set(p.nestedJarsKey)
+            }
         }
         // prod-mapped sources — 1.x's `remapSourcesJar`: a conventional
         // `sourcesJar` carries dev-namespace sources under a `-dev`
@@ -234,6 +258,76 @@ internal object ProductionJarWiring {
                 else "$originalClassifier-dev"
             }
         )
+        // identity environments collapse remapJar — the plain jar IS the
+        // production artifact, so the JiJ post-pass must land here
+        // instead of in the (skipped) JAR pipeline. The doLast reads the
+        // resolved input values off task.inputs — no provider/config
+        // captures in the serialized action (config-cache safe).
+        nestedJars?.let { p ->
+            jar.inputs.files(p.files)
+            jar.inputs.property(
+                "nestedJarPaths",
+                p.entries.map { l ->
+                    l.map { it.jar.get().asFile.toPath().toString() }
+                }
+            )
+            jar.inputs.property(
+                "nestedJarCoords",
+                p.entries.map { l -> l.map { it.coords.orNull } }
+            )
+            jar.inputs.property(
+                "nestedJarRanges",
+                p.entries.map { l -> l.map { it.versionRange.orNull } }
+            )
+            jar.inputs.property(
+                "nestedJarTypes",
+                p.entries.map { l -> l.map { it.fmlModType.orNull } }
+            )
+            jar.inputs.property(
+                "nestedJarObfuscated",
+                p.entries.map { l -> l.map { it.obfuscated.orNull } }
+            )
+            // nullable providers need a sentinel — registered inputs must
+            // always resolve; "" = absent (doLast treats it as unset)
+            jar.inputs.property("nestedJarsFormat", p.format.orElse(""))
+            jar.inputs.property("nestedJarsRecompress", p.recompress)
+            jar.inputs.property("nestedJarsMetadataFile", p.metadataFile.orElse(""))
+            jar.inputs.property("nestedJarsKey", p.nestedJarsKey.orElse(""))
+            jar.inputs.property("nestedJarsExpectedNamespace", prodNamespace)
+            jar.inputs.property("nestedJarsIdentity", identity)
+            jar.doLast { task ->
+                val props = task.inputs.properties
+                if (props["nestedJarsIdentity"] != true) return@doLast
+                val format = (props["nestedJarsFormat"] as? String)
+                    ?.takeUnless { it.isEmpty() }
+                    ?: return@doLast
+                @Suppress("UNCHECKED_CAST")
+                val rows = NestedJarsAppender.append(
+                    (task as Jar).archiveFile.get().asFile.toPath(),
+                    (props["nestedJarPaths"] as List<String>).mapIndexed { i, s ->
+                        NestedJarsAppender.Input(
+                            java.nio.file.Path.of(s),
+                            (props["nestedJarCoords"] as List<String?>)
+                                .getOrNull(i)?.let(::MavenCoords),
+                            (props["nestedJarRanges"] as List<String?>)
+                                .getOrNull(i),
+                            (props["nestedJarTypes"] as List<String?>)
+                                .getOrNull(i),
+                            (props["nestedJarObfuscated"] as List<Boolean?>)
+                                .getOrNull(i)
+                        )
+                    },
+                    format,
+                    props["nestedJarsRecompress"] as? Boolean ?: true,
+                    (props["nestedJarsMetadataFile"] as? String)
+                        ?.takeUnless { it.isEmpty() },
+                    (props["nestedJarsKey"] as? String)
+                        ?.takeUnless { it.isEmpty() },
+                    props["nestedJarsExpectedNamespace"] as? String
+                )
+                rows.forEach { task.logger.warn("[Unimined] $it") }
+            }
+        }
         project.tasks.findByName("build")?.dependsOn(remapJar, remapSourcesJar)
     }
 

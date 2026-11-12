@@ -1,0 +1,13 @@
+Reusing configuration cache.
+> Task :compileJava UP-TO-DATE
+> Task :generateModMetadata UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+
+> Task :resolveDevClasspath
+compileClasspath: 96 files
+runtimeClasspath: 99 files
+
+BUILD SUCCESSFUL in 1s
+3 actionable tasks: 1 executed, 2 up-to-date
+Configuration cache entry reused.

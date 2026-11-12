@@ -61,8 +61,16 @@ internal fun contributeRunMutators(
         .dir(".gradle/unimined/forge").asFile.toPath()
 
     // captured at config time — the mutator runs at execution,
-    // where Project is unavailable under configuration cache
-    val groups = forgeGroups(project, envSpec, minecraft)
+    // where Project is unavailable under configuration cache.
+    // Recomputed at projectsEvaluated so cross-project inherited
+    // envs (whose sourceSets/loaderSpecs don't exist until their own
+    // project configures) still fold into MOD_CLASSES groups —
+    // 1.x's lazy `groups` ran post-evaluation
+    val groupsRef = java.util.concurrent.atomic.AtomicReference(
+        forgeGroups(project, envSpec, minecraft))
+    project.gradle.projectsEvaluated {
+        groupsRef.set(forgeGroups(project, envSpec, minecraft))
+    }
     val mcLibs = project.configurations.getByName(
         environment.minecraftLibrariesConfigurationName
     )
@@ -129,19 +137,50 @@ internal fun contributeRunMutators(
     val unprotectMappings = project.provider {
         exportUnprotectMappings(artifacts.get().mappings.get(), cacheDir)
     }
-    val devNs = minecraft.devNamespace(environment.environmentId)
     envSpec.runMutators += org.gradle.api.Action<xyz.wagyourtail.unimined.api.spec.RunConfigSpec> { run ->
         val r = resolved.orNull ?: return@Action
         val ctx = UserdevRunConfigs.Ctx(
             assetIndex = { artifacts.get().assets.get().id },
-            groups = { groups },
+            groups = { groupsRef.get() },
             modules = { moduleFiles.get() },
             minecraftClasspathFile = { classpathFile.get() },
             srgToMcpAsSrg = {
-                exportSrgToMcp(
-                    artifacts.get().mappings.get(),
-                    r.descriptor.prodNamespace, devNs.get(), cacheDir
-                )
+                val tree = artifacts.get().mappings.get()
+                // the runtime deobf table describes the *patched*
+                // jar's member namespace — searge for userdev-era
+                // (notchObf included: obf input, srg output), mojmap
+                // for neoform — never `obfNamespace` (the patch
+                // source), which reads "official" for cleanroom
+                val prodNs =
+                    (r.profile as? ForgeProfile.Userdev)?.config
+                        ?.patchedNamespace
+                        ?: r.descriptor.prodNamespace
+                // dst is the tree's last (mod-facing) ns, not
+                // devNamespace: srg-runtime envs resolve that to
+                // the jar's own srg boundary
+                val runtimeDevNs = tree.namespaces.last().name
+                if (r.descriptor.capabilities["mcpToSrgFormat"] == "tsrg") {
+                    xyz.wagyourtail.unimined.transform.internal
+                        .RuntimeMappingExports.export(
+                            tree,
+                            xyz.wagyourtail.unimined.transform.internal
+                                .RuntimeMappingExports.Spec(
+                                    format = xyz.wagyourtail.unimined
+                                        .transform.internal
+                                        .RuntimeMappingExports.Format
+                                        .TSRG_V1,
+                                    srcNs = prodNs,
+                                    dstNs = runtimeDevNs,
+                                    fileName = "srg2mcp.tsrg"
+                                ),
+                            cacheDir
+                        ).toString()
+                } else {
+                    exportSrgToMcp(
+                        tree,
+                        prodNs, runtimeDevNs, cacheDir
+                    )
+                }
             },
             groupSeparator = bootstrapDevVersion(r)?.let {
                 if (bootstrapDevNeedsSemicolon(it)) ";" else
@@ -240,7 +279,7 @@ internal fun contributeRunMutators(
                     ) else emptyList()
                 )
                 run.environment["MOD_CLASSES"] =
-                    UserdevRunConfigs.groupsString(groups)
+                    UserdevRunConfigs.groupsString(groupsRef.get())
             }
 
             else -> {}
@@ -253,9 +292,12 @@ internal fun contributeRunMutators(
  * `projectPath:environmentId` -> output dirs. Members of an
  * inherited environment merge into this group when that env is not
  * itself forge-transformed; each forge-family inherited env forms
- * its own group. Same-project inheritance only — cross-project
- * `EnvironmentReference`s are skipped (Gradle isolated-project
- * resolution is not available at config time).
+ * its own group. Cross-project `EnvironmentReference`s resolve
+ * through `rootProject.project(refPath)` — but only once every
+ * project has been evaluated: callers evaluate this eagerly AND
+ * again inside `gradle.projectsEvaluated`, so refs whose target
+ * sourceSet/loaderSpec isn't declared yet contribute nothing in
+ * the early pass and land correctly in the late one.
  */
 internal fun forgeGroups(
     project: Project,
@@ -289,10 +331,12 @@ internal fun forgeGroups(
     fun dirsFor(projectPath: String, envId: String): List<String> {
         val proj = if (projectPath == project.path) project
         else project.rootProject.project(projectPath)
+        // findByName — a sibling project's sourceSets may not exist in
+        // the early (pre-projectsEvaluated) pass
         val sourceSet = proj.extensions
-            .getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
-            .getByName(envId)
-        return listOf(sourceSet.output.resourcesDir!!.absolutePath) +
+            .findByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            ?.findByName(envId) ?: return emptyList()
+        return listOfNotNull(sourceSet.output.resourcesDir?.absolutePath) +
                 sourceSet.output.classesDirs.files.map { it.absolutePath }
     }
 
@@ -302,11 +346,17 @@ internal fun forgeGroups(
                 manifestMemberFor(ownKey)).toMutableList()
     )
     for ((refPath, refEnvId) in spec.inheritedEnvironmentReferences()) {
-        // only same-project environments can be classified
-        if (refPath != project.path) continue
+        // loader identity lives on the *referenced* project's
+        // MinecraftExtension for cross-project envs; unevaluated
+        // siblings classify as non-forge in the early pass and get
+        // reclassified at projectsEvaluated
+        val refMinecraft = (if (refPath == project.path) project
+        else project.rootProject.findProject(refPath))
+            ?.extensions
+            ?.findByType(MinecraftExtension::class.java)
         val inheritedIsForge = LoaderRegistry
             .resolveBuiltin(
-                minecraft.environments.findByName(refEnvId)
+                refMinecraft?.environments?.findByName(refEnvId)
                     ?.loaderSpec?.orNull?.name ?: ""
             )
             ?.family == "forge"

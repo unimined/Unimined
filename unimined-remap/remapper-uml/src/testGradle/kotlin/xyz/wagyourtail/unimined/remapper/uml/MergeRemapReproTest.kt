@@ -26,10 +26,20 @@ import kotlin.io.path.deleteIfExists
  */
 class MergeRemapReproTest {
 
+    /** Debug repro — inputs are local-machine cache/fixture paths;
+     *  skip cleanly where they don't exist (CI). */
+    private fun assumeInputs(vararg paths: java.nio.file.Path) {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+            paths.all { java.nio.file.Files.exists(it) },
+            "repro inputs absent: ${paths.filter { !java.nio.file.Files.exists(it) }}"
+        )
+    }
+
     @Test
     fun dumpServerWorldMembers() {
         val bundle = java.nio.file.Path.of(
             "/run/media/william/m2shared/Projects/unimined-org/unimined/testing/ornithe-b173/build/unimined/mappings/main/prod-jar.json")
+        assumeInputs(bundle)
         val payload = ZipFile(bundle.toFile()).use { z ->
             z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
         }
@@ -76,6 +86,7 @@ class MergeRemapReproTest {
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/server.jar")
         val bundle = java.nio.file.Path.of(
             "/home/william/.gradle/caches/unimined/mapping-cache/mappings-merged/2ab8223058947ab18923730ad2832fd6e200a55e.json")
+        assumeInputs(inputJar, bundle)
         val payload = ZipFile(bundle.toFile()).use { z ->
             z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
         }
@@ -157,6 +168,7 @@ class MergeRemapReproTest {
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/client.jar")
         val bundle = java.nio.file.Path.of(
             "/home/william/.gradle/caches/unimined/mapping-cache/mappings-merged/2ab8223058947ab18923730ad2832fd6e200a55e.json")
+        assumeInputs(inputJar, bundle)
         val payload = ZipFile(bundle.toFile()).use { z ->
             z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
         }
@@ -220,6 +232,7 @@ class MergeRemapReproTest {
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/client.jar")
         val bundle = java.nio.file.Path.of(
             "/run/media/william/m2shared/Projects/unimined-org/unimined/testing/ornithe-b173/build/unimined/mappings/main/prod-jar.json")
+        assumeInputs(clientJar, bundle)
         val payload = ZipFile(bundle.toFile()).use { z ->
             z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
         }
@@ -270,6 +283,7 @@ class MergeRemapReproTest {
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/client.jar")
         val bundle = java.nio.file.Path.of(
             "/tmp/unimined-merge-mappings1116059787918761046.zip")
+        assumeInputs(inputJar, bundle)
         val payload = ZipFile(bundle.toFile()).use { z ->
             z.getInputStream(z.getEntry("views/uml-tree")).readBytes()
         }
@@ -309,6 +323,7 @@ class MergeRemapReproTest {
             "/home/william/.gradle/caches/unimined/native-cache/versions/b1.7.3/$side.jar")
         val bundle = java.nio.file.Path.of(
             "/run/media/william/m2shared/Projects/unimined-org/unimined/testing/ornithe-b173/build/unimined/mappings/main/prod-jar.json")
+        assumeInputs(inputJar, bundle)
 
         // prod-jar.json is a zip of views — views/uml-tree is a UMF doc
         val payload = ZipFile(bundle.toFile()).use { z ->

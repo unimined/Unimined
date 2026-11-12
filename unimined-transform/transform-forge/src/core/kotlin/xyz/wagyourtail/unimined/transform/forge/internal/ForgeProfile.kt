@@ -124,6 +124,15 @@ class UserdevConfig(val json: JsonObject) {
     fun obfNamespaceFor(unobfuscated: Boolean): String =
         if (unobfuscated) "mojmap" else obfNamespace
 
+    /** Namespace the *patched* userdev product's members carry at
+     *  dev-runtime — `searge` for mcp_config-era (notchObf included:
+     *  the merge is obf *input* but the patched jar is emitted at
+     *  the srg boundary FML/Foundation's deobf remapper expects),
+     *  `mojmap` for neoform-family. Distinct from [obfNamespace],
+     *  which describes the patch *source*. */
+    val patchedNamespace: String
+        get() = if (mcp.contains("neoform")) "mojmap" else "searge"
+
     /** `notchObf` — runtime is notch-obfuscated (pre-1.16.5-era). */
     val notchObf: Boolean
         get() =

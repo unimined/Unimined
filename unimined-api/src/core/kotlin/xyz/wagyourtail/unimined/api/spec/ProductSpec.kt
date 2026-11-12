@@ -43,6 +43,19 @@ interface ProductSpec {
     val librarySubstitutions: List<Pair<String, String>>
         get() = emptyList()
 
+    /** Rich library rules (1.x `replaceLibraryVersion`) — evaluated by
+     *  [applyLibraryRules] after [DEFAULT_LIBRARY_RULES] and before
+     *  [librarySubstitutions], so user rules override loader
+     *  conventions. */
+    val libraryRules: List<LibraryRule>
+        get() = emptyList()
+
+    /** Whole-coord rewrite filters (1.x `libraryFilter(String)`) —
+     *  each maps a coordinate to its replacement or `null` to drop;
+     *  last-declared runs first, ahead of every rule list. */
+    val libraryCoordFilters: List<(String) -> String?>
+        get() = emptyList()
+
     /** Additional ordered version-manifest locations searched after
      *  Mojang's official manifest (first match wins — official entries
      *  always take precedence; alternates fill gaps). Any manifest

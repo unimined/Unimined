@@ -87,4 +87,16 @@ internal object JarModEnvState {
         debug[envId] = value
     }
 
+    private val compiletimeTransforms = mutableMapOf<String, Boolean>()
+
+    /** 1.x `JarModAgentPatcher.compiletimeTransforms` — run the env's
+     *  declared jma transformers over the mod jar during `remapJar`
+     *  (a forked JarModAgent main pass before the namespace remap)
+     *  instead of relying on the runtime `-javaagent` alone. */
+    fun compiletimeTransforms(envId: String): Boolean =
+        compiletimeTransforms[envId] ?: false
+    fun compiletimeTransforms(envId: String, value: Boolean) {
+        compiletimeTransforms[envId] = value
+    }
+
 }

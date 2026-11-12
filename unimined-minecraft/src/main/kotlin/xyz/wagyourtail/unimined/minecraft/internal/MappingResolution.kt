@@ -19,7 +19,11 @@ import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.mapping.internal.MaterializedSourceSpec
 import xyz.wagyourtail.unimined.mapping.UniminedRepos
 import xyz.wagyourtail.unimined.mapping.task.ProduceMappingBundleTask
+import xyz.wagyourtail.commonskt.utils.toHex
+import xyz.wagyourtail.unimined.api.util.writeAtomically
+import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 
 /**
  * Mapping/artifact resolution seam for [MinecraftExtension] — owns the
@@ -56,6 +60,9 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
 
     private val mappingBundleJsonCache =
         java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private val mappingBundleFileCache =
+        java.util.concurrent.ConcurrentHashMap<String, Path>()
 
     private val mappingExtension: MappingExtension
         get() = project.extensions.getByType(MappingExtension::class.java)
@@ -246,6 +253,73 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                             "org.parchmentmc.data:parchment-$mcVersion:$version$classifier@zip"
                         )
                     )
+                }
+
+                "yarnv1" -> {
+                    // Tiny v1 yarn + stitch proposeFieldNames over the
+                    // client jar (1.x yarnv1 semantics) — resolves the
+                    // plain (non-v2) yarn artifact on the fabric maven
+                    val mcVersion = params["version"]
+                        ?: throw GradleException("yarnv1() requires a version")
+                    val build = params["build"]
+                        ?: throw GradleException("yarnv1() requires a build")
+                    UniminedRepos(project).fabric.ensure()
+                    val yarnJar = resolveMavenNotation(
+                        "net.fabricmc:yarn:$mcVersion+build.$build"
+                    )
+                    val cacheDir = xyz.wagyourtail.unimined.api.util
+                        .UniminedCache.global(project)
+                        .resolve("yarnv1")
+                    java.nio.file.Files.createDirectories(cacheDir)
+                    val extracted = cacheDir.resolve(
+                        "yarnv1-$mcVersion+build.$build.tiny")
+                    if (!java.nio.file.Files.exists(extracted)) {
+                        java.util.zip.ZipFile(yarnJar.toFile()).use { zip ->
+                            val entry = zip.getEntry("mappings/mappings.tiny")
+                                ?: throw GradleException(
+                                    "yarn jar $yarnJar carries no " +
+                                    "mappings/mappings.tiny")
+                            zip.getInputStream(entry).use { input ->
+                                java.nio.file.Files.copy(input, extracted)
+                            }
+                        }
+                    }
+                    val filled = cacheDir.resolve(
+                        "yarnv1-$mcVersion+build.$build-filled.tiny")
+                    if (!java.nio.file.Files.exists(filled)) {
+                        val stitch = resolveMavenNotation(
+                            "net.fabricmc:stitch:0.6.2")
+                        val arts = resolved(environment).artifacts
+                        val mcJar = arts[xyz.wagyourtail.unimined
+                            .minecraft.spi.ArtifactKey.CLIENT]?.orNull?.asFile
+                            ?: arts[xyz.wagyourtail.unimined
+                                .minecraft.spi.ArtifactKey.MERGED]
+                                ?.orNull?.asFile
+                            ?: throw GradleException(
+                                "mappings { yarnv1() }: environment " +
+                                "'${environment.name}' has no client or " +
+                                "merged jar for stitch proposeFieldNames")
+                        val javaBin = java.nio.file.Paths.get(
+                            System.getProperty("java.home"),
+                            "bin", "java").toString()
+                        val proc = ProcessBuilder(
+                            javaBin, "-cp", stitch.toString(),
+                            "net.fabricmc.stitch.Main",
+                            "proposeFieldNames",
+                            mcJar.absolutePath,
+                            extracted.toAbsolutePath().toString(),
+                            filled.toAbsolutePath().toString()
+                        ).redirectErrorStream(true).start()
+                        val output = proc.inputStream.bufferedReader().readText()
+                        val exit = proc.waitFor()
+                        if (exit != 0 || !java.nio.file.Files.exists(filled)) {
+                            throw GradleException(
+                                "mappings { yarnv1() }: stitch " +
+                                "proposeFieldNames failed (exit $exit):\n" +
+                                output.takeLast(4000))
+                        }
+                    }
+                    listOf(filled)
                 }
 
                 else -> throw GradleException(
@@ -514,5 +588,51 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             }
             bundleJson
         }
+    }
+
+    /**
+     * File-backed variant of [mappingBundleJson] — the same payload
+     * (rich `SerializedMappingData` zip, or the row-bundle fallback
+     * when no serializer covers the data's views) written once under
+     * the global cache's `mappings-bundle/`, content-addressed by
+     * sha1. Transform params carry the file reference instead of an
+     * inline `z64:` megastring, so the serialized tree stops riding
+     * the configuration-cache payload and param serialization once
+     * per registered transform. `SerializedMappingData.readEither`
+     * sniffs both payload kinds — identical semantics, transport
+     * aside.
+     */
+    internal fun mappingBundleFile(
+        environmentId: String,
+        from: Provider<String>,
+        to: Provider<String>
+    ): Provider<RegularFile> {
+        val environment = ext.sourceSet(environmentId)
+        return project.layout.file(providers.provider {
+            val path = mappingBundleFileCache.computeIfAbsent(
+                "$environmentId:${from.get()}:${to.get()}"
+            ) {
+                val data = resolvedMappingData(environment)
+                val bytes = SerializedMappingData.writeBytes(data)
+                    ?: run {
+                        val f = from.get(); val t = to.get()
+                        (data.view(MappingTree::class.java)?.let {
+                            MappingBundle.capture(f, t, it).toJson()
+                        } ?: MappingBundle(
+                            listOf(f, t).distinct(), f, t, emptyList()
+                        ).toJson()).toByteArray(Charsets.UTF_8)
+                    }
+                val sha = MessageDigest.getInstance("SHA-1")
+                    .digest(bytes).toHex()
+                UniminedCache.global(project)
+                    .resolve("mappings-bundle").resolve("$sha.bundle").also {
+                        if (!Files.exists(it)) {
+                            Files.createDirectories(it.parent)
+                            it.writeAtomically { tmp -> Files.write(tmp, bytes) }
+                        }
+                    }
+            }
+            path.toFile()
+        })
     }
 }

@@ -32,6 +32,14 @@ object UniminedCache {
                 .dir(".gradle/unimined").asFile.toPath()
         }.createDirectories()
 
+    /** Root for artifacts materialized at pipeline emit points —
+     *  mid-pipeline products (e.g. the environment's prod jar before
+     *  its dev remap + enhance steps) consumable via
+     *  `envArtifactBindings`, file deps, or external tooling. Content
+     *  is env-keyed, so it lives under the global root. */
+    fun emitted(project: Project): Path =
+        global(project).resolve("emitted").createDirectories()
+
     /** Root for project-scoped artifacts — always under the project's
      *  `.gradle` regardless of the flag (matches 1.x local-repo/stub
      *  placement). */

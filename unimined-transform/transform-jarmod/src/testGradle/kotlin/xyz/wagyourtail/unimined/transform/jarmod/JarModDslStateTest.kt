@@ -53,6 +53,16 @@ class JarModDslStateTest {
     }
 
     @Test
+    fun `compiletime transforms flag reaches env state`() {
+        val e = env("ct")
+        assertEquals(false, JarModEnvState.compiletimeTransforms("ct"))
+        e.jarmodCompiletimeTransforms()
+        assertEquals(true, JarModEnvState.compiletimeTransforms("ct"))
+        e.jarmodCompiletimeTransforms(disable = false)
+        assertEquals(false, JarModEnvState.compiletimeTransforms("ct"))
+    }
+
+    @Test
     fun `state is per-env`() {
         env("one").jarmodTransformer("one.transform")
         env("two").jarmodTransformer("two.transform")

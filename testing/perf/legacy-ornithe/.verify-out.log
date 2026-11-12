@@ -1,0 +1,321 @@
+Calculating task graph as no cached configuration is available for tasks: resolveDevClasspath
+> Task :unimined:unimined-frontend:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-frontend:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-frontend:compileCoreJava NO-SOURCE
+> Task :unimined:mc-launcher:kmpPartiallyResolvedDependenciesChecker
+> Task :unimined:mc-launcher:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:mc-launcher:compileKotlinJvm UP-TO-DATE
+> Task :unimined:mc-launcher:compileJvmMainJava NO-SOURCE
+> Task :unimined:mc-launcher:jvmProcessResources NO-SOURCE
+> Task :unimined:mc-launcher:processJvmMainResources SKIPPED
+> Task :unimined:mc-launcher:jvmMainClasses UP-TO-DATE
+> Task :unimined:mc-launcher:jvmJar UP-TO-DATE
+> Task :unimined:unimined-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-api:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-api:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-api:processCoreResources NO-SOURCE
+> Task :unimined:unimined-api:coreClasses UP-TO-DATE
+> Task :unimined:unimined-api:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-api:compileJava NO-SOURCE
+> Task :unimined:unimined-frontend:processCoreResources NO-SOURCE
+> Task :unimined:unimined-frontend:coreClasses UP-TO-DATE
+> Task :unimined:unimined-ide:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-ide:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-ide:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-ide:processCoreResources NO-SOURCE
+> Task :unimined:unimined-ide:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mapping:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-mapping:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-mapping:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-mapping:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-mapping:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mapping:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-mapping:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-remap:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:compileJava NO-SOURCE
+> Task :unimined:unimined-runs:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-runs:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-runs:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-runs:processCoreResources NO-SOURCE
+> Task :unimined:unimined-runs:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:processCoreResources NO-SOURCE
+> Task :unimined:unimined-transform:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:compileJava NO-SOURCE
+> Task :unimined:unimined-runs:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-runs:compileJava NO-SOURCE
+> Task :unimined:unimined-ide:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-ide:compileJava NO-SOURCE
+> Task :unimined:unimined-migrate:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-migrate:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-migrate:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-migrate:processCoreResources NO-SOURCE
+> Task :unimined:unimined-migrate:coreClasses UP-TO-DATE
+> Task :unimined:unimined-migrate:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-migrate:compileJava NO-SOURCE
+> Task :unimined:unimined-mod:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-mod:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-mod:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-mod:processCoreResources NO-SOURCE
+> Task :unimined:unimined-mod:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mod:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-mod:compileJava NO-SOURCE
+> Task :unimined:unimined-source:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-source:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-source:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-source:processCoreResources NO-SOURCE
+> Task :unimined:unimined-source:coreClasses UP-TO-DATE
+> Task :unimined:unimined-source:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-source:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-buildtools:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-native:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-conversion:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-access:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-access:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-access:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-access:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-tiny:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-uml:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileJava NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-source:decompiler-vineflower:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:processCoreResources NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:coreClasses UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-bukkit:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-bukkit:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-bukkit:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-conversion:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-conversion:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-conversion:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-fabric:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-fabric:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-fabric:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-forge:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-jarmod:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-jarmod:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:compileCoreJava UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-forge:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-jst:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-jst:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-remap:remapper-jst:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-jst:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-jst:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-forge:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:compileFg2 UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-misc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-misc:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-transform:transform-misc:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-misc:processCoreResources NO-SOURCE
+> Task :unimined:unimined-transform:transform-misc:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:compileJava NO-SOURCE
+> Task :unimined:unimined-frontend:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-frontend:compileJava NO-SOURCE
+> Task :unimined:unimined-frontend:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-frontend:processResources UP-TO-DATE
+> Task :unimined:unimined-frontend:classes UP-TO-DATE
+> Task :unimined:unimined-frontend:jar UP-TO-DATE
+> Task :unimined:unimined-ide:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-ide:processResources UP-TO-DATE
+> Task :unimined:unimined-ide:classes UP-TO-DATE
+> Task :unimined:unimined-ide:jar UP-TO-DATE
+> Task :unimined:unimined-runs:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-runs:processResources UP-TO-DATE
+> Task :unimined:unimined-runs:classes UP-TO-DATE
+> Task :unimined:unimined-runs:jar UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:processResources UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:classes UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:jar UP-TO-DATE
+> Task :unimined:unimined-source:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-source:processResources UP-TO-DATE
+> Task :unimined:unimined-source:classes UP-TO-DATE
+> Task :unimined:unimined-source:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-fabric:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-forge:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-jarmod:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-bukkit:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-misc:jar UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:classes UP-TO-DATE
+> Task :unimined:unimined-transform:transform-conversion:jar UP-TO-DATE
+> Task :unimined:unimined-transform:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-transform:processResources UP-TO-DATE
+> Task :unimined:unimined-transform:classes UP-TO-DATE
+> Task :unimined:unimined-transform:jar UP-TO-DATE
+> Task :unimined:unimined-migrate:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-migrate:processResources UP-TO-DATE
+> Task :unimined:unimined-migrate:classes UP-TO-DATE
+> Task :unimined:unimined-migrate:jar UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:processResources UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:classes UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:jar UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:processResources UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:classes UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:jar UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:processResources UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:classes UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:jar UP-TO-DATE
+> Task :unimined:unimined-mod:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-mod:processResources UP-TO-DATE
+> Task :unimined:unimined-mod:classes UP-TO-DATE
+> Task :unimined:unimined-mod:jar UP-TO-DATE
+> Task :unimined:unimined-minecraft:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-minecraft:processResources UP-TO-DATE
+> Task :unimined:unimined-minecraft:classes UP-TO-DATE
+> Task :unimined:unimined-minecraft:jar UP-TO-DATE
+> Task :unimined:unimined-mapping:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-mapping:processResources UP-TO-DATE
+> Task :unimined:unimined-mapping:classes UP-TO-DATE
+> Task :unimined:unimined-mapping:jar UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:processResources UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:classes UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:jar UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:processResources UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:classes UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:jar UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:processResources UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:classes UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:jar UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:processResources UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:classes UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-jst:jar UP-TO-DATE
+> Task :unimined:unimined-remap:pluginDescriptors UP-TO-DATE
+> Task :unimined:unimined-remap:processResources UP-TO-DATE
+> Task :unimined:unimined-remap:classes UP-TO-DATE
+> Task :unimined:unimined-remap:jar UP-TO-DATE
+> Task :unimined:unimined-api:processResources NO-SOURCE
+> Task :unimined:unimined-api:classes UP-TO-DATE
+> Task :unimined:unimined-api:jar UP-TO-DATE
+
+> Configure project :
+[Unimined/Fabric] ornithe meta unreachable, defaulting library overlay to gen2: Connection refused
+[Unimined/main/mappings] resolving mappings (7 sources)
+[Unimined/main/mappings] reading mappings mappings.tiny (tinyv2 format)
+[Unimined/main/mappings] reading mappings mappings.tiny (tinyv2 format)
+[Unimined/main/mappings] reading mappings mappings.nest (nest format)
+[Unimined/main/mappings] reading mappings mappings.nest (nest format)
+[Unimined/main/mappings] reading mappings mappings.sigs (signature format)
+[Unimined/main/mappings] reading mappings mappings.sigs (signature format)
+[Unimined/main/mappings] composing 6 mapping parts (18699 rows)
+[Unimined/main/mappings] resolved in 21220ms
+
+[Incubating] Problems report is available at: file:///run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/legacy-ornithe/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':resolveDevClasspath'.
+> Could not resolve all dependencies for configuration ':runtimeClasspath'.
+   > java.io.IOException: fetch failed for https://meta.ornithemc.net/v3/versions/gen2/libraries after 4 attempts
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.9.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 30s
+129 actionable tasks: 1 executed, 128 up-to-date
+Configuration cache entry stored.

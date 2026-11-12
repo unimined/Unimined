@@ -7,9 +7,12 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ModArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
@@ -91,14 +94,15 @@ internal object EnvironmentClasspathWiring {
         // (forge userdev's binpatch substitutes the srg-named clean jar).
         val devSrcNamespace = environment.devRemapSourceNamespace
             .orElse(minecraft.sourceNamespace(environmentId))
-        // Bundle JSON providers — evaluated at transform execution
+        // Bundle file providers — evaluated at transform execution
         // (dependency resolution), since artifact transforms cannot carry
-        // task dependencies on a bundle producer.
-        val mcBundleJson = minecraft.mappingBundleJson(
+        // task dependencies on a bundle producer. File transport keeps
+        // the serialized tree out of param values/CC payloads.
+        val mcBundleFile = minecraft.mappingBundleFile(
             environmentId,
             devSrcNamespace, devNamespace
         )
-        val modsBundleJson = minecraft.mappingBundleJson(
+        val modsBundleFile = minecraft.mappingBundleFile(
             environmentId,
             minecraft.modSourceNamespaces(environmentId).map { ns ->
                 ns.singleOrNull() ?: throw org.gradle.api.GradleException(
@@ -144,6 +148,19 @@ internal object EnvironmentClasspathWiring {
             minecraft, environment, envSpec, modBatch
         )
 
+        // the env's prod jar — emitted mid-pipeline by the `emit` tap
+        // `pipelineSteps` inserts between the original-namespace
+        // contributions and the dev remap. Consumers resolve the path
+        // lazily: the file materializes when the dev (or modsource)
+        // transform runs, so step/processor spec contexts must defer
+        // reads to execution like any other env artifact.
+        val prodEmission = UniminedCache.emitted(project)
+            .resolve("$environmentId-prod.jar")
+        val priorProd = envSpec.envArtifactBindings["mc:prod"]
+        envSpec.envArtifactBindings["mc:prod"] = {
+            listOf(prodEmission) + priorProd?.invoke().orEmpty()
+        }
+
         // identity envs (conversion products — dev ns == source ns)
         // normally shortcut the dev classpath to the raw artifact, but
         // the raw→dev transform is the only host for env-scoped pipeline
@@ -157,6 +174,25 @@ internal object EnvironmentClasspathWiring {
                                 spec.contributedPreSteps(RemapSurface.JAR).isNotEmpty() ||
                                 spec.contributedSteps(RemapSurface.JAR).isNotEmpty()
                     }
+        }
+
+        // 1.x `fixInners` (default `obfuscated`) + `mc < 1.8.2` gate —
+        // the remapped MC artifact gets missing InnerClasses entries
+        // rebuilt for obf-era envs. Mod-jar and dep-view pipelines
+        // share the spec list but never inject this default, so an
+        // unset flag stays off there (1.x ran it on the MC artifact
+        // only). Copies the spec: user-declared specs are shared
+        // across consumers, so a pipeline-scoped default must not
+        // mutate them.
+        val envFixInners: (xyz.wagyourtail.unimined.remap.spi.StepSpec) ->
+                xyz.wagyourtail.unimined.remap.spi.StepSpec = { spec ->
+            if (spec is RemapStepSpec && spec.fixInnerClasses == null &&
+                environment.obfuscated.get() &&
+                MinecraftVersions.compare(
+                    environment.version.get(), "1.8.2") < 0
+            ) RemapStepSpec(spec.engine, spec.jsr305ToJetbrains).apply {
+                fixInnerClasses = true
+            } else spec
         }
 
         project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
@@ -178,14 +214,15 @@ internal object EnvironmentClasspathWiring {
                 p.sourceNamespace.set(devSrcNamespace.orThrowNamed("sourceNamespace"))
                 p.targetNamespace.set(devNamespace.orThrowNamed("targetNamespace"))
                 p.envSide.set(environment.side.map { it.name })
-                p.mappingBundleJson.set(mcBundleJson)
+                p.mappingFile.set(mcBundleFile)
                 p.classpath.from(libraries)
                 p.stepSpecs.set(
                     remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
                         // ModArtifactOnly (e.g. modArtifacts refmaps)
                         // applies to mod jars, not the MC artifact
                         listOf(jarProcessorsPreSpec) +
-                            steps.filter { it !is ModArtifactOnlyStepSpec } +
+                            steps.map { envFixInners(it) }
+                                .filter { it !is ModArtifactOnlyStepSpec } +
                             jarProcessorsPostSpec
                     }
                 )
@@ -219,14 +256,15 @@ internal object EnvironmentClasspathWiring {
                         namespaces.single()
                     }
                 )
-                p.mappingBundleJson.set(mcBundleJson)
+                p.mappingFile.set(mcBundleFile)
                 p.classpath.from(libraries)
                 // remap-only — the dev pipeline's jar processors are
                 // environment-artifact-scoped, not modclasspath-scoped
                 p.stepSpecs.set(
                     remap.pipelineSteps(environmentId, RemapSurface.JAR).map { steps ->
                         listOf(jarProcessorsPreSpec) +
-                            steps.filter { it !is ModArtifactOnlyStepSpec } +
+                            steps.map { envFixInners(it) }
+                                .filter { it !is ModArtifactOnlyStepSpec } +
                             jarProcessorsPostSpec
                     }
                 )
@@ -235,13 +273,13 @@ internal object EnvironmentClasspathWiring {
 
         val modImplementationView = remappedModView(
             project, minecraft, remap, environment,
-            environment.modImplementationConfigurationName, modsBundleJson,
-            modImplementationDirect
+            environment.modImplementationConfigurationName, modsBundleFile,
+            mcBundleFile, modImplementationDirect
         )
         val modRuntimeOnlyView = remappedModView(
             project, minecraft, remap, environment,
-            environment.modRuntimeOnlyConfigurationName, modsBundleJson,
-            modRuntimeOnlyDirect
+            environment.modRuntimeOnlyConfigurationName, modsBundleFile,
+            mcBundleFile, modRuntimeOnlyDirect
         )
         minecraft.modDevViewConfigurations[
             "$environmentId:${environment.modImplementationConfigurationName}"
@@ -256,18 +294,42 @@ internal object EnvironmentClasspathWiring {
         // nonexistent namespace hop. The pick between direct and
         // remapped defers to resolution time so mappings never resolve
         // during configuration.
+        // the pick between direct and remapped defers to resolution
+        // time so mappings never resolve during configuration — and
+        // the provider shape matters under the configuration cache:
+        // `fileCollection.from(provider { conf })` (a CallableProvider
+        // yielding a Configuration) resolves to EMPTY on CC-restore
+        // runs — Gradle loses the conf's resolution link. The working
+        // idiom is a provider chain of domain-object providers:
+        // `identity.flatMap { configurations.named(branch) }` keeps
+        // each branch a first-class conf reference that resolves the
+        // live view (and its transforms) at execution.
         val identity = minecraft.isIdentityRemap(environmentId)
-        val modImplementationFiles = project.files(project.provider {
-            if (identity.get()) modImplementationDirect else modImplementationView
-        })
-        val modRuntimeOnlyFiles = project.files(project.provider {
-            if (identity.get()) modRuntimeOnlyDirect else modRuntimeOnlyView
-        })
+        val modImplementationFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modImplementationDirect.name else modImplementationView.name
+                )
+            }
+        )
+        val modRuntimeOnlyFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modRuntimeOnlyDirect.name else modRuntimeOnlyView.name
+                )
+            }
+        )
 
         sourceSet.compileClasspath += modImplementationFiles
         sourceSet.runtimeClasspath += modImplementationFiles + modRuntimeOnlyFiles
 
-        ProductionJarWiring.wire(project, environment, sourceSet)
+        ProductionJarWiring.wire(
+            project, environment, sourceSet,
+            NestedJarsWiring.plan(
+                project, environment, minecraft,
+                project.extensions.findByType(TransformExtension::class.java)
+            )
+        )
     }
 
     /**
@@ -291,7 +353,8 @@ internal object EnvironmentClasspathWiring {
         remap: RemapExtension,
         environment: MinecraftEnvironment,
         bucketName: String,
-        modsBundleJson: org.gradle.api.provider.Provider<String>,
+        modsBundleFile: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>,
+        mcBundleFile: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>,
         rawBatchView: Configuration
     ): Configuration {
         val environmentId = environment.environmentId
@@ -313,8 +376,8 @@ internal object EnvironmentClasspathWiring {
                 }
             )
             spec.targetNamespace.set(minecraft.devNamespace(environmentId))
-            spec.mappingBundleJson.set(modsBundleJson)
-            spec.hasLazyMappings = true
+            spec.mappingFile.set(modsBundleFile)
+            spec.hasLazyMappingFile = true
             // every transform invocation gets the complete raw mod set
             // on its analysis classpath — member propagation needs the
             // siblings a jar actually extends/implements — plus the MC
@@ -323,9 +386,21 @@ internal object EnvironmentClasspathWiring {
             // INTERMEDIARY) on readClassPath for the same reason)
             spec.classpath.from(
                 project.configurations.getByName(environment.minecraftLibrariesConfigurationName),
-                rawBatchView,
-                mcSourceArtifact(project, minecraft, environment)
+                rawBatchView
             )
+            // ...carried as a scan alias, not a remapped jar: the remap
+            // engine folds the MC artifact's name-translated
+            // inheritance scan into the shared batch graph, so no
+            // modsource jar is produced and no second full MC remap
+            // runs. When modSource == source (identity envs) the jar
+            // just indexes into the classpath unchanged.
+            spec.scanAliasJars.from(
+                minecraft.rawView(environmentId)
+                    ?: error("no raw MC view registered for environment '$environmentId'")
+            )
+            spec.scanAliasFromNs.set(minecraft.sourceNamespace(environmentId))
+            spec.scanAliasMappingFile.set(mcBundleFile)
+            spec.hasScanAlias = true
             // environment-declared access-model contributions (AW/AT/CT
             // rules from loader analysis) — merged lazily so the model
             // resolves mod jars only when the transform actually runs
@@ -334,43 +409,6 @@ internal object EnvironmentClasspathWiring {
                     remap.sourceSet(environmentId).accessModelProviders.map { it.get() }
                 ).serialize()
             })
-        }
-    }
-
-    /**
-     * The MC artifact in the mod jars' source namespace, resolved
-     * lazily — `rawView` when modSource == source (forge: no hop),
-     * the `modSourceView` transform otherwise (fabric: official →
-     * `intermediary`). Multi-source-namespace environments must
-     * declare `remap.remappedViews(...)` themselves.
-     */
-    private fun mcSourceArtifact(
-        project: Project,
-        minecraft: MinecraftExtension,
-        environment: MinecraftEnvironment
-    ): org.gradle.api.provider.Provider<Configuration> {
-        val environmentId = environment.environmentId
-        // orElse-named: an empty modSourceNamespaces yields an empty
-        // provider-backed file collection whose bare get() surfaces as
-        // an unlabelled MissingValueException during transform isolation
-        return minecraft.modSourceNamespaces(environmentId)
-            .orElse(project.provider {
-                throw GradleException(
-                    "unimined: modSourceNamespaces('$environmentId') resolved " +
-                    "empty — check the env's loader/mappings wiring")
-            })
-            .map { namespaces ->
-            val source = minecraft.sourceNamespace(environmentId).get()
-            require(namespaces.size == 1) {
-                "environment '$environmentId' declares ${namespaces.size} mod " +
-                        "source namespaces — auto mod classpath wiring needs " +
-                        "exactly one; declare remap.remappedViews(...) for mixed inputs"
-            }
-            (if (namespaces.single() == source) {
-                minecraft.rawView(environmentId)
-            } else {
-                minecraft.modSourceView(environmentId)
-            }) ?: error("no MC view registered for environment '$environmentId'")
         }
     }
 

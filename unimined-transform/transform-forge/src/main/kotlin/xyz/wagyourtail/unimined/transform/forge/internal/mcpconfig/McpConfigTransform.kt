@@ -4,6 +4,7 @@ import org.gradle.api.artifacts.transform.InputArtifact
 import org.gradle.api.artifacts.transform.TransformAction
 import org.gradle.api.artifacts.transform.TransformOutputs
 import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.JavaVersion
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemLocation
@@ -155,10 +156,25 @@ abstract class McpConfigTransform @Inject constructor(
                 "libraries" to { params.libraries.files.toList() }
             ),
             toolExec = { tool, args, jvmArgs, classpath ->
+                val required = tool.javaVersion
+                    ?: params.requiredJavaVersion.orNull
                 val java = if (useToolchains) javaBinaries[
-                    (tool.javaVersion ?: params.requiredJavaVersion.orNull)
-                        ?.toString()
-                ] ?: fallbackJava else fallbackJava
+                    required?.toString()
+                ] ?: fallbackJava else {
+                    // 1.x parity — toolchains off means the build JVM
+                    // must satisfy the tool's java requirement
+                    if (required != null && JavaVersion.current() <
+                        JavaVersion.toVersion(required)
+                    ) {
+                        error(
+                            "tool ${tool.mainClass} requires java " +
+                                    "$required but toolchains are disabled " +
+                                    "and the build JVM is ${JavaVersion.current()}"
+                        )
+                    }
+                    fallbackJava
+                }
+                val t0 = System.nanoTime()
                 execOps.exec { spec ->
                     spec.executable = java
                     spec.args(
@@ -167,6 +183,9 @@ abstract class McpConfigTransform @Inject constructor(
                                 tool.mainClass + args
                     )
                 }.assertNormalExitValue()
+                xyz.wagyourtail.unimined.api.util.Perf.emit(
+                    "tool", "main" to tool.mainClass,
+                    "ms" to (System.nanoTime() - t0) / 1_000_000)
             }
         ).execute(mcpZip, side, null, cacheDir, untilStep = step)
             ?: error("mcpconfig subpipeline produced no '$step' output")

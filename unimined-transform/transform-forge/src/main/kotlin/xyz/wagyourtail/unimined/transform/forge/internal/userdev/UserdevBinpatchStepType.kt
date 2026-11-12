@@ -31,7 +31,9 @@ abstract class UserdevBinpatchStepSpec : DevArtifactOnlyStepSpec {
         get() = null
 
 
-    /** The userdev jar — carries the lzma archive at [binpatchesKey].
+    /** The jar carrying the lzma archive at [binpatchesKey] — the
+     *  userdev jar for MERGED envs (`config.binpatches`), the
+     *  `:installer` jar for split-side envs (`data/<side>.lzma`).
      *  Optional: absent on non-Userdev profiles (spec passes the jar
      *  through unchanged). */
     @get:InputFile
@@ -83,7 +85,14 @@ class UserdevBinpatchStepType : RemapStepType<UserdevBinpatchStepSpec> {
             val patches = java.util.jar.JarFile(spec.installerJar.get().asFile).use { jar ->
                 val lzma = Files.createDirectories(c.workDir.resolve("forge-binpatch/in"))
                     .resolve("binpatches.lzma")
-                jar.getInputStream(jar.getJarEntry(spec.binpatchesKey.get()))
+                val entry = jar.getJarEntry(spec.binpatchesKey.get())
+                    ?: throw org.gradle.api.GradleException(
+                        "no binpatches entry ${spec.binpatchesKey.get()} in " +
+                                "${spec.installerJar.get().asFile.name} — " +
+                                "split-side binpatching is not supported by " +
+                                "this loader's packaging"
+                    )
+                jar.getInputStream(entry)
                     .use {
                         Files.copy(
                             it, lzma,

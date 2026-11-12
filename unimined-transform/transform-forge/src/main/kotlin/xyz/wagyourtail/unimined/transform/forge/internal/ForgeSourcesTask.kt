@@ -162,7 +162,7 @@ abstract class ForgeSourcesTask : DefaultTask() {
         val applyAts: (Path, List<Path>, Path) -> Unit = { input, ats, output ->
             if (ats.isNotEmpty()) applyAccessTransformers(
                 atCp, input, ats, output, workDir
-            )
+            ) else Files.copy(input, output)
         }
 
         val (spliced, extraTools) = UserdevSourcesChain.install(

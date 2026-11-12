@@ -16,13 +16,13 @@ init        — generate in the current directory
 | `--loader <name=v>` | repeat = multiloader; `v` empty = registry default |
 | `--product <p>` | `bta`, `reindev`, `nsss`, `custom:<name>` |
 | `--modules` | common + per-loader subproject layout |
-| `--dist <path>` | product jar for custom dists |
+| `--dist <path>` | dist artifact for `custom:`/`nsss` — path, `maven:<coord>`, or `url:<url>` |
 | `--mappings "<dsl>"` | mappings chain lines |
 | `--var k=v` | mappings-scope variables |
 | `--side <side>` | `client`, `server`, `merged` |
 | `--jarmod` | JarModAgent transforms (modloadermp shape) |
 | `--jars split|merged` | MC jar shape for jarmod-era envs |
-| `--modid`/`--package`/`--name`/`--mod-version` | mod identity |
+| `--modid`/`--package`/`--mod-version` | mod identity (`--mod-version` defaults `1.0.0`) |
 | `--metadata dsl` | emit `mod { }` metadata block |
 | `--extra "<line>"` | raw `build.gradle.kts` lines |
 | `--no-wrapper` | skip gradle-wrapper download |
@@ -31,7 +31,9 @@ init        — generate in the current directory
 | `--dsl kotlin|groovy` | emitted DSL flavor |
 | `--templates <zip>` / `--template <name>` | extract a bundled project zip |
 | `--out <dir>` | output directory |
-| `--gradle` | include `gradlew` wrapper files |
+| `--gradle <version>` | Gradle wrapper version to pin |
+| `--offline` | skip version probes — disk cache + baked versions only |
+| `--no-version-props` | inline literal versions instead of `gradle.properties` keys |
 
 ## Generation modes
 

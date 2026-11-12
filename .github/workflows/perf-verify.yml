@@ -1,0 +1,74 @@
+name: Perf Verify
+
+# Structural perf gate (Docs/perf-plan.md): cold transform wave, CC store
+# + reuse with zero transform executions, source-set classpath populated.
+# These properties fail silently (correct build, slower) — unit tests
+# never see them, so this gate exists. Runs only when perf-relevant code
+# moves: a schedule would pay the cold-run cost whether or not anything
+# changed, and pushes outside these paths can't regress the properties.
+# Wall times are informational — PERF_VERIFY_STRICT stays off because
+# daemon warmth swings walls ±60%.
+
+on:
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'unimined-api/**'
+      - 'unimined-mapping/**'
+      - 'unimined-transform/**'
+      - 'unimined-remap/**'
+      - 'unimined-mod/**'
+      - 'unimined-frontend/**'
+      - 'testing/perf/**'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/perf-verify.yml'
+  pull_request:
+    paths:
+      - 'unimined-api/**'
+      - 'unimined-mapping/**'
+      - 'unimined-transform/**'
+      - 'unimined-remap/**'
+      - 'unimined-mod/**'
+      - 'unimined-frontend/**'
+      - 'testing/perf/**'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/perf-verify.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture:
+          - fabric-modern
+          - forge-userdev
+          - neoforge
+          - legacy-fg2
+          - legacy-ornithe
+    # no per-fixture exemptions: an external-repo outage fails a leg
+    # the same as a regression — flakes re-run, regressions must not
+    # be hidden by an exemption carved out for one provider's uptime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          # 21 covers neoforge; 17 stays JAVA_HOME (last wins); 8 is
+          # only installed for Gradle toolchain resolution (old-MC envs)
+          java-version: |
+            8
+            17
+            21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x testing/perf-verify.sh && testing/perf-verify.sh ${{ matrix.fixture }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: perf-verify-${{ matrix.fixture }}
+          path: |
+            testing/perf/${{ matrix.fixture }}/.verify-out.log
+            testing/perf/${{ matrix.fixture }}/.perf-*.jsonl
+          if-no-files-found: ignore

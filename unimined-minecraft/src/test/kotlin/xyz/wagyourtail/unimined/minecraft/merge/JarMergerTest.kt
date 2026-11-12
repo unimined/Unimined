@@ -1,8 +1,16 @@
 package xyz.wagyourtail.unimined.minecraft.merge
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldNode
+import org.objectweb.asm.tree.InnerClassNode
+import org.objectweb.asm.tree.MethodNode
 import java.nio.file.Path
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -20,6 +28,50 @@ class JarMergerTest {
                 z.write(c.toByteArray())
                 z.closeEntry()
             }
+        }
+    }
+
+    private fun jar(path: Path, classes: List<ClassNode>) {
+        ZipOutputStream(path.outputStream()).use { z ->
+            for (node in classes) {
+                z.putNextEntry(java.util.zip.ZipEntry("${node.name}.class"))
+                val w = ClassWriter(0)
+                node.accept(w)
+                z.write(w.toByteArray())
+                z.closeEntry()
+            }
+        }
+    }
+
+    private fun classNode(
+        name: String,
+        methods: List<String> = emptyList(),
+        fields: List<String> = emptyList(),
+        annotations: List<String> = emptyList(),
+        inner: InnerClassNode? = null
+    ) = ClassNode().apply {
+        version = Opcodes.V1_8
+        access = Opcodes.ACC_PUBLIC
+        this.name = name
+        superName = "java/lang/Object"
+        methods.mapTo(this.methods) {
+            MethodNode(Opcodes.ACC_PUBLIC, it, "()V", null, null)
+        }
+        fields.mapTo(this.fields) {
+            FieldNode(Opcodes.ACC_PUBLIC, it, "I", null, null)
+        }
+        if (annotations.isNotEmpty()) {
+            visibleAnnotations = annotations.mapTo(mutableListOf()) {
+                org.objectweb.asm.tree.AnnotationNode(it)
+            }
+        }
+        inner?.let { innerClasses.add(it) }
+    }
+
+    private fun readNode(jar: Path, name: String): ClassNode {
+        ZipFile(jar.toFile()).use { z ->
+            val bytes = z.getInputStream(z.getEntry("$name.class")).readBytes()
+            return ClassNode().also { ClassReader(bytes).accept(it, 0) }
         }
     }
 
@@ -122,6 +174,47 @@ class JarMergerTest {
     }
 
     @Test
+    fun `merge output is byte-deterministic`() {
+        // the merged jar is a transform INPUT — entry timestamps must
+        // not vary between runs or the downstream artifact-transform
+        // cache misses on every produce
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, mapOf("a/Foo.class" to "client-foo", "shared.txt" to "client"))
+        jar(server, mapOf("b/Bar.class" to "server-bar", "shared.txt" to "server"))
+
+        val out1 = dir.resolve("merged1.jar")
+        val out2 = dir.resolve("merged2.jar")
+        JarMerger.merge(client, server, out1)
+        Thread.sleep(1100) // cross a DOS-time tick
+        JarMerger.merge(client, server, out2)
+
+        org.junit.jupiter.api.Assertions.assertArrayEquals(
+            java.nio.file.Files.readAllBytes(out1),
+            java.nio.file.Files.readAllBytes(out2)
+        )
+    }
+
+    @Test
+    fun `strip output is byte-deterministic`() {
+        val input = dir.resolve("input.jar")
+        val lib = dir.resolve("lib.jar")
+        jar(input, mapOf("game/Main.class" to "game", "lib/Lib.class" to "bundled"))
+        jar(lib, mapOf("lib/Lib.class" to "lib"))
+
+        val out1 = dir.resolve("stripped1.jar")
+        val out2 = dir.resolve("stripped2.jar")
+        BundledLibraryStrip.strip(input, listOf(lib), out1)
+        Thread.sleep(1100)
+        BundledLibraryStrip.strip(input, listOf(lib), out2)
+
+        org.junit.jupiter.api.Assertions.assertArrayEquals(
+            java.nio.file.Files.readAllBytes(out1),
+            java.nio.file.Files.readAllBytes(out2)
+        )
+    }
+
+    @Test
     fun `strip disabled keeps bundled library entries`() {
         val client = dir.resolve("client.jar")
         val server = dir.resolve("server.jar")
@@ -180,6 +273,91 @@ class JarMergerTest {
                 it.getInputStream(
                     it.getEntry("META-INF/services/spi.Provider")).reader().readText())
         }
+    }
+
+    private val marker = JarMerger.SideMarker.FORGE_FML
+    private val markerDesc = "L${marker.annotation};"
+
+    private fun env(node: ClassNode): String? =
+        node.visibleAnnotations?.firstOrNull { it.desc == markerDesc }
+            ?.values?.let { (it[it.indexOf("value") + 1] as Array<*>)[1] as String }
+
+    @Test
+    fun `side markers stamp single-side classes and members`() {
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, listOf(
+            classNode("a/Only", methods = listOf("c")),
+            classNode("a/Shared", methods = listOf("both", "cOnly"),
+                fields = listOf("bothF", "cOnlyF"))
+        ))
+        jar(server, listOf(
+            classNode("b/Only", methods = listOf("s")),
+            classNode("a/Shared", methods = listOf("both", "sOnly"),
+                fields = listOf("bothF", "sOnlyF"))
+        ))
+
+        val out = dir.resolve("merged.jar")
+        JarMerger.merge(client, server, out,
+            JarMerger.Options(sideMarkers = listOf(marker)))
+
+        assertEquals("CLIENT", env(readNode(out, "a/Only")))
+        assertEquals("SERVER", env(readNode(out, "b/Only")))
+        val shared = readNode(out, "a/Shared")
+        assertEquals(null, env(shared)) // both sides — no class mark
+        assertEquals("CLIENT",
+            shared.methods.first { it.name == "cOnly" }
+                .visibleAnnotations.first { it.desc == markerDesc }
+                .values.let { (it[it.indexOf("value") + 1] as Array<*>)[1] })
+        assertEquals("SERVER",
+            shared.fields.first { it.name == "sOnlyF" }
+                .visibleAnnotations.first { it.desc == markerDesc }
+                .values.let { (it[it.indexOf("value") + 1] as Array<*>)[1] })
+        assertTrue(shared.methods.first { it.name == "both" }
+            .visibleAnnotations?.none { it.desc == markerDesc } != false)
+    }
+
+    @Test
+    fun `side markers skip anonymous classes and pre-annotated content`() {
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, listOf(classNode("a/Outer")))
+        jar(server, listOf(
+            // anonymous: self InnerClasses entry with null innerName
+            classNode("a/Outer$1",
+                inner = InnerClassNode("a/Outer$1", null, null, 0)),
+            // already carries the marker — no duplicate stamp
+            classNode("b/Marked", annotations = listOf(markerDesc))
+        ))
+
+        val out = dir.resolve("merged.jar")
+        JarMerger.merge(client, server, out,
+            JarMerger.Options(sideMarkers = listOf(marker)))
+
+        val anon = readNode(out, "a/Outer$1")
+        assertTrue(anon.visibleAnnotations?.none { it.desc == markerDesc }
+            ?: true, "anonymous class must not be side-marked")
+        val marked = readNode(out, "b/Marked")
+        assertEquals(1,
+            marked.visibleAnnotations.count { it.desc == markerDesc })
+    }
+
+    @Test
+    fun `detectSideMarker finds the era the loader jar ships`() {
+        val jar = dir.resolve("loader.jar")
+        jar(jar, mapOf(
+            "cpw/mods/fml/relauncher/SideOnly.class" to "stub",
+            "cpw/mods/fml/relauncher/Side.class" to "stub"
+        ))
+        assertEquals(JarMerger.SideMarker.FORGE_CPMODS,
+            JarMerger.SideMarker.detectSideMarker(jar))
+
+        val none = dir.resolve("nomarker.jar")
+        jar(none, mapOf("x/Y.class" to "y"))
+        var warned = ""
+        assertEquals(null, JarMerger.SideMarker
+            .detectSideMarker(none) { warned = it })
+        assertTrue(warned.isNotEmpty())
     }
 
 }

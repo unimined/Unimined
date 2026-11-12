@@ -1,12 +1,11 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
+import kotlinx.coroutines.runBlocking
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
-import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.remapper as nsBoundRemapper
-import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.mapping.inheritance.ASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.inheritance.LazyASMInheritanceTree
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtensionFactory
@@ -16,6 +15,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform.ClassTransfo
 import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.LiteloaderObfTableExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
+import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinTables
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
@@ -53,6 +53,13 @@ import kotlin.reflect.KClass
  * so mod deps get mixin refmaps for the dev runtime. Resource-gated —
  * [MixinExtension] and [ClassTransformExtension] only load when the jar
  * carries their resources.
+ *
+ * The extension [ExtensionContext] rides
+ * [xyz.wagyourtail.unimined.mapping.tree.impl.ResolvingMappingTree] over
+ * the shared [xyz.wagyourtail.unimined.mapping.remapper.asm.RemapBatch]
+ * state — propagated member names resolve through the same member-group
+ * graph the remap wrote with, instead of materializing a propagated copy
+ * of the merged tree per jar.
  */
 class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
 
@@ -63,22 +70,26 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
 
     override val needsMappingTree = true
     override val needsClasspath = true
+    // consumed via the shared batch's access-model overlay — keeps this
+    // step's BatchKey identical to the remap step's so a preceding
+    // uml:remap's prepared batch is reused instead of rebuilt
+    override val needsAccessModel = true
 
     override fun supports(spec: RemapSpec) = true
 
     override val priority: Int = 1
 
     override fun create(spec: ModArtifactsStepSpec, ctx: StepContext): ArtifactStep =
-        ArtifactStep { input, c -> run(input, c) }
+        ArtifactStep { input, c -> run(input, c, spec) }
 
-    private fun run(input: Path, ctx: StepContext): Path {
+    private fun run(input: Path, ctx: StepContext, stepSpec: ModArtifactsStepSpec): Path {
         val spec = ctx.spec
         // identity hop — nothing to rewrite; also skips emitting a
         // "refmap" key into mixin configs on identity remaps
         if (Namespace(spec.sourceNamespace) == Namespace(spec.targetNamespace)) {
             return input
         }
-        val extensions = modArtifactExtensions(input, ctx)
+        val extensions = modArtifactExtensions(input, ctx, stepSpec)
         if (extensions.isEmpty()) return input
 
         val view = ctx.mappings?.view<MappingTree>()
@@ -94,23 +105,76 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
 
         val fns = Namespace(spec.sourceNamespace)
         val tns = Namespace(spec.targetNamespace)
-        val classpathJars = ctx.classpath.filter { it.exists() }
+        // same alias partition as UmlRemapStepType — identical
+        // classpathKey/scanAliasKey derivation keeps this step's
+        // BatchKey equal to the remap step's so the prepared batch
+        // is shared rather than rebuilt
+        val (sameNsJars, foreignAliases) = ctx.spec.scanAliases
+            .partition { Namespace(it.sourceNs) == fns }
+        val classpathJars = (ctx.classpath + sameNsJars.map { it.jar })
+            .filter { it.exists() }
         val classpathKey = classpathJars
             .map { Triple(it, Files.size(it), Files.getLastModifiedTime(it).toMillis()) }
             .sortedBy { it.first }
-        val index = UmlRemapStepType.scanCache.getOrPut(classpathKey) {
+        val scanAliasKey = foreignAliases.map {
+            UmlRemapStepType.Companion.ScanAliasKey(
+                Triple(it.jar, Files.size(it.jar), Files.getLastModifiedTime(it.jar).toMillis()),
+                it.sourceNs,
+                Triple(it.mappingsFile, Files.size(it.mappingsFile),
+                    Files.getLastModifiedTime(it.mappingsFile).toMillis())
+            )
+        }
+        // computeIfAbsent like the remap step — getOrPut's non-atomic
+        // get-then-put races N first-access transforms into N parallel
+        // index builds of the same classpath
+        val index = UmlRemapStepType.scanCache.computeIfAbsent(classpathKey) {
             LazyASMInheritanceTree.index(classpathJars.toSet())
         }
+        // Shared remap batch — identical keying to UmlRemapStepType, so
+        // a preceding uml:remap's merged tree + propagated member groups
+        // + classpath graph are reused verbatim instead of re-emitted
+        // per jar. After another engine's remap the cache misses and a
+        // batch is prepared here (same trees the uml step would use).
+        val batch = UmlRemapStepType.remapBatch(
+            UmlRemapStepType.Companion.BatchKey(
+                System.identityHashCode(ctx.mappings), classpathKey,
+                scanAliasKey,
+                fns, tns, ctx.accessModel?.serialize()?.hashCode() ?: 0
+            )
+        ) {
+            slog.lifecycle("preparing shared remap batch " +
+                "(${classpathJars.size}-jar classpath, " +
+                "${foreignAliases.size} scan aliases) for $fns -> $tns")
+            // foreign-namespace classpath members (e.g. the official
+            // MC jar on an intermediary batch) fold in as translated
+            // scans — see UmlRemapStepType.translatedScan
+            val extraScans = foreignAliases.map {
+                UmlRemapStepType.translatedScan(it, fns, slog)
+            }
+            // the remap-analysis overlay rides the batch's merged tree —
+            // names are overlay-invariant so member resolution matches
+            // either way, but sharing keeps one batch per key
+            val overlay = ctx.accessModel
+                ?.entries(spec.sourceNamespace, view)
+                ?.takeUnless { it.isEmpty() }
+                ?.let { accessModelOverlay(it, fns, view) }
+            runBlocking {
+                AsmRemapper.prepareBatch(
+                    listOf(view) + listOfNotNull(overlay),
+                    fns, tns, index = index,
+                    extraScans = extraScans
+                )
+            }
+        }
         val inputScan = ASMInheritanceTree.scan(setOf(input))
-        // merge + overlay like remapGraph so extension member lookups see
-        // inheritance-propagated names; see the class doc for why the outer
-        // class/member remap is identity rather than fns -> tns.
-        val merged = MutableMappingTree(view.namespaces.toSet())
-        view.emit(merged)
-        val overlaid = AsmRemapper.overlay(
-            merged,
-            LazyASMInheritanceTree(fns, inputScan, index)
-        )
+        // lazy propagated-member view over the batch state — extension
+        // member lookups resolve through the same MemberGroups +
+        // GraphNamespaceRemapper the remap wrote with, without IBT's
+        // O(rows) propagating re-emit per jar (the ~500k-row
+        // materialization that dominated this step). The input's own
+        // classes fold into the shared graph so members declared on the
+        // mod jar resolve too.
+        val overlaid = batch.mappingView(inputScan)
         AsmRemapper.writeJar(
             target,
             AsmRemapper.remap(
@@ -140,15 +204,33 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
      * on the MC artifact's streaming decompile pipeline.
      */
     private fun modArtifactExtensions(
-        input: Path, ctx: StepContext
+        input: Path, ctx: StepContext, spec: ModArtifactsStepSpec
     ): List<AsmExtensionFactory> {
         val exts = mutableListOf<AsmExtensionFactory>()
         exts += AsmExtensionFactory { c -> KotlinMetadataExtension(c) }
+        // `modArtifacts { off() }` — 1.x mixinRemap.off parity: the
+        // mixin/JMA/liteloader annotation machinery drops entirely
+        // (kotlin.Metadata stays — it isn't mixin-scoped)
+        if (spec.mixinRemapOff) return exts
+        val force = spec.forceMixinTables
         java.util.zip.ZipFile(input.toFile()).use { zip ->
-            if (zip.entries().asSequence().any {
+            val mixinForced = force.any { it == "mixin" || it == "mixinextras" }
+            if (mixinForced || zip.entries().asSequence().any {
                     MixinExtension.isMixinConfigPath(it.name)
                 }) {
-                exts += AsmExtensionFactory { c -> MixinExtension(c) }
+                // empty force = auto table (ALL — both standard and
+                // extras); a force names the explicit table set
+                val table = when {
+                    "mixin" in force && "mixinextras" in force ->
+                        MixinTables.ALL
+                    "mixinextras" in force -> MixinTables.EXTRAS
+                    "mixin" in force -> MixinTables.STANDARD
+                    else -> MixinTables.ALL
+                }
+                exts += AsmExtensionFactory { c ->
+                    MixinExtension(
+                        c, table, spec.emitRefmap, spec.noRefmapConfigs)
+                }
             }
             if (zip.getEntry(
                     "com/mumfrey/liteloader/core/runtime/Obf.class") != null ||
@@ -160,6 +242,7 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
                     LiteloaderObfTableExtension(c)
                 }
             }
+            var refmapPath: String? = null
             zip.getEntry("META-INF/MANIFEST.MF")?.let { e ->
                 val manifest = java.util.jar.Manifest(
                     zip.getInputStream(e))
@@ -170,13 +253,16 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
                     // space (JarModder) — emit onto the first declared
                     // path; the agent merges all refmaps per transformer
                     // anyway, so one canonical path carries the result
-                    val refmapPath = refmaps
+                    refmapPath = refmaps
                         .split(" ")
                         .firstOrNull { it.isNotBlank() }
-                        ?: "jarmodagent.refmap.json"
-                    exts += AsmExtensionFactory { c ->
-                        ClassTransformExtension(c, refmapPath = refmapPath)
-                    }
+                }
+            }
+            if ("jma" in force || refmapPath != null) {
+                val path = refmapPath ?: "jarmodagent.refmap.json"
+                exts += AsmExtensionFactory { c ->
+                    ClassTransformExtension(
+                        c, refmapPath = path, emitRefmap = spec.emitRefmap)
                 }
             }
         }

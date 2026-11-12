@@ -10,6 +10,7 @@ dependencies {
     "coreApi"(libs.asm.tree)
     "coreApi"(libs.asm.analysis)
     "coreImplementation"(libs.commons.kt)
+    "coreImplementation"(libs.commons.compress)
     api(project(":unimined-api"))
     api(project(":unimined-mapping"))
 

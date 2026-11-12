@@ -24,6 +24,11 @@ import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
  */
 abstract class FabricModJsonEmitter : ModMetadataEmitter {
 
+    /** Fabric-family loaders consume access wideners — env-declared
+     *  access files convert to AW at `<modid>.accesswidener`. */
+    override val accessFormat = "aw"
+    override val accessPath = "{modid}.accesswidener"
+
     /**
      * `custom` key carrying compile-visible interface injections
      * (`loom:injected_interfaces` on fabric-flavored loaders). The
@@ -32,6 +37,12 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
      * the prod repack rebases the keys to the production namespace.
      */
     protected open val injectedInterfacesKey = "loom:injected_interfaces"
+
+    /**
+     * The emitted descriptor path — `fabric.mod.json` for
+     * fabric-loader forks, `quilt.mod.json` on quilt.
+     */
+    protected open val metadataFileName = "fabric.mod.json"
 
     /** Entrypoint kind receiving [ModMetadataEmitter.EmitContext.gametestEntrypoints]. */
     protected open val gametestEntrypointKey = "fabric-gametest"
@@ -116,14 +127,36 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
                     meta.depends.forEach { (modId, range) -> put(modId, range) }
                 }
             }
-            section?.accessWidener?.let { put("accessWidener", it) }
+            (section?.accessWidener ?: context.accessFile)
+                ?.let { put("accessWidener", it) }
             if (custom.isNotEmpty()) {
                 putJsonObject("custom") {
                     custom.forEach { (key, value) -> put(key, value) }
                 }
             }
         }
-        return mapOf("fabric.mod.json" to json.toString().toByteArray())
+        val emitted = mutableMapOf(
+            metadataFileName to json.toString().toByteArray())
+        // 1.x `jarTask.manifest` parity — fabric-family production jars
+        // carried fingerprint attrs; loader-contributed extras
+        // (`Calamus-Generation`, `Legacy-Fabric-Intermediary-Version`)
+        // merge verbatim
+        if (context.loaderVersion != null ||
+            context.manifestAttributes.isNotEmpty()
+        ) {
+            val attrs = buildList {
+                add("Manifest-Version" to "1.0")
+                add("Fabric-Minecraft-Version" to context.minecraftVersion)
+                context.loaderVersion?.let {
+                    add("Fabric-Loader-Version" to it)
+                }
+                context.manifestAttributes.forEach { (k, v) -> add(k to v) }
+            }
+            emitted[ModMetadataEmitter.MANIFEST_PATH] = attrs.joinToString(
+                "\r\n", postfix = "\r\n\r\n"
+            ) { (k, v) -> "$k: $v" }.toByteArray(Charsets.UTF_8)
+        }
+        return emitted
     }
 
 }

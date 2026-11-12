@@ -170,11 +170,13 @@ internal object RunsWiring {
             spec
         }
 
+        val runEnabled = run.enabled
         val prepare = project.tasks.register(
             "prepare${taskName.replaceFirstChar { it.uppercase() }}",
             PrepareRunTask::class.java
         ) { t ->
             t.description = "Stage run directory for $taskName"
+            t.onlyIf { runEnabled.get() }
             t.runDirectory.set(
                 project.layout.projectDirectory.dir(
                     run.workingDirectory.orElse("run/$environmentId-${run.name}").get()
@@ -223,6 +225,14 @@ internal object RunsWiring {
 
         project.tasks.register(taskName, MinecraftRunTask::class.java) { task ->
             task.dependsOn(prepare)
+            task.onlyIf { runEnabled.get() }
+            run.beforeRunDeps.forEach { task.dependsOn(it) }
+            run.beforeRunActions.forEachIndexed { i, action ->
+                task.dependsOn(project.tasks.register(
+                    "pre${taskName.replaceFirstChar { it.uppercase() }}$i",
+                    org.gradle.api.DefaultTask::class.java
+                ) { t -> action.execute(t) })
+            }
             task.group = "unimined"
             task.description = "Launch Minecraft " +
                     (environment.version.orNull ?: "<unset>") +
@@ -311,7 +321,16 @@ internal object RunsWiring {
             )
             task.launchProperties.put(
                 "version_type",
-                project.providers.provider { "release" })
+                artifacts.map { a ->
+                    a.launch?.let { meta ->
+                        VersionData.parse(
+                            VersionChain.resolve(
+                                meta.versionJson(meta.rootId),
+                                meta::versionJson
+                            )
+                        ).type
+                    }
+                }.orElse("release"))
             task.launchProperties.put(
                 "assets_root",
                 task.assetsDirectory.map { it.asFile.absolutePath })
@@ -393,18 +412,17 @@ internal object RunsWiring {
      * document at resolution time (execution), so no metadata is fetched
      * during configuration.
      */
-    /** Apply `prefix -> version` rules to a `g:n:v[:classifier]` coord —
-     *  same semantics as provider-native's library substitution. */
-    private fun substituteCoord(coord: String, rules: List<Pair<String, String>>): String {
-        val parts = coord.split(':')
-        if (parts.size < 3) return coord
-        val groupName = "${parts[0]}:${parts[1]}"
-        val version = rules.firstOrNull { rule ->
-            if (':' in rule.first) groupName == rule.first
-            else groupName.startsWith(rule.first)
-        }?.second ?: return coord
-        return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
-    }
+    /** Route a `g:n:v[:classifier]` natives coord through the same
+     *  [applyLibraryRules] pipeline providers use — the default
+     *  `natives-osx` drop and user `replaceLibraryVersion` rules apply
+     *  to natives too (1.x parity). `null` = library dropped. */
+    private fun substituteCoord(
+        coord: String,
+        spec: xyz.wagyourtail.unimined.api.spec.ProductSpec
+    ): String? = xyz.wagyourtail.unimined.api.spec.applyLibraryRules(
+        coord, spec.librarySubstitutions, spec.libraryRules,
+        spec.libraryCoordFilters
+    )
 
     private fun nativesConfiguration(
         project: Project,
@@ -433,12 +451,15 @@ internal object RunsWiring {
                     )
                 )
                 // version-JSON natives coords are raw — run them through
-                // the environment's library substitutions (e.g. ornithe's
-                // org.lwjgl:* -> 2.9.4+legacyfabric.8) so natives match the
-                // substituted library jars, mirroring 1.x's libraryFilter
-                val rules = environment.spec().librarySubstitutions
+                // the environment's library rules (e.g. ornithe's
+                // org.lwjgl:* -> 2.9.4+legacyfabric.8 substitution, or the
+                // natives-osx drop) so natives match the substituted
+                // library jars, mirroring 1.x's libraryFilter
+                val spec = environment.spec()
                 Natives.coordinates(document, OperatingSystem.current()).forEach {
-                    deps.add(dependencies.create(substituteCoord(it, rules)))
+                    substituteCoord(it, spec)?.let { c ->
+                        deps.add(dependencies.create(c))
+                    }
                 }
             }
         }

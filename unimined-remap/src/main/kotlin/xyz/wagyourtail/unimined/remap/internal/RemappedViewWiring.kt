@@ -114,9 +114,18 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
             require(
                 existing.sourceNamespace.get() == spec.sourceNamespace.get() &&
                         existing.targetNamespace.get() == spec.targetNamespace.get() &&
-                        existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile &&
+                        existing.hasLazyMappingFile == spec.hasLazyMappingFile &&
+                        // lazy bundles share the env's provider — comparing
+                        // them would materialize mappings at registration;
+                        // within one artifactType the env is fixed so the
+                        // flag is the discriminator
+                        (existing.hasLazyMappingFile ||
+                                existing.mappingFile.orNull?.asFile == spec.mappingFile.orNull?.asFile) &&
                         existing.hasLazyMappings == spec.hasLazyMappings &&
                         existing.accessModel.isPresent == spec.accessModel.isPresent &&
+                        existing.hasScanAlias == spec.hasScanAlias &&
+                        (!spec.hasScanAlias ||
+                                existing.scanAliasJars.files == spec.scanAliasJars.files) &&
                         existing.classpath.files == spec.classpath.files &&
                         existing.stepSpecs.getOrElse(emptyList()) == spec.stepSpecs.getOrElse(emptyList())
             ) {
@@ -144,13 +153,25 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
                 })
                 p.sourceNamespace.set(spec.sourceNamespace)
                 p.targetNamespace.set(spec.targetNamespace)
-                if (spec.hasLazyMappings) {
-                    p.mappingBundleJson.set(spec.mappingBundleJson)
-                } else if (spec.mappingFile.isPresent) {
+                // file transport wins when both are set — but the env's
+                // lazy bundle provider must never be evaluated at
+                // registration (materializes mappings + needs the mc
+                // version), so presence goes through the flags, not
+                // `isPresent`
+                if (spec.hasLazyMappingFile || spec.mappingFile.isPresent) {
                     p.mappingFile.set(spec.mappingFile)
+                } else if (spec.hasLazyMappings) {
+                    p.mappingBundleJson.set(spec.mappingBundleJson)
                 }
                 if (spec.accessModel.isPresent) {
                     p.accessModel.set(spec.accessModel)
+                }
+                // scan-alias fields may bind lazy providers — forward
+                // them only under the flag, never presence-checked
+                if (spec.hasScanAlias) {
+                    p.scanAliasJars.from(spec.scanAliasJars)
+                    p.scanAliasFromNs.set(spec.scanAliasFromNs)
+                    p.scanAliasMappingFile.set(spec.scanAliasMappingFile)
                 }
                 p.classpath.from(spec.classpath)
                 p.stepSpecs.set(spec.stepSpecs)

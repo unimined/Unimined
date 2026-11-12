@@ -48,12 +48,18 @@ object BundledLibraryStrip {
                     }
                 }
                 ZipOutputStream(tmp.outputStream()).use { zout ->
+                    // fixed DOS-epoch stamps — the stripped jar feeds
+                    // merge/transform inputs; wall-clock times would
+                    // make every run's output hash differ and break
+                    // downstream artifact-transform caching
+                    fun zipEntry(name: String) =
+                        java.util.zip.ZipEntry(name).apply { time = 0 }
                     for (d in dirs) {
-                        zout.putNextEntry(java.util.zip.ZipEntry(d))
+                        zout.putNextEntry(zipEntry(d))
                         zout.closeEntry()
                     }
                     for ((name, bytes) in entries) {
-                        zout.putNextEntry(java.util.zip.ZipEntry(name))
+                        zout.putNextEntry(zipEntry(name))
                         zout.write(bytes)
                         zout.closeEntry()
                     }

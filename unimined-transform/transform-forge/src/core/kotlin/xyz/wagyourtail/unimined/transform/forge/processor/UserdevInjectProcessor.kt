@@ -3,11 +3,12 @@ package xyz.wagyourtail.unimined.transform.forge.processor
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.jar.JarEntry
-import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.FileTime
 
 /**
  * `userdev-inject` jar processor — copies the userdev installer jar's
@@ -48,26 +49,23 @@ class UserdevInjectProcessor : JarProcessor {
         val entries = UserdevExtract.injectEntries(s.jar, s.prefix)
         if (entries.isEmpty()) return
 
-        // rewrite the jar: existing entries + injected (injected wins)
-        val tmp = jar.resolveSibling("${jar.fileName}.tmp")
-        JarOutputStream(tmp.toFile().outputStream()).use { out ->
-            JarFile(jar.toFile()).use { input ->
-                input.entries().asSequence().forEach { entry ->
-                    // injected entries replace same-named originals
-                    if (entry.name !in entries) {
-                        out.putNextEntry(JarEntry(entry.name))
-                        input.getInputStream(entry).use { it.copyTo(out) }
-                        out.closeEntry()
-                    }
-                }
-            }
+        // in-place zipfs update — rewriting the whole jar to inject a
+        // handful of entries pays a serial deflate pass over ~50 MB for
+        // work that is O(injected): zipfs appends only the new entries
+        // (delete+write = REPLACE_EXISTING) and leaves untouched entries'
+        // compressed bytes alone. It also fixes a determinism bug the
+        // rewrite carried — `JarEntry(name)` stamped wall-clock times —
+        // by setting DOS-epoch on the written entries.
+        FileSystems.newFileSystem(jar, emptyMap<String, Any>()).use { fs ->
             for ((name, bytes) in entries) {
                 context.log.subLogger("forge").info("injecting $name into minecraft jar")
-                out.putNextEntry(JarEntry(name))
-                out.write(bytes)
-                out.closeEntry()
+                val p = fs.getPath(name)
+                Files.deleteIfExists(p)
+                p.parent?.let { Files.createDirectories(it) }
+                Files.write(p, bytes, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)
+                Files.setLastModifiedTime(p, FileTime.fromMillis(0))
             }
         }
-        tmp.toFile().renameTo(jar.toFile())
     }
 }

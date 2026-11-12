@@ -4,6 +4,7 @@ import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.ProductVersionSpec
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
 
 /** Execution-time [ProductSpec] assembled from extension DSL state.
  *  Public-but-`internal`-packaged so provider submodules can read the
@@ -22,7 +23,12 @@ data class RuntimeProductSpec(
     val mergeIncludeGlobs: List<String> = emptyList(),
     val mergeExcludeGlobs: List<String> = emptyList(),
     val stripBundledServerLibraries: Boolean = true,
+    /** Side-marker annotations the merge stamps on single-side
+     *  content — mirrored from `MinecraftEnvironment.sideMarkers`. */
+    val sideMarkers: List<JarMerger.SideMarker> = emptyList(),
     override val librarySubstitutions: List<Pair<String, String>> = emptyList(),
+    override val libraryRules: List<xyz.wagyourtail.unimined.api.spec.LibraryRule> = emptyList(),
+    override val libraryCoordFilters: List<(String) -> String?> = emptyList(),
     override val manifestUrls: List<String> = emptyList(),
     override val libraryOverlays: List<String> = emptyList(),
     override val obfuscatedLibraries: List<String> = emptyList(),

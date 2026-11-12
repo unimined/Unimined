@@ -142,6 +142,68 @@ class ForgeEnvironmentWiringTest {
         }
     }
 
+    /** Cleanroom swaps vanilla 1.12.2's platform libs for modern forks
+     *  via its userdev `libraries` — the env's provider-lib filter must
+     *  drop the vanilla copies it shadows
+     *  (1.x `CleanroomMinecraftTransformer.vanillaExcludesSet`). */
+    @Test
+    fun `cleanroom filters vanilla platform libs`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.12.2")
+        ext.main.provider.set("fake")
+        serveUserdev("com.cleanroommc:cleanroom:0.5.0-alpha")
+        val env = forgeEnv(ext, "cleanroom", "1.12.2", "0.5.0-alpha")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        fun keep(coord: String) =
+            env.libraryFilters.all { it(project.dependencies.create(coord)) }
+        assertTrue(env.libraryFilters.isNotEmpty(),
+            "cleanroom should contribute libraryFilters")
+        // vanilla-1.12.2 set cleanroom replaces — dropped
+        assertFalse(keep("com.mojang:patchy:1.3.9"))
+        assertFalse(keep("oshi-project:oshi-core:1.1"))
+        assertFalse(keep("com.ibm.icu:icu4j-core-mojang:51.2"))
+        assertFalse(keep("net.java.jutils:jutils:1.0.0"))
+        assertFalse(keep("io.netty:netty-all:4.1.9.Final"))
+        assertFalse(keep("net.java.dev.jna:platform:3.4.0"))
+        assertFalse(keep("org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209"))
+        assertFalse(keep("org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209"))
+        // cleanroom's modern replacements stay
+        assertTrue(keep("org.lwjgl:lwjgl:3.4.1"))
+        assertTrue(keep("com.cleanroommc:lwjglxx:1.1.17"))
+        assertTrue(keep("com.google.guava:guava:21.0"))
+    }
+
+    /** 1.x `NeoForgedMinecraftTransformer.configureRemapJar`: prod on
+     *  real neoforge (>1.20.1) runs at mojmap — the searge-era refmap
+     *  is suppressed on the auto-appended ModArtifactsStepSpec, but
+     *  1.20.1's `net.neoforged:forge` artifact (searge prod) keeps it. */
+    @Test
+    fun `neoforge refmap suppression honors the 1_20_1 carve-out`() {
+        fun emitRefmapFor(mc: String, ver: String, coords: String): Boolean {
+            project = project()
+            val ext = project.extensions
+                .getByType(MinecraftExtension::class.java)
+            ext.main.version.set(mc)
+            ext.main.provider.set("fake")
+            serveUserdev(coords)
+            forgeEnv(ext, "neoforge", mc, ver)
+            (project as org.gradle.api.internal.project.ProjectInternal)
+                .evaluate()
+            val spec = xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec()
+            project.extensions.getByType(
+                xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+                .sourceSet("neoforge")
+                .modArtifactsConventions.forEach { it.execute(spec) }
+            return spec.emitRefmap
+        }
+        assertFalse(emitRefmapFor(
+            "1.21.1", "77", "net.neoforged:neoforge:21.1.77"))
+        assertTrue(emitRefmapFor(
+            "1.20.1", "47.1.79", "net.neoforged:forge:1.20.1-47.1.79"))
+    }
+
     private data class Product(
         val id: String,
         val mc: String,

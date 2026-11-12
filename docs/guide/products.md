@@ -24,14 +24,9 @@ own blocks:
     }
     ```
 
-=== "Kotlin `build.gradle.kts`"
-    ```kotlin
-    --8<-- "generated/product-bta.gradle.kts"
-    ```
-
-=== "Groovy `build.gradle`"
-    ```groovy
-    --8<-- "generated/product-bta.gradle"
-    ```
 Products nest their loader inside the product env — the loader axis
 stays the same either way.
+
+Full generated build scripts: [BTA](../generated/product-bta.gradle.kts)
+/ [custom product](../generated/product-custom.gradle.kts) (`.gradle`
+siblings are the Groovy twins).

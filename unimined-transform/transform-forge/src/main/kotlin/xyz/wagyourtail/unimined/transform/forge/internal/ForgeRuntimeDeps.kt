@@ -61,7 +61,9 @@ internal fun contributeClientExtra(
         val raw = rawView.files.firstOrNull { it.extension == "jar" }
             ?: return@provider emptyList()
         val out = cacheDir.resolve(
-            "client-extra-${r.descriptor.id}-${environment.loaderSpec.orNull?.version}.jar"
+            "client-extra-${r.descriptor.id}-" +
+                    "${environment.loaderSpec.orNull?.version}-" +
+                    "${environment.version.get()}.jar"
         )
         UserdevExtract.writeClientExtra(raw.toPath(), out)
         listOf(out.toFile())
@@ -92,7 +94,6 @@ internal fun contributeSrgToMcp(
     val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
     val cacheDir = project.layout.projectDirectory
         .dir(".gradle/unimined/forge").asFile.toPath()
-    val devNs = minecraft.devNamespace(environment.environmentId)
     val artifacts = minecraft.artifacts(environment.environmentId)
 
     val srg2mcpJar = project.provider {
@@ -106,8 +107,14 @@ internal fun contributeSrgToMcp(
             return@provider emptyList()
         }
         val tree = artifacts.get().mappings.get()
-        val prod = r.descriptor.prodNamespace
-        val dev = devNs.get()
+        // the csv table describes the *patched* jar's member ns —
+        // searge for userdev-era (notchObf included: obf input, srg
+        // output — `obfNamespace` would read "official" there),
+        // mojmap for neoform; dst is the tree's last (mod-facing)
+        // ns — srg-runtime envs resolve devNamespace to the jar's
+        // own srg boundary
+        val prod = profile.config.patchedNamespace
+        val dev = tree.namespaces.last().name
         // unobf'd-era products (26.x+) resolve an identity mapping
         // tree — prod/dev namespaces coincide (or are absent) so
         // there is no searge->mcp hop to emit; MCPv6 csvs need

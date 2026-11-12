@@ -37,4 +37,14 @@ interface MaterializedMappingSource {
     val attachments: Map<String, Path>
         get() = emptyMap()
 
+    /**
+     * Every file was written by a serializer we control (the builtin
+     * channels' derived `.umf` documents) — readers may skip JVMS
+     * syntax validation (`unchecked`) for a faster parse. Foreign
+     * content — extracted archive entries, user files — stays checked
+     * so malformed input still reports a clear error.
+     */
+    val trusted: Boolean
+        get() = false
+
 }

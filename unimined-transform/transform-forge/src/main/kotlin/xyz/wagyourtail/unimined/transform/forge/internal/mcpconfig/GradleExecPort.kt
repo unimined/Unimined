@@ -69,6 +69,7 @@ internal open class GradleExecPort @Inject constructor(
             }
             File(System.getProperty("java.home"), "bin/java").absolutePath
         }
+        val t0 = System.nanoTime()
         val result = execOps.javaexec { spec ->
             spec.executable = executable
             spec.mainClass.set(mainClass ?: error("no main class"))
@@ -77,6 +78,9 @@ internal open class GradleExecPort @Inject constructor(
             spec.jvmArgs(jvmArgs)
             spec.isIgnoreExitValue = true
         }
+        xyz.wagyourtail.unimined.api.util.Perf.emit(
+            "tool", "main" to mainClass,
+            "ms" to (System.nanoTime() - t0) / 1_000_000)
         if (result.exitValue != 0) {
             error("tool $mainClass exited ${result.exitValue}")
         }

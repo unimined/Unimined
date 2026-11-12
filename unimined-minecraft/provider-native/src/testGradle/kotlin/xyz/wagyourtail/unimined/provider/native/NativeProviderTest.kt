@@ -122,9 +122,9 @@ class NativeProviderTest {
         }
     """.trimIndent()
 
-    private fun spec(side: Side, loader: LoaderSpec? = null) = object : ProductSpec {
+    private fun spec(side: Side, loader: LoaderSpec? = null, mcVersion: String = "1.20.1") = object : ProductSpec {
         override val version: ProductVersionSpec = object : ProductVersionSpec {
-            override val version = "1.20.1"
+            override val version = mcVersion
         }
         override val side = side
         override val loader = loader
@@ -189,6 +189,46 @@ class NativeProviderTest {
         assertTrue(Files.exists(assetIndex.file.get().asFile.toPath()))
         assertEquals("example.Main", result.launch!!.root["mainClass"]!!.toString().trim('"'))
         assertNotNull(result.mappings.get())
+    }
+
+    /** `empty-<version>` — real metadata (libraries/args) but the game
+     *  jars and official mappings ship empty (1.x pseudo-version) */
+    @Test
+    fun `empty- pseudo-version produces empty jars over real metadata`() {
+        val calls = mutableListOf<String>()
+        val native = NativeProvider { _, cache ->
+            Downloader(cacheDir = cache, fetch = { url ->
+                calls += url
+                when {
+                    url.endsWith("version_manifest_v2.json") -> manifestJson().toByteArray()
+                    url == "https://example/version.json" -> versionJson().toByteArray()
+                    url == "https://example/client.jar" -> clientJar
+                    url == "https://example/server.jar" -> serverJar
+                    url == "https://example/assets.json" -> "{\"objects\":{}}".toByteArray()
+                    else -> error("unexpected URL: $url")
+                }
+            })
+        }
+        val result = native.resolve(
+            spec(Side.CLIENT, mcVersion = "empty-1.20.1"), context(project())
+        )
+        // a real zip with zero entries — and the client jar is never fetched
+        val clientFile = result.artifacts.getValue(ArtifactKey.CLIENT).get().asFile.toPath()
+        ZipFile(clientFile.toFile()).use { zip -> assertEquals(0, zip.size()) }
+        assertFalse(calls.any { it.endsWith("client.jar") })
+        // metadata resolves through the stripped id — libraries still arrive
+        val library = result.libraries.get().single()
+        assertEquals("org.example", library.group)
+        assertEquals(
+            "https://example/version.json",
+            calls.single { it.endsWith("version.json") }
+        )
+        // merged side gets an empty merge — no server download either
+        val merged = native.resolve(
+            spec(Side.MERGED, mcVersion = "empty-1.20.1"), context(project())
+        ).artifacts.getValue(ArtifactKey.MERGED).get().asFile.toPath()
+        ZipFile(merged.toFile()).use { zip -> assertEquals(0, zip.size()) }
+        assertFalse(calls.any { it.endsWith("server.jar") })
     }
 
     @Test

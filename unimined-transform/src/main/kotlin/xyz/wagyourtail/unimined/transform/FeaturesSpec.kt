@@ -19,6 +19,10 @@ class FeaturesSpec(val registry: FeatureRegistry) {
         registry.register(feature)
     }
 
+    /** `nestedJars("fabric")` / `nestedJars("jarjar")` — the jar-in-jar
+     *  embed format for this env's `include` bucket. */
+    fun nestedJars(format: String) = binding("nestedJars", format)
+
     /** Declare a binding — `nestedJars("jarjar")` / `mixin`. */
     fun binding(key: String, value: String? = null) {
         registry.require(key) // fail at declaration on unknown keys

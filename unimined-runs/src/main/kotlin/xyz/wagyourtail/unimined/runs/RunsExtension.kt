@@ -16,6 +16,11 @@ import javax.inject.Inject
  */
 abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
 
+    /** Master switch — `runs { enabled.set(false) }` disables every
+     *  materialized run/prepare task (1.x task-level `enabled`
+     *  parity). Per-run `enabled` conventions to this. */
+    abstract val enabled: org.gradle.api.provider.Property<Boolean>
+
     /** All declared run configurations. */
     /** env a run was registered *for* — recorded eagerly at registration
      *  because `run.environment` conventions resolve in deferred order and
@@ -44,7 +49,9 @@ abstract class RunsExtension @Inject constructor(objects: ObjectFactory) {
         objects.domainObjectContainer(RunConfig::class.java)
 
     init {
+        enabled.convention(true)
         runs.configureEach { rc ->
+            rc.enabled.convention(enabled)
             rc.auth.kind.convention(auth.kind)
             // composite preserves the `username` back-compat bridge —
             // run.username > extension auth.username > AuthSpec's "Dev"

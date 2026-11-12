@@ -34,6 +34,11 @@ class DecompilerRegistry {
             Thread.currentThread().contextClassLoader
         ).toList()
         found.distinctBy { it.name }.forEach(selector::register)
+        // the external engine is a host builtin (coordinate-supplied
+        // decompiler jars) — packaged engines still win capability
+        // selection; "external" only comes via `engine.set("external")`
+        selector.register(
+            xyz.wagyourtail.unimined.source.internal.ExternalDecompilerEngine())
     }
 
     /** Register an engine impl. */

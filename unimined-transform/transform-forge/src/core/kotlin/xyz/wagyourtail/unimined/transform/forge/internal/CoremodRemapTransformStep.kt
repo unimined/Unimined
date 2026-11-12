@@ -48,10 +48,12 @@ object CoremodRemapTransformStep : TransformStep, Serializable {
         "\\b[a-zA-Z_$][\\w$]*(?:/[a-zA-Z_$][\\w$]*)+\\b"
     )
 
-    /** dotted class names — lowercase package segments then a
-     *  capitalized class segment: `a.b.C`, `a.b.C.D`. */
+    /** dotted class names — lowercase-led package segments then any
+     *  class segment: `a.b.C`, `a.b.c` (obf-era names are all-lowercase
+     *  — the class-map lookup filters candidates, so a widened class
+     *  segment can't over-match). */
     private val CLASS_DOTTED_RE = Regex(
-        "\\b(?:[a-z][\\w$]*\\.)+[A-Z][\\w$]*(?:\\.[\\w$]+)*\\b"
+        "\\b(?:[a-z][\\w$]*\\.)+[\\w$]+(?:\\.[\\w$]+)*\\b"
     )
 
     /**
@@ -131,7 +133,10 @@ object CoremodRemapTransformStep : TransformStep, Serializable {
     }
 
     private fun isCoremodResource(name: String): Boolean =
-        name.endsWith(".js")
+        name.endsWith(".js") ||
+                // `coremods/*.json` declare coremod classes + tweak
+                // targets by name — same srg-era literal problem
+                (name.startsWith("coremods/") && name.endsWith(".json"))
 
     override fun transform(input: Path, ctx: TransformStepContext): Path {
         val spec = ctx.stepContext.spec

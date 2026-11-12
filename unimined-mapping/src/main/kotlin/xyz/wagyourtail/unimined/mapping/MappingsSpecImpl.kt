@@ -98,6 +98,15 @@ class MappingsSpecImpl(
     var ornitheGenVersion: Int = 1
 
     /**
+     * Suppress loader-contributed intermediary mapping sources — set
+     * when the user supplies their own intermediary artifacts (1.x
+     * `customIntermediaries`). Fabric-family wiring checks this before
+     * contributing the descriptor's intermediary jar or
+     * `upstreamMappingChannel` sources.
+     */
+    var customIntermediaries: Boolean = false
+
+    /**
      * Legacy Fabric mapping generation — `>=2` selects the
      * `net.legacyfabric.v<N>` group on `legacyIntermediaryGen<N>`/
      * `legacyYarnGen<N>` namespaces, same both-gens model as
@@ -292,6 +301,36 @@ class MappingsSpecImpl(
             "yarn(build) requires the environment's Minecraft version to be set"
         }.map { "net.fabricmc:yarn:$it+build.$build:v2" }
     )
+
+    /**
+     * Declare Tiny v1 Yarn — `net.fabricmc:yarn:<mc>+build.<N>` (no
+     * `:v2` classifier) — with stitch `proposeFieldNames` run over the
+     * environment's client jar to fill intermediary field names (1.x
+     * `yarnv1` semantics). Rides the `intermediary` hop; the named
+     * namespace is `yarnv1`.
+     */
+    fun yarnv1(build: Int) = builtin(
+        "yarnv1",
+        mapOf(
+            "version" to requireMcVersion("yarnv1"),
+            "build" to const(build.toString())
+        )
+    ) {
+        named("yarnv1")
+        mapNamespace("named" to "yarnv1")
+    }
+
+    /** [String]-build overload of [yarnv1]. */
+    fun yarnv1(build: String) = builtin(
+        "yarnv1",
+        mapOf(
+            "version" to requireMcVersion("yarnv1"),
+            "build" to const(build)
+        )
+    ) {
+        named("yarnv1")
+        mapNamespace("named" to "yarnv1")
+    }
 
     /** Declare Mojang's official runtime mappings channel. */
     fun official() = builtin("official")
@@ -663,6 +702,16 @@ class MappingsSpecImpl(
         builtin("searge", mapOf("version" to requireMcVersion("searge")))
 
     /**
+     * Declare Spigot BuildData mappings (1.x `spigotDev`) — the
+     * `spigot` namespace, `official`-keyed. Resolves the BuildData
+     * archive for the environment's Minecraft version; mojmap-era
+     * BuildData (no `memberMappings`) leaves members to a composed
+     * `mojmap` hop.
+     */
+    fun spigot() =
+        builtin("spigot", mapOf("version" to requireMcVersion("spigot")))
+
+    /**
      * Declare the MCP data bundled inside an FG1-era forge `:src` zip —
      * `net.minecraftforge:forge:<mcVersion>-<version>:src@zip`. The zip's
      * `joined.srg` provides the `official -> searge` hop; its csvs layer
@@ -705,6 +754,31 @@ class MappingsSpecImpl(
                 "checked" to const(checked.toString())
             )
         )
+
+    /**
+     * Layer inline patch rows onto this environment's composed
+     * mappings (1.x `stubs(*namespaces) { }`). [namespaces] binds the
+     * row cell order — each `c`/`f`/`m` row's values are positional
+     * across it. The rows serialize to a tiny-v2 document at
+     * materialization and ride the normal source pipeline, so the
+     * merged-mapping cache is content-keyed on the stub bytes (1.x
+     * `combinedNames` `-stubs-<sha>` parity).
+     */
+    fun stubs(vararg namespaces: String, apply: StubsSpec.() -> Unit) {
+        sources += Source.Stubs(
+            StubsSpec(namespaces.toList()).apply(apply)
+        )
+    }
+
+    /** Groovy DSL twin — `stubs(["official", "named"]) { ... }`. */
+    fun stubs(
+        namespaces: List<String>,
+        @DelegatesTo(value = StubsSpec::class, strategy = Closure.DELEGATE_FIRST)
+        apply: Closure<*>
+    ) = stubs(*namespaces.toTypedArray()) { apply.delegatingTo(this) }
+
+    /** Whether any [stubs] declarations exist (1.x `hasStubs`). */
+    fun hasStubs(): Boolean = effectiveSources().any { it is Source.Stubs }
 
     /**
      * Use another environment's mappings when this environment declares none.
@@ -787,6 +861,34 @@ class MappingsSpecImpl(
         /** A Maven mapping coordinate resolved lazily. */
         class Maven(val notationProvider: Provider<String>) : Source(), MavenMappingSource {
             override val notation: String get() = notationProvider.get()
+        }
+
+        /**
+         * Inline `stubs { }` rows — serialized to a content-keyed
+         * tiny-v2 document at materialization so the merged-mapping
+         * cache fingerprints the stub bytes like any other file.
+         */
+        class Stubs(val spec: StubsSpec) : Source(), FileMappingSource {
+            init {
+                formatHint("tinyv2")
+            }
+
+            override val files: () -> List<java.nio.file.Path> = {
+                val bytes = spec.serialize()
+                val sha = java.security.MessageDigest.getInstance("SHA-1")
+                    .digest(bytes).joinToString("") { "%02x".format(it) }
+                val file = java.nio.file.Paths.get(
+                    System.getProperty("java.io.tmpdir"),
+                    "unimined-stubs", "${sha.substring(0, 16)}.tiny")
+                if (!java.nio.file.Files.exists(file) ||
+                    !java.nio.file.Files.readAllBytes(file).contentEquals(bytes)) {
+                    java.nio.file.Files.createDirectories(file.parent)
+                    java.nio.file.Files.write(file, bytes)
+                }
+                listOf(file)
+            }
+
+            override fun toString() = "stubs:${spec.namespaces.joinToString(",") { it.name }}"
         }
 
         /** A provider-named built-in mapping channel — [nameProvider]

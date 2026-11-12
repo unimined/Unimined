@@ -52,6 +52,7 @@ abstract class VineflowerDecompileTransform @Inject constructor(
         val input = inputArtifact.get().asFile
         val output = outputs.file("${input.nameWithoutExtension}-sources.jar")
         output.parentFile.mkdirs()
+        val t0 = System.nanoTime()
         execOperations.javaexec { spec ->
             spec.classpath = parameters.decompilerClasspath
             spec.mainClass.set(
@@ -62,6 +63,9 @@ abstract class VineflowerDecompileTransform @Inject constructor(
                     parameters.referenceClasspath.files.map { "-e=${it.absolutePath}" } +
                     listOf(input.absolutePath, output.absolutePath)
         }
+        xyz.wagyourtail.unimined.api.util.Perf.emit(
+            "decompile", "input" to input.name,
+            "ms" to (System.nanoTime() - t0) / 1_000_000)
     }
 
 }

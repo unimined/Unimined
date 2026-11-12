@@ -58,8 +58,10 @@ data class InitSpec(
      * extension DSL (`bta { }`); `custom:` emits `custom("name") { }`.
      */
     val product: String? = null,
-    /** Distribution jar path for `custom:` products / `nsss` —
-     *  emitted as `file("...")` inside the env block. */
+    /** Distribution artifact for `custom:` products / `nsss` —
+     *  emitted as the declared source inside the env block: a bare
+     *  path renders `file("...")`; `maven:`/`url:` prefixes render
+     *  `maven("g:n:v")` / `url("...")` instead. */
     val distFile: String? = null,
     /**
      * JarModAgent transforms — emit `client`/`server` source sets,

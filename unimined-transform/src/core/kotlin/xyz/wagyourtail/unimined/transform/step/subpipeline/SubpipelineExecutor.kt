@@ -192,12 +192,16 @@ class SubpipelineExecutor(
                 }.getOrNull()
             } ?: error("no main class resolvable for tool")
             val java = File(System.getProperty("java.home"), "bin/java")
+            val t0 = System.nanoTime()
             ProcessBuilder(
                 listOf(java.absolutePath) + jvmArgs +
                         listOf("-cp", classpath.joinToString(File.pathSeparator), main) +
                         args
             ).inheritIO().start().waitFor().also {
                 check(it == 0) { "tool exec failed ($it): $main" }
+                xyz.wagyourtail.unimined.api.util.Perf.emit(
+                    "tool", "main" to main,
+                    "ms" to (System.nanoTime() - t0) / 1_000_000)
             }
         }
     }

@@ -25,6 +25,14 @@ class RemapEnvironmentSpec internal constructor(
 
     private val surfaces = mutableMapOf<RemapSurface, RemapSurfaceSpec>()
 
+    /** Transform-contributed conventions applied to the auto-appended
+     *  [ModArtifactsStepSpec] default (e.g. neoforge >1.20.1 forcing
+     *  `emitRefmap = false` — 1.x `NeoForgedMinecraftTransformer.
+     *  configureRemapJar`). Explicit `modArtifacts {}` declarations
+     *  take full control — conventions never rewrite them. */
+    val modArtifactsConventions: MutableList<Action<ModArtifactsStepSpec>> =
+        mutableListOf()
+
     /** Plugin-registered DSL verb factories — populated by
      *  [RemapExtension.registerDslVerb] before spec creation. */
     var dslVerbs: Map<String, (RemapSurfaceSpec) -> Any> = emptyMap()

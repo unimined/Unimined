@@ -14,7 +14,6 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
-import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
@@ -89,22 +88,18 @@ internal fun exportSrgToMcp(
     prodNs: String,
     devNs: String,
     cacheDir: Path
-): String {
-    val file = cacheDir.resolve("srg2mcp.srg")
-    if (file.exists()) return file.toString()
-    java.nio.file.Files.createDirectories(cacheDir)
-    file.toFile().writeText(buildString {
-        tree.emit(
-            xyz.wagyourtail.unimined.mapping.formats.srg.SrgWriter
-                .write(::append),
-            nsFilter = listOf(
-                xyz.wagyourtail.unimined.mapping.Namespace(prodNs),
-                xyz.wagyourtail.unimined.mapping.Namespace(devNs)
-            )
-        )
-    })
-    return file.toString()
-}
+): String = xyz.wagyourtail.unimined.transform.internal
+    .RuntimeMappingExports.export(
+        tree,
+        xyz.wagyourtail.unimined.transform.internal.RuntimeMappingExports
+            .Spec(
+                format = xyz.wagyourtail.unimined.transform.internal
+                    .RuntimeMappingExports.Format.SRG,
+                srcNs = prodNs, dstNs = devNs,
+                fileName = "srg2mcp.srg"
+            ),
+        cacheDir
+    ).toString()
 
 /**
  * 1.x `srgToMCPAsMCP` — MCP-zip `prodNs -> devNs` export:
@@ -116,65 +111,18 @@ internal fun exportSrgToMcpZip(
     prodNs: String,
     devNs: String,
     cacheDir: Path
-): String {
-    val file = cacheDir.resolve("srg2mcp.jar")
-    if (file.exists()) return file.toString()
-    java.nio.file.Files.createDirectories(cacheDir)
-    val ns = listOf(
-        xyz.wagyourtail.unimined.mapping.Namespace(prodNs),
-        xyz.wagyourtail.unimined.mapping.Namespace(devNs)
-    )
-    xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-        .MCPv6FieldWriter.writeComments = false
-    xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-        .MCPv6MethodWriter.writeComments = false
-    try {
-        val methods = buildString {
-            tree.emit(
-                xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-                    .MCPv6MethodWriter.write(::append),
-                nsFilter = ns)
-        }
-        val fields = buildString {
-            tree.emit(
-                xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-                    .MCPv6FieldWriter.write(::append),
-                nsFilter = ns)
-        }
-        val params = buildString {
-            tree.emit(
-                xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-                    .MCPv6ParamWriter.write(::append),
-                nsFilter = ns)
-        }
-        java.util.zip.ZipOutputStream(
-            file.toFile().outputStream().buffered()
-        ).use { zip ->
-            for ((name, content) in listOf(
-                "methods.csv" to methods,
-                "fields.csv" to fields,
-                "params.csv" to params
-            )) {
-                zip.putNextEntry(java.util.zip.ZipEntry(name))
-                // FML's CSV parser keys on the literal `name` column —
-                // the writer emits the devNs there (`searge,mcp,...`),
-                // so rewrite the header line before zipping
-                zip.write(
-                    content.replaceFirst(
-                        "$prodNs,$devNs,", "$prodNs,name,"
-                    ).toByteArray()
-                )
-                zip.closeEntry()
-            }
-        }
-    } finally {
-        xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-            .MCPv6FieldWriter.writeComments = true
-        xyz.wagyourtail.unimined.mapping.formats.mcp.v6
-            .MCPv6MethodWriter.writeComments = true
-    }
-    return file.toString()
-}
+): String = xyz.wagyourtail.unimined.transform.internal
+    .RuntimeMappingExports.export(
+        tree,
+        xyz.wagyourtail.unimined.transform.internal.RuntimeMappingExports
+            .Spec(
+                format = xyz.wagyourtail.unimined.transform.internal
+                    .RuntimeMappingExports.Format.MCPV6_CSV_ZIP,
+                srcNs = prodNs, dstNs = devNs,
+                fileName = "srg2mcp.jar"
+            ),
+        cacheDir
+    ).toString()
 
 /**
  * Unprotect's mapping lookup — `mappings/mappings.tiny` inside a
@@ -189,34 +137,21 @@ internal fun exportUnprotectMappings(
     tree: xyz.wagyourtail.unimined.mapping.MappingTree,
     cacheDir: Path
 ): String {
-    val zip = cacheDir.resolve("unprotect-mappings.jar")
-    if (zip.exists()) return zip.toString()
     val dst = tree.namespaces.last()
-    java.nio.file.Files.createDirectories(cacheDir)
-    java.nio.file.FileSystems.newFileSystem(
-        zip, mapOf("create" to "true")
-    ).use { fs ->
-        java.nio.file.Files.createDirectories(
-            fs.getPath("mappings")
-        )
-        java.nio.file.Files.write(
-            fs.getPath("mappings/mappings.tiny"),
-            buildString {
-                tree.emit(
-                    xyz.wagyourtail.unimined.mapping.formats.tiny.v2
-                        .TinyV2Writer.write(::append),
-                    nsFilter = listOf(
-                        tree.namespaces.first(), dst
-                    ),
+    return xyz.wagyourtail.unimined.transform.internal
+        .RuntimeMappingExports.export(
+            tree,
+            xyz.wagyourtail.unimined.transform.internal.RuntimeMappingExports
+                .Spec(
+                    format = xyz.wagyourtail.unimined.transform.internal
+                        .RuntimeMappingExports.Format.TINY_JAR,
                     nsRenamer = {
-                        if (it == dst)
-                            xyz.wagyourtail.unimined.mapping
-                                .Namespace("named")
-                        else it
-                    }
-                )
-            }.toByteArray()
-        )
-    }
-    return zip.toString()
+                        if (it == dst) xyz.wagyourtail.unimined.mapping
+                            .Namespace("named") else it
+                    },
+                    renamerKey = "unprotect:dst=named",
+                    fileName = "unprotect-mappings.jar"
+                ),
+            cacheDir
+        ).toString()
 }

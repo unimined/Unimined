@@ -78,6 +78,15 @@ abstract class RemappedViewSpec {
     var hasLazyMappings: Boolean = false
 
     /**
+     * Whether [mappingFile] was bound to a lazily-materializing provider
+     * (environment mapping bundles) — checked without evaluating it,
+     * like [hasLazyMappings]. A plain user-set file stays `false` and is
+     * still detectable via `isPresent`.
+     */
+    @get:Internal
+    var hasLazyMappingFile: Boolean = false
+
+    /**
      * Explicit `artifactType` token for the view's transform request,
      * bypassing the namespace-derived default. Internal host wiring sets
      * this when the target namespace is only known lazily — the token is
@@ -85,6 +94,31 @@ abstract class RemappedViewSpec {
      */
     @get:Internal
     abstract val artifactTypeToken: Property<String>
+
+    /**
+     * Classpath jars whose class files live in a foreign namespace —
+     * the remap engine folds their name-translated inheritance scan
+     * into the batch graph instead of remapping them as artifacts
+     * (see [xyz.wagyourtail.unimined.api.spec.RemapSpec.scanAliases]).
+     * Presence must go through [hasScanAlias] — host wiring binds the
+     * fields lazily, so `isPresent`/`files` checks could materialize
+     * environment mappings at registration.
+     */
+    @get:Internal
+    abstract val scanAliasJars: ConfigurableFileCollection
+
+    /** The namespace [scanAliasJars]' classes are natively in. */
+    @get:Internal
+    abstract val scanAliasFromNs: Property<String>
+
+    /** Mapping bundle carrying `scanAliasFromNs` -> `sourceNamespace`. */
+    @get:Internal
+    abstract val scanAliasMappingFile: RegularFileProperty
+
+    /** Whether the scan-alias fields were bound — checked without
+     *  evaluating them, like [hasLazyMappingFile]. */
+    @get:Internal
+    var hasScanAlias: Boolean = false
 
     /**
      * Mod indicators for [onlyRemapMarkedJars] — prefixed matchers

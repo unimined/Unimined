@@ -1,0 +1,7 @@
+# volatile run state — fixtures are the committed substrate
+.cold-guh/
+.gradle/
+build/
+run/
+.perf-*.jsonl
+.bench-out.log

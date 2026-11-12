@@ -5,6 +5,8 @@ plugins {
 dependencies {
     "coreApi"(project(":unimined-api"))
     api(project(":unimined-minecraft"))
+    // access-file format conversion for GenerateModMetadataTask
+    implementation(project(":unimined-remap:remapper-access"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.asm)
 

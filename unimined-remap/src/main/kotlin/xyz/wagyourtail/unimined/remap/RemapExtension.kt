@@ -12,12 +12,15 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskProvider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
+import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.remap.spi.EmitArtifactStepSpec
 import xyz.wagyourtail.unimined.remap.task.RemapArtifactTask
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
 import xyz.wagyourtail.unimined.remap.internal.RemappedViewWiring
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
+import xyz.wagyourtail.unimined.remap.spi.StripNestedJarsStepSpec
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 import javax.inject.Inject
 
@@ -244,8 +247,17 @@ abstract class RemapExtension @Inject constructor(
     fun dependencyPipelineSteps(
         environmentId: String,
         surface: RemapSurface
-    ): Provider<List<StepSpec>> =
-        pipelineSteps(environmentId, surface, includeEnvironmentArtifactSteps = false)
+    ): Provider<List<StepSpec>> {
+        val steps = pipelineSteps(
+            environmentId, surface, includeEnvironmentArtifactSteps = false)
+        return if (surface != RemapSurface.JAR) steps
+        else steps.map {
+            // dep jars' JiJ declarations don't survive the dev remap —
+            // drop them from dep `*.mod.json` metadata (1.x
+            // innerJarRemapper parity); the prod pipeline is untouched
+            it + listOf<StepSpec>(StripNestedJarsStepSpec())
+        }
+    }
 
     private fun pipelineSteps(
         environmentId: String,
@@ -277,8 +289,23 @@ abstract class RemapExtension @Inject constructor(
             else StepScope.ALL_ARTIFACTS
             named("contributedPreSteps") {
                 environment.contributedPreSteps(surface, scope)
-            } + core + (if (includeModArtifactsStep)
-                withModArtifactsStep(core, surface) else emptyList()) +
+            } + (if (includeEnvironmentArtifactSteps && surface == RemapSurface.JAR) {
+                // emit the "prod jar" — the artifact as of the end of
+                // the original-namespace contributions, before the
+                // namespace remap and post/enhance steps — so consumers
+                // (envArtifactBindings["mc:prod"], prod runs, tooling)
+                // get a real file. The emit is a fusible tap inside the
+                // group's traversal; dropped automatically on mod-jar
+                // and remapJar pipelines by DevArtifactOnlyStepSpec.
+                listOf<StepSpec>(
+                    EmitArtifactStepSpec(
+                        UniminedCache.emitted(project)
+                            .resolve("$environmentId-prod.jar").toString()
+                    )
+                )
+            } else emptyList()) + core + (if (includeModArtifactsStep)
+                withModArtifactsStep(environment, core, surface)
+            else emptyList()) +
             named("contributedSteps") {
                 environment.contributedSteps(surface, scope)
             }
@@ -300,7 +327,7 @@ abstract class RemapExtension @Inject constructor(
             val environment = sourceSet(environmentId)
             environment.validate()
             val declared = environment.effectiveSteps(surface)
-            declared + withModArtifactsStep(declared, surface) +
+            declared + withModArtifactsStep(environment, declared, surface) +
                     environment.contributedSteps(surface, StepScope.ALL_ARTIFACTS)
         }
 
@@ -313,12 +340,15 @@ abstract class RemapExtension @Inject constructor(
      * namespace remap (identity views stay untouched).
      */
     private fun withModArtifactsStep(
+        environment: RemapEnvironmentSpec,
         steps: List<StepSpec>, surface: RemapSurface
     ): List<StepSpec> =
         if (surface == RemapSurface.JAR &&
             steps.any { it is RemapStepSpec } &&
             steps.none { it is ModArtifactsStepSpec }
-        ) listOf(ModArtifactsStepSpec())
+        ) listOf(ModArtifactsStepSpec().also { spec ->
+            environment.modArtifactsConventions.forEach { it.execute(spec) }
+        })
         else emptyList()
 
     /**

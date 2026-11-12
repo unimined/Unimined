@@ -47,6 +47,29 @@ class TransformEnvironmentSpec internal constructor(
         action: Closure<*>
     ) = action.delegatingTo(pipeline)
 
+    /** Jar-in-jar packaging knobs — `nestedJars { recompress.set(false) }`;
+     *  the env's `include` dependency bucket feeds it. The embed format
+     *  comes from the declared `features { nestedJars("…") }` binding. */
+    val nestedJars = objects.newInstance(NestedJarsSpec::class.java)
+
+    /** `nestedJars { }` DSL verb. */
+    fun nestedJars(action: Action<in NestedJarsSpec>) {
+        action.execute(nestedJars)
+    }
+
+    /** Groovy DSL overload — `nestedJars { recompress.set(false) }`. */
+    fun nestedJars(
+        @DelegatesTo(value = NestedJarsSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(nestedJars)
+
+    /** Declare a capability binding — `binding("nestedJars", "jarjar")`;
+     *  top-level alias for `features.binding(...)` so env-side
+     *  `loader(n, v) { }` closures reach it without a `features { }`
+     *  nest. */
+    fun binding(key: String, value: String? = null) =
+        features.binding(key, value)
+
     /** Declared capability bindings — `features { nestedJars("jarjar") }`. */
     val features = FeaturesSpec(FeatureRegistry())
 

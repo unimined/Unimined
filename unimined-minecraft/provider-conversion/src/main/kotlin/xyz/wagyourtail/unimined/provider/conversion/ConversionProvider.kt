@@ -73,8 +73,10 @@ class ConversionProvider : ProductProvider {
                     "with divergent shared classes; declare side = " +
                     "CLIENT or SERVER (upstream ships real sided jars)"
         }
-        val cacheDir = ctx.layout.projectDirectory
-            .dir(".gradle/unimined/conversion-cache").asFile.toPath()
+        // shared with the transform-time producer cacheDir
+        // (UniminedCache.global/native-cache) — project-local roots made
+        // every download run twice per cold build
+        val cacheDir = ctx.globalCacheDir.resolve("native-cache")
         val downloader = Downloader(
             cacheDir = cacheDir,
             offline = ctx.offline,

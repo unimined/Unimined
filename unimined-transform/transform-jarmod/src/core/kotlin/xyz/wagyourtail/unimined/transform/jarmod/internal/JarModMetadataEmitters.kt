@@ -9,6 +9,10 @@ import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
  */
 abstract class JarModFamilyMetadataEmitter : ModMetadataEmitter {
 
+    /** FG1-era FML consumes legacy `*_at.cfg` access transformers. */
+    override val accessFormat = "legacy_at"
+    override val accessPath = "META-INF/{modid}_at.cfg"
+
     override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
         val meta = context.metadata
         val json = buildJsonArray {
@@ -82,6 +86,12 @@ class LiteLoaderModMetadataEmitter : ModMetadataEmitter {
  */
 class RiftModMetadataEmitter : ModMetadataEmitter {
     override val loader = "rift"
+
+    /** Rift consumed ATs on the dev artifact (1.x
+     *  `AccessTransformerMinecraftTransformer`); the packaged file is
+     *  inert on Rift's runtime but kept in canonical AT shape. */
+    override val accessFormat = "at"
+    override val accessPath = "META-INF/accesstransformer.cfg"
 
     override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
         val meta = context.metadata

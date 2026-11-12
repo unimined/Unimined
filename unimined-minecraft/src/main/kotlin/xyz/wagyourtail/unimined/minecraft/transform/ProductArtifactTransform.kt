@@ -3,16 +3,21 @@ package xyz.wagyourtail.unimined.minecraft.transform
 import org.gradle.api.artifacts.transform.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.minecraft.ProductArtifactProducerRegistry
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
@@ -131,6 +136,14 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
         @get:Input
         val stripBundledServerLibraries: Property<Boolean>
 
+        /** Side-marker annotations stamped on single-side merged
+         *  content (`MinecraftEnvironment.sideMarkers` — Serializable
+         *  value objects, fingerprinted per element). */
+        @get:Input
+        val sideMarkers: ListProperty<
+                xyz.wagyourtail.unimined.minecraft.merge.JarMerger
+                        .SideMarker>
+
         /** Shared namespace both sides are remapped into before
          *  merging — set only on split-side merged environments
          *  (`official` is a union of disjoint client/server obf
@@ -152,6 +165,13 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
         @get:Input
         val mergeMappings: Property<String>
 
+        /** File variant of [mergeMappings] — same payload, content-
+         *  addressed; preferred so the tree stays out of param values. */
+        @get:Optional
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
+        val mergeMappingsFile: RegularFileProperty
+
     }
 
     @get:InputArtifact
@@ -159,6 +179,7 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
     abstract val inputArtifact: Provider<FileSystemLocation>
 
     override fun transform(outputs: TransformOutputs) {
+        val t0 = System.nanoTime()
         val p = parameters
         val spec = RuntimeProductSpec(
             environmentId = p.environmentId.get(),
@@ -170,6 +191,7 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
                     it, p.loaderVersion.orNull ?: ""
                 )
             },
+            sideMarkers = p.sideMarkers.get(),
             product = p.product.orNull
                 ?: xyz.wagyourtail.unimined.api.spec.ProductSpec.PRODUCT_NATIVE,
             // namespace/format defaults suffice here — only producers
@@ -191,6 +213,7 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
             mergeIncludeGlobs = p.mergeIncludeGlobs.get(),
             mergeExcludeGlobs = p.mergeExcludeGlobs.get(),
             stripBundledServerLibraries = p.stripBundledServerLibraries.get(),
+            sideMarkers = p.sideMarkers.get(),
             preMerge = preMergeHook(p),
             logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(ProductArtifactTransform::class.java))
         )
@@ -200,6 +223,9 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
                     p.artifactKey.get().lowercase() + ".jar"
         ).toPath()
         produced.copyAtomicTo(output)
+        Perf.emit("produce.transform", "env" to p.environmentId.get(),
+            "key" to p.artifactKey.get(), "version" to p.version.get(),
+            "ms" to (System.nanoTime() - t0) / 1_000_000)
     }
 
     /**
@@ -211,15 +237,27 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
      */
     private fun preMergeHook(p: Params): ((Path, Path) -> Pair<Path, Path>)? {
         val mergeNs = p.mergeNamespace.orNull ?: return null
-        val z64 = p.mergeMappings.orNull
-            ?: error("mergeNamespace set without mergeMappings")
-        require(z64.startsWith("z64:")) {
-            "mergeMappings must be a z64 SerializedMappingData payload"
+        val mappings = p.mergeMappingsFile.orNull?.let {
+            xyz.wagyourtail.unimined.api.mapping
+                .SerializedMappingData.readEither(it.asFile.toPath())
+        } ?: run {
+            val z64 = p.mergeMappings.orNull
+                ?: error("mergeNamespace set without mergeMappings(File)")
+            require(z64.startsWith("z64:")) {
+                "mergeMappings must be a z64 SerializedMappingData payload"
+            }
+            val tmp = Files.createTempFile("unimined-merge-mappings", ".zip")
+            try {
+                Files.write(
+                    tmp,
+                    java.util.Base64.getDecoder().decode(z64.removePrefix("z64:"))
+                )
+                xyz.wagyourtail.unimined.api.mapping
+                    .SerializedMappingData.readEither(tmp)
+            } finally {
+                Files.deleteIfExists(tmp)
+            }
         }
-        val tmp = Files.createTempFile("unimined-merge-mappings", ".zip")
-        Files.write(tmp, java.util.Base64.getDecoder().decode(z64.removePrefix("z64:")))
-        val mappings = xyz.wagyourtail.unimined.api.mapping
-            .SerializedMappingData.readEither(tmp)
         val remapper = java.util.ServiceLoader.load(
             xyz.wagyourtail.unimined.api.spi.JarRemapper::class.java,
             xyz.wagyourtail.unimined.api.spi.JarRemapper::class.java.classLoader

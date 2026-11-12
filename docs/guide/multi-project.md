@@ -75,20 +75,41 @@ This is what `unimined new mymod --modules --loader fabric=…
     ```groovy
     --8<-- "generated/multiloader-settings.gradle"
     ```
-A loader module applies unimined, declares its env on `main`, and
-depends on `:common` for shared code:
+`common` gets a loader-less env (MC classpath + mappings only); a
+loader module applies unimined, declares its env on `main`, and
+depends on `:common` for shared code — the fabric/forge scripts are
+the same shape with a different `loader()`:
 
-=== "Kotlin `build.gradle.kts`"
+=== "Kotlin `common/build.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/multiloader-common.gradle.kts"
+    ```
+
+=== "Groovy `common/build.gradle`"
+    ```groovy
+    --8<-- "generated/multiloader-common.gradle"
+    ```
+
+=== "Kotlin `fabric/build.gradle.kts`"
     ```kotlin
     --8<-- "generated/multiloader-fabric.gradle.kts"
     ```
 
-=== "Groovy `build.gradle`"
+=== "Groovy `fabric/build.gradle`"
     ```groovy
     --8<-- "generated/multiloader-fabric.gradle"
     ```
-`common` gets a loader-less env (MC classpath + mappings only); the
-loader jars land as `modImplementation` deps in each loader module.
+
+=== "Kotlin `forge/build.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/multiloader-forge.gradle.kts"
+    ```
+
+=== "Groovy `forge/build.gradle`"
+    ```groovy
+    --8<-- "generated/multiloader-forge.gradle"
+    ```
+The loader jars land as `modImplementation` deps in each loader module.
 Cross-project inheritance uses the `<project>:<env>` path form —
 `combineWith(":common:main")` pulls the `common` project's `main`
 env (classpath included, so shared code resolves); `copyFrom`

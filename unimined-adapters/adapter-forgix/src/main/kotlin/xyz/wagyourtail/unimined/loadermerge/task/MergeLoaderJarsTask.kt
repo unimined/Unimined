@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.loadermerge.task
 
+import org.gradle.work.DisableCachingByDefault
 import io.github.pacifistmc.forgix.Forgix
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
@@ -22,7 +23,7 @@ import java.nio.file.Files
  * files, not maps, so names ride a separate [ListProperty]; [merge]
  * zips them back into the `Map<String, Path>` Forgix consumes.
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class MergeLoaderJarsTask : DefaultTask() {
 
     /** All input jars, for up-to-date tracking. */

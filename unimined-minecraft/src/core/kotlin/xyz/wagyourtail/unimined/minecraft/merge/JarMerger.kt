@@ -7,10 +7,12 @@ import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.zip.ZipFile
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
-import kotlin.io.path.inputStream
+import java.io.ByteArrayInputStream
 import java.nio.file.Files
+import java.util.concurrent.Executors
+import org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import kotlin.io.path.outputStream
 import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
 import xyz.wagyourtail.commonskt.jvm.tempSibling
@@ -48,7 +50,7 @@ object JarMerger {
      * merge: bump this whenever merge semantics change (v2 = pre
      * bundled-library strip).
      */
-    const val FORMAT_VERSION = "v7"
+    const val FORMAT_VERSION = "v9"
 
     /**
      * Server-side strip controls for [merge].
@@ -106,6 +108,11 @@ object JarMerger {
             val FORGE_CPMODS = SideMarker(
                 "cpw/mods/fml/relauncher/SideOnly",
                 "cpw/mods/fml/relauncher/Side", "CLIENT", "SERVER")
+            /** Pre-relauncher FML (≤1.3.2 era):
+             *  `cpw.mods.fml.common.asm.SideOnly`. */
+            val FORGE_FML_COMMON = SideMarker(
+                "cpw/mods/fml/common/asm/SideOnly",
+                "cpw/mods/fml/common/Side", "CLIENT", "SERVER")
             /** FML-era forge 1.8–1.12.x: `net.minecraftforge.fml
              *  .relauncher.SideOnly` — what mergetool injects for
              *  FG2-era (e.g. 1.12.2 userdev3) merges. */
@@ -128,6 +135,36 @@ object JarMerger {
             val FABRIC = SideMarker(
                 "net/fabricmc/api/Environment",
                 "net/fabricmc/api/EnvType", "CLIENT", "SERVER")
+
+            /** FML-era markers a loader jar can ship — detection scans
+             *  for the annotation class itself (1.x `actualSideMarker`:
+             *  the jar declares which era's marker its runtime reads). */
+            private val DETECTABLE = listOf(
+                FORGE_FML, FORGE_CPMODS, FORGE_FML_COMMON)
+
+            /**
+             * Scan [jar] for a known `SideOnly`-style annotation and
+             * return the matching marker — the era the loader ships is
+             * the era its runtime reads (1.x `actualSideMarker`; `null`
+             * means no marker, merges stamp nothing). Exactly one
+             * candidate may be present.
+             */
+            fun detectSideMarker(jar: Path, warn: (String) -> Unit = {}): SideMarker? {
+                val found = DETECTABLE.filter { marker ->
+                    ZipFile(jar.toFile()).use { zip ->
+                        zip.getEntry("${marker.annotation}.class") != null
+                    }
+                }
+                if (found.isEmpty()) {
+                    warn("[Unimined] no side marker found in " +
+                            "$jar — merged jar members won't be " +
+                            "side-annotated")
+                    return null
+                }
+                if (found.size > 1) throw IllegalStateException(
+                    "more than one side marker in $jar: $found")
+                return found.single()
+            }
         }
     }
 
@@ -168,10 +205,14 @@ object JarMerger {
         val clientResources = linkedMapOf<String, ByteArray>()
         val serverResources = linkedMapOf<String, ByteArray>()
 
+        // read+parse fans out two ways: per-entry decompression/class
+        // parsing inside one jar (ZipFile gives each entry an
+        // independent stream — order preserved by toList on the
+        // central-directory stream), and the two jars against each
+        // other — they fill disjoint structures
         fun read(jar: Path, serverSide: Boolean) {
-            ZipInputStream(jar.inputStream()).use { zin ->
-                var e = zin.nextEntry
-                while (e != null) {
+            ZipFile(jar.toFile()).use { zip ->
+                zip.entries().toList().parallelStream().map { e ->
                     // META-INF is stripped wholesale except service
                     // registrations — signatures/manifests are side-
                     // specific, but `services/` SPI wiring must survive
@@ -180,10 +221,9 @@ object JarMerger {
                         (e.name.startsWith("META-INF/") &&
                                 !e.name.startsWith("META-INF/services/")) ||
                         !keep(e.name, serverSide)) {
-                        e = zin.nextEntry
-                        continue
+                        return@map null
                     }
-                    val bytes = zin.readBytes()
+                    val bytes = zip.getInputStream(e).readBytes()
                     val node = if (e.name.endsWith(".class")) {
                         // unparseable .class — non-JVM or fixture
                         // content — falls back to verbatim resource
@@ -192,22 +232,28 @@ object JarMerger {
                             ClassNode().also { ClassReader(bytes).accept(it, 0) }
                         }.getOrNull()
                     } else null
+                    Triple(e.name, bytes, node)
+                }.toList().forEach { t ->
+                    if (t == null) return@forEach
+                    val (name, bytes, node) = t
                     if (node != null) {
-                        // parsed as a class — drop any earlier
-                        // resource claim; the class wins
-                        clientResources.remove(e.name)
-                        serverResources.remove(e.name)
-                        (if (serverSide) serverClasses else clientClasses)[e.name] = node
-                        (if (serverSide) serverClassBytes else clientClassBytes)[e.name] = bytes
+                        (if (serverSide) serverClasses else clientClasses)[name] = node
+                        (if (serverSide) serverClassBytes else clientClassBytes)[name] = bytes
                     } else {
-                        (if (serverSide) serverResources else clientResources)[e.name] = bytes
+                        (if (serverSide) serverResources else clientResources)[name] = bytes
                     }
-                    e = zin.nextEntry
                 }
             }
         }
+        val serverRead = java.util.concurrent.CompletableFuture.runAsync {
+            read(server, serverSide = true)
+        }
         read(client, serverSide = false)
-        read(server, serverSide = true)
+        serverRead.join()
+        // parsed as a class on one side — the class wins over any
+        // resource claim, cross-side cleanup after both reads settle
+        serverClasses.keys.forEach { clientResources.remove(it) }
+        clientClasses.keys.forEach { serverResources.remove(it) }
 
         // one composed chain — user extensions first, then built-ins.
         // first non-null merge result wins; every transform hook runs
@@ -258,7 +304,6 @@ object JarMerger {
 
         val tmp = out.tempSibling()
         try {
-            ZipOutputStream(tmp.outputStream()).use { zout ->
             // explicit dir entries — legacy resource enumeration
             // (`Class.getResource("dir/")`) resolves directories only
             // when the zip carries them; the input skips dir entries
@@ -274,31 +319,52 @@ object JarMerger {
             mergedClasses.keys.forEach(::collectDirs)
             clientResources.keys.forEach(::collectDirs)
             serverResources.keys.forEach(::collectDirs)
-            for (d in dirs) {
-                zout.putNextEntry(java.util.zip.ZipEntry(d))
-                zout.closeEntry()
-            }
-            for ((name, data) in mergedClasses) {
-                zout.putNextEntry(java.util.zip.ZipEntry(name))
-                zout.write(data)
-                zout.closeEntry()
-            }
-            val resourceNames = LinkedHashSet<String>()
-                .apply { addAll(clientResources.keys); addAll(serverResources.keys) }
-            for (name in resourceNames) {
-                // an entry that parsed as a class on one side but
-                // fell back to a resource on the other is already
-                // written from mergedClasses — the class wins
-                if (name in mergedClasses) continue
-                val c = clientResources[name]
-                val s = serverResources[name]
-                // extension chain, then client-wins as the default
-                // non-class conflict policy
-                val merged = pipeline.mergeResource(name, c, s) ?: c ?: s!!
-                zout.putNextEntry(java.util.zip.ZipEntry(name))
-                zout.write(merged)
-                zout.closeEntry()
-            }
+            // fixed DOS-epoch timestamps — the merged jar is a
+            // synthesized artifact consumed as a transform INPUT, so
+            // its bytes must be reproducible: wall-clock stamps would
+            // give every produce run a different hash and invalidate
+            // the entire downstream transform cache. deflate output is
+            // deterministic per entry and the scatter creator writes
+            // entries in submission order, so parallel compression
+            // keeps the whole-jar bytes reproducible
+            val pool = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors()
+            )
+            try {
+                val creator = ParallelScatterZipCreator(pool)
+                fun addEntry(name: String, data: ByteArray) {
+                    creator.addArchiveEntry(
+                        ZipArchiveEntry(name).apply {
+                            method = ZipArchiveEntry.DEFLATED
+                            time = 0
+                        }
+                    ) { ByteArrayInputStream(data) }
+                }
+                for (d in dirs) {
+                    addEntry(d, ByteArray(0))
+                }
+                for ((name, data) in mergedClasses) {
+                    addEntry(name, data)
+                }
+                val resourceNames = LinkedHashSet<String>()
+                    .apply { addAll(clientResources.keys); addAll(serverResources.keys) }
+                for (name in resourceNames) {
+                    // an entry that parsed as a class on one side but
+                    // fell back to a resource on the other is already
+                    // written from mergedClasses — the class wins
+                    if (name in mergedClasses) continue
+                    val c = clientResources[name]
+                    val s = serverResources[name]
+                    // extension chain, then client-wins as the default
+                    // non-class conflict policy
+                    val merged = pipeline.mergeResource(name, c, s) ?: c ?: s!!
+                    addEntry(name, merged)
+                }
+                ZipArchiveOutputStream(tmp.outputStream()).use { zout ->
+                    creator.writeTo(zout)
+                }
+            } finally {
+                pool.shutdown()
             }
             tmp.moveAtomicTo(out)
         } finally {

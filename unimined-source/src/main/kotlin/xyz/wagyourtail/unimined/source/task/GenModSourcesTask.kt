@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.source.task
 
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -32,7 +33,7 @@ import kotlin.io.path.createDirectories
  * by `GenModSourcesWiring` — this task only resolves the views and
  * copies the results into maven layout.
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class GenModSourcesTask : DefaultTask() {
 
     /** The resolved mod-sources artifact views (decompiled jars). */

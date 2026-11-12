@@ -35,8 +35,10 @@ class LegacyDistProvider : ProductProvider {
     override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         val declared = spec.declaredSource
             ?: throw GradleException("legacydist selected without a declaredSource")
-        val cacheDir = ctx.layout.projectDirectory
-            .dir(".gradle/unimined/legacydist-cache").asFile
+        // shared with the transform-time producer cacheDir
+        // (UniminedCache.global/native-cache) — project-local roots made
+        // every download run twice per cold build
+        val cacheDir = ctx.globalCacheDir.resolve("native-cache").toFile()
         val jar = ctx.providers.provider {
             materialize(spec, declared.source, cacheDir, ctx)
         }

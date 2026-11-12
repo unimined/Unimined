@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
+import xyz.wagyourtail.unimined.remap.spi.EmitArtifactStepSpec
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
@@ -79,18 +80,20 @@ class FabricEnvironmentWiringTest {
 
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val steps = remap.pipelineSteps("fabric", RemapSurface.JAR).get()
-        assertEquals(4, steps.size)
-        assertTrue(steps[0] is RemapStepSpec)
+        assertEquals(5, steps.size)
+        // the prod-jar emit tap rides before the implicit remap core
+        assertTrue(steps[0] is EmitArtifactStepSpec)
+        assertTrue(steps[1] is RemapStepSpec)
         // auto-appended after remap: embedded-ref fixups (kotlin
         // metadata, mixin configs + refmaps) for the dev->prod hop
-        assertTrue(steps[1] is ModArtifactsStepSpec)
-        assertTrue(steps[2] is ApplyClassTweakerStepSpec)
-        assertTrue(steps[3] is AccessRemapStepSpec)
+        assertTrue(steps[2] is ModArtifactsStepSpec)
+        assertTrue(steps[3] is ApplyClassTweakerStepSpec)
+        assertTrue(steps[4] is AccessRemapStepSpec)
 
         // own AW/CTs and dependency-extracted files feed separate
         // collections — dependencies apply through the transitive-only
         // filter
-        val awSpec = steps[2] as ApplyClassTweakerStepSpec
+        val awSpec = steps[3] as ApplyClassTweakerStepSpec
         assertTrue(awSpec.classTweakerFiles !== awSpec.dependencyClassTweakerFiles)
         assertEquals(true, env.transitiveAccessWideners.get())
 
@@ -125,6 +128,54 @@ class FabricEnvironmentWiringTest {
         assertTrue("fabric-loader-0.16.0.jar" in resolved)
         assertTrue(resolved.any { it.startsWith("sponge-mixin-") })
         assertTrue(resolved.any { it.startsWith("asm-") })
+    }
+
+    /** `customGameProvider` adds the loader's skipMcProvider prop to run
+     *  configs (1.x patcher flag); unset it adds nothing */
+    @Test
+    fun `customGameProvider emits the loader's skipMcProvider jvm arg`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val env = fabricEnv(project, ext)
+        // stage the loader jar so the mutator's fabricLoader* view resolves
+        val repo = dir.resolve("repo").toFile()
+        val jarDir = repo.resolve("net/fabricmc/fabric-loader/0.16.0")
+        jarDir.mkdirs()
+        jarDir.resolve("fabric-loader-0.16.0.jar").writeBytes(
+            byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+        )
+        project.repositories.maven {
+            it.url = repo.toURI()
+            it.metadataSources { s -> s.artifact() }
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+        val transform = project.extensions.getByType(TransformExtension::class.java)
+        val mutators = transform.sourceSet("fabric").runMutators
+        fun runConfig(): xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
+            val spec = object : xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
+                override val name = "fabricClient"
+                override val prod = false
+                override var mainClass: String? = null
+                override val javaagents = mutableListOf<java.nio.file.Path>()
+                override val jvmArgs = mutableListOf<String>()
+                override val programArgs = mutableListOf<String>()
+                override val environment = mutableMapOf<String, String>()
+                override val properties = mutableMapOf<String, () -> String>()
+            }
+            // the mutator emits jvmArgs before resolving the env's
+            // product (which the fake provider can't produce) — absorb
+            // that late failure and assert on the emitted args
+            try {
+                mutators.forEach { it.execute(spec) }
+            } catch (_: Exception) {
+            }
+            return spec
+        }
+        assertFalse("-Dfabric.skipMcProvider" in runConfig().jvmArgs)
+        env.customGameProvider.set(true)
+        assertTrue("-Dfabric.skipMcProvider" in runConfig().jvmArgs)
     }
 
     @Test

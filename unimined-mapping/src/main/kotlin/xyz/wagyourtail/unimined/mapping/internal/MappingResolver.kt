@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.mapping.internal
 import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.mapping.*
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.*
 import java.nio.file.Path
@@ -56,6 +57,7 @@ internal object MappingResolver {
         slog.lifecycle(
             "resolving mappings (${sources.size} sources)"
         )
+        val tResolve = System.nanoTime()
         // named namespaces, in declaration order — each source's flagged
         // names plus the `"named"` document-column convention (1.x's
         // `outputs(ns, named)` tracking). The environment's dev namespace
@@ -65,12 +67,15 @@ internal object MappingResolver {
         // merged-output cache, and cheap materialization is shared by
         // hit and miss paths alike
         val mats = sources.mapNotNull { src ->
-            var m = sourceProviders.select(src).materialize(src, ctx)
+            var m = Perf.span("mappings.materialize",
+                "env" to ctx.environmentId, "src" to src.toString().take(80)) {
+                sourceProviders.select(src).materialize(src, ctx)
+            }
             val filtered = filterSideDocs(m.files, ctx.envSide)
             if (filtered !== m.files) {
                 m = RuntimeMaterializedMappingSource(
                     m.declaration, filtered, m.formatHint,
-                    m.nsMap, m.namedNamespaces, m.attachments
+                    m.nsMap, m.namedNamespaces, m.attachments, m.trusted
                 )
             }
             if (m.files.isEmpty()) {
@@ -96,13 +101,32 @@ internal object MappingResolver {
             }.getOrNull()
         }
         var data = cachedData ?: run {
-            val parts = mats.map { (_, m) -> providers.select(m).resolve(m, ctx) }
-            val request = MappingComposeRequest(envCollapse(parts, ctx))
-            composers.select(request).compose(request, ctx).also { composed ->
+            // reads stay serial — measured: 3 parallel parses of the
+            // ~500k-row sources took ~17 s each on a contended daemon
+            // (CPU-bound parsing + GC, not IO), ~3× worse than the
+            // ~8 s serial total. Parallelizing the merge/compose is
+            // where the remaining serial budget actually sits.
+            val parts = mats.map { (_, m) ->
+                Perf.span("mappings.read", "env" to ctx.environmentId,
+                    "files" to m.files.size) {
+                    providers.select(m).resolve(m, ctx)
+                }
+            }
+            val request = MappingComposeRequest(
+                Perf.span("mappings.envCollapse", "env" to ctx.environmentId) {
+                    envCollapse(parts, ctx)
+                }
+            )
+            Perf.span("mappings.compose", "env" to ctx.environmentId,
+                "parts" to request.parts.size) {
+                composers.select(request).compose(request, ctx)
+            }.also { composed ->
                 cacheFile?.let { f ->
                     runCatching {
                         Files.createDirectories(f.parent)
-                        SerializedMappingData.write(composed, f)
+                        Perf.span("mappings.bundleWrite", "env" to ctx.environmentId) {
+                            SerializedMappingData.write(composed, f)
+                        }
                     }.onFailure {
                         slog.info("merged mappings cache write failed: ${it.message}")
                     }
@@ -112,7 +136,9 @@ internal object MappingResolver {
         data.view<MappingTree>()?.namespaces
             ?.filter { it.name == "named" }
             ?.forEach { named += it.name }
-        data = postProcessors.process(data, ctx)
+        data = Perf.span("mappings.postProcess", "env" to ctx.environmentId) {
+            postProcessors.process(data, ctx)
+        }
         if (named.isNotEmpty()) {
             data = object : MappingData by data {
                 override val properties = data.properties +
@@ -122,10 +148,16 @@ internal object MappingResolver {
         // spec-scoped enrichments (transform wiring — e.g. jar-processor
         // mapping mutations) run after the global registry
         for (postProcessor in spec.postProcessors) {
-            data = postProcessor.process(data, ctx)
+            data = Perf.span("mappings.specPost", "env" to ctx.environmentId,
+                "pp" to postProcessor.javaClass.simpleName) {
+                postProcessor.process(data, ctx)
+            }
         }
         spec.namespaces = data.view<MappingTree>()?.namespaces?.map { it.name }
             ?: emptyList()
+        Perf.emit("mappings.resolve", "env" to ctx.environmentId,
+            "ms" to (System.nanoTime() - tResolve) / 1_000_000,
+            "cacheHit" to (cachedData != null), "sources" to sources.size)
         return data
     }
 
@@ -143,7 +175,7 @@ internal object MappingResolver {
         if (filtered.isEmpty()) return@mapNotNull null
         if (filtered !== m.files) RuntimeMaterializedMappingSource(
             m.declaration, filtered, m.formatHint,
-            m.nsMap, m.namedNamespaces, m.attachments
+            m.nsMap, m.namedNamespaces, m.attachments, m.trusted
         ) else m
     }
 
@@ -191,6 +223,7 @@ internal object MappingResolver {
         postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
         val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
+        val tResolve = System.nanoTime()
         val files = filterSideDocs(files, ctx.envSide)
         val cacheFile = mergedCacheFile(ctx, files)
         var data = cacheFile?.takeIf { Files.exists(it) }?.let { f ->
@@ -202,6 +235,7 @@ internal object MappingResolver {
                 slog.info("merged mappings cache read failed: ${it.message}")
             }.getOrNull()
         }
+        val cacheHit = data != null
         if (data == null) {
             val parts = files.map { file ->
                 val t0 = System.nanoTime()
@@ -230,6 +264,10 @@ internal object MappingResolver {
                 )
             }
         }
+        Perf.emit("mappings.readFiles", "env" to ctx.environmentId,
+            "ms" to (System.nanoTime() - tResolve) / 1_000_000,
+            "cacheHit" to cacheHit,
+            "files" to files.size)
         return postProcessors.process(data, ctx)
     }
 

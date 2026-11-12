@@ -1,6 +1,19 @@
 # First Project
 
-A flat, single-loader mod environment on native Minecraft:
+A flat, single-loader mod environment on native Minecraft — three
+files: `settings.gradle.kts` (plugin + dependency repos — see
+[Installation](installation.md) for what each block does),
+`build.gradle.kts`, and `gradle.properties`:
+
+=== "Kotlin `settings.gradle.kts`"
+    ```kotlin
+    --8<-- "generated/settings.gradle.kts"
+    ```
+
+=== "Groovy `settings.gradle`"
+    ```groovy
+    --8<-- "generated/settings.gradle"
+    ```
 
 === "Kotlin `build.gradle.kts`"
     ```kotlin

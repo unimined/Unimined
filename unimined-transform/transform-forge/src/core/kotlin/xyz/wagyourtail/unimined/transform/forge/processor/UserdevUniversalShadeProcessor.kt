@@ -1,13 +1,14 @@
 package xyz.wagyourtail.unimined.transform.forge.processor
 
-import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.jar.JarEntry
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.FileTime
 import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
 
 /**
  * `userdev-universal-shade` jar processor — overlays the userdev
@@ -55,6 +56,13 @@ class UserdevUniversalShadeProcessor : JarProcessor {
             for (e in src.entries()) {
                 if (e.isDirectory) continue
                 if (e.name == "module-info.class") continue
+                // patch packs never reach runtime — the runtime
+                // ClassPatchManager checksums the pre-patch jar and
+                // fatals on an already-patched dev jar (1.x removed
+                // `binpatches.pack.lzma` unconditionally, incl. when
+                // `universalFilters` is empty)
+                if (e.name == "binpatches.pack.lzma" ||
+                    e.name == "devbinpatches.pack.lzma") continue
                 if (e.name.startsWith("META-INF")) {
                     // drop the manifest + signature files only —
                     // META-INF/mods.toml, coremods.json, services/ and
@@ -71,33 +79,23 @@ class UserdevUniversalShadeProcessor : JarProcessor {
         }
         if (entries.isEmpty()) return
 
-        // rewrite the jar: shaded entries replace same-named originals
-        // (1.x REPLACE_EXISTING — the loader wins over stale MC entries)
-        val tmp = jar.resolveSibling("${jar.fileName}.tmp")
-        val emittedDirs = HashSet<String>()
-        JarOutputStream(tmp.toFile().outputStream()).use { out ->
-            JarFile(jar.toFile()).use { input ->
-                input.entries().asSequence().forEach { entry ->
-                    if (entry.name !in entries) {
-                        if (entry.isDirectory) {
-                            emittedDirs.add(entry.name)
-                            out.putNextEntry(JarEntry(entry.name))
-                            out.closeEntry()
-                        } else {
-                            out.putEntryWithDirs(entry.name, emittedDirs) { o ->
-                                input.getInputStream(entry).use { it.copyTo(o) }
-                            }
-                        }
-                    }
-                }
-            }
+        // in-place zipfs update — the loader's entries win
+        // (1.x REPLACE_EXISTING) via delete+write, and untouched MC
+        // entries keep their original compressed bytes instead of
+        // paying a full-jar serial deflate. DOS-epoch stamps keep the
+        // output byte-deterministic.
+        FileSystems.newFileSystem(jar, emptyMap<String, Any>()).use { fs ->
             for ((name, bytes) in entries) {
-                out.putEntryWithDirs(name, emittedDirs) { it.write(bytes) }
+                val p = fs.getPath(name)
+                Files.deleteIfExists(p)
+                p.parent?.let { Files.createDirectories(it) }
+                Files.write(p, bytes, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)
+                Files.setLastModifiedTime(p, FileTime.fromMillis(0))
             }
         }
         context.log.subLogger("forge").info(
             "shaded ${entries.size} universal entries into minecraft jar"
         )
-        tmp.toFile().renameTo(jar.toFile())
     }
 }

@@ -25,7 +25,9 @@ internal object FabricModAnalysis {
         val accessWidener: String? = null,
         val classTweakers: JsonElement? = null,
         val mainClass: Map<String, String>? = null,
-        val custom: JsonObject? = null
+        val custom: JsonObject? = null,
+        @kotlinx.serialization.SerialName("quilt_loom")
+        val quiltLoom: JsonObject? = null
     )
 
     /** The loader's embedded `fabric-installer.json` — its only runtime
@@ -43,19 +45,84 @@ internal object FabricModAnalysis {
             val rules: List<Rule> = emptyList()
         ) {
             @Serializable
-            class Rule(val action: String? = null)
+            class Rule(
+                val action: String? = null,
+                val os: Os? = null,
+                val features: Map<String, Boolean> = emptyMap()
+            ) {
+                @Serializable
+                class Os(
+                    val name: String? = null,
+                    val version: String? = null,
+                    val arch: String? = null
+                )
+            }
 
-            val disallowed: Boolean
-                get() = rules.any { it.action == "disallow" }
+            /** Mojang rule semantics — no rules allow; otherwise the
+             *  last rule matching the host platform decides. */
+            fun appliesTo(platform: HostPlatform): Boolean {
+                if (rules.isEmpty()) return true
+                var allowed = false
+                for (rule in rules) {
+                    if (rule.matches(platform)) allowed = rule.action == "allow"
+                }
+                return allowed
+            }
+
+            private fun Rule.matches(platform: HostPlatform): Boolean {
+                val o = os
+                if (o != null) {
+                    if (o.name != null && o.name != platform.osName) return false
+                    if (o.arch != null && !Regex(o.arch).containsMatchIn(platform.arch)) return false
+                    if (o.version != null && !Regex(o.version).containsMatchIn(platform.osVersion)) return false
+                }
+                return features.all { (k, v) -> (platform.features[k] ?: false) == v }
+            }
+        }
+    }
+
+    /** Host platform fields for installer rule evaluation — same shape
+     *  as `MinecraftMetadataAssembler`'s `PlatformInfo` (duplicated:
+     *  transform core must not depend on unimined-minecraft). */
+    class HostPlatform(
+        val osName: String,
+        val arch: String,
+        val osVersion: String,
+        val features: Map<String, Boolean> = emptyMap()
+    ) {
+        companion object {
+            fun current(): HostPlatform {
+                val os = System.getProperty("os.name").lowercase()
+                return HostPlatform(
+                    osName = when {
+                        os.contains("win") -> "windows"
+                        os.contains("mac") || os.contains("darwin") -> "osx"
+                        os.contains("linux") -> "linux"
+                        else -> os
+                    },
+                    arch = System.getProperty("os.arch"),
+                    osVersion = System.getProperty("os.version")
+                )
+            }
         }
     }
 
     /** The `id` field of the mod's `fabric.mod.json`, if present. */
     fun modId(jar: Path): String? = modJson(jar)?.id
 
-    /** A `custom` section value from the mod's `fabric.mod.json`. */
-    fun customValue(jar: Path, key: String): String? =
-        modJson(jar)?.custom?.get(key)?.jsonPrimitive?.contentOrNull
+    /**
+     * A `custom` section value from the mod's `fabric.mod.json`.
+     * The entry bytes are scanned for the key before paying for a
+     * full JSON parse — jar-processor `buildSpec`s probe every mod
+     * jar for keys almost none of them declare, so the raw scan
+     * short-circuits the common case. Key-bearing jars fall through
+     * to the (cached) parse for the real value.
+     */
+    fun customValue(jar: Path, key: String): String? {
+        val raw = rawEntry(jar, "fabric.mod.json") ?: return null
+        if (raw.indexOfSubsequence(key.encodeToByteArray()) < 0) return null
+        return modJson(jar)?.custom?.get(key)?.jsonPrimitive?.contentOrNull
+    }
 
     /**
      * Interface injections declared under `custom.*injected_interfaces`
@@ -65,11 +132,10 @@ internal object FabricModAnalysis {
      * classTweaker directives for the dependent's compile artifact.
      */
     fun injectedInterfaces(jar: Path): Map<String, List<String>> {
-        val custom = modJson(jar)?.custom ?: return emptyMap()
+        val modJson = modJson(jar) ?: return emptyMap()
         val out = LinkedHashMap<String, MutableList<String>>()
-        for ((key, value) in custom) {
-            if (!key.endsWith("injected_interfaces")) continue
-            val obj = value as? JsonObject ?: continue
+        fun collect(obj: JsonObject?) {
+            if (obj == null) return
             for ((target, ifaces) in obj) {
                 val list = (ifaces as? JsonArray)?.mapNotNull {
                     (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content
@@ -79,6 +145,19 @@ internal object FabricModAnalysis {
                 }
             }
         }
+        // flat keys — fmj `loom:`/`steel:injected_interfaces`, qmj-style
+        // `quilt_loom.injected_interfaces` written as a single key
+        for ((key, value) in modJson.custom.orEmpty()) {
+            if (key.endsWith("injected_interfaces")) {
+                collect(value as? JsonObject)
+            } else if (value is JsonObject) {
+                // nested — qmj's `custom.quilt_loom.injected_interfaces`
+                collect(value["injected_interfaces"] as? JsonObject)
+            }
+        }
+        // qmj also accepts a top-level `quilt_loom` object (1.x checked
+        // both locations)
+        collect(modJson.quiltLoom?.get("injected_interfaces") as? JsonObject)
         return out.mapValues { (_, v) -> v.distinct() }
     }
 
@@ -159,21 +238,79 @@ internal object FabricModAnalysis {
      * and including server libs on a client run is harmless). The
      * loader's pom intentionally declares no dependencies.
      */
-    fun loaderLibraries(jar: Path): List<String> = installerJson(jar)
-        ?.let { installer ->
-            listOf("common", "server", "client").flatMap { section ->
+    fun loaderLibraries(jar: Path, side: String? = null): List<String> =
+        installerJson(jar)?.let { installer ->
+            // 1.x parity: common + development always; the sided
+            // sections only on their side (merged gets both)
+            val sections = mutableListOf("common", "development")
+            if (side == null || side == "client" || side == "merged") {
+                sections += "client"
+            }
+            if (side == null || side == "server" || side == "merged") {
+                sections += "server"
+            }
+            val platform = HostPlatform.current()
+            sections.flatMap { section ->
                 installer.libraries[section].orEmpty()
-                    .filter { !it.disallowed }
+                    .filter { it.appliesTo(platform) }
                     .map { it.name }
             }
-        }
-        ?: emptyList()
+        } ?: emptyList()
 
-    private fun modJson(jar: Path): FabricModJson? = readJarEntry(jar, "fabric.mod.json")
+    // daemon-wide parse cache — every public accessor above re-opens
+    // the jar and re-parses the json without it, and call sites stack
+    // up (modId + customValue + classTweakers + injectedInterfaces +
+    // buildSpec's per-mod custom probes run per run). Content-keyed by
+    // path+size+mtime so a rebuilt jar can't serve stale metadata.
+    private val modJsonCache = java.util.concurrent.ConcurrentHashMap<String, Cached<FabricModJson>>()
+    private val installerJsonCache = java.util.concurrent.ConcurrentHashMap<String, Cached<FabricInstallerJson>>()
+
+    private class Cached<T>(val value: T?)
+
+    private fun cacheKey(jar: Path): String {
+        val attrs = runCatching {
+            Files.readAttributes(jar, java.nio.file.attribute.BasicFileAttributes::class.java)
+        }.getOrNull() ?: return jar.toString()
+        return "${jar}:${attrs.size()}:${attrs.lastModifiedTime().toMillis()}"
+    }
+
+    /** Raw bytes of a jar entry without parsing — the cheap probe
+     *  behind [customValue]'s key short-circuit. */
+    private fun rawEntry(jar: Path, name: String): ByteArray? = runCatching {
+        JarFile(jar.toFile()).use { jarFile ->
+            jarFile.getJarEntry(name)
+                ?.let { jarFile.getInputStream(it).readBytes() }
+        }
+    }.getOrNull()
+
+    private fun ByteArray.indexOfSubsequence(needle: ByteArray): Int {
+        if (needle.isEmpty() || size < needle.size) return -1
+        outer@ for (i in 0..size - needle.size) {
+            for (j in needle.indices) {
+                if (this[i + j] != needle[j]) continue@outer
+            }
+            return i
+        }
+        return -1
+    }
+
+    private fun modJson(jar: Path): FabricModJson? =
+        modJsonCache.computeIfAbsent(cacheKey(jar)) {
+            Cached(
+                // quilt envs' own metadata is `quilt.mod.json` — probe
+                // both (1.x read the env's own mod-json path)
+                readJarEntry(jar, "fabric.mod.json")
+                    ?: readJarEntry(jar, "quilt.mod.json")
+            )
+        }.value
 
     private fun installerJson(jar: Path): FabricInstallerJson? =
-        readJarEntry(jar, "fabric-installer.json")
-            ?: readJarEntry(jar, "quilt_installer.json")
+        installerJsonCache.computeIfAbsent(cacheKey(jar)) {
+            Cached(
+                readJarEntry(jar, "fabric-installer.json")
+                    ?: readJarEntry(jar, "quilt_installer.json")
+            )
+        }.value
 
     private inline fun <reified T> readJarEntry(jar: Path, name: String): T? = runCatching {
         JarFile(jar.toFile()).use { jarFile ->

@@ -77,16 +77,19 @@ class UniminedRepos private constructor(
         val artifactFallback: Boolean = false,
         val includeGroups: Set<String> = emptySet(),
         val includeGroupRegex: String? = null,
+        val excludeGroups: Set<String> = emptySet(),
         override val servedGroups: Set<String> = emptySet()
     ) : Repo {
         override fun registerOn(repos: RepositoryHandler) {
             repos.maven { r ->
                 r.name = this@Maven.name
                 r.setUrl(url)
-                if (includeGroups.isNotEmpty() || includeGroupRegex != null) {
+                if (includeGroups.isNotEmpty() || includeGroupRegex != null ||
+                    excludeGroups.isNotEmpty()) {
                     r.content { c ->
                         includeGroups.forEach(c::includeGroup)
                         includeGroupRegex?.let(c::includeGroupByRegex)
+                        excludeGroups.forEach(c::excludeGroup)
                     }
                 }
                 if (artifactFallback) {
@@ -251,8 +254,22 @@ class UniminedRepos private constructor(
         }
     }
 
+    /** Maven Central — named `MavenRepo` so it dedupes against
+     *  Gradle's own `mavenCentral()` (settings-mode checks are
+     *  name-keyed). The excludes mirror 1.x: `com.mojang` artifacts
+     *  live authoritatively on Mojang's host, and `org.lwjgl` must
+     *  resolve there too — 1.21's `natives-macos-patch` classifier is
+     *  absent from central, and Gradle pins a module's artifacts to
+     *  whichever repo served its metadata. Registering central FIRST
+     *  keeps its classifiers reachable for modules both hosts carry
+     *  (netty natives — libraries.minecraft.net serves the POM + main
+     *  jar but not the `linux-x86_64` classifier). */
+    val mavenCentral by Maven("MavenRepo",
+        "https://repo.maven.apache.org/maven2/",
+        excludeGroups = setOf("com.mojang", "org.lwjgl"))
     val mojangLibraries by Maven("Mojang Libraries",
-        "https://libraries.minecraft.net")
+        "https://libraries.minecraft.net",
+        excludeGroups = setOf("ca.weblite"))
     val minecraftForge by Maven("Minecraft Forge",
         "https://maven.minecraftforge.net/", artifactFallback = true,
         servedGroups = setOf("de.oceanlabs.mcp", "net.minecraftforge"))
@@ -530,9 +547,27 @@ class UniminedRepos private constructor(
                 "\n    }\n  }"
 
         private fun repoSnippet(repo: Repo): String = when (repo) {
-            is Maven -> """maven("${repo.url}") {
-                name = "${repo.name}"
-            }"""
+            is Maven -> buildString {
+                append("""maven("${repo.url}") {
+                |name = "${repo.name}""""".trimMargin())
+                val filters = buildList {
+                    repo.includeGroups.forEach {
+                        add("includeGroup(\"$it\")")
+                    }
+                    repo.includeGroupRegex?.let {
+                        add("includeGroupByRegex(\"$it\")")
+                    }
+                    repo.excludeGroups.forEach {
+                        add("excludeGroup(\"$it\")")
+                    }
+                }
+                if (filters.isNotEmpty()) {
+                    append("\ncontent {\n    ")
+                    append(filters.joinToString("\n    "))
+                    append("\n}")
+                }
+                append("\n}")
+            }
             is Ivy -> """ivy("${repo.url}") {
                 patternLayout { artifact("${repo.artifactPattern}") }
             }"""

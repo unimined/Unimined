@@ -4,6 +4,7 @@ import org.gradle.api.GradleException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
@@ -21,6 +22,8 @@ import java.security.MessageDigest
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 
 /**
  * Gradle-free artifact production shared by [NativeProvider] (which wraps
@@ -114,8 +117,20 @@ internal object NativeArtifactProduction {
         rebuild: Boolean,
         mergeOptions: JarMerger.Options = JarMerger.Options(),
         preMerge: ((client: Path, server: Path) -> Pair<Path, Path>)? = null
-    ): Path {
-        return when (key) {
+    ): Path = Perf.span(
+        "produce", "version" to versionId, "key" to key.name
+    ) {
+        // `empty-<version>` pseudo-version: real metadata but empty game
+        // artifacts (1.x parity — total-conversion/custom-provider envs)
+        if (versionId.startsWith("empty-")) {
+            return@span when (key) {
+                ArtifactKey.CLIENT -> emptyJar(downloader.cacheDir, "versions/$versionId/client.jar")
+                ArtifactKey.SERVER -> emptyJar(downloader.cacheDir, "versions/$versionId/server.jar")
+                ArtifactKey.MERGED -> emptyJar(downloader.cacheDir, "versions/$versionId/merged.jar")
+                else -> throw GradleException("native provider cannot produce artifact key $key")
+            }
+        }
+        return@span when (key) {
             ArtifactKey.CLIENT ->
                 downloadReference(key, metadata(versionId, resolver), versionId, downloader)
 
@@ -132,15 +147,26 @@ internal object NativeArtifactProduction {
                 // downloadReference falls back to the betacraft
                 // archive; only the sha1 (for merge caching) is absent
                 val serverRef = versionMetadata.downloads[ArtifactKey.SERVER]
+                // client download and the server download+unbundle chain
+                // are independent fetches — overlap them; dests are
+                // disjoint (client.jar vs server.jar/unbundled) and the
+                // downloader's temp names are unique per writer
+                val serverFuture = CompletableFuture.supplyAsync {
+                    unbundleServer(
+                        downloadReference(
+                            ArtifactKey.SERVER, versionMetadata, versionId, downloader
+                        ),
+                        versionId, downloader.cacheDir, rebuild
+                    )
+                }
                 var client = downloadReference(
                     ArtifactKey.CLIENT, versionMetadata, versionId, downloader
                 )
-                var server = unbundleServer(
-                    downloadReference(
-                        ArtifactKey.SERVER, versionMetadata, versionId, downloader
-                    ),
-                    versionId, downloader.cacheDir, rebuild
-                )
+                var server = try {
+                    serverFuture.get()
+                } catch (e: ExecutionException) {
+                    throw (e.cause as? Exception) ?: e
+                }
                 // split-era versions (no manifest server download) have
                 // disjoint client/server obf namespaces — the caller's
                 // hook remaps both sides into a shared namespace before
@@ -166,6 +192,7 @@ internal object NativeArtifactProduction {
             else -> throw GradleException("native provider cannot produce artifact key $key")
         }
     }
+
 
     /**
      * Modern server downloads are Mojang *bundler* jars — a wrapper that
@@ -217,7 +244,7 @@ internal object NativeArtifactProduction {
         // the merge options affect the output, so the side-cache key
         // folds them in — library-set content (path+size+mtime per
         // jar), globs, and the strip flag
-        val optionsTag = safeHashTag(
+        val optionsTag = MessageDigest.getInstance("SHA-1").digest(
             listOf(
                 options.stripBundledServerLibraries,
                 options.includeGlobs, options.excludeGlobs,
@@ -232,16 +259,49 @@ internal object NativeArtifactProduction {
                     listOf(it.annotation, it.enumType,
                         it.clientValue, it.serverValue)
                 }
-            ).hashCode().toString()
-        )
+            ).toString().toByteArray(Charsets.UTF_8)
+        ).toHex()
         val merged = cacheDir.resolve(
             "versions/$versionId/merged-${JarMerger.FORMAT_VERSION}-$clientTag-$serverTag-$optionsTag.jar"
         )
         if (Files.exists(merged) && !rebuild) return merged
 
         Files.createDirectories(merged.parent)
-        merged.writeAtomically { JarMerger.merge(client, server, it, options) }
+        merged.writeAtomically {
+            Perf.span("merge", "version" to versionId) {
+                JarMerger.merge(client, server, it, options)
+            }
+        }
         return merged
+    }
+
+    /** cached zero-byte file at [relPath] under the cache dir — used for
+     *  `empty-*` pseudo-version artifacts that must exist but carry no
+     *  content (e.g. official mapping channels) */
+    fun emptyFile(cacheDir: Path, relPath: String): Path {
+        val path = cacheDir.resolve(relPath)
+        if (!Files.exists(path)) {
+            Files.createDirectories(path.parent)
+            path.tempSibling().also {
+                Files.write(it, ByteArray(0))
+                it.moveAtomicTo(path)
+            }
+        }
+        return path
+    }
+
+    /** cached empty zip at [relPath] under the cache dir — the `empty-*`
+     *  pseudo-version's client/server/merged jar (1.x parity) */
+    fun emptyJar(cacheDir: Path, relPath: String): Path {
+        val path = cacheDir.resolve(relPath)
+        if (!Files.exists(path)) {
+            Files.createDirectories(path.parent)
+            path.tempSibling().also {
+                java.util.zip.ZipOutputStream(Files.newOutputStream(it)).close()
+                it.moveAtomicTo(path)
+            }
+        }
+        return path
     }
 
     fun emptyAssetIndex(cacheDir: Path): Path {

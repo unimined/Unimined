@@ -24,14 +24,13 @@ import xyz.wagyourtail.unimined.mapping.formats.ct.CTReader
 import xyz.wagyourtail.unimined.mapping.formats.ct.CTWriter
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
+import xyz.wagyourtail.unimined.remap.spi.FusedJarEntry
+import xyz.wagyourtail.unimined.remap.spi.FusibleJarStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
-import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarEntry
 import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
 import kotlin.reflect.KClass
 
 /**
@@ -49,102 +48,87 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
 
     override fun supports(spec: RemapSpec) = true
 
-    override fun create(spec: AccessRemapStepSpec, ctx: StepContext) = ArtifactStep { input, c ->
-        val tree = c.mappings?.view<MappingTree>()
-            ?: throw GradleException("remap-access requires mapping data exposing a MappingTree view")
-        val output = Files.createTempDirectory(c.workDir, "access").resolve(input.fileName.toString())
-        val formats = spec.formats.map { it.lowercase() }.toSet()
-        val unknown = formats - setOf("aw", "at", "ct")
-        if (unknown.isNotEmpty()) {
-            throw GradleException("remap-access: unknown format(s): ${unknown.joinToString()}")
-        }
-        val targetNs = Namespace(c.spec.targetNamespace)
-        // loader-facing header label: fabric-family runtimes require the
-        // canonical namespace names — resolve the spec's label map with
-        // the same prefix-match the alias path uses for gen columns.
-        // `devNamespaceLabel` defers the dev-ns lookup to now: the tree
-        // is resolved here anyway, so wiring never parses mappings at
-        // configuration time (mirrors devNamespace()'s heuristic)
-        val labels = spec.devNamespaceLabel?.let { label ->
-            val present = tree.namespaces.mapTo(HashSet()) { it.name }
-            val devNs = c.mappings?.namedNamespaces()?.firstOrNull { it in present }
-                ?: tree.namespaces.lastOrNull()?.name
-            if (devNs != null) spec.namespaceLabels + (devNs to label)
-            else spec.namespaceLabels
-        } ?: spec.namespaceLabels
-        val targetLabel = labels.entries
-            .firstOrNull { (k, _) -> targetNs.name == k || targetNs.name.startsWith(k) }
-            ?.value
-        rewriteJar(
-            input, output, tree,
-            Namespace(c.spec.sourceNamespace), targetNs,
-            formats, spec.paths, spec.legacyAt, spec.namespaceAliases,
-            targetLabel
-        )
-        output
-    }
+    override fun create(spec: AccessRemapStepSpec, ctx: StepContext): ArtifactStep =
+        object : FusibleJarStep {
+            private lateinit var tree: MappingTree
+            private lateinit var sourceNs: Namespace
+            private lateinit var targetNs: Namespace
+            private var formats: Set<String> = emptySet()
+            private var explicit: Set<String> = emptySet()
+            private var legacyAt = false
+            private var namespaceAliases: Map<String, String> = emptyMap()
+            private var targetLabel: String? = null
 
-    private enum class Kind { AW, AT, CT }
-
-    private fun rewriteJar(
-        input: Path,
-        output: Path,
-        tree: MappingTree,
-        sourceNs: Namespace,
-        targetNs: Namespace,
-        formats: Set<String>,
-        explicitPaths: Set<String>,
-        legacyAt: Boolean,
-        namespaceAliases: Map<String, String>,
-        targetLabel: String? = null
-    ) {
-        JarFile(input.toFile()).use { jar ->
-            // FMLAT manifest attr — old-FML custom AT paths
-            // (space-separated); 1.x AtRemapper parity — per-jar,
-            // so merged here rather than on the spec
-            val declared = (jar.manifest?.mainAttributes
-                ?.getValue("FMLAT") as? String)
-                ?.split(" ")?.filter(String::isNotEmpty)?.toSet()
-                .orEmpty()
-            val explicit = explicitPaths + declared
-            JarOutputStream(Files.newOutputStream(output)).use { out ->
-                for (entry in jar.entries()) {
-                    val next = JarEntry(entry.name)
-                    next.time = entry.time
-                    out.putNextEntry(next)
-                    if (!entry.isDirectory) {
-                        val bytes = jar.getInputStream(entry).readBytes()
-                        out.write(
-                            try {
-                                if (entry.name.endsWith(".mod.json")) {
-                                    remapModJson(bytes, tree, sourceNs, targetNs)
-                                } else when (kind(entry.name, bytes, explicit, formats)) {
-                                    Kind.AW -> relabelHeader(
-                                        remapAw(
-                                            normalizeNs(bytes, tree, namespaceAliases, sourceNs),
-                                            tree, targetNs
-                                        ), targetNs, targetLabel
-                                    )
-                                    Kind.AT -> remapAt(bytes, tree, sourceNs, targetNs, legacyAt)
-                                    Kind.CT -> relabelHeader(
-                                        remapCt(
-                                            normalizeNs(bytes, tree, namespaceAliases, sourceNs),
-                                            tree, targetNs
-                                        ), targetNs, targetLabel
-                                    )
-                                    null -> bytes
-                                }
-                            } catch (e: Exception) {
-                                throw GradleException(
-                                    "remap-access failed on entry ${entry.name}: ${e.message}", e)
-                            }
-                        )
-                    }
-                    out.closeEntry()
+            override fun prepareFused(input: Path, c: StepContext) {
+                tree = c.mappings?.view<MappingTree>()
+                    ?: throw GradleException(
+                        "remap-access requires mapping data exposing a MappingTree view"
+                    )
+                formats = spec.formats.map { it.lowercase() }.toSet()
+                val unknown = formats - setOf("aw", "at", "ct")
+                if (unknown.isNotEmpty()) {
+                    throw GradleException("remap-access: unknown format(s): ${unknown.joinToString()}")
                 }
+                sourceNs = Namespace(c.spec.sourceNamespace)
+                targetNs = Namespace(c.spec.targetNamespace)
+                legacyAt = spec.legacyAt
+                namespaceAliases = spec.namespaceAliases
+                // loader-facing header label: fabric-family runtimes require
+                // the canonical namespace names — resolve the spec's label
+                // map with the same prefix-match the alias path uses for gen
+                // columns. `devNamespaceLabel` defers the dev-ns lookup to
+                // now: the tree is resolved here anyway, so wiring never
+                // parses mappings at configuration time (mirrors
+                // devNamespace()'s heuristic)
+                val labels = spec.devNamespaceLabel?.let { label ->
+                    val present = tree.namespaces.mapTo(HashSet()) { it.name }
+                    val devNs = c.mappings?.namedNamespaces()?.firstOrNull { it in present }
+                        ?: tree.namespaces.lastOrNull()?.name
+                    if (devNs != null) spec.namespaceLabels + (devNs to label)
+                    else spec.namespaceLabels
+                } ?: spec.namespaceLabels
+                targetLabel = labels.entries
+                    .firstOrNull { (k, _) -> targetNs.name == k || targetNs.name.startsWith(k) }
+                    ?.value
+                // FMLAT manifest attr — old-FML custom AT paths
+                // (space-separated); 1.x AtRemapper parity — per-jar,
+                // so merged here rather than on the spec
+                val declared = (JarFile(input.toFile()).use { it.manifest }
+                    ?.mainAttributes?.getValue("FMLAT") as? String)
+                    ?.split(" ")?.filter(String::isNotEmpty)?.toSet()
+                    .orEmpty()
+                explicit = spec.paths + declared
+            }
+
+            override fun visitEntry(entry: FusedJarEntry, c: StepContext): FusedJarEntry {
+                val bytes = try {
+                    if (entry.name.endsWith(".mod.json")) {
+                        remapModJson(entry.bytes, tree, sourceNs, targetNs)
+                    } else when (kind(entry.name, entry.bytes, explicit, formats)) {
+                        Kind.AW -> relabelHeader(
+                            remapAw(
+                                normalizeNs(entry.bytes, tree, namespaceAliases, sourceNs),
+                                tree, targetNs
+                            ), targetNs, targetLabel
+                        )
+                        Kind.AT -> remapAt(entry.bytes, tree, sourceNs, targetNs, legacyAt)
+                        Kind.CT -> relabelHeader(
+                            remapCt(
+                                normalizeNs(entry.bytes, tree, namespaceAliases, sourceNs),
+                                tree, targetNs
+                            ), targetNs, targetLabel
+                        )
+                        null -> entry.bytes
+                    }
+                } catch (e: Exception) {
+                    throw GradleException(
+                        "remap-access failed on entry ${entry.name}: ${e.message}", e)
+                }
+                return if (bytes === entry.bytes) entry else FusedJarEntry(entry.name, bytes)
             }
         }
-    }
+
+    private enum class Kind { AW, AT, CT }
 
     private fun kind(
         path: String,

@@ -96,10 +96,11 @@ internal class ConversionArtifacts(
 
     override val libraries: Provider<List<Dependency>> =
         ctx.providers.provider {
-            metadata().libraries.map {
-                ctx.dependencyFactory.create(
-                    substitute(it, spec.librarySubstitutions)
-                )
+            metadata().libraries.mapNotNull {
+                xyz.wagyourtail.unimined.api.spec.applyLibraryRules(
+                    it, spec.librarySubstitutions, spec.libraryRules,
+                    spec.libraryCoordFilters
+                )?.let { c -> ctx.dependencyFactory.create(c) }
             } + ConversionProvider.PRODUCTS[
                     spec.product.removePrefix("minecraft:")
                 ]?.extraLibraries.orEmpty().map {
@@ -148,19 +149,6 @@ internal class ConversionArtifacts(
         override val file: Provider<RegularFile>
     ) : AssetIndex
 
-}
-
-/** `g:n:v[:classifier]` version replacement — same semantics as
- *  provider-native's `replaceLibraryVersion` substitution. */
-internal fun substitute(coord: String, rules: List<Pair<String, String>>): String {
-    val parts = coord.split(':')
-    if (parts.size < 3) return coord
-    val groupName = "${parts[0]}:${parts[1]}"
-    val version = rules.firstOrNull { rule ->
-        if (':' in rule.first) groupName == rule.first
-        else groupName.startsWith(rule.first)
-    }?.second ?: return coord
-    return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
 }
 
 internal fun Side.artifactKey() = when (this) {

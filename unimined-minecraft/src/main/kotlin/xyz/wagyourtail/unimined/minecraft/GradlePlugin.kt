@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.task.PruneUniminedCacheTask
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.minecraft`.
@@ -12,6 +13,7 @@ import xyz.wagyourtail.unimined.minecraft.task.PruneUniminedCacheTask
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         target.pluginManager.apply(xyz.wagyourtail.unimined.mapping.GradlePlugin::class.java)
         target.extensions.create("uniminedMinecraft", MinecraftExtension::class.java, target)
         target.uniminedAdopt("minecraft", MinecraftExtension::class.java)

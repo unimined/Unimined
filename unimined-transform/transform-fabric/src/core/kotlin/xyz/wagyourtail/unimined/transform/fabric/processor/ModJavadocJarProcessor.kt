@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.transform.fabric.processor
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import okio.buffer
 import okio.source
@@ -49,14 +52,23 @@ class ModJavadocJarProcessor : JarProcessor {
     class Spec(val entries: List<Entry>) : JarProcessor.JarProcessorSpec
 
     override fun buildSpec(context: JarProcessor.SpecContext): JarProcessor.JarProcessorSpec? {
-        val entries = context.mods().mapNotNull { mod ->
-            val path = mod.custom(PROVIDED_JAVADOC_KEY) ?: return@mapNotNull null
-            val bytes = mod.readEntry(path) ?: return@mapNotNull null
-            Entry(
-                mod.id, mod.jar.fileName.toString(), path,
-                MessageDigest.getInstance("SHA-256")
-                    .digest(bytes).toHex()
-            )
+        // one JarFile open + fmj read per mod — IO-latency bound on
+        // slow filesystems, so probe concurrently; the sort below keeps
+        // spec output deterministic regardless of completion order
+        val entries = runBlocking {
+            coroutineScope {
+                context.mods().map { mod ->
+                    async(Dispatchers.IO) {
+                    val path = mod.custom(PROVIDED_JAVADOC_KEY) ?: return@async null
+                    val bytes = mod.readEntry(path) ?: return@async null
+                    Entry(
+                        mod.id, mod.jar.fileName.toString(), path,
+                        MessageDigest.getInstance("SHA-256")
+                            .digest(bytes).toHex()
+                        )
+                    }
+                }.map { it.await() }.filterNotNull()
+            }
         }.sortedWith(compareBy({ it.modId }, { it.jarName }))
         return if (entries.isEmpty()) null else Spec(entries)
     }

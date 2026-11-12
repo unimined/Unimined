@@ -61,20 +61,23 @@ class ManifestResolver(
         require(id.matches(Regex("[A-Za-z0-9._-]+"))) {
             "invalid Minecraft version id: $id"
         }
+        // `empty-<version>` resolves the real version's metadata — the
+        // pseudo-version only swaps the produced artifacts (1.x parity)
+        val lookupId = id.substringAfter("empty-")
         val ref = manifestUrls.firstNotNullOfOrNull { url ->
-            manifest(url).versions.firstOrNull { it.id == id }
+            manifest(url).versions.firstOrNull { it.id == lookupId }
         } ?: throw IllegalArgumentException(
             "unknown minecraft version '$id' in ${manifestUrls.joinToString(", ")}"
         )
         val file = downloader.fetchMetadata(
-            ref.url, "metadata/versions/$id.json", metadataTtlOverride ?: versionJsonTtl
+            ref.url, "metadata/versions/$lookupId.json", metadataTtlOverride ?: versionJsonTtl
         )
         var document = json.parseToJsonElement(Files.readString(file)).jsonObject
         if (ref.details != null) {
             // enrichment channel: details fills keys the Mojang schema
             // doesn't carry; the standard document always wins
             val details = downloader.fetchMetadata(
-                ref.details, "metadata/versions/$id-details.json",
+                ref.details, "metadata/versions/$lookupId-details.json",
                 metadataTtlOverride ?: versionJsonTtl
             )
             val enriched = json.parseToJsonElement(Files.readString(details)).jsonObject

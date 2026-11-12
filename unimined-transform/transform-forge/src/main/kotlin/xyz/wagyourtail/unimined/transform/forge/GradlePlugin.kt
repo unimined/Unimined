@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.mapping.UniminedRepos
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeEnvironmentWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.transform.forge`.
@@ -18,6 +19,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             // every registered forge product contributes its maven repo;

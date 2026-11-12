@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remap.task
 
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -26,7 +27,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * execution time. The pipeline runs in the task action; engine-classpath
  * isolation (worker action) is a planned optimization, not a requirement.
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class AbstractRemapTask : DefaultTask() {
 
     /** The artifact to run the pipeline over. */

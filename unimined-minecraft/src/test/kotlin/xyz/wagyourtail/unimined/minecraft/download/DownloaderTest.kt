@@ -187,6 +187,53 @@ class DownloaderTest {
     }
 
     @Test
+    fun `fetch retries transient io failures then succeeds`() {
+        var calls = 0
+        val d = Downloader(dir, retryBackoffMs = { 0 }, fetch = {
+            if (++calls < 3) throw java.io.IOException("reset")
+            "ok".toByteArray()
+        })
+        val path = d.fetch("https://x/a.jar", "a.jar")
+        assertEquals("ok", java.nio.file.Files.readString(path))
+        assertEquals(3, calls)
+    }
+
+    @Test
+    fun `fetch gives up after bounded attempts`() {
+        var calls = 0
+        val d = Downloader(dir, retryBackoffMs = { 0 }, fetch = {
+            calls++
+            throw java.io.IOException("always down")
+        })
+        assertThrows<java.io.IOException> {
+            d.fetch("https://x/a.jar", "a.jar")
+        }
+        assertEquals(4, calls) // maxAttempts budget, not infinite
+    }
+
+    @Test
+    fun `fetch does not retry checksum mismatches`() {
+        var calls = 0
+        val d = Downloader(dir, fetch = { calls++; "data".toByteArray() })
+        assertThrows<java.io.IOException> {
+            d.fetch("https://x/a.jar", "a.jar", "deadbeef")
+        }
+        assertEquals(1, calls) // permanent validation failure — no retry
+    }
+
+    @Test
+    fun `metadata refresh retries transient io failures`() {
+        var calls = 0
+        val d = Downloader(dir, retryBackoffMs = { 0 }, fetch = {
+            if (++calls < 2) throw java.io.IOException("reset")
+            "fresh".toByteArray()
+        })
+        val path = d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
+        assertEquals("fresh", java.nio.file.Files.readString(path))
+        assertEquals(2, calls)
+    }
+
+    @Test
     fun `offline missing metadata reports url`() {
         val d = Downloader(dir, offline = true)
         val error = assertThrows<java.io.IOException> {

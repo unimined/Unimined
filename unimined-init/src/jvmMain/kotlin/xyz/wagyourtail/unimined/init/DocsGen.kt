@@ -57,7 +57,9 @@ fun main(args: Array<String>) {
         Templates::buildProduct)
     putBoth("product-custom", base.copy(
         loaders = listOf("fabric" to "0.16.0"),
-        layout = InitSpec.Layout.CUSTOM_PRODUCT, product = "custom:mymodpack"),
+        layout = InitSpec.Layout.CUSTOM_PRODUCT,
+        product = "custom:myoverhaul",
+        distFile = "maven:com.example:myoverhaul:1.0"),
         Templates::buildProduct)
 
     putBoth("side-server", base.copy(

@@ -95,6 +95,14 @@ class JarModEnvExtension(private val env: MinecraftEnvironment) {
         JarModEnvState.debug(env.environmentId, true)
     }
 
+    /** 1.x `jarModAgentPatcher.compiletimeTransforms` — run the declared
+     *  jma transformers over this env's jar during `remapJar` (a forked
+     *  JarModAgent pass before the namespace remap), instead of relying
+     *  on the runtime `-javaagent` alone. */
+    fun jarmodCompiletimeTransforms(disable: Boolean = true) {
+        JarModEnvState.compiletimeTransforms(env.environmentId, disable)
+    }
+
     private companion object {
         val FAIL_STRATEGIES = setOf("CONTINUE", "CANCEL", "EXIT", "THROW")
     }

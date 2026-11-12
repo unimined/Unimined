@@ -6,7 +6,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.CacheableTask
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
@@ -23,6 +23,9 @@ import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
+import xyz.wagyourtail.unimined.api.util.MavenCoords
+import xyz.wagyourtail.unimined.remap.NestedJarEntrySpec
+import xyz.wagyourtail.unimined.remap.internal.NestedJarsAppender
 import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
 import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -39,7 +42,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepSpec
  * the declared [RemapSurface.JAR] step pipeline dev→prod over it into
  * [archiveFile].
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class RemapJarTask : Jar(), ProducesArtifacts {
 
     /** The surface whose pipeline this task runs — JAR for binaries,
@@ -100,6 +103,46 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
     @get:Input
     abstract val footgunChecks: Property<xyz.wagyourtail.unimined.remap.FootgunCheckLevel>
 
+    /**
+     * Resolved `include`-bucket jars bound for the production artifact —
+     * embedded after the pipeline, before lint, so packaging checks
+     * validate the appended entries. Build-dep tracked via the wiring
+     * site's [ConfigurableFileCollection] projection; per-jar
+     * coordinates/metadata live on [nestedJarEntries].
+     */
+    @get:InputFiles
+    @get:Classpath
+    abstract val nestedJars: ConfigurableFileCollection
+
+    /** Per-jar JiJ rows (file + coords + version range) — resolved from
+     *  the env's `include` configuration. */
+    @get:Nested
+    abstract val nestedJarEntries: ListProperty<NestedJarEntrySpec>
+
+    /** `fabric`|`jarjar` — absent means JiJ is off for this jar. */
+    @get:Optional
+    @get:Input
+    abstract val nestedJarsFormat: Property<String>
+
+    /** Rewrite embedded jars (STORED inner for `fabric`, epoch +
+     *  sorted); `false` copies them verbatim. */
+    @get:Optional
+    @get:Input
+    abstract val nestedJarsRecompress: Property<Boolean>
+
+    /** Loader metadata filename carrying the nested-jar list
+     *  (`fabric.mod.json`/`quilt.mod.json`); absent skips metadata
+     *  updates. */
+    @get:Optional
+    @get:Input
+    abstract val nestedJarsMetadataFile: Property<String>
+
+    /** The metadata key listing embedded jars (`jars`,
+     *  `quilt_loader.jars`). */
+    @get:Optional
+    @get:Input
+    abstract val nestedJarsKey: Property<String>
+
     override val artifacts: Map<String, Provider<RegularFile>>
         get() = mapOf("jar" to archiveFile)
 
@@ -135,6 +178,32 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
 
         val jarPath = jarFile.asFile.toPath()
         if (surface.get() == RemapSurface.JAR) {
+            // JiJ embed — post-pipeline so embedded jars ride the
+            // namespace the pipeline just produced; pre-lint so the
+            // packaging checks see the appended entries. Identity
+            // environments never reach here (remapJar is skipped) —
+            // ProductionJarWiring hangs the same appender off the
+            // plain `Jar` task there instead.
+            if (nestedJarsFormat.orNull != null) {
+                NestedJarsAppender.append(
+                        jarPath,
+                        nestedJarEntries.get().map { s ->
+                            NestedJarsAppender.Input(
+                                s.jar.get().asFile.toPath(),
+                                s.coords.orNull?.let(::MavenCoords),
+                                s.versionRange.orNull,
+                                s.fmlModType.orNull,
+                                s.obfuscated.orNull
+                            )
+                        },
+                        nestedJarsFormat.get(),
+                        nestedJarsRecompress.getOrElse(true),
+                        nestedJarsMetadataFile.orNull,
+                        nestedJarsKey.orNull,
+                        targetNamespace.get()
+                    )
+                    .forEach { logger.warn("[Unimined] $it") }
+            }
             stampAndLintProductionJar(
                 jarPath, targetNamespace.get(),
                 footgunChecks.getOrElse(

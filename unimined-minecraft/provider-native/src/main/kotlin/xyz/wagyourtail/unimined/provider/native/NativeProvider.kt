@@ -53,9 +53,10 @@ class NativeProvider(
         // environment's vanilla-side artifact (e.g. fabric) — resolve
         // honors the spec as given.
         val versionId = spec.version.version
-        val cacheDir = ctx.layout.projectDirectory
-            .dir(".gradle/unimined/native-cache")
-            .asFile.toPath()
+        // the producer's transform-time cacheDir is
+        // UniminedCache.global/native-cache — resolve must land downloads
+        // under the same root or every artifact is fetched twice per run
+        val cacheDir = ctx.globalCacheDir.resolve("native-cache")
         val downloader = downloaderFactory(ctx, cacheDir)
         val resolver = ManifestResolver(
             downloader = downloader,
@@ -79,7 +80,8 @@ class NativeProvider(
             JarMerger.Options(
                 includeGlobs = rs.mergeIncludeGlobs,
                 excludeGlobs = rs.mergeExcludeGlobs,
-                stripBundledServerLibraries = rs.stripBundledServerLibraries
+                stripBundledServerLibraries = rs.stripBundledServerLibraries,
+                sideMarkers = rs.sideMarkers
             )
         } ?: JarMerger.Options()
 
@@ -103,8 +105,11 @@ class NativeProvider(
             ctx.providers.provider {
                 (metadata().libraries + overlayLibraries(
                     spec.libraryOverlays, versionId, downloader, resolver
-                )).map {
-                    ctx.dependencyFactory.create(substitute(it, spec.librarySubstitutions))
+                )).mapNotNull {
+                    xyz.wagyourtail.unimined.api.spec.applyLibraryRules(
+                        it, spec.librarySubstitutions, spec.libraryRules,
+                        spec.libraryCoordFilters
+                    )?.let { c -> ctx.dependencyFactory.create(c) }
                 }
             }
         val assetIndex = NativeAssetIndex(
@@ -156,6 +161,13 @@ class NativeProvider(
             auxiliary[channel] = ctx.layout.file(ctx.providers.provider {
                 val ref = metadata().version.downloads?.get(channel)
                     ?: return@provider null
+                // `empty-*` versions ship an empty mapping file (1.x
+                // parity — legacy wrote an empty zip; a zero-byte text
+                // file parses to an empty mapping instead of failing)
+                if (versionId.startsWith("empty-"))
+                    return@provider NativeArtifactProduction
+                        .emptyFile(cacheDir, "versions/$versionId/$channel.txt")
+                        .toFile()
                 downloader.fetch(
                     ref.url,
                     "versions/$versionId/$channel.txt",
@@ -245,22 +257,9 @@ private val MojmapIdentityMappingTree: MappingTree =
  *  obfuscated artifacts (Realms is the only Mojang-published one). */
 private const val OBF_AUX_PREFIXES = "com.mojang:realms"
 
-/** Apply the spec's typed library-version substitutions
- *  (1.x `replaceLibraryVersion`): a coord `group:name:version[:classifier]`
- *  whose `group:name` matches a rule gets its version component
- *  replaced; first matching rule wins. A `group:name` rule targets one
- *  artifact exactly (1.x's group+name args); a group-only rule is a
- *  prefix covering every artifact in the group. */
-internal fun substitute(coord: String, rules: List<Pair<String, String>>): String {
-    val parts = coord.split(':')
-    if (parts.size < 3) return coord
-    val groupName = "${parts[0]}:${parts[1]}"
-    val version = rules.firstOrNull { rule ->
-        if (':' in rule.first) groupName == rule.first
-        else groupName.startsWith(rule.first)
-    }?.second ?: return coord
-    return (listOf(parts[0], parts[1], version) + parts.drop(3)).joinToString(":")
-}
+/** Library coords route through
+ *  [xyz.wagyourtail.unimined.api.spec.applyLibraryRules] — pair
+ *  substitutions, rich rules, and coord filters all evaluated there. */
 
 private val overlayJson = Json { ignoreUnknownKeys = true }
 

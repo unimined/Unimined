@@ -82,3 +82,35 @@ class GenSourcesWiringTest {
     }
 
 }
+
+class ExternalEngineSelectionTest {
+
+    @Test
+    fun `engine=external selects the external engine when dependency set`() {
+        val spec = object : xyz.wagyourtail.unimined.source.spi.DecompileSpec {
+            override val input: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>
+                get() = throw UnsupportedOperationException()
+            override val classpath: org.gradle.api.file.FileCollection
+                get() = throw UnsupportedOperationException()
+            override val options: Map<String, String> = emptyMap()
+            override val dependency: String = "org.example:ff:1.0"
+        }
+        val engine = xyz.wagyourtail.unimined.source.DecompilerRegistry()
+            .select(spec, "external")
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "external", engine.name)
+    }
+
+    @Test
+    fun `generator verb sets external engine and vineflower shorthand`() {
+        val project = org.gradle.testfixtures.ProjectBuilder.builder()
+            .build()
+        val ext = project.objects.newInstance(
+            xyz.wagyourtail.unimined.source.SourceExtension::class.java)
+        ext.generator("1.11.0")
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "external", ext.engine.get())
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "org.vineflower:vineflower:1.11.0", ext.dependency.get())
+    }
+}

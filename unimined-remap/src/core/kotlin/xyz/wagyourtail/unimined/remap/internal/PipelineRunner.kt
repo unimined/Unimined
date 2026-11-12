@@ -4,11 +4,15 @@ import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.remap.RemapStepRegistry
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
+import xyz.wagyourtail.unimined.remap.spi.FusedJarEntry
+import xyz.wagyourtail.unimined.remap.spi.FusibleJarStep
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.remap.spi.StepPipeline
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
@@ -75,28 +79,72 @@ object PipelineRunner {
         val steps = stepSpecs.zip(resolved)
             .map { (stepSpec, type) ->
                 val delegate = type.create(stepSpec, ctx)
-                // timed wrapper — start/finish lines identify which
-                // env/artifact each step is running on
-                ArtifactStep { input, c ->
-                    log.lifecycle("${prefix}running step ${type.name}:${type.stepName} on ${input.fileName}")
-                    val t0 = System.nanoTime()
-                    val out = delegate.apply(input, c)
-                    log.lifecycle(
-                        "${prefix}step ${type.name}:${type.stepName} " +
-                                "${input.fileName} -> ${out.fileName} in " +
-                                "${(System.nanoTime() - t0) / 1_000_000}ms"
-                    )
-                    out
+                if (delegate is FusibleJarStep) {
+                    // fusible steps need their interface to survive the
+                    // timing wrapper — accumulate prep+visit time and
+                    // emit on endFused, when the group has finished
+                    object : FusibleJarStep {
+                        private var ns = 0L
+                        override fun prepareFused(input: Path, c: StepContext) {
+                            log.lifecycle(
+                                "${prefix}preparing step ${type.name}:${type.stepName} on ${input.fileName}"
+                            )
+                            val t0 = System.nanoTime()
+                            delegate.prepareFused(input, c)
+                            ns = System.nanoTime() - t0
+                        }
+                        override fun visitEntry(entry: FusedJarEntry, c: StepContext): FusedJarEntry? {
+                            val t0 = System.nanoTime()
+                            val r = delegate.visitEntry(entry, c)
+                            ns += System.nanoTime() - t0
+                            return r
+                        }
+                        override fun visitDirectory(entry: FusedJarEntry, c: StepContext): Boolean =
+                            delegate.visitDirectory(entry, c)
+                        override fun endFused(c: StepContext) {
+                            delegate.endFused(c)
+                            val stepMs = ns / 1_000_000
+                            log.lifecycle(
+                                "${prefix}step ${type.name}:${type.stepName} " +
+                                        "(fused) in ${stepMs}ms"
+                            )
+                            Perf.emit("step", "host" to envLabel,
+                                "step" to "${type.name}:${type.stepName}",
+                                "fused" to true, "ms" to stepMs)
+                        }
+                    }
+                } else {
+                    // timed wrapper — start/finish lines identify which
+                    // env/artifact each step is running on
+                    ArtifactStep { input, c ->
+                        log.lifecycle("${prefix}running step ${type.name}:${type.stepName} on ${input.fileName}")
+                        val t0 = System.nanoTime()
+                        val out = delegate.apply(input, c)
+                        val stepMs = (System.nanoTime() - t0) / 1_000_000
+                        log.lifecycle(
+                            "${prefix}step ${type.name}:${type.stepName} " +
+                                    "${input.fileName} -> ${out.fileName} in " +
+                                    "${stepMs}ms"
+                        )
+                        Perf.emit("step", "host" to envLabel,
+                            "step" to "${type.name}:${type.stepName}",
+                            "input" to input.fileName.toString(), "ms" to stepMs)
+                        out
+                    }
                 }
             }
 
         log.info("${prefix}pipeline on ${input.fileName} (${steps.size} steps)")
         val t0 = System.nanoTime()
         val out = StepPipeline.run(input, steps, ctx)
+        val pipelineMs = (System.nanoTime() - t0) / 1_000_000
         log.lifecycle(
             "${prefix}pipeline ${input.fileName} -> ${out.fileName} done in " +
-                    "${(System.nanoTime() - t0) / 1_000_000}ms"
+                    "${pipelineMs}ms"
         )
+        Perf.emit("pipeline", "host" to envLabel,
+            "input" to input.fileName.toString(),
+            "steps" to steps.size, "ms" to pipelineMs)
         if (out != output) {
             output.parent?.createDirectories()
             // temp + atomic move — a killed pipeline must not leave a

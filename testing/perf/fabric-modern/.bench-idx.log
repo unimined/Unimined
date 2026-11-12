@@ -1,0 +1,24 @@
+=== run 1/1 [--cold] classes
+    wall: 122532ms
+
+== wall times: 122532 | median: 122532ms
+phase                   median ms  count
+transform                  230198     73
+pipeline                   225396     61
+step                       202907    247
+mappings.resolve            20238      1
+mappings.compose             7002      1
+mappings.specPost            6115      1
+mappings.read                5651      3
+produce.transform            3531      1
+produce                      3401      1
+merge                        1804      1
+download                     1714      2
+classpath.scanAlias          1266      1
+mappings.bundleWrite          526      1
+metadata                      234      4
+mappings.postProcess           67      1
+classpath.index                45      2
+mappings.envCollapse            0      1
+
+perf logs: /run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/fabric-modern/.perf-*.jsonl ; gradle out: /run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/fabric-modern/.bench-out.log

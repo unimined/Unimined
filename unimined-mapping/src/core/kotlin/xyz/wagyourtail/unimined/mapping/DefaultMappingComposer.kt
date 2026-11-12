@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.mapping
 
 import xyz.wagyourtail.unimined.api.mapping.*
+import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.api.util.ProgressGate
 import xyz.wagyourtail.unimined.mapping.element.MappingElement
@@ -62,9 +63,12 @@ class DefaultMappingComposer : MappingComposer {
         fun elCount(e: MappingElement): Long =
             1L + e.contents.sumOf(::elCount) +
                 ((e as? MetadataParent)?.metadata ?: emptyList()).sumOf(::metaCount)
-        val total = trees.sumOf { tree ->
-            tree.packages.sumOf(::elCount) + tree.classes.sumOf(::elCount) +
-                tree.constantGroups.sumOf(::elCount)
+        val total = Perf.span("mappings.compose.count",
+            "env" to ctx.environmentId) {
+            trees.sumOf { tree ->
+                tree.packages.sumOf(::elCount) + tree.classes.sumOf(::elCount) +
+                    tree.constantGroups.sumOf(::elCount)
+            }
         }
         val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
         val gate = ProgressGate { elapsed, done ->
@@ -76,14 +80,18 @@ class DefaultMappingComposer : MappingComposer {
             "composing ${trees.size} mapping parts ($total rows)"
         )
         val counted = CountingMappingSink(composed, gate)
-        for (tree in trees) tree.emit(counted)
+        Perf.span("mappings.compose.emit", "env" to ctx.environmentId) {
+            for (tree in trees) tree.emit(counted)
+        }
 
         // relocate inner classes their source namespace left unmapped under
         // the mapped parent (Outer$1 -> mapped/Outer$1) — verbatim name fill
         // would strand them in the source package and break javac nests
-        for (tree in trees) {
-            val srcNs = tree.namespaces.firstOrNull() ?: continue
-            composed.renest(srcNs, tree.namespaces.drop(1).toSet())
+        Perf.span("mappings.compose.renest", "env" to ctx.environmentId) {
+            for (tree in trees) {
+                val srcNs = tree.namespaces.firstOrNull() ?: continue
+                composed.renest(srcNs, tree.namespaces.drop(1).toSet())
+            }
         }
 
         // fill missing namespace names along each part's hop chain —
@@ -91,17 +99,19 @@ class DefaultMappingComposer : MappingComposer {
         // (yarn-unmapped members stay `field_*`, not `official`; srg-era
         // class names in `searge` propagate to `mcp`, not `official`).
         // Each target namespace is filled by the first part providing it.
-        val filled = mutableSetOf<Namespace>()
-        val toFill = mutableListOf<Pair<Namespace, Set<Namespace>>>()
-        for (tree in trees) {
-            for ((parent, target) in tree.namespaces.zipWithNext()) {
-                if (target !in filled) {
-                    toFill += parent to setOf(target)
-                    filled += target
+        Perf.span("mappings.compose.fill", "env" to ctx.environmentId) {
+            val filled = mutableSetOf<Namespace>()
+            val toFill = mutableListOf<Pair<Namespace, Set<Namespace>>>()
+            for (tree in trees) {
+                for ((parent, target) in tree.namespaces.zipWithNext()) {
+                    if (target !in filled) {
+                        toFill += parent to setOf(target)
+                        filled += target
+                    }
                 }
             }
+            composed.fillMissingNames(*toFill.toTypedArray())
         }
-        composed.fillMissingNames(*toFill.toTypedArray())
 
         val views = linkedMapOf<KClass<*>, Any>(
             MappingTree::class to composed

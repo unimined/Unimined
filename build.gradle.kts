@@ -147,6 +147,9 @@ subprojects {
                 })
                 dependsOn(metadata)
             }
+            // the suite runs several ProjectBuilder mapping resolves in
+            // one executor JVM — default heap OOMs partway through
+            maxHeapSize = "2g"
             useJUnitPlatform()
         }
         tasks.named("check") {

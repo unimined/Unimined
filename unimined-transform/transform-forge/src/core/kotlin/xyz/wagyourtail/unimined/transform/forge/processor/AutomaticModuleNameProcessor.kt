@@ -1,13 +1,15 @@
 package xyz.wagyourtail.unimined.transform.forge.processor
 
-import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor.*
+import java.io.ByteArrayOutputStream
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.FileTime
 import java.util.jar.Attributes
-import java.util.jar.JarEntry
 import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
 /**
@@ -88,27 +90,24 @@ class AutomaticModuleNameProcessor : JarProcessor {
                 }
             }
 
-            val tmp = jar.resolveSibling("${jar.fileName}.tmp")
-            val emittedDirs = HashSet<String>()
-            JarOutputStream(tmp.toFile().outputStream(), existing).use { out ->
-                jf.entries().asSequence().forEach { entry ->
-                    if (entry.name != "META-INF/MANIFEST.MF") {
-                        if (entry.isDirectory) {
-                            emittedDirs.add(entry.name)
-                            out.putNextEntry(JarEntry(entry.name))
-                            out.closeEntry()
-                        } else {
-                            out.putEntryWithDirs(entry.name, emittedDirs) { o ->
-                                jf.getInputStream(entry).use { it.copyTo(o) }
-                            }
-                        }
-                    }
-                }
+            // zipfs in-place manifest swap — rewriting all ~2000
+            // entries to change one manifest pays a serial deflate
+            // pass over the whole jar for a few hundred bytes of
+            // work; delete+write of the single entry leaves every
+            // other entry's compressed bytes untouched
+            val mfBytes = ByteArrayOutputStream()
+                .also { existing.write(it) }.toByteArray()
+            FileSystems.newFileSystem(jar, emptyMap<String, Any>()).use { fs ->
+                val p = fs.getPath("META-INF/MANIFEST.MF")
+                Files.deleteIfExists(p)
+                p.parent?.let { Files.createDirectories(it) }
+                Files.write(p, mfBytes, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)
+                Files.setLastModifiedTime(p, FileTime.fromMillis(0))
             }
             context.log.subLogger("forge").info(
                 "set Automatic-Module-Name: ${s.moduleName} on minecraft jar"
             )
-            tmp.toFile().renameTo(jar.toFile())
         }
     }
 }

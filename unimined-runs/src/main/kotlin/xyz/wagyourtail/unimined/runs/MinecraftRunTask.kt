@@ -264,14 +264,22 @@ abstract class MinecraftRunTask @Inject constructor(
                 indexTarget.parent.toFile().mkdirs()
                 indexTarget.toFile().writeText(indexJson)
             }
-            val downloaded = Assets.downloadObjects(indexJson, assetsRoot, offline.get())
+            val downloaded = xyz.wagyourtail.unimined.api.util.Perf.span(
+                "assets", "index" to indexId
+            ) {
+                Assets.downloadObjects(indexJson, assetsRoot, offline.get())
+            }
             if (downloaded > 0) logger.lifecycle("Unimined: fetched $downloaded asset objects")
             // pre-1.6 games load sounds/music from <gamedir>/resources;
             // map_to_resources indexes must be materialized there before
             // launch or the in-game downloader hits the dead S3 bucket
             if (side.get() != RunSide.SERVER && Assets.mapsToResources(indexJson)) {
                 val resourcesDir = runDirectory.get().asFile.toPath().resolve("resources")
-                val copied = Assets.copyToResources(indexJson, assetsRoot, resourcesDir)
+                val copied = xyz.wagyourtail.unimined.api.util.Perf.span(
+                    "assets.resources", "index" to indexId
+                ) {
+                    Assets.copyToResources(indexJson, assetsRoot, resourcesDir)
+                }
                 if (copied > 0) logger.lifecycle("Unimined: mapped $copied assets into resources/")
             }
         }

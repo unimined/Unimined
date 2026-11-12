@@ -49,7 +49,10 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // build/reports path per run
                 "gametestServerJvmArgs" to
                     "-Dfabric-api.gametest " +
-                    "-Dfabric-api.gametest.report-file={reportFile}"
+                    "-Dfabric-api.gametest.report-file={reportFile}",
+                // `customGameProvider` — suppress the loader's builtin MC
+                // game-provider lookup (total-conversion/`empty-*` envs)
+                "skipMcProvider" to "-Dfabric.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
@@ -71,6 +74,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // quilt rides fabric intermediary — quilt-mappings is
             // the named layer on top
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
+            capabilities = mapOf(
+                "skipMcProvider" to "-Dloader.skipMcProvider"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "quilt.mod.json",
                 accessDiscovery = setOf(
@@ -91,7 +97,13 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "legacyIntermediary",
             // 1.x legacyFabricRevisionTransform: generation-keyed group
             intermediaryCoords = { mc -> "net.legacyfabric:intermediary:$mc:v2" },
-            capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
+            capabilities = mapOf(
+                "replaceLwjgl" to "2.9.4+legacyfabric.8",
+                // 1.x Legacy-Fabric-Intermediary-Version manifest attr —
+                // the gen baked into intermediaryCoords above (v2)
+                "manifestAttr.Legacy-Fabric-Intermediary-Version" to "2",
+                "skipMcProvider" to "-Dfabric.skipMcProvider"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
@@ -118,7 +130,13 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                     listOf("clientOfficial", "serverOfficial"),
                     "intermediary"
                 ),
-            capabilities = mapOf("replaceLwjgl" to "2.9.4+legacyfabric.8"),
+            capabilities = mapOf(
+                "replaceLwjgl" to "2.9.4+legacyfabric.8",
+                // b1.7.3 ships argo/** inside the server jar — keep it
+                // through the merge library-strip (1.x includeGlobs)
+                "mergeIncludeGlobs" to "argo/**",
+                "skipMcProvider" to "-Dfabric.skipMcProvider"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
                 accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
@@ -147,6 +165,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             capabilities = mapOf(
                 "replaceLwjgl" to "2.9.4+legacyfabric.8",
                 "libraryOverlayMeta" to "https://meta.ornithemc.net",
+                "skipMcProvider" to "-Dfabric.skipMcProvider"
             ),
             // ornithe runs on Java 17
             javaVersion = { _, _ -> 17 },

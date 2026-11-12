@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.remap.internal
 
+import xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import java.nio.file.Path
 
@@ -9,5 +10,6 @@ import java.nio.file.Path
 internal class RuntimeRemapSpec(
     override val sourceNamespace: String,
     override val targetNamespace: String,
-    override val classpath: List<Path>
+    override val classpath: List<Path>,
+    override val scanAliases: List<ClasspathScanAlias> = emptyList()
 ) : RemapSpec

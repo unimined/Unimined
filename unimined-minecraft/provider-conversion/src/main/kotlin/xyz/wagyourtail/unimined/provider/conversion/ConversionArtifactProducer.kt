@@ -160,12 +160,19 @@ class ConversionArtifactProducer : ProductArtifactProducer {
                                 request.stripBundledServerLibraries,
                         // every conversion product is FML-era (bta,
                         // reindev, nsss — all b1.7.3-based dists) —
-                        // stamp the era-canonical markers mergetool
-                        // checksums were built against
-                        sideMarkers = listOf(
-                            xyz.wagyourtail.unimined.minecraft.merge
-                                .JarMerger.SideMarker.FORGE_FML
-                        ),
+                        // default to the era-canonical markers
+                        // mergetool checksums were built against;
+                        // loader/user-contributed markers win when
+                        // declared (e.g. a forge claim's detected
+                        // SideOnly on a forge-over-dist env)
+                        sideMarkers =
+                                request.sideMarkers.ifEmpty {
+                                    listOf(
+                                        xyz.wagyourtail.unimined.minecraft
+                                            .merge.JarMerger.SideMarker
+                                            .FORGE_FML
+                                    )
+                                },
                     )
                 )
                 out

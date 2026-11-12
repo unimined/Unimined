@@ -284,7 +284,16 @@ internal object FabricEnvironmentWiring {
         val loaderFiles = project.files(loader)
 
         transform.sourceSet(environment.environmentId).runMutators += Action<RunConfigSpec> { config ->
-            if (loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric") return@Action
+            val descriptor = loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }
+            if (descriptor?.family != "fabric") return@Action
+            // `customGameProvider` — suppress the loader's builtin MC
+            // game-provider lookup (1.x patcher flag; total-conversion
+            // setups, typically paired with an `empty-*` version)
+            if (environment.customGameProvider.get()) {
+                descriptor.capabilities["skipMcProvider"]?.let {
+                    config.jvmArgs += it
+                }
+            }
             val jar = loaderFiles.singleFile.toPath()
             val side = if (config.name.contains("server", ignoreCase = true)) "server" else "client"
             // loaders that ship fabric-loader unmodified (fabric,
@@ -316,6 +325,12 @@ internal object FabricEnvironmentWiring {
                 it.getJarEntry("org/quiltmc/loader/impl/launch/knot/KnotClient.class") != null
             }
             if (isQuilt) {
+                // quilt-loader reads its own dev-mode key —
+                // `fabric.development` is dead on quilt (verified:
+                // SystemProperties.DEVELOPMENT = "loader.development"
+                // gates the same PackageAccessFixer install + dev
+                // discovery paths)
+                config.jvmArgs += "-Dloader.development=true"
                 config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=official"
             }
             // canonical runtime contract (see exportLoaderMappings):

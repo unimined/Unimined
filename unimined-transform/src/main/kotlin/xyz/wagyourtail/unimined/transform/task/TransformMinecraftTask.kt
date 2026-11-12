@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.task
 
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -15,7 +16,7 @@ import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
  * plugins; this shell defines the input/output contract so downstream
  * plugins can wire dependency edges via [ProducesArtifacts].
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class TransformMinecraftTask : DefaultTask(), ProducesArtifacts {
 
     /** The named-namespace artifact from the provider (or prior transform). */

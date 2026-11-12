@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.internal.EnvironmentClasspathWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
+import xyz.wagyourtail.unimined.api.util.Perf
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.transform`.
@@ -13,6 +14,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Perf.syncFrom(target)
         target.extensions.create("uniminedTransform", TransformExtension::class.java, target)
         target.uniminedAdopt("transform", TransformExtension::class.java)
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
@@ -23,6 +25,18 @@ class GradlePlugin : Plugin<Project> {
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                 val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
                 minecraft.onEnvironmentBound { environment, sourceSet ->
+                    // attach the env's transform spec as a named
+                    // extension — Groovy `minecraft { transform { } }`
+                    // delegates to it; Kotlin gets the `transform`
+                    // extension fn (LoaderEnvDsl)
+                    if (environment.extensions.findByName("transform") == null) {
+                        environment.extensions.add(
+                            "transform",
+                            target.extensions
+                                .getByType(TransformExtension::class.java)
+                                .sourceSet(environment.environmentId)
+                        )
+                    }
                     EnvironmentClasspathWiring.wire(target, environment, sourceSet)
                 }
                 // lazy per-loader transform apply — the loader's

@@ -13,6 +13,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.plugins.ExtensionAware
@@ -24,6 +25,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 import xyz.wagyourtail.unimined.minecraft.internal.EnvironmentInheritance
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
+import xyz.wagyourtail.unimined.api.spec.DeclaredAccessFile
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
@@ -313,6 +315,15 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  server jar. No effect on transforms that don't check it. */
     val apiOnly: Property<Boolean> = objects.property(Boolean::class.java)
 
+    /** Custom game-provider mode (1.x `customGameProvider`) — adds the
+     *  loader's `skipMcProvider` system property to run configs,
+     *  suppressing the loader's built-in MC game-provider lookup for
+     *  total-conversion setups (typically paired with an `empty-*`
+     *  version). Only loaders whose descriptor declares a
+     *  `skipMcProvider` capability emit anything. */
+    val customGameProvider: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(false)
+
     /** Declared modloader for this environment — read by transform plugins
      *  to contribute loader-specific wiring (dependency defaults, namespace
      *  conventions, transformers). */
@@ -391,6 +402,59 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * dependencies — FML has no transitive-gated subset.
      */
     val accessTransformers: ConfigurableFileCollection = objects.fileCollection()
+
+    /** Per-file access-declaration overrides (plan escape hatch) —
+     *  files declared via [accessFile] emit as independent conversions
+     *  (custom `output`, `declare` suppression, forced `format`)
+     *  rather than folding into the canonical merge. */
+    val accessFileOverrides: ListProperty<DeclaredAccessFile> = objects
+        .listProperty(DeclaredAccessFile::class.java)
+        .convention(emptyList())
+
+    /** Declares an access file with per-file packaging control —
+     *  [format] forces interpretation (`"aw"`/`"at"`/`"legacy_at"`,
+     *  default detect), [output] sets a non-canonical jar path
+     *  (still converted to the loader's consumed format), [declare]
+     *  `false` keeps it out of generated loader metadata. */
+    fun accessFile(
+        path: Any,
+        format: String? = null,
+        output: String? = null,
+        declare: Boolean = true
+    ) {
+        val file = project.files(path).files.singleOrNull()
+            ?: throw GradleException(
+                "accessFile($path) must resolve to exactly one file")
+        accessFileOverrides.add(
+            DeclaredAccessFile(
+                file.absolutePath, format, output, declare))
+    }
+
+    /** Configuring twin of [accessFile]. */
+    fun accessFile(path: Any, action: Action<AccessFileSpec>) {
+        val spec = AccessFileSpec()
+        action.execute(spec)
+        accessFile(path, spec.format, spec.output, spec.declare)
+    }
+
+    /** Groovy DSL twin of [accessFile]. */
+    fun accessFile(
+        path: Any,
+        @DelegatesTo(
+            target = "accessFileSpec",
+            strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        val spec = AccessFileSpec()
+        action.delegatingTo(spec)
+        accessFile(path, spec.format, spec.output, spec.declare)
+    }
+
+    /** Mutable backing spec for the configuring [accessFile] verb. */
+    class AccessFileSpec {
+        var format: String? = null
+        var output: String? = null
+        var declare: Boolean = true
+    }
 
     /**
      * Predicates consulted when the env's provider-declared MC
@@ -475,6 +539,22 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         }
 
     /**
+     * Dependency bucket for jars embedded into the production artifact —
+     * the `include`/`nestJars` mechanism (1.x parity). Entries land under
+     * `META-INF/jars`/`META-INF/jarjar` per the env's `nestedJars` format
+     * binding, with loader metadata updated to match. Note this bucket is
+     * NOT also a mod classpath dep — declare `modImplementation` (or
+     * `implementation` for library jarjar deps) alongside when dev runs
+     * need the contents.
+     */
+    val includeConfigurationName: String
+        get() = if (environmentId == "main") {
+            "include"
+        } else {
+            "${environmentId}Include"
+        }
+
+    /**
      * Classes and resources from environments passed to [combineWith]. The
      * future mod packaging plugin consumes this collection; it is exposed so
      * integrations do not need to rediscover compose requests.
@@ -549,6 +629,57 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /** Configure this environment's modloader and version. */
     fun loader(name: String, version: String) {
         loaderSpec.set(RuntimeLoaderSpec(name, version))
+    }
+
+    /**
+     * Groovy DSL — `loader "forge", "47.2.0", { nestedJars { } }`:
+     * configure the loader plus transform-side packaging/feature
+     * knobs for this environment in one place. The closure's delegate
+     * is the transform module's per-env spec, resolved via the
+     * `uniminedTransform` extension. Kotlin DSL gets the typed
+     * `Action<TransformEnvironmentSpec>` overload as an extension
+     * function from the transform module.
+     */
+    fun loader(
+        name: String,
+        version: String,
+        action: Closure<*>
+    ) {
+        loader(name, version)
+        action.delegatingTo(transformSpec())
+    }
+
+    /** Groovy DSL overload — `loader "forge", { nestedJars { } }`. */
+    fun loader(name: String, action: Closure<*>) {
+        loader(name)
+        action.delegatingTo(transformSpec())
+    }
+
+    /** Groovy DSL — `transform { nestedJars { } }`: configures this
+     *  env's transform spec. The Kotlin counterpart is the transform
+     *  module's `transform` extension function. */
+    fun transform(action: Closure<*>) =
+        action.delegatingTo(transformSpec())
+
+    /** The transform module's per-env spec — `Any` here because the
+     *  concrete type (`TransformEnvironmentSpec`) is not visible to
+     *  this module; the transform plugin's Kotlin-side `loader` and
+     *  `transform` extensions cast it. Normally attached by transform
+     *  wiring as the named `transform` extension on this env (envs
+     *  are [ExtensionAware]); self-attaches here for envs whose DSL
+     *  runs before environment binding. */
+    fun transformSpec(): Any {
+        extensions.findByName("transform")?.let { return it }
+        val ext = project.extensions.findByName("uniminedTransform")
+            as? TransformExtensionFacade
+            ?: throw GradleException(
+                "env '$environmentId': transform { } and " +
+                "loader(...) { } require the unimined-transform " +
+                "plugin (uniminedTransform extension)"
+            )
+        return ext.environmentSpec(environmentId).also { spec ->
+            extensions.add("transform", spec)
+        }
     }
 
     /** Configure this environment's mapping sources. */
@@ -686,12 +817,93 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val stripBundledServerLibraries: Property<Boolean> = objects
         .property(Boolean::class.java).convention(true)
 
+    /** Side-marker annotations stamped on single-side class/field/
+     *  method content in the merged artifact (1.x `merger` callback
+     *  parity — loaders read these at runtime: fabric `Environment`,
+     *  FML-era `SideOnly`). Loader wiring contributes era-correct
+     *  markers (forge detects from the loader jar); users may add
+     *  their own. */
+    val sideMarkers: ListProperty<xyz.wagyourtail.unimined.minecraft
+            .merge.JarMerger.SideMarker> = objects
+        .listProperty(xyz.wagyourtail.unimined.minecraft.merge
+            .JarMerger.SideMarker::class.java)
+        .convention(emptyList())
+
+    /** Loader-contributed attributes merged into the environment jar's
+     *  manifest at packaging time (1.x `jarTask.manifest` parity —
+     *  ornithe's `Calamus-Generation`, legacyfabric's
+     *  `Legacy-Fabric-Intermediary-Version`, …). Transform wiring
+     *  writes loader facts; packaging folds them into the emitted
+     *  manifest merge file so identity and remapped envs behave
+     *  identically. */
+    val manifestAttributes: MapProperty<String, String> = objects
+        .mapProperty(String::class.java, String::class.java)
+        .convention(emptyMap())
+
     /** Typed library-version substitutions forwarded to the provider:
      *  `(coordPrefix, version)` — a version-JSON library whose
      *  `group:name` starts with the prefix gets its version replaced
      *  (1.x `replaceLibraryVersion`; e.g. the LWJGL2 patched-build
      *  swap legacy loaders need on modern JVMs). */
     val librarySubstitutions = mutableListOf<Pair<String, String>>()
+
+    /** Rich library rules (1.x `replaceLibraryVersion(group, name,
+     *  classifier) { version }`) — evaluated by
+     *  [xyz.wagyourtail.unimined.api.spec.applyLibraryRules] before the
+     *  simple [librarySubstitutions] pairs. */
+    val libraryRules =
+        mutableListOf<xyz.wagyourtail.unimined.api.spec.LibraryRule>()
+
+    /** Whole-coord rewrite filters — the 1.x string form of
+     *  `libraryFilter`: each maps `group:name:version[:classifier]` to
+     *  a replacement coord or `null` to drop. Named differently from
+     *  [libraryFilter] because Kotlin can't overload two bare-lambda
+     *  parameters. */
+    val libraryCoordFilters = mutableListOf<(String) -> String?>()
+
+    /**
+     * Rewrite or drop version-JSON libraries — 1.x
+     * `replaceLibraryVersion`. `group`/`name`/`classifier` are full-
+     * match regexes; [version] receives the matched artifact's version
+     * and returns the replacement — `null` drops the library.
+     */
+    fun replaceLibraryVersion(
+        @org.intellij.lang.annotations.Language("regex") group: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") name: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") classifier: String = ".*",
+        version: (String) -> String?
+    ) {
+        libraryRules += xyz.wagyourtail.unimined.api.spec.LibraryRule(
+            Regex(group), Regex(name), Regex(classifier), version)
+    }
+
+    /** Fixed-version overload of [replaceLibraryVersion]. */
+    fun replaceLibraryVersion(
+        @org.intellij.lang.annotations.Language("regex") group: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") name: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") classifier: String = ".*",
+        version: String?
+    ) = replaceLibraryVersion(group, name, classifier) { version }
+
+    /** Groovy-DSL overload of [replaceLibraryVersion] — the closure
+     *  receives the matched version string. */
+    fun replaceLibraryVersion(
+        @org.intellij.lang.annotations.Language("regex") group: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") name: String = ".*",
+        @org.intellij.lang.annotations.Language("regex") classifier: String = ".*",
+        version: Closure<String?>
+    ) = replaceLibraryVersion(group, name, classifier) { version.call(it) }
+
+    /** Whole-coord library rewrite — 1.x `libraryFilter(String)`:
+     *  return the replacement coord, `null` to drop, or the input
+     *  unchanged. */
+    fun libraryCoordFilter(filter: (String) -> String?) {
+        libraryCoordFilters += filter
+    }
+
+    /** Groovy-DSL overload of [libraryCoordFilter]. */
+    fun libraryCoordFilter(filter: Closure<String?>) =
+        libraryCoordFilter { filter.call(it) }
 
     /** Additional ordered version-manifest locations searched after
      *  Mojang's official manifest (first match wins; e.g.
@@ -804,7 +1016,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             mergeIncludeGlobs = mergeIncludeGlobs.getOrElse(emptyList()),
             mergeExcludeGlobs = mergeExcludeGlobs.getOrElse(emptyList()),
             stripBundledServerLibraries = stripBundledServerLibraries.get(),
+            sideMarkers = sideMarkers.getOrElse(emptyList()),
             librarySubstitutions = librarySubstitutions.toList(),
+            libraryRules = libraryRules.toList(),
+            libraryCoordFilters = libraryCoordFilters.toList(),
             manifestUrls = manifestUrls.toList(),
             libraryOverlays = libraryOverlays.toList(),
             obfuscatedLibraries = obfuscatedLibraries.toList(),

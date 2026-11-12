@@ -50,7 +50,8 @@ class NativeArtifactProducer : ProductArtifactProducer {
                 libraryJars = request.libraryJars,
                 includeGlobs = request.mergeIncludeGlobs,
                 excludeGlobs = request.mergeExcludeGlobs,
-                stripBundledServerLibraries = request.stripBundledServerLibraries
+                stripBundledServerLibraries = request.stripBundledServerLibraries,
+                sideMarkers = request.sideMarkers
             ),
             preMerge = request.preMerge
         )

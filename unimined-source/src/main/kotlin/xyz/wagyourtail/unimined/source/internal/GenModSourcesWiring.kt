@@ -83,6 +83,14 @@ internal object GenModSourcesWiring {
             override val classpath: FileCollection = libraries
             override val options: Map<String, String>
                 get() = source.options.get()
+            override val jvmArgs: List<String>
+                get() = source.jvmArgs.get()
+            override val javaVersion: String?
+                get() = source.javaVersion.orNull?.takeIf { it.isNotBlank() }
+            override val args: List<String>
+                get() = source.args.get()
+            override val dependency: String?
+                get() = source.dependency.orNull
         }
         val engine = DecompilerRegistry().select(engineSpec, source.engine.orNull)
 
@@ -126,8 +134,8 @@ internal object GenModSourcesWiring {
                         })
                         p.sourceNamespace.set(devNamespace)
                         p.targetNamespace.set(devNamespace)
-                        p.mappingBundleJson.set(
-                            minecraft.mappingBundleJson(environmentId, devNamespace, devNamespace)
+                        p.mappingFile.set(
+                            minecraft.mappingBundleFile(environmentId, devNamespace, devNamespace)
                         )
                         // no classpath — see EnvironmentClasspathWiring;
                         // `libraries` remains the *decompiler* classpath

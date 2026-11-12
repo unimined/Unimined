@@ -137,7 +137,10 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
             // org.gradle.jvm.version=25 — variant check fails lower
             javaVersion = { _, _ -> 25 },
             capabilities = mapOf(
-                "atTool" to "8.1.6"
+                "atTool" to "8.1.6",
+                // Cleanroom's FMLDeobfuscatingRemapper reads TSRG, not
+                // forge's SRG — 1.x exported `srg2mcp.tsrg`
+                "mcpToSrgFormat" to "tsrg"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "mcmod.info",

@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.remap.task
 
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.CacheableTask
+import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 
@@ -11,7 +11,7 @@ import xyz.wagyourtail.unimined.remap.spi.RemapSurface
  * [RemapSurface.SOURCES] step pipeline over it (source remap, javadoc
  * enrichment, JST, ...).
  */
-@CacheableTask
+@DisableCachingByDefault
 abstract class RemapSourcesJarTask : AbstractRemapTask(), ProducesArtifacts {
 
     init {

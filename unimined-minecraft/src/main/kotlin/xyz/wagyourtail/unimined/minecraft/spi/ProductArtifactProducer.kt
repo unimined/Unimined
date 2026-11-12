@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.minecraft.spi
 import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spi.Supports
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
 import java.nio.file.Path
 import java.time.Duration
 
@@ -39,6 +40,11 @@ class ArtifactProductionRequest(
 
     /** Master switch for the server-bundled-library strip. */
     val stripBundledServerLibraries: Boolean = true,
+
+    /** Side-marker annotations stamped on single-side merged content
+     *  (`MinecraftEnvironment.sideMarkers`, loader-contributed — e.g.
+     *  fabric `Environment`, forge jar-detected `SideOnly`). */
+    val sideMarkers: List<JarMerger.SideMarker> = emptyList(),
 
     /**
      * Pre-merge hook for split-side environments — applied to

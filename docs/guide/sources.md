@@ -5,10 +5,9 @@
 environment with no provider-supplied sources:
 
 1. **Decompile** — the env's dev-namespace Minecraft artifact through
-   the selected engine (`vineflower` by default). The task is
-   `@CacheableTask` — outputs are content-addressed by input jar,
-   classpath, and engine options, so reruns and shared caches skip
-   work.
+   the selected engine (`vineflower` by default). Inputs are the jar,
+   classpath, and engine options, so up-to-date checks skip reruns
+   (`@DisableCachingByDefault` — no build-cache entry).
 2. **Sources-surface steps** — the env's `RemapSurface.SOURCES`
    pipeline (e.g. `uml:remap` renaming the decompiled `.java` to the
    dev namespace) runs over the decompiled jar when steps are
@@ -44,6 +43,39 @@ default; engine options can override it:
 
 Artifacts land in the env's generated local-repo as
 `minecraft-<env>-<version>-sources.jar` and `-linemapped.jar`.
+
+## External decompiler engine
+
+`engine.set("external")` runs any fernflower-CLI-compatible decompiler
+jar — selected by coordinate via `generator(dep)` (a bare version
+string is shorthand for `org.vineflower:vineflower:<version>`):
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        source {
+            generator("org.vineflower:vineflower:1.10.1")
+            // or pin a different decompiler entirely:
+            // generator("org.quiltmc:quiltflower:1.9.0")
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        source {
+            generator("org.vineflower:vineflower:1.10.1")
+        }
+    }
+    ```
+
+## Fork options
+
+`jvmArgs` (default `-Xmx4G -Xms1G -Xss4M`) sizes the forked decompiler
+JVM; `javaVersion` (default `17`, empty string disables) selects the
+toolchain it runs on; `args` (default `-jrt=1`) appends raw CLI
+arguments after the `-key=value` engine options.
 
 ## Provider-supplied sources
 

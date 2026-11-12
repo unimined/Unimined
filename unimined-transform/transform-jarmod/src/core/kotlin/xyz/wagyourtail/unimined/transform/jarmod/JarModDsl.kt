@@ -89,6 +89,12 @@ fun MinecraftEnvironment.jarmodFailStrategy(strategy: String) =
 /** `jma.debug` — dump patched classes under `.jma/patched`. */
 fun MinecraftEnvironment.jarmodDebug() = jarmodExt().jarmodDebug()
 
+/** 1.x `jarModAgentPatcher.compiletimeTransforms` — run the declared
+ *  jma transformers over this env's jar during `remapJar` instead of
+ *  relying on the runtime `-javaagent` alone. */
+fun MinecraftEnvironment.jarmodCompiletimeTransforms(disable: Boolean = true) =
+    jarmodExt().jarmodCompiletimeTransforms(disable)
+
 // `minecraft {}` configures the `main` environment — these forward
 // there so `unimined { minecraft { jarmodTransformer("x.transform") } }`
 // works alongside `sourceSet("other") { jarmodTransformer(...) }`.
@@ -116,3 +122,6 @@ fun MinecraftExtension.jarmodFailStrategy(strategy: String) =
 
 fun MinecraftExtension.jarmodDebug() =
     environments.getByName("main").jarmodDebug()
+
+fun MinecraftExtension.jarmodCompiletimeTransforms(disable: Boolean = true) =
+    environments.getByName("main").jarmodCompiletimeTransforms(disable)

@@ -45,6 +45,27 @@ interface ModMetadataEmitter {
     val gametestAnnotation: String? get() = null
 
     /**
+     * Access-file format this loader's runtime consumes from mod jars —
+     * `"aw"` (fabric-family access wideners), `"at"` (forge-family
+     * access transformers), `"legacy_at"` (pre-1.8 forge ATs), or
+     * `null` when the loader has no mod-jar access-file convention.
+     * When set alongside [accessPath], env-declared access files
+     * (`environment.accessWideners`/`accessTransformers`) are converted
+     * into this format and packaged at the canonical path — so a mod
+     * authored AW ships as a forge `accesstransformer.cfg` on forge
+     * environments.
+     */
+    val accessFormat: String? get() = null
+
+    /**
+     * Canonical jar path for the loader's access file when the host
+     * converts and emits env-declared access files — `{modid}` expands
+     * to the declared mod id (e.g. `"{modid}.accesswidener"`).
+     * `null` disables canonical emission.
+     */
+    val accessPath: String? get() = null
+
+    /**
      * The DSL section created for `loader("<name>") { }` — subclass
      * [LoaderSection] for loader-specific fields, or return the base for
      * the shared bag only. Invoked at configuration time; the returned
@@ -103,10 +124,29 @@ interface ModMetadataEmitter {
          *  declare them under the loader's `classTweakers` metadata
          *  key so dependents discover them. */
         val classTweakerRefs: List<String> = emptyList(),
+        /**
+         * Jar-relative path of the environment's converted access file
+         * when the host emitted one ([accessFormat]/[accessPath]) —
+         * emitters declare it in loader metadata where the loader
+         * doesn't auto-discover the canonical path (fabric's
+         * `accessWidener` field). `null` when no access file was
+         * emitted.
+         */
+        val accessFile: String? = null,
         /** Owning environment id (the source-set name). */
         val environmentId: String,
         /** Environment's Minecraft version. */
         val minecraftVersion: String,
+        /** Resolved loader version (`loaderSpec.version`) — emitters
+         *  write it into manifest attrs where the loader's convention
+         *  wants it (`Fabric-Loader-Version`). `null` when the env
+         *  declares no loader. */
+        val loaderVersion: String? = null,
+        /** Loader-contributed manifest attributes (from the env's
+         *  `manifestAttributes` channel — e.g. ornithe's
+         *  `Calamus-Generation`) — emitters merge them verbatim into a
+         *  [MANIFEST_PATH] body when they produce one. */
+        val manifestAttributes: Map<String, String> = emptyMap(),
         /** Environment side (`CLIENT`/`SERVER`/`MERGED`). */
         val side: String,
         /** Dev namespace the environment compiles/runs against. */

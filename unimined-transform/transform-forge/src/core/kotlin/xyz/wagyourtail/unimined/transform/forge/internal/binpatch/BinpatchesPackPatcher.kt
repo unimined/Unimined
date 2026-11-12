@@ -1,20 +1,22 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.binpatch
 
 import com.nothome.delta.GDiffPatcher
+import org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.compress.harmony.unpack200.Pack200UnpackerAdapter
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.nio.file.Path
+import java.util.concurrent.Executors
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.zip.Adler32
-import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import kotlin.io.path.outputStream
-import xyz.wagyourtail.commonskt.compress.putEntryWithDirs
 
 /**
  * FG2-era `binpatches.pack.lzma` application — a faithful port of
@@ -199,18 +201,23 @@ object BinpatchesPackPatcher {
         val patcher = ThreadLocal.withInitial { GDiffPatcher() }
         val applied = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
         ZipFile(input.toFile()).use { `in` ->
-            val entries = `in`.entries().asSequence()
-                .map { e ->
-                    // 1.x parity: META-INF entries are written empty —
-                    // strips signatures (signed jars would fail
-                    // verification once classes are patched)
-                    val data = if (e.isDirectory || e.name.contains("META-INF")) null
-                    else `in`.getInputStream(e).readBytes()
-                    EntryData(e.name, e.time, e.name.replace('\\', '/'), data)
-                }.toList()
             val patchCount = java.util.concurrent.atomic.AtomicInteger()
-            val patched = entries.parallelStream().map { rec ->
-                onProgress?.invoke(patchCount.incrementAndGet(), entries.size)
+            // read+patch fused in one parallel pass — the per-entry
+            // inflate is CPU-bound like the GDiff patch itself, so it
+            // rides the same worker pool instead of a serial front-end
+            // (ZipFile.getInputStream is thread-safe: independent
+            // inflater streams per call)
+            val patched = `in`.entries().asSequence().toList()
+                .parallelStream().map { e ->
+                onProgress?.invoke(patchCount.incrementAndGet(), `in`.size())
+                // 1.x parity: META-INF entries are written empty —
+                // strips signatures (signed jars would fail
+                // verification once classes are patched)
+                val rec = EntryData(
+                    e.name, e.time, e.name.replace('\\', '/'),
+                    if (e.isDirectory || e.name.contains("META-INF")) null
+                    else `in`.getInputStream(e).readBytes()
+                )
                 val data = rec.data ?: return@map rec
                 val inputChecksum = adlerHash(data)
                 val candidates = sideInputs.asSequence()
@@ -308,19 +315,57 @@ object BinpatchesPackPatcher {
                     )
                 }
                 .toList()
-            tmp.outputStream().buffered().let {
-                java.util.zip.ZipOutputStream(it)
-            }.use { out ->
+            // parallel per-entry deflate, ordered gather — the same
+            // pattern JarMerger/AsmRemapper ride; output stays
+            // deterministic because original entry times and the
+            // emittedDirs walk are replicated verbatim
+            val pool = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors()
+            )
+            try {
+                val creator = ParallelScatterZipCreator(pool)
                 val emittedDirs = HashSet<String>()
-                for (rec in patched) {
-                    out.putEntryWithDirs(rec.name, emittedDirs, rec.time) {
-                        if (rec.data != null) it.write(rec.data)
+                // mirrors commonskt putEntryWithDirs: missing `dir/`
+                // parents emitted once, in first-occurrence position,
+                // stamped with their child's time
+                fun addWithDirs(name: String, time: Long, data: ByteArray?) {
+                    var i = name.indexOf('/')
+                    while (i != -1) {
+                        val dir = name.substring(0, i + 1)
+                        if (emittedDirs.add(dir)) {
+                            creator.addArchiveEntry(
+                                ZipArchiveEntry(dir).apply {
+                                    method = ZipArchiveEntry.DEFLATED
+                                    this.time = time
+                                }
+                            ) { ByteArrayInputStream(ByteArray(0)) }
+                        }
+                        i = name.indexOf('/', i + 1)
                     }
+                    // explicit `dir/` input entry — the parent loop
+                    // already emitted it; a second write would dup
+                    if (name.endsWith('/')) return
+                    creator.addArchiveEntry(
+                        ZipArchiveEntry(name).apply {
+                            method = ZipArchiveEntry.DEFLATED
+                            this.time = time
+                        }
+                    ) { ByteArrayInputStream(data ?: ByteArray(0)) }
+                }
+                for (rec in patched) {
+                    addWithDirs(rec.name, rec.time, rec.data)
                 }
                 for ((side, name, bytes) in added) {
-                    out.putEntryWithDirs(name, emittedDirs) { it.write(bytes) }
+                    addWithDirs(name, 0L, bytes)
                     log("added $name ($side patch)")
                 }
+                tmp.outputStream().buffered().let {
+                    ZipArchiveOutputStream(it)
+                }.use { zout ->
+                    creator.writeTo(zout)
+                }
+            } finally {
+                pool.shutdown()
             }
         }
         }

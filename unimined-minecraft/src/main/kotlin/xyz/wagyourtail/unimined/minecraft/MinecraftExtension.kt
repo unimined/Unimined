@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.api.Deprecations
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -379,6 +380,19 @@ abstract class MinecraftExtension @Inject constructor(
         main.loader(name, version)
     }
 
+    /** Groovy DSL — `loader "forge", "47.2.0", { nestedJars { } }` —
+     *  the closure delegates to `main`'s transform spec. */
+    fun loader(name: String, version: String, action: Closure<*>) =
+        main.loader(name, version, action)
+
+    /** Groovy DSL — `loader "foxloader", { }` single-arg form. */
+    fun loader(name: String, action: Closure<*>) =
+        main.loader(name, action)
+
+    /** Groovy DSL — `transform { nestedJars { } }` on `main`. */
+    fun transform(action: Closure<*>) =
+        action.delegatingTo(main.transformSpec())
+
     /** Configure `main` as a Better Than Adventure dist —
      *  `provider("conversion")` + `product("minecraft:bta")` preset. */
     fun bta(action: Action<DistSpec>) = main.bta(action)
@@ -604,6 +618,64 @@ abstract class MinecraftExtension @Inject constructor(
         from: Provider<String>,
         to: Provider<String>
     ): Provider<String> = resolution.mappingBundleJson(environmentId, from, to)
+
+    /**
+     * File-backed variant of [mappingBundleJson] — the same payload
+     * written once, content-addressed under the global cache's
+     * `mappings-bundle/`, so transform params carry a file reference
+     * rather than an inline `z64:` megastring. Preferred for
+     * environment wiring; the string form remains for call sites
+     * that genuinely need an inline value.
+     */
+    fun mappingBundleFile(
+        environmentId: String,
+        from: Provider<String>,
+        to: Provider<String>
+    ): Provider<RegularFile> = resolution.mappingBundleFile(environmentId, from, to)
+
+    /**
+     * Register the `exportMappings` task (`exportMappings<Ss>` for
+     * non-main) — declare `export { }` specs inside [action]; each
+     * writes the environment's resolved mappings through a UML writer
+     * (1.x `exportMappings` parity). Registration is on-demand like
+     * `migrateMappings`, so no mapping resolution is wired into
+     * projects that never export.
+     */
+    fun exportMappings(
+        environmentId: String,
+        action: Action<xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask>
+    ) {
+        val name = "exportMappings" + if (environmentId == "main") ""
+            else environmentId.replaceFirstChar(Char::uppercase)
+        // registers its own produceMappingBundle task — must happen
+        // outside the tasks.register below (nested registration is
+        // illegal)
+        val inputBundle = mappingBundle(
+            environmentId, "export",
+            devNamespace(environmentId),
+            modSourceNamespaces(environmentId).map { it.first() }
+        )
+        project.tasks.register(
+            name,
+            xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask::class.java
+        ) { t ->
+            t.group = "unimined"
+            t.description = "Exports '$environmentId' resolved mappings"
+            t.environmentId.set(environmentId)
+            t.inputBundleFile.set(inputBundle)
+            action.execute(t)
+        }
+    }
+
+    /** Groovy DSL overload —
+     *  `exportMappings("main") { export { ... } }`. */
+    fun exportMappings(
+        environmentId: String,
+        @DelegatesTo(
+            value = xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) = exportMappings(environmentId, Action { action.delegatingTo(it) })
 
     /**
      * The resolved environment artifacts — provider resolution is deferred

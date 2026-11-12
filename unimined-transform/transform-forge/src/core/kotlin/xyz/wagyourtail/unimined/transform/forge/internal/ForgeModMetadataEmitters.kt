@@ -12,6 +12,11 @@ import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
  */
 abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
 
+    /** Forge-family loaders auto-discover `META-INF/accesstransformer.cfg`
+     *  — env-declared access files convert to AT there. */
+    override val accessFormat = "at"
+    override val accessPath = "META-INF/accesstransformer.cfg"
+
     /** File name for the TOML descriptor — `mods.toml` for forge-family,
      *  `neoforge.mods.toml` for NeoForge. */
     open val tomlFileName = "mods.toml"

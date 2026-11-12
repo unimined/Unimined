@@ -97,12 +97,20 @@ Store: `<unimined global cache>/auth/credentials.json`, written
 
 === "Kotlin `build.gradle.kts`"
     ```kotlin
-    unimined.runs.named("client") { auth { injected() } }
+    unimined {
+        runs {
+            named("client") { auth { injected() } }
+        }
+    }
     ```
 
 === "Groovy `build.gradle`"
     ```groovy
-    unimined.runs.named("client") { auth { injected() } }
+    unimined {
+        runs {
+            named("client") { auth { injected() } }
+        }
+    }
     ```
 
 reads `UNIMINED_AUTH_ACCESS_TOKEN` (required) plus optional

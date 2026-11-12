@@ -1,0 +1,7 @@
+=== run 1/1 [--cold] classes
+    wall: 115952ms
+
+== wall times: 115952 | median: 115952ms
+phase                   median ms  count
+
+perf logs: /run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/fabric-modern/.perf-*.jsonl ; gradle out: /run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/fabric-modern/.bench-out.log

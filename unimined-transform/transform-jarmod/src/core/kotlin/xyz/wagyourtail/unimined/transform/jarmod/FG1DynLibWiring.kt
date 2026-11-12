@@ -46,11 +46,13 @@ import java.util.zip.ZipFile
  */
 object FG1DynLibWiring {
 
-    /** FML's dyn-lib rename: the resolved bcprov jar names gain a dot
-     *  that `CoreFMLLibraries` never asks for. */
+    /** FML's dyn-lib rename: resolved jar names that don't match the
+     *  name `CoreFMLLibraries` asks for — bcprov gains a dot, the
+     *  maven scala artifact carries its version. */
     private val depNameMap = mapOf(
         "bcprov-jdk15on-1.47.jar" to "bcprov-jdk15on-147.jar",
         "bcprov-jdk15on-1.48.jar" to "bcprov-jdk15on-148.jar",
+        "scala-library-2.9.1-1.jar" to "scala-library.jar",
     )
 
     /**
@@ -123,9 +125,9 @@ object FG1DynLibWiring {
             "scala-library.jar" to "org.scala-lang:scala-library:2.9.1-1",
             "bcprov-jdk15on-148.jar" to "org.bouncycastle:bcprov-jdk15on:1.48",
             "bcprov-jdk15on-147.jar" to "org.bouncycastle:bcprov-jdk15on:1.47",
-            // argo-small is FML's slim build of argo 3.2 — never
-            // published; the full jar is a superset and the checksum
-            // patch covers the hash
+            // argo-small is FML's slim repack of argo 3.2 — the real
+            // argo:3.2 POM carries an XHTML <!DOCTYPE> Gradle can't
+            // parse, so it rides the wag flat store (wagFmlLibs)
             "argo-small-3.2.jar" to "net.sourceforge.argo:argo:3.2",
         )
         // 1.5.2's deobfuscation_data zip is FML-*generated* content —
@@ -139,7 +141,11 @@ object FG1DynLibWiring {
             for (zip in zips.filter { it.isFile }) {
                 ZipFile(zip).use { z ->
                     z.getEntry("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
-                        ?.let { e -> z.getInputStream(e).use { out += dynLibs(it) } }
+                        ?.let { e ->
+                            z.getInputStream(e).use {
+                                out += dynLibs(it, environment.version.get())
+                            }
+                        }
                 }
             }
             out.toSet()
@@ -160,10 +166,11 @@ object FG1DynLibWiring {
                 environment.libraryFilters += { it.group != "org.ow2.asm" }
             }
             // fmllibs jars whose FML-pinned sha1 no maven coord
-            // matches (FML's own repackaged asm-all-4.0, etc.) —
+            // matches, or whose POM can't parse (argo 3.2's
+            // XHTML <!DOCTYPE> breaks Gradle's POM reader) —
             // fetched as exact copies from the wag flat fmllibs
             // store so the checksum passes unpatched
-            val wagFmlLibs = setOf("asm-all-4.0.jar")
+            val wagFmlLibs = setOf("asm-all-4.0.jar", "argo-small-3.2.jar")
             for ((name, coord) in mavenDeps) {
                 if (name !in names) continue
                 when {
@@ -296,9 +303,13 @@ object FG1DynLibWiring {
     }
 
     /** Read the dyn-lib names out of `CoreFMLLibraries.<clinit>` —
-     *  the String-array LDCs stored into `libraries`
+     *  the String-array LDCs stored into `libraries`, plus the
+     *  computed `debfuscationDataName()` (FML's own spelling) entry
      *  (1.x `FG1MinecraftTransformer.getDynLibs`). */
-    private fun dynLibs(stream: java.io.InputStream): Set<String> {
+    private fun dynLibs(
+        stream: java.io.InputStream,
+        mcVersion: String
+    ): Set<String> {
         val cn = org.objectweb.asm.tree.ClassNode().also {
             org.objectweb.asm.ClassReader(stream).accept(it, 0)
         }
@@ -309,8 +320,14 @@ object FG1DynLibWiring {
             if (insn is org.objectweb.asm.tree.TypeInsnNode &&
                 insn.opcode == org.objectweb.asm.Opcodes.ANEWARRAY &&
                 insn.desc == "java/lang/String") inArray = true
-            if (inArray && insn is org.objectweb.asm.tree.LdcInsnNode && insn.cst is String)
-                out.add(insn.cst as String)
+            if (inArray) {
+                if (insn is org.objectweb.asm.tree.LdcInsnNode && insn.cst is String)
+                    out.add(insn.cst as String)
+                if (insn is org.objectweb.asm.tree.MethodInsnNode &&
+                    insn.opcode == org.objectweb.asm.Opcodes.INVOKESTATIC &&
+                    insn.name == "debfuscationDataName")
+                    out.add("deobfuscation_data_$mcVersion.zip")
+            }
             if (insn is org.objectweb.asm.tree.FieldInsnNode &&
                 insn.opcode == org.objectweb.asm.Opcodes.PUTSTATIC) {
                 if (insn.name == "libraries") break
