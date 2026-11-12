@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../index.html">unimined-source</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.source.task</a><span class="delimiter">/</span><span class="current">DecompileTask</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Decompile</span><wbr><span><span>Task</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.api.tasks/CacheableTask///PointingToDeclaration/"><span class="token annotation builtin">CacheableTask</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">DecompileTask</a> : <span data-unresolved-link="org.gradle.api/DefaultTask///PointingToDeclaration/">DefaultTask</span>, <a href="../../../unimined-api/xyz.wagyourtail.unimined.api.task/-produces-artifacts/index.html">ProducesArtifacts</a></div><p class="paragraph">Base task type for decompiler engines: produces a sources jar from a dev artifact. Engine plugins subclass this with their decompiler's invocation (usually a classloader-isolated worker action).</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.work/DisableCachingByDefault///PointingToDeclaration/"><span class="token annotation builtin">DisableCachingByDefault</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">DecompileTask</a> : <span data-unresolved-link="org.gradle.api/DefaultTask///PointingToDeclaration/">DefaultTask</span>, <a href="../../../unimined-api/xyz.wagyourtail.unimined.api.task/-produces-artifacts/index.html">ProducesArtifacts</a></div><p class="paragraph">Base task type for decompiler engines: produces a sources jar from a dev artifact. Engine plugins subclass this with their decompiler's invocation (usually a classloader-isolated worker action).</p><h4 class="tableheader">Inheritors</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":unimined-source/main" data-filterable-set=":unimined-source/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../xyz.wagyourtail.unimined.source.internal/-external-decompile-task/index.html">ExternalDecompileTask</a></div></span></div><div></div></div></div></div></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -145,6 +145,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="../-gen-mod-sources-task/index.html#1950580337%2FProperties%2F-1168453355">ant</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api/AntBuilder///PointingToDeclaration/">AntBuilder</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-666839417%2FProperties%2F-1168453355" anchor-label="args" id="-666839417%2FProperties%2F-1168453355" data-filterable-set=":unimined-source/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-source/main" data-filterable-set=":unimined-source/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="args.html"><span><span>args</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-666839417%2FProperties%2F-1168453355"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="args.html">args</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Raw CLI args appended after the <code class="lang-kotlin">-key=value</code> options.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -415,6 +430,36 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="../-gen-mod-sources-task/index.html#1322490778%2FProperties%2F-1168453355">isHasCustomActions</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-899831488%2FProperties%2F-1168453355" anchor-label="javaVersion" id="-899831488%2FProperties%2F-1168453355" data-filterable-set=":unimined-source/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-source/main" data-filterable-set=":unimined-source/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="java-version.html"><span>java</span><wbr><span><span>Version</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-899831488%2FProperties%2F-1168453355"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="java-version.html">javaVersion</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Java major version for the forked JVM — resolved through the toolchain service when present (blank = build JVM).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="788473336%2FProperties%2F-1168453355" anchor-label="jvmArgs" id="788473336%2FProperties%2F-1168453355" data-filterable-set=":unimined-source/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-source/main" data-filterable-set=":unimined-source/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jvm-args.html"><span>jvm</span><wbr><span><span>Args</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="788473336%2FProperties%2F-1168453355"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-source/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="jvm-args.html">jvmArgs</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">JVM args for the decompiler's forked JVM.</p></div></div></div>
                 </div>
               </div>
             </div>

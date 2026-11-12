@@ -1517,10 +1517,15 @@ Declare it inside the env block — <code>loader("&lt;name&gt;", "&lt;version&gt
 <ul>
 <li><strong>Forge is era-aware</strong> — <code>loader("forge", …)</code> emits FG1-era wiring
   on ≤1.7.10, FML-style on 1.8–1.12, and modern Forge ≥1.13
-  (<a href="../../generated/flat-forge-170.gradle.kts">era examples</a> / <a href="../../generated/flat-forge-170.gradle">groovy</a>).</li>
+  (scripts: <a href="../../generated/flat-forge-170.gradle.kts">1.7.10</a>,
+  <a href="../../generated/flat-forge-112.gradle.kts">1.12.2</a>,
+  <a href="../../generated/flat-forge-modern.gradle.kts">1.20.1</a> — the <code>.gradle</code>
+  siblings are the Groovy twins).</li>
 <li><strong>Pseudo-loaders</strong> — <code>jarmod</code> injects into the MC jar itself
-  (see <code>--jarmod</code>/<code>--jars split|merged</code>); <code>accessTransformer</code>/
-  <code>accessWidener</code> are transform-only.</li>
+  (<a href="../../generated/jarmod.gradle.kts">script</a>); <code>--jars split|merged</code>
+  shapes the jar set (<a href="../../generated/jars-split.gradle.kts">split</a> /
+  <a href="../../generated/jars-merged.gradle.kts">merged</a>);
+  <code>accessTransformer</code>/<code>accessWidener</code> are transform-only.</li>
 <li><strong>Products nest loaders</strong> — <code>bta { loader("bta-babric", …) }</code>.</li>
 <li><strong>Single-arg form</strong> — inside a <em>named</em> env, <code>loader("0.16.0")</code>
   reads the lone arg as the <em>version</em> and the env id as the loader

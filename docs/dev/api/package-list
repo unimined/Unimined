@@ -83,6 +83,7 @@ xyz.wagyourtail.unimined.decompiler.vineflower
 module:unimined-transform
 xyz.wagyourtail.unimined.transform
 xyz.wagyourtail.unimined.transform.feature
+xyz.wagyourtail.unimined.transform.internal
 xyz.wagyourtail.unimined.transform.processor
 xyz.wagyourtail.unimined.transform.spi
 xyz.wagyourtail.unimined.transform.task
@@ -106,6 +107,7 @@ xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig
 xyz.wagyourtail.unimined.transform.forge.internal.userdev
 module:transform-jarmod
 xyz.wagyourtail.unimined.transform.jarmod
+xyz.wagyourtail.unimined.transform.jarmod.internal
 xyz.wagyourtail.unimined.transform.jarmod.internal.modloader
 module:transform-misc
 xyz.wagyourtail.unimined.transform.misc

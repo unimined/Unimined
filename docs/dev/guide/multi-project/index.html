@@ -1610,9 +1610,11 @@ configuration and classpath:</p>
 </div>
 </div>
 </div>
-<p>A loader module applies unimined, declares its env on <code>main</code>, and
-depends on <code>:common</code> for shared code:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<p><code>common</code> gets a loader-less env (MC classpath + mappings only); a
+loader module applies unimined, declares its env on <code>main</code>, and
+depends on <code>:common</code> for shared code — the fabric/forge scripts are
+the same shape with a different <code>loader()</code>:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:6"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><input id="__tabbed_3_4" name="__tabbed_3" type="radio" /><input id="__tabbed_3_5" name="__tabbed_3" type="radio" /><input id="__tabbed_3_6" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>common/build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>common/build.gradle</code></label><label for="__tabbed_3_3">Kotlin <code>fabric/build.gradle.kts</code></label><label for="__tabbed_3_4">Groovy <code>fabric/build.gradle</code></label><label for="__tabbed_3_5">Kotlin <code>forge/build.gradle.kts</code></label><label for="__tabbed_3_6">Groovy <code>forge/build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>
@@ -1622,10 +1624,25 @@ depends on <code>:common</code> for shared code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>
 </code></pre></div>
 </div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>
+</code></pre></div>
 </div>
 </div>
-<p><code>common</code> gets a loader-less env (MC classpath + mappings only); the
-loader jars land as <code>modImplementation</code> deps in each loader module.
+</div>
+<p>The loader jars land as <code>modImplementation</code> deps in each loader module.
 Cross-project inheritance uses the <code>&lt;project&gt;:&lt;env&gt;</code> path form —
 <code>combineWith(":common:main")</code> pulls the <code>common</code> project's <code>main</code>
 env (classpath included, so shared code resolves); <code>copyFrom</code>

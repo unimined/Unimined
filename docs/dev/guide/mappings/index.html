@@ -621,6 +621,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mappings
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -637,6 +655,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#builtin-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Builtin channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stub-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stub mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1393,6 +1463,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#builtin-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Builtin channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stub-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stub mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1450,6 +1561,54 @@ takes the same DSL lines and <code>--var key=val</code> feeds mapping vars
 (e.g. Ornithe's <code>ornitheGenVersion</code>).</p>
 <p>Mod dependencies declared on env <code>mod*</code> configurations are remapped
 through this chain automatically.</p>
+<h2 id="builtin-channels">Builtin channels<a class="headerlink" href="#builtin-channels" title="Permanent link">&para;</a></h2>
+<p>Beyond the channels shown above: <code>spigot()</code> (Spigot BuildData
+mappings — fails loud if the provider can't supply the archive),
+<code>parchment(mcVersion, version)</code> (Parchment param/javadoc layer),
+<code>forgeBuiltinMCP(version)</code> (MCP data bundled in FG1 forge <code>:src</code>
+zips), and <code>yarnv1(build)</code> — Tiny-v1 Yarn for legacy Fabric envs,
+with stitch <code>proposeFieldNames</code> filled from the client jar.</p>
+<h2 id="stub-mappings">Stub mappings<a class="headerlink" href="#stub-mappings" title="Permanent link">&para;</a></h2>
+<p><code>stubs</code> declares inline mapping rows when a real channel doesn't
+cover what you need — values are positional across the namespaces
+you bind:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">stubs</span><span class="p">(</span><span class="s">"official"</span><span class="p">,</span><span class="w"> </span><span class="s">"named"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">c</span><span class="p">(</span><span class="s">"a/b"</span><span class="p">,</span><span class="w"> </span><span class="s">"com/example/Foo"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">            </span><span class="n">f</span><span class="p">(</span><span class="s">"a"</span><span class="p">,</span><span class="w"> </span><span class="s">"someField"</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">            </span><span class="n">m</span><span class="p">(</span><span class="s">"c;()V"</span><span class="p">,</span><span class="w"> </span><span class="s">"run"</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">stubs</span><span class="o">([</span><span class="s2">"official"</span><span class="o">,</span><span class="w"> </span><span class="s2">"named"</span><span class="o">])</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">c</span><span class="o">([</span><span class="s2">"a/b"</span><span class="o">,</span><span class="w"> </span><span class="s2">"com/example/Foo"</span><span class="o">])</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">            </span><span class="n">f</span><span class="o">([</span><span class="s2">"a"</span><span class="o">,</span><span class="w"> </span><span class="s2">"someField"</span><span class="o">])</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">            </span><span class="n">m</span><span class="o">([</span><span class="s2">"c;()V"</span><span class="o">,</span><span class="w"> </span><span class="s2">"run"</span><span class="o">])</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Member entries are <code>name[;desc]</code> per namespace; a <code>null</code> cell leaves
+that namespace unmapped.</p>
+<p>Set <code>customIntermediaries = true</code> on the mappings spec to tell
+fabric-family loaders your intermediary column is your own, not
+upstream's — their wiring checks this before contributing
+<code>net.fabricmc:intermediary</code>.</p>
+<h2 id="exporting">Exporting<a class="headerlink" href="#exporting" title="Permanent link">&para;</a></h2>
+<p><code>uniminedMinecraft.exportMappings(envId) { }</code> registers an
+<code>exportMappings&lt;Env&gt;</code> task (<code>exportMappings</code> for <code>main</code>) that writes
+the env's resolved tree in a chosen format (SRG/TSRG/Tiny/MCP —
+see <code>ExportMappingsTask</code> for the format + output inputs).</p>
 
 
 

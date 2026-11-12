@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../index.html">unimined-remap</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.remap.task</a><span class="delimiter">/</span><span class="current">RemapJarTask</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Remap</span><wbr><span>Jar</span><wbr><span><span>Task</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.api.tasks/CacheableTask///PointingToDeclaration/"><span class="token annotation builtin">CacheableTask</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">RemapJarTask</a> : <span data-unresolved-link="org.gradle.jvm.tasks/Jar///PointingToDeclaration/">Jar</span>, <a href="../../../unimined-api/xyz.wagyourtail.unimined.api.task/-produces-artifacts/index.html">ProducesArtifacts</a></div><p class="paragraph">Builds the production artifact directly: the task <i>is</i> a <span data-unresolved-link="org.gradle.jvm.tasks/Jar///PointingToDeclaration/">Jar</span> whose spec mirrors the development jar's (<code class="lang-kotlin">rootSpec.with(jar.rootSpec)</code> + <code class="lang-kotlin">manifest.from(jar.manifest)</code> — wired by the registration site), so it depends on the jar's <strong>inputs</strong> (classes, resources) rather than on the <code class="lang-kotlin">jar</code> task's output the way 1.x <code class="lang-kotlin">remapJar</code> did.</p><p class="paragraph"><a href="copy.html">copy</a> assembles the mirrored contents to a scratch jar, then runs the declared <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface.JAR///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">RemapSurface.JAR</span> step pipeline dev→prod over it into <a href="index.html#1936379240%2FProperties%2F-584358979">archiveFile</a>.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.work/DisableCachingByDefault///PointingToDeclaration/"><span class="token annotation builtin">DisableCachingByDefault</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">RemapJarTask</a> : <span data-unresolved-link="org.gradle.jvm.tasks/Jar///PointingToDeclaration/">Jar</span>, <a href="../../../unimined-api/xyz.wagyourtail.unimined.api.task/-produces-artifacts/index.html">ProducesArtifacts</a></div><p class="paragraph">Builds the production artifact directly: the task <i>is</i> a <span data-unresolved-link="org.gradle.jvm.tasks/Jar///PointingToDeclaration/">Jar</span> whose spec mirrors the development jar's (<code class="lang-kotlin">rootSpec.with(jar.rootSpec)</code> + <code class="lang-kotlin">manifest.from(jar.manifest)</code> — wired by the registration site), so it depends on the jar's <strong>inputs</strong> (classes, resources) rather than on the <code class="lang-kotlin">jar</code> task's output the way 1.x <code class="lang-kotlin">remapJar</code> did.</p><p class="paragraph"><a href="copy.html">copy</a> assembles the mirrored contents to a scratch jar, then runs the declared <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface.JAR///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">RemapSurface.JAR</span> step pipeline dev→prod over it into <a href="index.html#1936379240%2FProperties%2F-584358979">archiveFile</a>.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -925,6 +925,96 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="../-remap-sources-jar-task/index.html#-1528909769%2FProperties%2F-584358979">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="153032436%2FProperties%2F-584358979" anchor-label="nestedJarEntries" id="153032436%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jar-entries.html"><span>nested</span><wbr><span>Jar</span><wbr><span><span>Entries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="153032436%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jar-entries.html">nestedJarEntries</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="../../xyz.wagyourtail.unimined.remap/-nested-jar-entry-spec/index.html">NestedJarEntrySpec</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Per-jar JiJ rows (file + coords + version range) — resolved from the env's <code class="lang-kotlin">include</code> configuration.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1102924399%2FProperties%2F-584358979" anchor-label="nestedJars" id="-1102924399%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars.html"><span>nested</span><wbr><span><span>Jars</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1102924399%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Classpath///PointingToDeclaration/"><span class="token annotation builtin">Classpath</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jars.html">nestedJars</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Resolved <code class="lang-kotlin">include</code>-bucket jars bound for the production artifact — embedded after the pipeline, before lint, so packaging checks validate the appended entries. Build-dep tracked via the wiring site's <span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span> projection; per-jar coordinates/metadata live on <a href="nested-jar-entries.html">nestedJarEntries</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="434444890%2FProperties%2F-584358979" anchor-label="nestedJarsFormat" id="434444890%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars-format.html"><span>nested</span><wbr><span>Jars</span><wbr><span><span>Format</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="434444890%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jars-format.html">nestedJarsFormat</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">fabric</code>|<code class="lang-kotlin">jarjar</code> — absent means JiJ is off for this jar.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="999841802%2FProperties%2F-584358979" anchor-label="nestedJarsKey" id="999841802%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars-key.html"><span>nested</span><wbr><span>Jars</span><wbr><span><span>Key</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="999841802%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jars-key.html">nestedJarsKey</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The metadata key listing embedded jars (<code class="lang-kotlin">jars</code>, <code class="lang-kotlin">quilt_loader.jars</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1353094010%2FProperties%2F-584358979" anchor-label="nestedJarsMetadataFile" id="-1353094010%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars-metadata-file.html"><span>nested</span><wbr><span>Jars</span><wbr><span>Metadata</span><wbr><span><span>File</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1353094010%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jars-metadata-file.html">nestedJarsMetadataFile</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loader metadata filename carrying the nested-jar list (<code class="lang-kotlin">fabric.mod.json</code>/<code class="lang-kotlin">quilt.mod.json</code>); absent skips metadata updates.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-422342788%2FProperties%2F-584358979" anchor-label="nestedJarsRecompress" id="-422342788%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars-recompress.html"><span>nested</span><wbr><span>Jars</span><wbr><span><span>Recompress</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-422342788%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="nested-jars-recompress.html">nestedJarsRecompress</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Rewrite embedded jars (STORED inner for <code class="lang-kotlin">fabric</code>, epoch + sorted); <code class="lang-kotlin">false</code> copies them verbatim.</p></div></div></div>
                 </div>
               </div>
             </div>

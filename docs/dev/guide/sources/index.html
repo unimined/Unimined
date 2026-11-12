@@ -616,6 +616,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#external-decompiler-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External decompiler engine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fork-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fork options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#provider-supplied-sources" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1459,6 +1481,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#external-decompiler-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External decompiler engine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fork-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fork options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#provider-supplied-sources" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1506,10 +1550,9 @@
 environment with no provider-supplied sources:</p>
 <ol>
 <li><strong>Decompile</strong> — the env's dev-namespace Minecraft artifact through
-   the selected engine (<code>vineflower</code> by default). The task is
-   <code>@CacheableTask</code> — outputs are content-addressed by input jar,
-   classpath, and engine options, so reruns and shared caches skip
-   work.</li>
+   the selected engine (<code>vineflower</code> by default). Inputs are the jar,
+   classpath, and engine options, so up-to-date checks skip reruns
+   (<code>@DisableCachingByDefault</code> — no build-cache entry).</li>
 <li><strong>Sources-surface steps</strong> — the env's <code>RemapSurface.SOURCES</code>
    pipeline (e.g. <code>uml:remap</code> renaming the decompiled <code>.java</code> to the
    dev namespace) runs over the decompiled jar when steps are
@@ -1546,6 +1589,37 @@ default; engine options can override it:</p>
 </div>
 <p>Artifacts land in the env's generated local-repo as
 <code>minecraft-&lt;env&gt;-&lt;version&gt;-sources.jar</code> and <code>-linemapped.jar</code>.</p>
+<h2 id="external-decompiler-engine">External decompiler engine<a class="headerlink" href="#external-decompiler-engine" title="Permanent link">&para;</a></h2>
+<p><code>engine.set("external")</code> runs any fernflower-CLI-compatible decompiler
+jar — selected by coordinate via <code>generator(dep)</code> (a bare version
+string is shorthand for <code>org.vineflower:vineflower:&lt;version&gt;</code>):</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">source</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">generator</span><span class="p">(</span><span class="s">"org.vineflower:vineflower:1.10.1"</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span><span class="c1">// or pin a different decompiler entirely:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="c1">// generator("org.quiltmc:quiltflower:1.9.0")</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">source</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">generator</span><span class="o">(</span><span class="s2">"org.vineflower:vineflower:1.10.1"</span><span class="o">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="fork-options">Fork options<a class="headerlink" href="#fork-options" title="Permanent link">&para;</a></h2>
+<p><code>jvmArgs</code> (default <code>-Xmx4G -Xms1G -Xss4M</code>) sizes the forked decompiler
+JVM; <code>javaVersion</code> (default <code>17</code>, empty string disables) selects the
+toolchain it runs on; <code>args</code> (default <code>-jrt=1</code>) appends raw CLI
+arguments after the <code>-key=value</code> engine options.</p>
 <h2 id="provider-supplied-sources">Provider-supplied sources<a class="headerlink" href="#provider-supplied-sources" title="Permanent link">&para;</a></h2>
 <p>When the product provider ships a <code>devSources</code> artifact (e.g. Forge
 userdev's mcpconfig chain), the decompile step is skipped entirely —

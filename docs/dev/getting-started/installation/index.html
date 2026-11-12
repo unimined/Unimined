@@ -1412,9 +1412,25 @@
 
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p>Unimined 2.0 is a Gradle plugin. In <code>settings.gradle.kts</code>, register the
-maven repo and (for local composite development) optionally the
-<code>includeBuild</code> path:</p>
+<p>Unimined 2.0 is a Gradle plugin. Your <code>settings.gradle.kts</code> carries
+three pieces:</p>
+<ul>
+<li><strong><code>pluginManagement.repositories</code></strong> — where Gradle resolves the
+  plugin itself (the <code>maven.wagyourtail.xyz</code> repos +
+  <code>gradlePluginPortal()</code>). Required.</li>
+<li><strong><code>dependencyResolutionManagement.repositories</code></strong> — settings-level
+  dependency repos applied to every project that doesn't declare its
+  own <code>repositories { }</code> (the generated module scripts do declare
+  theirs, so this is a fallback). Under the default
+  <code>PREFER_PROJECT</code> mode a project's own <code>repositories { }</code> wins —
+  but you <em>can</em> centralize all repos here by switching
+  <code>repositoriesMode</code> to <code>PREFER_SETTINGS</code> or
+  <code>FAIL_ON_PROJECT_REPOS</code>, which makes the settings block the single
+  source instead of repeating mavens per module.</li>
+<li><strong><code>includeBuild("…")</code></strong> — optional, local composite development
+  only (resolves the plugin from a source checkout instead of a
+  maven artifact). Drop it for normal use.</li>
+</ul>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>settings.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>settings.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">

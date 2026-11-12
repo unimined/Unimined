@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../index.html">unimined-mod</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.mod.task</a><span class="delimiter">/</span><span class="current">GenerateModMetadataTask</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Generate</span><wbr><span>Mod</span><wbr><span>Metadata</span><wbr><span><span>Task</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.api.tasks/CacheableTask///PointingToDeclaration/"><span class="token annotation builtin">CacheableTask</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">GenerateModMetadataTask</a> : <span data-unresolved-link="org.gradle.api/DefaultTask///PointingToDeclaration/">DefaultTask</span></div><p class="paragraph">Emits generated mod metadata + mixin configs for one bound environment into <a href="output-dir.html">outputDir</a>, which the packaging wiring registers as a resources srcDir. Everything materializes at execution: emitters rediscover via ServiceLoader so no loader objects sit in serialized task state.</p><p class="paragraph">Emitted paths that already exist in <a href="resource-dirs.html">resourceDirs</a> are MERGED, not rejected: JSON documents deep-merge (objects recurse, arrays union, generated scalars win) and the manual source files are listed in <a href="merged-paths-file.html">mergedPathsFile</a> so the packaging wiring excludes them from <code class="lang-kotlin">processResources</code> — the merged copy is the only one packaged. Non-JSON collisions still fail.</p><p class="paragraph">The task also auto-fills what the <code class="lang-kotlin">mod {}</code> model can't express: hand-written <code class="lang-kotlin">*.mixins.json</code> files in resources are discovered and referenced from loader metadata, classes implementing the emitter's <a href="../../xyz.wagyourtail.unimined.mod/-fabric-mod-json-emitter/index.html#870905121%2FProperties%2F1402879926">ModMetadataEmitter.gametestInterface</a> become gametest entrypoints, and interfaces implemented by mixin classes are emitted as a <code class="lang-kotlin">transitive-inject-interface</code> classTweaker (declared via the loader's <code class="lang-kotlin">classTweakers</code> metadata key and <code class="lang-kotlin">custom.*injected_interfaces</code>).</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.work/DisableCachingByDefault///PointingToDeclaration/"><span class="token annotation builtin">DisableCachingByDefault</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">GenerateModMetadataTask</a> : <span data-unresolved-link="org.gradle.api/DefaultTask///PointingToDeclaration/">DefaultTask</span></div><p class="paragraph">Emits generated mod metadata + mixin configs for one bound environment into <a href="output-dir.html">outputDir</a>, which the packaging wiring registers as a resources srcDir. Everything materializes at execution: emitters rediscover via ServiceLoader so no loader objects sit in serialized task state.</p><p class="paragraph">Emitted paths that already exist in <a href="resource-dirs.html">resourceDirs</a> are MERGED, not rejected: JSON documents deep-merge (objects recurse, arrays union, generated scalars win) and the manual source files are listed in <a href="merged-paths-file.html">mergedPathsFile</a> so the packaging wiring excludes them from <code class="lang-kotlin">processResources</code> — the merged copy is the only one packaged. Non-JSON collisions still fail.</p><p class="paragraph">The task also auto-fills what the <code class="lang-kotlin">mod {}</code> model can't express: hand-written <code class="lang-kotlin">*.mixins.json</code> files in resources are discovered and referenced from loader metadata, classes implementing the emitter's <a href="../../xyz.wagyourtail.unimined.mod/-fabric-mod-json-emitter/index.html#870905121%2FProperties%2F1402879926">ModMetadataEmitter.gametestInterface</a> become gametest entrypoints, and interfaces implemented by mixin classes are emitted as a <code class="lang-kotlin">transitive-inject-interface</code> classTweaker (declared via the loader's <code class="lang-kotlin">classTweakers</code> metadata key and <code class="lang-kotlin">custom.*injected_interfaces</code>).</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -119,7 +119,22 @@
       </div>
       <div data-togglable="PROPERTY">
         <h2 class="tableheader">Properties</h2>
-        <div class="table"><a data-name="1015733915%2FProperties%2F1402879926" anchor-label="actions" id="1015733915%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+        <div class="table"><a data-name="1283954069%2FProperties%2F1402879926" anchor-label="accessBundle" id="1283954069%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="access-bundle.html"><span>access</span><wbr><span><span>Bundle</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1283954069%2FProperties%2F1402879926"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.NONE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.NONE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="access-bundle.html">accessBundle</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Serialized mapping bundle carrying the env's dev-namespace tree — only attached when the loader consumes AW and AT-family inputs are declared (AT→AW member-descriptor resolution needs the tree; AW→AT needs nothing).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1015733915%2FProperties%2F1402879926" anchor-label="actions" id="1015733915%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -194,6 +209,21 @@
               </div>
             </div>
           </div>
+<a data-name="-476074147%2FProperties%2F1402879926" anchor-label="customAccessFiles" id="-476074147%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="custom-access-files.html"><span>custom</span><wbr><span>Access</span><wbr><span><span>Files</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-476074147%2FProperties%2F1402879926"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="custom-access-files.html">customAccessFiles</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/DeclaredAccessFile///PointingToDeclaration/">DeclaredAccessFile</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Per-file access-declaration overrides (<code class="lang-kotlin">accessFile(...)</code> on the env) — custom output/declare/format controls outside the collection→canonical merge.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="1227488038%2FProperties%2F1402879926" anchor-label="declaredAccessFiles" id="1227488038%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
             <div class="main-subrow keyValue ">
@@ -204,7 +234,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="declared-access-files.html">declaredAccessFiles</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Project-declared access files (AW/CT/AT) — scanned for existing <code class="lang-kotlin">inject-interface</code> rules so generation never duplicates them.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="declared-access-files.html">declaredAccessFiles</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Project-declared access files (AW/CT/AT) — scanned for existing <code class="lang-kotlin">inject-interface</code> rules so generation never duplicates them, and converted into the loader's consumed format when accessFormat/accessPath are set.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -479,6 +509,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1135099974%2FProperties%2F1402879926" anchor-label="loaderVersion" id="-1135099974%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="loader-version.html"><span>loader</span><wbr><span><span>Version</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1135099974%2FProperties%2F1402879926"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="loader-version.html">loaderVersion</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Resolved loader version — emitters fold it into manifest attributes (<code class="lang-kotlin">Fabric-Loader-Version</code>). Unset on loader-less envs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="940287868%2FProperties%2F1402879926" anchor-label="localState" id="940287868%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
             <div class="main-subrow keyValue ">
@@ -535,6 +580,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="index.html#-1183825368%2FProperties%2F1402879926">loggingManager</a><span class="token operator">: </span><span><span class="token annotation builtin">@</span><span data-unresolved-link="org.jspecify.annotations/Nullable///PointingToDeclaration/"><span class="token annotation builtin">Nullable</span></span>&nbsp;</span><span data-unresolved-link="org.gradle.internal.logging/LoggingManagerInternal///PointingToDeclaration/">LoggingManagerInternal</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1790874933%2FProperties%2F1402879926" anchor-label="manifestAttributes" id="1790874933%2FProperties%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="manifest-attributes.html"><span>manifest</span><wbr><span><span>Attributes</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1790874933%2FProperties%2F1402879926"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="manifest-attributes.html">manifestAttributes</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/MapProperty///PointingToDeclaration/">MapProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loader-contributed manifest attributes from the env's <code class="lang-kotlin">manifestAttributes</code> channel — emitters merge them into their <span data-unresolved-link="xyz.wagyourtail.unimined.mod.spi/ModMetadataEmitter.Companion/MANIFEST_PATH/#/PointingToDeclaration/">ModMetadataEmitter.MANIFEST_PATH</span> body.</p></div></div></div>
                 </div>
               </div>
             </div>

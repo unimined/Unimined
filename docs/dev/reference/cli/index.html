@@ -1516,7 +1516,7 @@ environment for any MC version.</p>
 </tr>
 <tr>
 <td><code>--dist &lt;path&gt;</code></td>
-<td>product jar for custom dists</td>
+<td>dist artifact for <code>custom:</code>/<code>nsss</code> — path, <code>maven:&lt;coord&gt;</code>, or <code>url:&lt;url&gt;</code></td>
 </tr>
 <tr>
 <td><code>--mappings "&lt;dsl&gt;"</code></td>
@@ -1539,8 +1539,8 @@ environment for any MC version.</p>
 <td>MC jar shape for jarmod-era envs</td>
 </tr>
 <tr>
-<td><code>--modid</code>/<code>--package</code>/<code>--name</code>/<code>--mod-version</code></td>
-<td>mod identity</td>
+<td><code>--modid</code>/<code>--package</code>/<code>--mod-version</code></td>
+<td>mod identity (<code>--mod-version</code> defaults <code>1.0.0</code>)</td>
 </tr>
 <tr>
 <td><code>--metadata dsl</code></td>
@@ -1575,8 +1575,16 @@ environment for any MC version.</p>
 <td>output directory</td>
 </tr>
 <tr>
-<td><code>--gradle</code></td>
-<td>include <code>gradlew</code> wrapper files</td>
+<td><code>--gradle &lt;version&gt;</code></td>
+<td>Gradle wrapper version to pin</td>
+</tr>
+<tr>
+<td><code>--offline</code></td>
+<td>skip version probes — disk cache + baked versions only</td>
+</tr>
+<tr>
+<td><code>--no-version-props</code></td>
+<td>inline literal versions instead of <code>gradle.properties</code> keys</td>
 </tr>
 </tbody>
 </table>

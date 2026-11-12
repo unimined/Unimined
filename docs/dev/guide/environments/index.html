@@ -537,6 +537,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environments
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -553,6 +571,36 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#environment-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment knobs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1393,6 +1441,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#environment-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment knobs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1460,6 +1527,45 @@ dependency configurations.</p>
   <a href="../multi-project/">multi-module</a> is the alternative.</li>
 </ul>
 <p>Envs are also the scope of <code>mod { }</code> metadata and <code>runs { }</code>.</p>
+<h2 id="environment-knobs">Environment knobs<a class="headerlink" href="#environment-knobs" title="Permanent link">&para;</a></h2>
+<p>Everything below lives inside an env block (<code>minecraft { … }</code> or
+<code>sourceSet("x") { … }</code>):</p>
+<ul>
+<li><strong>Java</strong> — <code>javaVersion</code> sets the compile/run floor (conventioned
+  from the loader descriptor); <code>useToolchains</code> toggles Gradle
+  toolchains for env-scoped compiles (conventioned from the
+  extension-level <code>unimined.useToolchains</code>); <code>requiredJavaVersion</code>
+  reads the effective requirement — version-json <code>javaVersion</code>
+  raised by your <code>javaVersion</code> — and feeds toolchains, launchers,
+  and tool-exec fallbacks.</li>
+<li><strong>Access widening</strong> — <code>accessWideners</code> / <code>accessTransformers</code> are
+  file collections of <code>*.accesswidener</code> / <code>accesstransformer.cfg</code>
+  applied to the dev artifact; <code>transitiveAccessWideners</code> (default
+  <code>true</code>) lets AW <code>transitive-*</code> directives from compile-classpath
+  mods contribute — set <code>false</code> to isolate the dev jar.</li>
+<li><strong>Prod packaging</strong> — <code>defaultRemapJar</code> (default <code>true</code>) auto-wires
+  <code>remap&lt;JarTask&gt;</code> so the jar task's input gains a <code>-dev</code> classifier
+  and the remap task produces the prod-namespace artifact;
+  <code>apiOnly</code> tells bukkit-family transforms to compile against the
+  loader's api artifact instead of building the patched server jar.</li>
+<li><strong>Merge controls</strong> — <code>stripBundledServerLibraries</code> (default <code>true</code>)
+  drops pre-1.13 server-jar entries that duplicate
+  <code>minecraftLibraries</code> jars during the client+server merge;
+  <code>mergeExcludeGlobs</code> adds entry globs to strip;
+  <code>mergeIncludeGlobs</code> marks entries that are never stripped.</li>
+<li><strong>Library resolution</strong> — <code>manifestUrls</code> adds ordered
+  version-manifest locations searched after Mojang's;
+  <code>libraryOverlays</code> merges <code>{name, url?, maxGameVersion?}</code> overlay
+  lists into the version JSON; <code>librarySubstitutions</code> /
+  <code>replaceLibraryVersion(group, name, classifier) { … }</code> rewrite
+  matched library versions (regexes, <code>null</code> drops the library);
+  <code>libraryFilter { dep -&gt; … }</code> keeps a library only when every
+  filter accepts it; <code>libraryCoordFilters</code> maps whole coords;
+  <code>obfuscatedLibraries</code> flags coords that remap with the MC jar.</li>
+<li><code>combinedSources</code> / <code>combinedOutputs</code> — file collections
+  populated by <code>combineWith</code>; read-mostly, used by generated
+  source jars and mod packaging.</li>
+</ul>
 
 
 

@@ -711,6 +711,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#jar-in-jar-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Jar-in-jar (include)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Jar-in-jar (include)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entry-type-marking-jarjar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry type marking (jarjar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identity-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#loader-apis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1481,6 +1531,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#jar-in-jar-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Jar-in-jar (include)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Jar-in-jar (include)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entry-type-marking-jarjar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry type marking (jarjar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identity-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#loader-apis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1546,6 +1646,201 @@ mod jars land remapped onto your mappings:</p>
 </div>
 </div>
 </div>
+<p>Mod jars are remapped from the environment's <em>mod source namespace</em>
+to its dev namespace — they must already be built against the mod
+source namespace (usually the loader's production namespace, e.g.
+<code>intermediary</code> on Fabric). A jar built against any other namespace is
+remapped as if it were at the declared one and breaks at runtime —
+there is no per-jar namespace sniffing (the 1.x
+<code>remapClasspathFile</code>/<code>classPathGroups</code> runtime-remap machinery is
+gone by design). If your mod set mixes namespaces, set the env's
+<code>modSourceNamespaces</code> to match or declare per-namespace
+<code>remap.remappedViews(...)</code> and wire the buckets yourself.</p>
+<h2 id="jar-in-jar-include">Jar-in-jar (include)<a class="headerlink" href="#jar-in-jar-include" title="Permanent link">&para;</a></h2>
+<p>Each env exposes an <code>include</code> configuration (<code>&lt;env&gt;Include</code> for named
+source sets). Artifacts declared there are embedded inside the
+production jar and declared in its loader metadata:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s">"libs/local.jar"</span><span class="p">))</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="n">files</span><span class="o">(</span><span class="s2">"libs/local.jar"</span><span class="o">))</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Two formats, chosen per environment — normally by the loader claim
+(fabric-family → <code>fabric</code>, forge → <code>jarjar</code>) or explicitly:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="p">(</span><span class="s">"jarjar"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="o">(</span><span class="s2">"jarjar"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The transform knobs can also sit directly on the loader declaration —
+<code>loader(name, version) { }</code> receives the same environment's transform
+spec (<code>nestedJars { }</code> plus <code>binding(key, value)</code> for feature
+bindings), so packaging config colocates with the loader it belongs
+to:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"forge"</span><span class="p">,</span><span class="w"> </span><span class="s">"47.2.0"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"forge"</span><span class="o">,</span><span class="w"> </span><span class="s2">"47.2.0"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Both paths write the same spec — pick whichever reads better;
+<code>loader(name) { }</code> works too for loaders that resolve their own
+version. The env-scoped <code>transform { }</code> verb reaches the same spec
+directly (<code>minecraft { transform { nestedJars { } } }</code> for <code>main</code>,
+or inside <code>sourceSet("x") { }</code> for named environments).</p>
+<ul>
+<li><strong><code>fabric</code></strong> — jars pack under <code>META-INF/jars/</code> and the loader
+  metadata key (<code>jars</code> in <code>fabric.mod.json</code>, <code>quilt_loader.jars</code> in
+  <code>quilt.mod.json</code>) gains <code>{file}</code> rows. Nested jars missing loader
+  metadata get a synthesized stub so the loader accepts them.</li>
+<li><strong><code>jarjar</code></strong> — jars pack under <code>META-INF/jarjar/</code> (STORED — forge's
+  runtime byte-range-reads them) plus <code>META-INF/jarjar/metadata.json</code>
+  rows in the <code>net.neoforged.jarjar</code> schema (<code>identifier</code>, <code>version</code>
+  <code>range</code>/<code>artifactVersion</code>, <code>path</code>, <code>isObfuscated</code>). File
+  dependencies without Maven coordinates fall back to
+  <code>Automatic-Module-Name</code> / <code>Implementation-Version</code> manifest
+  attributes.</li>
+</ul>
+<h3 id="entry-type-marking-jarjar">Entry type marking (jarjar)<a class="headerlink" href="#entry-type-marking-jarjar" title="Permanent link">&para;</a></h3>
+<p>FML classifies every discovered jar by the <code>FMLModType</code> manifest
+attribute — <code>MOD</code>, <code>LIBRARY</code>, <code>GAMELIBRARY</code> (nested-jar default),
+<code>LANGPROVIDER</code>, <code>CUSTOM</code> — which also picks its JPMS layer:
+<code>LIBRARY</code>/<code>LANGPROVIDER</code> land in the PLUGIN layer (visible to
+language providers), <code>MOD</code>/<code>GAMELIBRARY</code> in GAME. Stamping it is how
+you mark a nested jar for FML's mod pipeline (scan, runtime remap)
+without <code>mods.toml</code> inside it:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"LIBRARY"</span><span class="p">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">                    </span><span class="s">"com.example:lang-lib"</span><span class="p">,</span><span class="w"> </span><span class="s">"LANGPROVIDER"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per g:a</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"local.jar"</span><span class="p">,</span><span class="w"> </span><span class="s">"MOD"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per file name</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"com.example:obf-lib"</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"LIBRARY"</span><span class="o">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">                    </span><span class="s2">"com.example:lang-lib"</span><span class="o">,</span><span class="w"> </span><span class="s2">"LANGPROVIDER"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per g:a</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"local.jar"</span><span class="o">,</span><span class="w"> </span><span class="s2">"MOD"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per file name</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"com.example:obf-lib"</span><span class="o">,</span><span class="w"> </span><span class="kc">true</span><span class="o">)</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Unset entries embed untouched — FML's <code>GAMELIBRARY</code> default applies.
+A stamp forces the inner rewrite (the manifest is emitted first so
+<code>JarFile</code> sees it). <code>isObfuscated</code> otherwise detects from the
+nested jar's own <code>Obfuscated-By</code> manifest attribute.</p>
+<p><code>include</code> is <strong>not</strong> a classpath dependency — declare
+<code>modImplementation</code> (fabric-style mods) or <code>implementation</code>
+(jarjar library deps) alongside when dev runs need the contents.</p>
+<h3 id="recompression">Recompression<a class="headerlink" href="#recompression" title="Permanent link">&para;</a></h3>
+<p>By default embedded jars are rewritten before packing: entries sorted
+and stamped at a fixed epoch for reproducible builds, STORED for
+<code>fabric</code> so the outer jar compresses the whole nested stream once
+(verbatim embedding would double-compress for ~zero gain). Opt out per
+environment:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_6_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="identity-environments">Identity environments<a class="headerlink" href="#identity-environments" title="Permanent link">&para;</a></h3>
+<p>Environments with no dev→prod namespace remap (identity envs —
+e.g. unobfuscated targets, or <code>devNamespace == modSourceNamespaces</code>)
+skip <code>remapJar</code> entirely. The embed runs as a post-pass on the plain
+<code>jar</code> task there instead, so <code>include</code> behaves identically whether or
+not a remap hop exists.</p>
+<p>Nested jars stamped with a different <code>Unimined-Mapping-Namespace</code>
+than the production target produce a warning — embed the
+production-namespace artifact.</p>
 <h2 id="loader-apis">Loader apis<a class="headerlink" href="#loader-apis" title="Permanent link">&para;</a></h2>
 <p><code>unimined.loaderApi(name, version)</code> resolves a loader's api artifact
 bundle; <code>loaderApiModule(name, module, version)</code> resolves one

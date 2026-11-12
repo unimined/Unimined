@@ -1321,6 +1321,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removed-extension-points-spi-breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed extension points (SPI breaking changes)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1544,6 +1605,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removed-extension-points-spi-breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed extension points (SPI breaking changes)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1596,6 +1718,11 @@ old calls to their 2.0 equivalents.</p>
 <p>Loader declaration moves onto the environment:
 <code>loader("fabric", "0.16.0")</code> / <code>loader("fg1", "0.1.5")</code> /
 <code>env.jarmod("x")</code> / <code>env.fg1("x")</code> / <code>env.customSearge()</code>.</p>
+<p>Kept verbatim on the environment: <code>customGameProvider</code> (suppresses
+the loader's built-in MC game-provider lookup for total-conversion
+setups — emits the descriptor's <code>skipMcProvider</code> system property;
+typically paired with an <code>empty-*</code> version, which still parses as a
+resolve-nothing pseudo-version).</p>
 <h2 id="remap-pipeline">Remap pipeline<a class="headerlink" href="#remap-pipeline" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1660,21 +1787,30 @@ artifacts:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="p">.</span><span class="na">main</span><span class="p">.</span><span class="na">legacydist</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">file</span><span class="p">(</span><span class="s">"libs/bta-7.3-client.jar"</span><span class="p">)</span><span class="w">      </span><span class="c1">// or maven("g:a:v"),</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="c1">// url("https://...", sha256 = "..."), producer("tool", "...")</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"official"</span><span class="w">               </span><span class="c1">// jar's production namespace</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"obf"</span><span class="w">                       </span><span class="c1">// optional — raw-&gt;dev remap view</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">main</span><span class="p">.</span><span class="na">legacydist</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">            </span><span class="n">file</span><span class="p">(</span><span class="s">"libs/bta-7.3-client.jar"</span><span class="p">)</span><span class="w"> </span><span class="c1">// or maven("g:a:v"),</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">            </span><span class="c1">// url("https://...", sha256 = "..."),</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">            </span><span class="c1">// producer("tool", "...")</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">            </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"official"</span><span class="w">          </span><span class="c1">// jar's prod namespace</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">            </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"obf"</span><span class="w">  </span><span class="c1">// optional — raw-&gt;dev remap view</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="o">.</span><span class="na">minecraft</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">legacydist</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">file</span><span class="o">(</span><span class="s2">"libs/bta-7.3-client.jar"</span><span class="o">)</span><span class="w">      </span><span class="c1">// or maven("g:a:v"),</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="c1">// url("https://...", "..."), producer("tool", "...")</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"official"</span><span class="w">               </span><span class="c1">// jar's production namespace</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"obf"</span><span class="w">                       </span><span class="c1">// optional — raw-&gt;dev remap view</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="n">main</span><span class="o">.</span><span class="na">legacydist</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">            </span><span class="n">file</span><span class="o">(</span><span class="s2">"libs/bta-7.3-client.jar"</span><span class="o">)</span><span class="w"> </span><span class="c1">// or maven("g:a:v"),</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">            </span><span class="c1">// url("https://...", "..."), producer("tool", "...")</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">            </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"official"</span><span class="w">          </span><span class="c1">// jar's prod namespace</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">            </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"obf"</span><span class="w">  </span><span class="c1">// optional — raw-&gt;dev remap view</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -1683,6 +1819,119 @@ artifacts:</p>
 is cached by content hash and reported with the declared
 namespace/format. URLs are pinned by SHA-256 (warned-but-allowed when
 omitted); maven coordinates resolve at declaration time.</p>
+<h2 id="runs">Runs<a class="headerlink" href="#runs" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>1.x</th>
+<th>2.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runs.off</code> global kill-switch</td>
+<td><code>unimined.runs { enabled.set(false) }</code> — disables every generated run task; <code>enabled</code> also exists per run config</td>
+</tr>
+<tr>
+<td><code>preLaunch(name) { }</code> / <code>preLaunch(name, task)</code></td>
+<td><code>beforeRun { }</code> / <code>beforeRun(task)</code> on the run config, or <code>tasks.named("prepareRun&lt;Name&gt;") { }</code></td>
+</tr>
+<tr>
+<td><code>runs.configFirst(name) { }</code></td>
+<td><code>runs { named(name) { } }</code> — configures the existing run or creates it if absent</td>
+</tr>
+<tr>
+<td><code>RunConfig.setProperty(key, closure)</code> <code>${key}</code> substitution</td>
+<td>removed — set args/jvmArgs/env directly</td>
+</tr>
+</tbody>
+</table>
+<h3 id="auth">Auth<a class="headerlink" href="#auth" title="Permanent link">&para;</a></h3>
+<p><code>unimined.auth.enabled</code> is gone. 2.0 uses <strong>per-run</strong> <code>auth { }</code>
+blocks; with no <code>auth {}</code> declared the run launches offline. A run
+declaring <code>auth { microsoft() }</code> with an empty credential store fails
+fast instead of prompting mid-launch — authenticate once via the
+auth task or a stored token.</p>
+<h2 id="mappings">Mappings<a class="headerlink" href="#mappings" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>1.x</th>
+<th>2.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stubs { }</code> / <code>hasStubs()</code> inline stub rows (<code>c</code>/<code>f</code>/<code>m</code>)</td>
+<td><code>mappings { stubs { } }</code> — same <code>c</code>/<code>f</code>/<code>m</code> row verbs, composes through the normal pipeline and participates in the mapping cache key</td>
+</tr>
+<tr>
+<td><code>yarnv1(build)</code> tiny-v1 yarn</td>
+<td><code>mappings { yarnv1("build") }</code> — restored, still stitch-filled</td>
+</tr>
+<tr>
+<td><code>ExportMappingsTask</code></td>
+<td><code>unimined.exportMappings("&lt;envId&gt;") { }</code> — writes the resolved env tree to a file in a chosen format</td>
+</tr>
+<tr>
+<td><code>spigotDev(mcVersion)</code></td>
+<td><code>mappings { spigot("mcVersion") }</code> (or <code>builtin("spigot")</code>)</td>
+</tr>
+<tr>
+<td><code>mixinRemap { off(); disableRefmap(keys) }</code></td>
+<td><code>remap { &lt;surface&gt; { modArtifacts { off() / disableRefmap(...) } } }</code> — auto-gating on jar markers still applies; these are the manual overrides</td>
+</tr>
+<tr>
+<td><code>AccessConvert.aw2at</code>/<code>at2aw</code>/<code>mergeAws</code> helpers</td>
+<td>internal — declared <code>accessWidener</code>/<code>accessTransformer</code> files are converted to the loader's canonical format automatically during <code>processResources</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="source-generation">Source generation<a class="headerlink" href="#source-generation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>1.x</th>
+<th>2.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generator("g:a:v")</code> arbitrary decompiler dep</td>
+<td><code>unimined.source { generator("g:a:v") }</code> — a bare version string still resolves to <code>org.vineflower:vineflower:&lt;v&gt;</code>; sets <code>engine = "external"</code> + <code>dependency</code></td>
+</tr>
+<tr>
+<td><code>jvmArgs</code>, <code>javaVersion</code>, <code>args</code></td>
+<td>same names on <code>unimined.source { }</code>; <code>engine</code>, <code>dependency</code>, <code>options</code> also exposed directly</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>external</code> engine wraps any Fernflower-CLI-compatible artifact;
+<code>vineflower</code> remains the default builtin.</p>
+<h2 id="removed-extension-points-spi-breaking-changes">Removed extension points (SPI breaking changes)<a class="headerlink" href="#removed-extension-points-spi-breaking-changes" title="Permanent link">&para;</a></h2>
+<p>1.x exposed implementation callbacks that 2.0 replaces with the
+step-spec pipeline. There is no direct port — write a <code>*StepSpec</code> or
+transformer claim instead:</p>
+<ul>
+<li><code>customPatcher</code>, <code>mcPatcher</code>, <code>minecraftRemapper</code>,
+  <code>remapper(TinyRemapper.Builder)</code>, <code>tinyRemapperConf</code>,
+  <code>addResourceRemapper</code>, <code>replaceJSRWithJetbrains</code> → remap step specs
+  on each <code>remap { }</code> surface.</li>
+<li><code>onMergeFail</code>, <code>canCombine</code> overrides → fixed merge semantics.</li>
+<li><code>defaultRemapSourcesJar</code>, <code>createJarTask</code>, <code>isMinecraftJar</code>,
+  <code>minecraftDependency</code>, <code>forgeMCVersion</code>, <code>useUnionRelaunch</code>,
+  <code>mods.remap(arbitraryConfiguration)</code>, <code>getClasspathAs</code>,
+  <code>catchAWNamespaceAssertion</code>, <code>loader(dep)</code> arbitrary-notation
+  overload → no equivalent; open an issue if a workflow depended on
+  one.</li>
+<li><code>-Dfabric.remapClasspathFile</code> / <code>classPathGroups</code> /
+  <code>intermediaryClasspath</code> → deliberate redesign: mod dependencies
+  arrive pre-remapped through <code>mods</code> handling; no system-property
+  seam. Classpath-embedded mods built against a <em>foreign</em> namespace
+  are not detected or runtime-remapped — they are remapped as-if at
+  <code>modSourceNamespaces</code> and fail at runtime; set the env's
+  <code>modSourceNamespaces</code> or use <code>remap.remappedViews(...)</code>.</li>
+</ul>
 
 
 

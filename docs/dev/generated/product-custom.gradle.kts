@@ -10,8 +10,9 @@ repositories {
 }
 
 unimined {
-    custom("mymodpack") {
+    custom("myoverhaul") {
         version = providers.gradleProperty("minecraft_version").get()
+        maven("com.example:myoverhaul:1.0")
         loader("fabric", "0.16.0")
     }
 

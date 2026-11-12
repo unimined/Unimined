@@ -1697,6 +1697,14 @@ artifact with your remapped mod jar — the shipped-runtime check
 <td>which env's classpath/dirs the run launches (convention: the env it was registered for)</td>
 </tr>
 <tr>
+<td><code>enabled</code></td>
+<td><code>false</code> = the <code>run&lt;Name&gt;</code> task exists but fails with a "disabled" message — gate runs on env/CI conditions</td>
+</tr>
+<tr>
+<td><code>beforeRun(task)</code> / <code>beforeRun { }</code></td>
+<td>task deps/actions wired ahead of launch (e.g. build a datapack first)</td>
+</tr>
+<tr>
 <td><code>side</code></td>
 <td><code>CLIENT</code>/<code>SERVER</code> — defaults from the run name</td>
 </tr>
