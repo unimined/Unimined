@@ -15,22 +15,26 @@ on:
     paths:
       - 'unimined-api/**'
       - 'unimined-mapping/**'
+      - 'unimined-minecraft/**'
       - 'unimined-transform/**'
       - 'unimined-remap/**'
       - 'unimined-mod/**'
       - 'unimined-frontend/**'
       - 'testing/perf/**'
+      - 'testing/perf-verify.sh'
       - 'gradle/libs.versions.toml'
       - '.github/workflows/perf-verify.yml'
   pull_request:
     paths:
       - 'unimined-api/**'
       - 'unimined-mapping/**'
+      - 'unimined-minecraft/**'
       - 'unimined-transform/**'
       - 'unimined-remap/**'
       - 'unimined-mod/**'
       - 'unimined-frontend/**'
       - 'testing/perf/**'
+      - 'testing/perf-verify.sh'
       - 'gradle/libs.versions.toml'
       - '.github/workflows/perf-verify.yml'
   workflow_dispatch:

@@ -116,6 +116,11 @@ run_gradle || { tail -20 "$LOG" >&2; fail "cc-reuse run rc"; exit 1; }
 REUSE_MS=$(( ($(date +%s%N) - t0) / 1000000 ))
 echo "    wall: ${REUSE_MS}ms"
 
+# Surface the invalidation reasons — the checks below classify them, but
+# any failure needs the raw "cannot be reused because" lines for triage
+# (the runner's gradle output itself isn't uploaded).
+grep "cannot be reused" "$LOG" | sed 's/^/    REASON: /' || true
+
 # One tolerated case: a fingerprint-recorded cache file (e.g. the
 # merged-mappings bundle) created during the store pass invalidates the
 # next entry exactly once — Gradle records the file absent at read-time,
