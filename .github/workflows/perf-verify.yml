@@ -67,6 +67,15 @@ jobs:
             17
             21
       - uses: gradle/actions/setup-gradle@v4
+      # fixtures consume the plugin via composite includeBuild — the CC
+      # fingerprint tracks each included module dir, and on a clean
+      # checkout the fixture's own first build creates every
+      # unimined-*/build/ dir, so the reuse pass would always see
+      # "directory has changed". Build the modules once up front so the
+      # fingerprint is stable from the cold pass onward; the transform
+      # wave the gate measures is unaffected (fixture-side work).
+      - name: warm included-build outputs
+        run: ./gradlew jar -x test -q
       - run: chmod +x testing/perf-verify.sh && testing/perf-verify.sh ${{ matrix.fixture }}
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
