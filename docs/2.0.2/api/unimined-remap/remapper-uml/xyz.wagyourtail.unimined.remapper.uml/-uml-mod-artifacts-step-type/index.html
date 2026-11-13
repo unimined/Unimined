@@ -1,0 +1,299 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>UmlModArtifactsStepType</title>
+<link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.2
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-remap:remapper-uml/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-remap:remapper-uml/main" data-filter=":unimined-remap:remapper-uml/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="remapper-uml::xyz.wagyourtail.unimined.remapper.uml/UmlModArtifactsStepType///PointingToDeclaration//285076422">
+  <div class="breadcrumbs"><a href="../../index.html">remapper-uml</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.remapper.uml</a><span class="delimiter">/</span><span class="current">UmlModArtifactsStepType</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Uml</span><wbr><span>Mod</span><wbr><span>Artifacts</span><wbr><span>Step</span><wbr><span><span>Type</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">UmlModArtifactsStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="../../../../unimined-remap/xyz.wagyourtail.unimined.remap/-mod-artifacts-step-spec/index.html">ModArtifactsStepSpec</a><span class="token operator">&gt; </span></div><p class="paragraph">The <code class="lang-kotlin">modArtifacts</code> step backed by <code class="lang-kotlin">UniminedMappingLibrary</code>'s <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.remapper.asm/AsmRemapper///PointingToDeclaration/">AsmRemapper</span> — binary surface (<span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface.JAR///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">RemapSurface.JAR</span>) only.</p><p class="paragraph">Mod-jar metadata survives a pure namespace remap with source-namespace references still embedded: <code class="lang-kotlin">kotlin.Metadata</code> class names, mixin annotation refs (<code class="lang-kotlin">method</code>, <code class="lang-kotlin">target</code>, injection <code class="lang-kotlin">args</code>), mixin config paths, and ClassTransform/JarModAgent transformer refs. This step runs a second ASM pass with only the mod-artifact <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.remapper.asm/AsmExtension///PointingToDeclaration/">xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension</span>s enabled, resolving those embedded refs through the source→target tree. The class/member remap itself is run as identity (target→target): the jar's classes are already target-named, and re-applying the real source→target map renames any target-named class that textually collides with an unrelated source-namespace row (e.g. mojmap <code class="lang-kotlin">DedicatedServer</code> → yarn <code class="lang-kotlin">MinecraftDedicatedServer</code>, while yarn has its own <code class="lang-kotlin">DedicatedServer</code>) — producing duplicate output entries. The extensions still see the real source→target ExtensionContext, which is what their embedded-ref resolution needs.</p><p class="paragraph">Engine-agnostic by construction: appended to the JAR pipeline after <code class="lang-kotlin">remap</code> regardless of which engine performed it (a <code class="lang-kotlin">remap("tiny")</code> override gets identical treatment), and to remapped dependency views, so mod deps get mixin refmaps for the dev runtime. Resource-gated — <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.remapper.ext.mixin/MixinExtension///PointingToDeclaration/">MixinExtension</span> and <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform/ClassTransformExtension///PointingToDeclaration/">ClassTransformExtension</span> only load when the jar carries their resources.</p><p class="paragraph">The extension ExtensionContext rides <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.tree.impl/ResolvingMappingTree///PointingToDeclaration/">xyz.wagyourtail.unimined.mapping.tree.impl.ResolvingMappingTree</span> over the shared <span data-unresolved-link="xyz.wagyourtail.unimined.mapping.remapper.asm/RemapBatch///PointingToDeclaration/">xyz.wagyourtail.unimined.mapping.remapper.asm.RemapBatch</span> state — propagated member names resolve through the same member-group graph the remap wrote with, instead of materializing a propagated copy of the merged tree per jar.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="-639385371%2FConstructors%2F285076422" anchor-label="UmlModArtifactsStepType" id="-639385371%2FConstructors%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-uml-mod-artifacts-step-type.html"><span>Uml</span><wbr><span>Mod</span><wbr><span>Artifacts</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-639385371%2FConstructors%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-1666916847%2FProperties%2F285076422" anchor-label="name" id="-1666916847%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="name.html"><span><span>name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1666916847%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="name.html">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="75944820%2FProperties%2F285076422" anchor-label="needsAccessModel" id="75944820%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="needs-access-model.html"><span>needs</span><wbr><span>Access</span><wbr><span><span>Model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="75944820%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="needs-access-model.html">needsAccessModel</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="17157116%2FProperties%2F285076422" anchor-label="needsClasspath" id="17157116%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="needs-classpath.html"><span>needs</span><wbr><span><span>Classpath</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="17157116%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="needs-classpath.html">needsClasspath</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1188630509%2FProperties%2F285076422" anchor-label="needsMappingTree" id="1188630509%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="needs-mapping-tree.html"><span>needs</span><wbr><span>Mapping</span><wbr><span><span>Tree</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1188630509%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="needs-mapping-tree.html">needsMappingTree</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1641711000%2FProperties%2F285076422" anchor-label="priority" id="1641711000%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="priority.html"><span><span>priority</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1641711000%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="priority.html">priority</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator"> = </span><span class="token constant">1</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1699022137%2FProperties%2F285076422" anchor-label="specType" id="-1699022137%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="spec-type.html"><span>spec</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1699022137%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="spec-type.html">specType</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-class/index.html">KClass</a><span class="token operator">&lt;</span><a href="../../../../unimined-remap/xyz.wagyourtail.unimined.remap/-mod-artifacts-step-spec/index.html">ModArtifactsStepSpec</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1932168411%2FProperties%2F285076422" anchor-label="stepName" id="-1932168411%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="step-name.html"><span>step</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1932168411%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="step-name.html">stepName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1610822678%2FProperties%2F285076422" anchor-label="surfaces" id="1610822678%2FProperties%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="surfaces.html"><span><span>surfaces</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1610822678%2FProperties%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="surfaces.html">surfaces</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface///PointingToDeclaration/">RemapSurface</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-188994624%2FFunctions%2F285076422" anchor-label="create" id="-188994624%2FFunctions%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="create.html"><span><span>create</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-188994624%2FFunctions%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="create.html"><span class="token function">create</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">spec<span class="token operator">: </span><a href="../../../../unimined-remap/xyz.wagyourtail.unimined.remap/-mod-artifacts-step-spec/index.html">ModArtifactsStepSpec</a><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepContext///PointingToDeclaration/">StepContext</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/ArtifactStep///PointingToDeclaration/">ArtifactStep</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-68971877%2FFunctions%2F285076422" anchor-label="supports" id="-68971877%2FFunctions%2F285076422" data-filterable-set=":unimined-remap:remapper-uml/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-uml/main" data-filterable-set=":unimined-remap:remapper-uml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="supports.html"><span><span>supports</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-68971877%2FFunctions%2F285076422"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-uml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="supports.html"><span class="token function">supports</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">spec<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/RemapSpec///PointingToDeclaration/">RemapSpec</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

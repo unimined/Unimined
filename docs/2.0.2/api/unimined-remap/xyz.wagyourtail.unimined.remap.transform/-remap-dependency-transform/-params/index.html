@@ -1,0 +1,321 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>Params</title>
+<link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.2
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-remap/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-remap/main" data-filter=":unimined-remap/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-remap::xyz.wagyourtail.unimined.remap.transform/RemapDependencyTransform.Params///PointingToDeclaration//-584358979">
+  <div class="breadcrumbs"><a href="../../../index.html">unimined-remap</a><span class="delimiter">/</span><a href="../../index.html">xyz.wagyourtail.unimined.remap.transform</a><span class="delimiter">/</span><a href="../index.html">RemapDependencyTransform</a><span class="delimiter">/</span><span class="current">Params</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Params</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">Params</a> : <span data-unresolved-link="org.gradle.api.artifacts.transform/TransformParameters///PointingToDeclaration/">TransformParameters</span></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="1932320061%2FProperties%2F-584358979" anchor-label="accessModel" id="1932320061%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="access-model.html"><span>access</span><wbr><span><span>Model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1932320061%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="access-model.html">accessModel</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Serialized <span data-unresolved-link="xyz.wagyourtail.unimined.api.access/AccessModel///PointingToDeclaration/">AccessModel</span> — the merged AW/AT/CT rules of the whole remap batch, identical across invocations, fed to <code class="lang-kotlin">needsAccessModel</code> steps as the analysis overlay. A string input carries no task dependency, like <a href="mapping-bundle-json.html">mappingBundleJson</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="805680133%2FProperties%2F-584358979" anchor-label="classpath" id="805680133%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="classpath.html"><span><span>classpath</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="805680133%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Classpath///PointingToDeclaration/"><span class="token annotation builtin">Classpath</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="classpath.html">classpath</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1118176478%2FProperties%2F-584358979" anchor-label="envSide" id="1118176478%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="env-side.html"><span>env</span><wbr><span><span>Side</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1118176478%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="env-side.html">envSide</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The environment's side (<code class="lang-kotlin">CLIENT</code>/<code class="lang-kotlin">SERVER</code>/<code class="lang-kotlin">MERGED</code>) for env-scoped transforms — carried into PipelineState so steps and jar processors can validate side-sensitive inputs. Absent on env-agnostic transforms (mod views, standalone use).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1535700722%2FProperties%2F-584358979" anchor-label="label" id="-1535700722%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="label.html"><span><span>label</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1535700722%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="label.html">label</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Identity tag for logs — env + view context (<code class="lang-kotlin">envId</code>/<code class="lang-kotlin">dev</code>, <code class="lang-kotlin">envId</code>/<code class="lang-kotlin">modImplementation</code>, …) so parallel transforms from multi-sourceset projects are distinguishable. Optional: absent labels fall back to the input artifact name.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="77902090%2FProperties%2F-584358979" anchor-label="mappingBundleJson" id="77902090%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mapping-bundle-json.html"><span>mapping</span><wbr><span>Bundle</span><wbr><span><span>Json</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="77902090%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="mapping-bundle-json.html">mappingBundleJson</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Serialized <a href="../../../../unimined-api/xyz.wagyourtail.unimined.api.mapping/-mapping-bundle/index.html">MappingBundle</a> content — preferred over <a href="mapping-file.html">mappingFile</a> since a string input carries no task dependency (transforms execute outside the task graph).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1929458280%2FProperties%2F-584358979" anchor-label="mappingFile" id="-1929458280%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mapping-file.html"><span>mapping</span><wbr><span><span>File</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1929458280%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFile///PointingToDeclaration/"><span class="token annotation builtin">InputFile</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.NONE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.NONE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="mapping-file.html">mappingFile</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/RegularFileProperty///PointingToDeclaration/">RegularFileProperty</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1933958881%2FProperties%2F-584358979" anchor-label="modMarkers" id="1933958881%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mod-markers.html"><span>mod</span><wbr><span><span>Markers</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1933958881%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="mod-markers.html">modMarkers</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Mod indicators — when non-empty, artifacts without a marker (<span data-unresolved-link="xyz.wagyourtail.unimined.remap.internal/ModMarkerScan///PointingToDeclaration/">xyz.wagyourtail.unimined.remap.internal.ModMarkerScan</span>) pass through unmapped. Set only on mod views; environment dev-artifact transforms leave it empty so the Minecraft jar (unmarked by definition) is never skipped.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2002672320%2FProperties%2F-584358979" anchor-label="scanAliasFromNs" id="2002672320%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="scan-alias-from-ns.html"><span>scan</span><wbr><span>Alias</span><wbr><span>From</span><wbr><span><span>Ns</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2002672320%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="scan-alias-from-ns.html">scanAliasFromNs</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="261412023%2FProperties%2F-584358979" anchor-label="scanAliasJars" id="261412023%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="scan-alias-jars.html"><span>scan</span><wbr><span>Alias</span><wbr><span><span>Jars</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="261412023%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Classpath///PointingToDeclaration/"><span class="token annotation builtin">Classpath</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="scan-alias-jars.html">scanAliasJars</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Jars whose classes live in a foreign namespace — scanned and name-translated into <a href="source-namespace.html">sourceNamespace</a> by the remap engine rather than remapped as artifacts (<span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/RemapSpec/scanAliases/#/PointingToDeclaration/">xyz.wagyourtail.unimined.api.spec.RemapSpec.scanAliases</span>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1620040609%2FProperties%2F-584358979" anchor-label="scanAliasMappingFile" id="1620040609%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="scan-alias-mapping-file.html"><span>scan</span><wbr><span>Alias</span><wbr><span>Mapping</span><wbr><span><span>File</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1620040609%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFile///PointingToDeclaration/"><span class="token annotation builtin">InputFile</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.NONE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.NONE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="scan-alias-mapping-file.html">scanAliasMappingFile</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/RegularFileProperty///PointingToDeclaration/">RegularFileProperty</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-878782526%2FProperties%2F-584358979" anchor-label="sourceNamespace" id="-878782526%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="source-namespace.html"><span>source</span><wbr><span><span>Namespace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-878782526%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="source-namespace.html">sourceNamespace</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-966157354%2FProperties%2F-584358979" anchor-label="stepSpecs" id="-966157354%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="step-specs.html"><span>step</span><wbr><span><span>Specs</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-966157354%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="step-specs.html">stepSpecs</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="397607864%2FProperties%2F-584358979" anchor-label="targetNamespace" id="397607864%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="target-namespace.html"><span>target</span><wbr><span><span>Namespace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="397607864%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="target-namespace.html">targetNamespace</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>xyz.wagyourtail.unimined.remap</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.2
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-remap/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-remap/main" data-filter=":unimined-remap/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="unimined-remap::xyz.wagyourtail.unimined.remap////PointingToDeclaration//-584358979">
+  <div class="breadcrumbs"><a href="../index.html">unimined-remap</a><span class="delimiter">/</span><span class="current">xyz.wagyourtail.unimined.remap</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button><button class="section-tab" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="993902325%2FClasslikes%2F-584358979" anchor-label="AccessRemapStepSpec" id="993902325%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-access-remap-step-spec/index.html"><span>Access</span><wbr><span>Remap</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="993902325%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-access-remap-step-spec/index.html">AccessRemapStepSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>engine<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span></div><div class="brief "><p class="paragraph">Spec for the <code class="lang-kotlin">remap-access</code> step. Rewrites access-modification resources embedded in the jar so they refer to the target namespace after a namespace-changing <code class="lang-kotlin">remap</code> step.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="905721139%2FClasslikes%2F-584358979" anchor-label="FootgunCheckLevel" id="905721139%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-footgun-check-level/index.html"><span>Footgun</span><wbr><span>Check</span><wbr><span><span>Level</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="905721139%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-footgun-check-level/index.html">FootgunCheckLevel</a> : <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><a href="-footgun-check-level/index.html">FootgunCheckLevel</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Post-remap validation level for production jars — packaging footguns compile fine and only fail at runtime: metadata keys pointing at files never packed, entrypoint/mixin/main classes the jar doesn't contain, a missing or wrong remapped-namespace manifest marker.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1020328761%2FClasslikes%2F-584358979" anchor-label="GradlePlugin" id="-1020328761%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-gradle-plugin/index.html"><span>Gradle</span><wbr><span><span>Plugin</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1020328761%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-gradle-plugin/index.html">GradlePlugin</a> : <span data-unresolved-link="org.gradle.api/Plugin///PointingToDeclaration/">Plugin</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Plugin id <code class="lang-kotlin">xyz.wagyourtail.unimined.remap</code> — remapper SPI host for artifact &amp; dependency jar remapping. Defines the <code class="lang-kotlin">remap { }</code> DSL and the step-pipeline machinery; engines are separate plugins.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-877020453%2FClasslikes%2F-584358979" anchor-label="ModArtifactsStepSpec" id="-877020453%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mod-artifacts-step-spec/index.html"><span>Mod</span><wbr><span>Artifacts</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-877020453%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-mod-artifacts-step-spec/index.html">ModArtifactsStepSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>engine<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/ModArtifactOnlyStepSpec///PointingToDeclaration/">ModArtifactOnlyStepSpec</span></div><div class="brief "><p class="paragraph">DSL spec of the mod-artifact post-remap step — rewrites mod-jar metadata that a pure namespace remap leaves untouched: <code class="lang-kotlin">kotlin.Metadata</code> internal names, mixin configs + refmap emission (<code class="lang-kotlin">*.mixins.json</code> inputs), and JarModAgent/ClassTransform refmaps (manifest <code class="lang-kotlin">JarModAgent-Refmaps</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="694231032%2FClasslikes%2F-584358979" anchor-label="NestedJarEntrySpec" id="694231032%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-nested-jar-entry-spec/index.html"><span>Nested</span><wbr><span>Jar</span><wbr><span>Entry</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="694231032%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-nested-jar-entry-spec/index.html">NestedJarEntrySpec</a></div><div class="brief "><p class="paragraph">One resolved <code class="lang-kotlin">include</code>-bucket artifact bound for the production jar's jar-in-jar entries — the file plus its loader-facing identity. Resolved lazily from <code class="lang-kotlin">include.incoming.artifacts</code> by environment wiring; consumed by <code class="lang-kotlin">RemapJarTask</code>/the identity <code class="lang-kotlin">Jar</code> post-pass.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-426225749%2FClasslikes%2F-584358979" anchor-label="RemapArtifactSpec" id="-426225749%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remap-artifact-spec/index.html"><span>Remap</span><wbr><span>Artifact</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-426225749%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remap-artifact-spec/index.html">RemapArtifactSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">DSL spec for one-off artifact remaps — <code class="lang-kotlin">remap.artifact("name") { }</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-552375652%2FClasslikes%2F-584358979" anchor-label="RemapEnvironmentSpec" id="-552375652%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remap-environment-spec/index.html"><span>Remap</span><wbr><span>Environment</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-552375652%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-remap-environment-spec/index.html">RemapEnvironmentSpec</a></div><div class="brief "><p class="paragraph">Remap pipelines for one Minecraft environment/source set.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-317296981%2FClasslikes%2F-584358979" anchor-label="RemapExtension" id="-317296981%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remap-extension/index.html"><span>Remap</span><wbr><span><span>Extension</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-317296981%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remap-extension/index.html">RemapExtension</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span><span class="token punctuation">, </span></span><span class="parameter ">providers<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ProviderFactory///PointingToDeclaration/">ProviderFactory</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">remap { }</code> DSL: ordered step pipelines per <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface///PointingToDeclaration/">RemapSurface</span>, plus remapped views over dependency configurations.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-393324719%2FClasslikes%2F-584358979" anchor-label="RemappedNamespaceSpec" id="-393324719%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remapped-namespace-spec/index.html"><span>Remapped</span><wbr><span>Namespace</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-393324719%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remapped-namespace-spec/index.html">RemappedNamespaceSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>sourceNamespace<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>sourceConfiguration<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">One input namespace in a multi-source <a href="-remapped-views-spec/index.html">RemappedViewsSpec</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="220392938%2FClasslikes%2F-584358979" anchor-label="RemappedViewSet" id="220392938%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remapped-view-set/index.html"><span>Remapped</span><wbr><span>View</span><wbr><span><span>Set</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="220392938%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-remapped-view-set/index.html">RemappedViewSet</a> : <span data-unresolved-link="org.gradle.api.file/FileCollection///PointingToDeclaration/">FileCollection</span></div><div class="brief "><p class="paragraph">Result of <a href="-remap-extension/remapped-views.html">RemapExtension.remappedViews</a> or <a href="-remap-extension/remapped-views-for.html">RemapExtension.remappedViewsFor</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1913335899%2FClasslikes%2F-584358979" anchor-label="RemappedViewSpec" id="1913335899%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remapped-view-spec/index.html"><span>Remapped</span><wbr><span>View</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1913335899%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remapped-view-spec/index.html">RemappedViewSpec</a></div><div class="brief "><p class="paragraph">Spec for a remapped dependency view — see <a href="-remap-extension/remapped-view.html">RemapExtension.remappedView</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-535434722%2FClasslikes%2F-584358979" anchor-label="RemappedViewsSpec" id="-535434722%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remapped-views-spec/index.html"><span>Remapped</span><wbr><span>Views</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-535434722%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remapped-views-spec/index.html">RemappedViewsSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">DSL for a set of remapped dependency views that accept different input namespaces but resolve to one target namespace.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-239483791%2FClasslikes%2F-584358979" anchor-label="RemapStepSpec" id="-239483791%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remap-step-spec/index.html"><span>Remap</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-239483791%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-remap-step-spec/index.html">RemapStepSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>engine<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>jsr305ToJetbrains<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span></div><div class="brief "><p class="paragraph">DSL spec of the namespace-changing <code class="lang-kotlin">remap</code> step — at most one per surface. <a href="../../unimined-remap/xyz.wagyourtail.unimined.remap/-remap-step-spec/--root--.html">engine</a> names the remap engine (<code class="lang-kotlin">"tiny"</code>, <code class="lang-kotlin">"uml"</code>, ...); <code class="lang-kotlin">null</code> defers to capability selection.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1915658946%2FClasslikes%2F-584358979" anchor-label="RemapSurfaceSpec" id="1915658946%2FClasslikes%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remap-surface-spec/index.html"><span>Remap</span><wbr><span>Surface</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1915658946%2FClasslikes%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-remap-surface-spec/index.html">RemapSurfaceSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>surface<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface///PointingToDeclaration/">RemapSurface</span><span class="token punctuation">, </span></span><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.gradle.api.plugins/ExtensionAware///PointingToDeclaration/">ExtensionAware</span></div><div class="brief "><p class="paragraph">DSL block for one <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapSurface///PointingToDeclaration/">RemapSurface</span>'s step pipeline. Steps run in declaration order.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="EXTENSION_FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1396363526%2FFunctions%2F-584358979" anchor-label="stepVerb" id="-1396363526%2FFunctions%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="step-verb.html"><span>step</span><wbr><span><span>Verb</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1396363526%2FFunctions%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="step-verb.html">S</a><span class="token operator"> : </span><span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span><span class="token operator">&gt; </span><a href="-remap-surface-spec/index.html">RemapSurfaceSpec</a><span class="token punctuation">.</span><a href="step-verb.html"><span class="token function">stepVerb</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html">Class</a><span class="token operator">&lt;</span><a href="step-verb.html">S</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">extraArgs<span class="token operator">: </span><span class="token punctuation">(</span><a href="step-verb.html">S</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator">&gt;</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator"> = </span>{ _, _ -&gt; }</span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Groovy-DSL verb factory: Groovy's dispatch on a decorated <a href="-remap-surface-spec/index.html">RemapSurfaceSpec</a> resolves <code class="lang-kotlin">verb(...)</code> to the extension <i>named</i> <code class="lang-kotlin">verb</code>; when that extension is a <span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span> it is invoked with the call args — that is how <code class="lang-kotlin">jst { }</code> / <code class="lang-kotlin">unpick("a.unpick")</code> reach the step DSL (Kotlin extension functions are static and cannot dispatch).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
