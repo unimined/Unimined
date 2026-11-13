@@ -303,6 +303,133 @@ class NestedJarsAppenderTest {
         }
     }
 
+    private fun innerManifest(outer: Path, innerName: String): Manifest {
+        val file = dir.resolve(
+            innerName.substringAfterLast('/')).toFile()
+        ZipFile(outer.toFile()).use { o ->
+            file.writeBytes(
+                o.getInputStream(o.getEntry(innerName)).readBytes())
+        }
+        java.util.jar.JarFile(file).use { return it.manifest }
+    }
+
+    @Test
+    fun `jarjar detects langprovider service file as LANGPROVIDER`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("lang.jar", mapOf(
+            "META-INF/services/net.minecraftforge.forgespi.language." +
+                "IModLanguageProvider" to "com.acme.KotlinLang"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "lang", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("LANGPROVIDER", innerManifest(
+            out, "META-INF/jarjar/lang-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar detects mods toml as MOD`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("nestedmod.jar", mapOf(
+            "META-INF/mods.toml" to "modLoader=javafml"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "nestedmod", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("MOD", innerManifest(
+            out, "META-INF/jarjar/nestedmod-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar detects Obfuscated-By as GAMELIBRARY`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("obf.jar", mapOf("y.class" to "y"), manifest = {
+            mainAttributes.putValue("Obfuscated-By", "searge")
+        })
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "obf", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("GAMELIBRARY", innerManifest(
+            out, "META-INF/jarjar/obf-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar explicit type wins over detection`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("lang.jar", mapOf(
+            "META-INF/services/net.minecraftforge.forgespi.language." +
+                "IModLanguageProvider" to "com.acme.KotlinLang"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "lang", "1.0"),
+                fmlModType = "LIBRARY")),
+            "jarjar", true, null, null
+        )
+        assertEquals("LIBRARY", innerManifest(
+            out, "META-INF/jarjar/lang-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar plugin-layer parent propagates LIBRARY to libs`() {
+        val out = jar("provider.jar", mapOf("x.class" to "x"),
+            manifest = {
+                mainAttributes.putValue("FMLModType", "LANGPROVIDER")
+            })
+        val dep = jar("kotlin-stdlib.jar", mapOf("y.class" to "y"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "kotlin-stdlib", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("LIBRARY", innerManifest(
+            out, "META-INF/jarjar/kotlin-stdlib-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar game-layer parent does not propagate`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"), manifest = {
+            mainAttributes.putValue("FMLModType", "MOD")
+        })
+        val dep = jar("lib.jar", mapOf("y.class" to "y"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "lib", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertNull(innerManifest(out, "META-INF/jarjar/lib-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar detection does not force a rewrite`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("nestedmod.jar", mapOf(
+            "META-INF/mods.toml" to "modLoader=javafml"))
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "nestedmod", "1.0"))),
+            "jarjar", false, null, null
+        )
+        assertNull(innerManifest(out, "META-INF/jarjar/nestedmod-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
     @Test
     fun `jarjar isObfuscated detects the Obfuscated-By attribute`() {
         val out = jar("mod.jar", mapOf("x.class" to "x"))

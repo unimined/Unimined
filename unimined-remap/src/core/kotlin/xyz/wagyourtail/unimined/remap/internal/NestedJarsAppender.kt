@@ -116,6 +116,14 @@ object NestedJarsAppender {
         }
         val warnings = mutableListOf<String>()
         val dir = if (format == "jarjar") "META-INF/jarjar" else "META-INF/jars"
+        // FML propagates the parent jar's layer to nested jars
+        // (JarInJarDependencyLocator, post-#9939): a plugin-layer
+        // parent's libs default to LIBRARY — stamp it explicitly so
+        // the semantics hold on any FML era. Game-layer parents keep
+        // the GAMELIBRARY floor (nothing detected → no stamp)
+        val parentPluginLayer = format == "jarjar" &&
+                manifestAttrOf(output, "FMLModType") in
+                setOf("LIBRARY", "LANGPROVIDER", "CUSTOM")
 
         // resolve entries: name dedup + inner bytes (recompressed or
         // verbatim) + per-format metadata contributions
@@ -153,12 +161,23 @@ object NestedJarsAppender {
             val stubBytes = if (needsStub)
                 synthesizeMetadata(coords, input.path, metadataFile!!)
             else null
-            val manifestAttrs = if (format == "jarjar" &&
-                input.fmlModType != null)
-                mapOf("FMLModType" to input.fmlModType)
-            else null
+            // explicit FMLModType stamps force a rewrite; the
+            // detect pass only rides a rewrite that already happens —
+            // verbatim (recompress=false, no explicit stamp) stays
+            // untouched
+            val explicitType = input.fmlModType.takeIf {
+                format == "jarjar" && it != null
+            }
             val recompressed = recompress || needsStub ||
-                    manifestAttrs != null
+                    explicitType != null
+            val fmlType = explicitType
+                ?: if (format == "jarjar" && recompressed)
+                    detectFmlModType(input.path)
+                        ?: "LIBRARY".takeIf { parentPluginLayer }
+                else null
+            val manifestAttrs = fmlType?.let {
+                mapOf("FMLModType" to it)
+            }
             val bytes = when {
                 !recompressed -> Files.readAllBytes(input.path)
                 format == "jarjar" -> rewriteJar(
@@ -241,6 +260,41 @@ object NestedJarsAppender {
         val outerMethod: Int,
         val obfuscated: Boolean
     )
+
+    /**
+     * Entry-name scan for FML layer signals, applied only when the
+     * jar is rewritten anyway (explicit config wins, so this only
+     * resolves the unset case): a language-provider service file
+     * means PLUGIN layer is required (`LANGPROVIDER`); `mods.toml`/
+     * `neoforge.mods.toml` marks a mod file (`MOD`); `Obfuscated-By`
+     * needs game-layer remap (`GAMELIBRARY`). `LIBRARY` is never
+     * detected — nothing inside a jar proves it doesn't touch game
+     * classes. `null` = no stamp, FML's `GAMELIBRARY` default.
+     */
+    private fun detectFmlModType(path: Path): String? = runCatching {
+        JarFile(path.toFile()).use { jar ->
+            var modsToml = false
+            for (e in jar.entries()) {
+                val n = e.name
+                if (n.startsWith("META-INF/services/") &&
+                    (n.endsWith("IModLanguageProvider") ||
+                            n.endsWith("IModLanguageLoader"))
+                ) {
+                    return@use "LANGPROVIDER"
+                }
+                if (n == "META-INF/mods.toml" ||
+                        n == "META-INF/neoforge.mods.toml") {
+                    modsToml = true
+                }
+            }
+            when {
+                modsToml -> "MOD"
+                jar.manifest?.mainAttributes
+                    ?.getValue("Obfuscated-By") != null -> "GAMELIBRARY"
+                else -> null
+            }
+        }
+    }.getOrNull()
 
     private fun manifestAttrOf(path: Path, attr: String): String? =
         runCatching {

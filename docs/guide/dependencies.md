@@ -171,8 +171,25 @@ without `mods.toml` inside it:
     }
     ```
 
-Unset entries embed untouched — FML's `GAMELIBRARY` default applies.
-A stamp forces the inner rewrite (the manifest is emitted first so
+Unset entries aren't blindly left alone — during the rewrite pass
+the embedder detects layer-bound signals inside each jar:
+
+| Found inside the jar | Stamps | Why |
+|---|---|---|
+| `META-INF/services/…​IModLanguageProvider` (or `IModLanguageLoader`) | `LANGPROVIDER` | providers must be PLUGIN-layer — the Kotlin-for-Forge case |
+| `META-INF/mods.toml` / `neoforge.mods.toml` | `MOD` | it is a mod file |
+| `Obfuscated-By` manifest attribute | `GAMELIBRARY` | needs game-layer runtime remap |
+| parent jar's `FMLModType` is `LIBRARY`/`LANGPROVIDER`/`CUSTOM` | `LIBRARY` | plugin-layer parents propagate to their deps — FML does the same at runtime post-1.20 |
+
+Explicit config always wins over detection; `LIBRARY` is never
+auto-detected (nothing inside a jar proves it doesn't touch game
+classes) beyond the parent-propagation rule. With no signal at all
+the jar embeds unstamped — FML's `GAMELIBRARY` default applies,
+which can't break anything since GAME sees PLUGIN.
+
+Detection only rides the rewrite pass: `recompress.set(false)`
+embeds verbatim with no stamp unless you declare a type explicitly —
+which still forces the rewrite (the manifest is emitted first so
 `JarFile` sees it). `isObfuscated` otherwise detects from the
 nested jar's own `Obfuscated-By` manifest attribute.
 

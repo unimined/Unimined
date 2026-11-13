@@ -202,6 +202,10 @@ internal object FabricEnvironmentWiring {
             if (descriptor != null) {
                 accessSpec.namespaceAliases =
                     mapOf("intermediary" to descriptor.prodNamespace)
+                // `named` input headers alias to the dev column —
+                // unimined emits `named` in dev jars, loom-dev artifacts
+                // do the same; raw dev-ns names match the tree directly
+                accessSpec.devNamespaceAliases = setOf("named")
                 if (environment.obfuscated.get()) {
                     // the declared dev-namespace override is a cheap
                     // DSL-property read; the derived name is NOT — it

@@ -72,21 +72,30 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
                 sourceNs = Namespace(c.spec.sourceNamespace)
                 targetNs = Namespace(c.spec.targetNamespace)
                 legacyAt = spec.legacyAt
-                namespaceAliases = spec.namespaceAliases
+                // resolve the dev column once when either the label map
+                // or the dev-namespace aliases need it — deferred to
+                // execution (tree-resolved here anyway) so wiring never
+                // parses mapping data at configuration time (mirrors
+                // devNamespace()'s heuristic)
+                val devNs = if (spec.devNamespaceLabel != null ||
+                    spec.devNamespaceAliases.isNotEmpty()) {
+                    val present = tree.namespaces.mapTo(HashSet()) { it.name }
+                    (c.mappings?.namedNamespaces()?.firstOrNull { it in present }
+                        ?: tree.namespaces.lastOrNull()?.name)
+                } else null
                 // loader-facing header label: fabric-family runtimes require
                 // the canonical namespace names — resolve the spec's label
                 // map with the same prefix-match the alias path uses for gen
-                // columns. `devNamespaceLabel` defers the dev-ns lookup to
-                // now: the tree is resolved here anyway, so wiring never
-                // parses mappings at configuration time (mirrors
-                // devNamespace()'s heuristic)
+                // columns
                 val labels = spec.devNamespaceLabel?.let { label ->
-                    val present = tree.namespaces.mapTo(HashSet()) { it.name }
-                    val devNs = c.mappings?.namedNamespaces()?.firstOrNull { it in present }
-                        ?: tree.namespaces.lastOrNull()?.name
                     if (devNs != null) spec.namespaceLabels + (devNs to label)
                     else spec.namespaceLabels
                 } ?: spec.namespaceLabels
+                // canonical `named` (et al.) input headers mean "the dev
+                // column" — raw column names already match the tree directly
+                namespaceAliases = if (devNs != null)
+                    spec.namespaceAliases + spec.devNamespaceAliases.associateWith { devNs }
+                else spec.namespaceAliases
                 targetLabel = labels.entries
                     .firstOrNull { (k, _) -> targetNs.name == k || targetNs.name.startsWith(k) }
                     ?.value
@@ -225,7 +234,9 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         val text = bytes.toString(Charsets.UTF_8)
         val nl = text.indexOf('\n')
         val header = if (nl >= 0) text.substring(0, nl) else text
-        val cols = header.trim().split('\t')
+        // headers may be space- or tab-separated — both are accepted
+        // input; output is normalized to tabs
+        val cols = header.trim().split(Regex("\\s+"))
         if (cols.size < 3) return bytes
         val declared = cols.last().trim()
         if (tree.namespaces.any { it.name == declared }) return bytes
@@ -255,7 +266,7 @@ class AccessRemapStepType : RemapStepType<AccessRemapStepSpec> {
         val text = bytes.toString(Charsets.UTF_8)
         val nl = text.indexOf('\n')
         val header = if (nl >= 0) text.substring(0, nl) else text
-        val cols = header.trim().split('\t')
+        val cols = header.trim().split(Regex("\\s+"))
         if (cols.size < 3) return bytes
         val rest = if (nl >= 0) text.substring(nl) else ""
         return (cols.dropLast(1).joinToString("\t") + "\t" + label + rest)

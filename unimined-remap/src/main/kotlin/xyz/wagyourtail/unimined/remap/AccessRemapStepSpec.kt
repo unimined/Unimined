@@ -67,4 +67,17 @@ class AccessRemapStepSpec(
     @get:Input @get:Optional
     var devNamespaceLabel: String? = null
 
+    /**
+     * Canonical names that alias to the environment's *dev* namespace
+     * on the input side — embedded AW/CT files may declare `named`
+     * (unimined's own emit, loom-dev artifacts) while the tree's dev
+     * column is `mojmap`/`feather` under the hood. The dev column name
+     * is derived at execution with the same heuristic as
+     * [devNamespaceLabel], so wiring stays free of mapping resolution.
+     * The raw column name needs no alias — it's a tree column and
+     * matches directly.
+     */
+    @get:Input
+    var devNamespaceAliases: Set<String> = emptySet()
+
 }

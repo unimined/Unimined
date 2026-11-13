@@ -300,7 +300,7 @@ class AccessFormatConvertTest {
                 "accessible" to "c/C"
             ), rows)
         assertTrue(
-            merged.decodeToString().startsWith("accessWidener\tv2\tnamed"))
+            merged.decodeToString().startsWith("accessWidener\tv1\tnamed"))
     }
 
     // ---------------------------------------------------------------

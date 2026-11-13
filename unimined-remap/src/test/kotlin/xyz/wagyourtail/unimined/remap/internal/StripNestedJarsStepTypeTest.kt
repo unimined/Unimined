@@ -4,6 +4,8 @@ import org.gradle.api.logging.Logging
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.api.mapping.NAMED_NAMESPACES_KEY
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.remap.spi.FusedJarEntry
@@ -74,6 +76,66 @@ class StripNestedJarsStepTypeTest {
         val text = out!!.bytes.toString(Charsets.UTF_8)
         assertFalse(text.contains("\"jars\""))
         assertTrue(text.contains("\"depmod\""))
+    }
+
+    @Test
+    fun `manifest mapping namespace is rewritten to target`() {
+        val mf = "Manifest-Version: 1.0\r\n" +
+            "Fabric-Mapping-Namespace: intermediary\r\n" +
+            "Fabric-Loader-Version: 0.16.9\r\n\r\n"
+        val out = step().visitEntry(
+            FusedJarEntry("META-INF/MANIFEST.MF", mf.toByteArray()), ctx())
+        val parsed = java.util.jar.Manifest(out!!.bytes.inputStream())
+        assertEquals("named",
+            parsed.mainAttributes.getValue("Fabric-Mapping-Namespace"))
+        // other attrs survive
+        assertEquals("0.16.9",
+            parsed.mainAttributes.getValue("Fabric-Loader-Version"))
+    }
+
+    @Test
+    fun `manifest namespace canonicalizes to fabric vocabulary`() {
+        // internal ns names (mojmap) must not leak into the
+        // fabric-ecosystem attribute — the named flag decides the role
+        val ctx = object : StepContext by ctx() {
+            override val spec = object : RemapSpec {
+                override val sourceNamespace = "intermediary"
+                override val targetNamespace = "mojmap"
+                override val classpath = emptyList<Path>()
+            }
+            override val mappings = object : MappingData {
+                override val viewTypes = emptySet<kotlin.reflect.KClass<*>>()
+                override fun <T : Any> view(type: Class<T>): T? = null
+                override val properties = mapOf(
+                    NAMED_NAMESPACES_KEY to "mojmap")
+            }
+        }
+        val s = StripNestedJarsStepType().create(
+            StripNestedJarsStepSpec(), ctx) as FusibleJarStep
+        val mf = FusedJarEntry("META-INF/MANIFEST.MF",
+            ("Manifest-Version: 1.0\r\n" +
+                "Fabric-Mapping-Namespace: intermediary\r\n\r\n").toByteArray())
+        val parsed = java.util.jar.Manifest(
+            s.visitEntry(mf, ctx)!!.bytes.inputStream())
+        assertEquals("named",
+            parsed.mainAttributes.getValue("Fabric-Mapping-Namespace"))
+        // canonical-equal declared value passes through untouched
+        val same = FusedJarEntry("META-INF/MANIFEST.MF",
+            ("Manifest-Version: 1.0\r\n" +
+                "Fabric-Mapping-Namespace: named\r\n\r\n").toByteArray())
+        assertSame(same, s.visitEntry(same, ctx))
+    }
+
+    @Test
+    fun `manifest without the attribute or already-target passes through`() {
+        val s = step()
+        val noAttr = FusedJarEntry("META-INF/MANIFEST.MF",
+            "Manifest-Version: 1.0\r\n\r\n".toByteArray())
+        assertSame(noAttr, s.visitEntry(noAttr, ctx()))
+        val already = FusedJarEntry("META-INF/MANIFEST.MF",
+            ("Manifest-Version: 1.0\r\n" +
+                "Fabric-Mapping-Namespace: named\r\n\r\n").toByteArray())
+        assertSame(already, s.visitEntry(already, ctx()))
     }
 
     @Test

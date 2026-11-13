@@ -496,16 +496,18 @@ object AccessFormatConvert {
         targetNs: Namespace
     ): ByteArray {
         val seen = LinkedHashSet<AWReader.AWData>()
+        var version = "v1"
         for (bytes in inputs) {
             val aw = AWReader.readData(
                 StringCharReader(bytes.toString(Charsets.UTF_8)), true)
+            if (aw.version == "v2") version = "v2"
             for (item in aw.targets) {
                 if (item is AWReader.AWData) seen += item
             }
         }
         val out = StringBuilder()
         AWWriter.writeData(
-            AWReader.AWMappings(targetNs, seen.toList())
+            AWReader.AWMappings(targetNs, seen.toList(), version)
         ) { out.append(it) }
         return out.toString().toByteArray()
     }
