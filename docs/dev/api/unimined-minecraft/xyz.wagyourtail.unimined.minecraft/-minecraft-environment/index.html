@@ -704,17 +704,17 @@
               </div>
             </div>
           </div>
-<a data-name="-576080064%2FProperties%2F-1355253599" anchor-label="minecraftModSourceViewName" id="-576080064%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+<a data-name="1947912646%2FProperties%2F-1355253599" anchor-label="minecraftProdViewName" id="1947912646%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="minecraft-mod-source-view-name.html"><span>minecraft</span><wbr><span>Mod</span><wbr><span>Source</span><wbr><span>View</span><wbr><span><span>Name</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-576080064%2FProperties%2F-1355253599"></span>
+                  <div><a href="minecraft-prod-view-name.html"><span>minecraft</span><wbr><span>Prod</span><wbr><span>View</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1947912646%2FProperties%2F-1355253599"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="minecraft-mod-source-view-name.html">minecraftModSourceViewName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Resolvable view producing the mod-source-namespace MC artifact — the mod-view remap-analysis classpath entry.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="minecraft-prod-view-name.html">minecraftProdViewName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Resolvable view producing the production-namespace MC artifact — the <code class="lang-kotlin">prodClient</code>/<code class="lang-kotlin">prodServer</code> launch classpath entry and the mod-view remap-analysis classpath entry. "Prod" means the namespace shipped mod jars are mapped to, which for runtime-deobf loaders (FG2-era forge) is MC's <i>post-deobf</i> state, not the literal jar Mojang ships.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -820,6 +820,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="obfuscated-libraries.html">obfuscatedLibraries</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Coord prefixes (<code class="lang-kotlin">group:name</code>+) of version-JSON libraries that are obfuscated Mojang artifacts — they route through the env's raw→dev artifact view so they remap with the MC jar rather than sitting on the classpath in production namespace (<code class="lang-kotlin">com.mojang: realms</code> is flagged by the provider; this list adds others).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1850911862%2FProperties%2F-1355253599" anchor-label="prodRunViewName" id="1850911862%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="prod-run-view-name.html"><span>prod</span><wbr><span>Run</span><wbr><span>View</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1850911862%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="prod-run-view-name.html">prodRunViewName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">The MC artifact view <code class="lang-kotlin">prodClient</code>/<code class="lang-kotlin">prodServer</code> put on the launch classpath — <a href="minecraft-prod-view-name.html">minecraftProdViewName</a> by default (MC in the mod-ship namespace); loader wiring overrides where production launches on the shipped artifact plus a runtime remap (FG2-era forge: raw obf jar + FMLDeobfTweaker → searge). Wiring surface, not user DSL — set during environment wiring, read at run-task realization.</p></div></div></div>
                 </div>
               </div>
             </div>

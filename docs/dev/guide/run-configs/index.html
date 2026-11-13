@@ -1663,9 +1663,14 @@ configurations from <code>genIdeRuns</code>.</p>
 </tr>
 </tbody>
 </table>
-<p>The <code>prod*</code> variants launch the <em>production-namespace</em> Minecraft
-artifact with your remapped mod jar — the shipped-runtime check
-(1.x <code>runObfClient</code>/<code>runObfServer</code> parity).</p>
+<p>The <code>prod*</code> variants launch against <code>minecraftProd</code> — Minecraft in
+the namespace shipped mod jars are remapped to — with your <code>remapJar</code>
+output and <em>direct</em> (un-remapped) mod dependencies: the
+shipped-runtime check (1.x <code>runObfClient</code>/<code>runObfServer</code> parity).
+FG2-era forge is the exception: real production launches the shipped
+obf jar and lets <code>FMLDeobfTweaker</code> remap obf→searge at runtime, so
+<code>prodClient</code>/<code>prodServer</code> there resolve <code>minecraftRaw</code> plus the
+runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <h2 id="reaching-runs">Reaching runs<a class="headerlink" href="#reaching-runs" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">

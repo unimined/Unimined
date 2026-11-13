@@ -372,63 +372,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#planned-features" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Planned Features
+        Getting started
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recommended-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#other-setups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Other Setups
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Other Setups">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arch-loom-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Arch-Loom Style
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#third-party-template-s" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        third party template (s)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1594,63 +1544,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#planned-features" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Planned Features
+        Getting started
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recommended-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#other-setups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Other Setups
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Other Setups">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arch-loom-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Arch-Loom Style
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#third-party-template-s" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        third party template (s)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1675,67 +1575,64 @@
 
 
 <h1 id="about-unimined">About Unimined<a class="headerlink" href="#about-unimined" title="Permanent link">&para;</a></h1>
-<p>Welcome to Unimined, a unified Minecraft modding environment that supports both modern
-and legacy environments. Whether you're working with the latest Minecraft versions or
-exploring older builds, Unimined provides a comprehensive set of tools to help you
-build mods with ease.</p>
+<p>Welcome to Unimined, a unified Minecraft modding environment supporting
+modern and legacy Minecraft alike — one Gradle plugin suite covering
+everything from alpha-era jar mods to current releases.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Unified Modding Environment:</strong> Supports various Minecraft mod loaders and offers tools for a seamless experience
-  across different modding platforms.</li>
-<li><strong>Custom Loader Support:</strong> Create and integrate your own loaders with the flexibility of Unimined.</li>
+<li><strong>Unified environment DSL</strong> — <code>minecraft { }</code> binds a source set to a
+  version, loaders, and mappings; multiple environments per project or
+  across modules.</li>
+<li><strong>Whole-history loader coverage</strong> — alpha through current releases,
+  across the forge, fabric, and bukkit families (see below).</li>
+<li><strong>Configurable remap pipeline</strong> — <code>remap { }</code> step specs produce the
+  production-namespace jar (<code>remapJar</code>), remapped dependencies, and
+  sources jars.</li>
+<li><strong>Production runs</strong> — <code>runProdClient</code>/<code>runProdServer</code> launch your mod
+  against the Minecraft artifact it will actually link to at ship time.</li>
+<li><strong>Mod metadata generation</strong> — <code>mod { }</code> emits <code>fabric.mod.json</code>,
+  <code>mods.toml</code>, manifest attributes, and more, era-correct per loader.</li>
+<li><strong>Project init CLI</strong> — <code>unimined init</code> scaffolds ready-made mod
+  projects (see <a href="getting-started/cli/">unimined-cli</a>).</li>
+<li><strong>Adapters</strong> — JvmDowngrader, Stonecutter, ExpectPlatform, Forgix,
+  PatchBase, and ModPublisher integrate as <code>unimined.adapter-*</code> plugins.</li>
 </ul>
 <h2 id="supported-loaders">Supported Loaders<a class="headerlink" href="#supported-loaders" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://fabricmc.net/">Fabric</a></li>
-<li><a href="https://quiltmc.org/">Quilt</a></li>
-<li><a href="https://minecraftforge.net/">Forge</a></li>
-<li><a href="https://neoforged.net/">Neoforge</a></li>
-<li>just plain jarmodding<ul>
-<li><a href="https://mcarchive.net/mods/modloader">Modloader</a></li>
-<li><a href="https://github.com/unimined/JarModAgent">JarModAgent</a></li>
-</ul>
-</li>
-<li>~~Flint Loader~~ (removed — maven.flintloader.net offline)</li>
-<li>Rift</li>
-<li><a href="https://hub.spigotmc.org">Craftbukkit/Spigot</a></li>
-<li><a href="https://papermc.io">Paper</a></li>
-<li><a href="https://liteloader.com">Liteloader</a></li>
+<li><a href="https://fabricmc.net/">Fabric</a>, <a href="https://quiltmc.org/">Quilt</a>,
+  <a href="https://legacyfabric.net">LegacyFabric</a>, Ornithe, and Babric — the
+  whole intermediary family, alpha to current</li>
+<li><a href="https://minecraftforge.net/">Forge</a> — merged-jar FG1 era (≤1.6.4),
+  userdev FG2 era (1.7.10–1.12.2), and modern installer-era, including
+  LexForge and Cleanroom</li>
+<li><a href="https://neoforged.net/">NeoForge</a> — userdev-era and 26.x unobfuscated</li>
+<li><a href="https://github.com/DimensionalDevelopment/Rift">Rift</a>,
+  <a href="https://liteloader.com">LiteLoader</a>, ModLoader (Risugami), and plain
+  jar-modding via <a href="https://github.com/unimined/JarModAgent">JarModAgent</a></li>
+<li><a href="https://hub.spigotmc.org">Craftbukkit/Spigot</a> and
+  <a href="https://papermc.io">Paper</a></li>
+<li>Vanilla conversions — ReIndev, NSSS, Better-Than-Adventure, FoxLoader</li>
 </ul>
 <h3 id="planned">Planned<a class="headerlink" href="#planned" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Better Bukkit-derivitive support<ul>
-<li>Spigot currently just kinda runs buildtools in the backround.</li>
-</ul>
-</li>
 <li>Sponge</li>
 <li>NilLoader</li>
+<li>merged multi-loader environments</li>
+<li>~~Flint Loader~~ (removed — maven.flintloader.net offline;
+  reintroducible if the host returns)</li>
 </ul>
 <h3 id="custom-loaders">Custom Loaders<a class="headerlink" href="#custom-loaders" title="Permanent link">&para;</a></h3>
 <p>you can create a custom patching/transforming process for minecraft,
-for example <a href="https://github.com/prcraft-minecraft/PrcraftExampleMod">PrcraftExampleMod</a>'s buildsrc dir.</p>
-<h2 id="planned-features">Planned Features<a class="headerlink" href="#planned-features" title="Permanent link">&para;</a></h2>
+for example <a href="https://github.com/prcraft-minecraft/PrcraftExampleMod">PrcraftExampleMod</a>'s buildsrc dir —
+or register a loader descriptor, see <a href="guide/loaders/">Loaders</a>.</p>
+<h2 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Eclipse / VSCode Support</li>
-<li>Datagen</li>
-<li>Fixing neoforge on yarn (again)</li>
-</ul>
-<h2 id="recommended-setup">Recommended Setup<a class="headerlink" href="#recommended-setup" title="Permanent link">&para;</a></h2>
-<p>you can either re-create a unimined build from a standard gradle project or,</p>
-<ol>
-<li>take one of the versions from <a href="https://github.com/unimined/Unimined/tree/main/testing">testing</a></li>
-<li>remove <code>includeBuild('../../')</code> from <code>settings.gradle</code></li>
-<li>put a proper version number for the plugin in <code>build.grade</code></li>
-</ol>
-<h2 id="other-setups">Other Setups<a class="headerlink" href="#other-setups" title="Permanent link">&para;</a></h2>
-<h3 id="arch-loom-style">Arch-Loom Style<a class="headerlink" href="#arch-loom-style" title="Permanent link">&para;</a></h3>
-<ul>
-<li>direct porting of arch-loom projects without changing the directory structure is possible.</li>
-<li>instructions pending...</li>
-</ul>
-<h3 id="third-party-template-s">third party template (s)<a class="headerlink" href="#third-party-template-s" title="Permanent link">&para;</a></h3>
-<ul>
-<li><em>(out of date — check back later)</em></li>
+<li><a href="getting-started/installation/">Installation</a> and
+  <a href="getting-started/first-project/">First Project</a> walk through a
+  minimal build</li>
+<li><code>unimined init</code> — the <a href="getting-started/cli/">CLI</a> generates a
+  project with the right DSL for your version+loader</li>
+<li>Migrating a 1.x build? See <a href="migration-1x-to-2.0/">Migrating 1.x to 2.0</a></li>
 </ul>
 
 

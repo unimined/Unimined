@@ -598,6 +598,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#minecraft-artifact-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minecraft artifact configurations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1458,6 +1469,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#minecraft-artifact-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minecraft artifact configurations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1566,6 +1588,44 @@ dependency configurations.</p>
   populated by <code>combineWith</code>; read-mostly, used by generated
   source jars and mod packaging.</li>
 </ul>
+<h2 id="minecraft-artifact-configurations">Minecraft artifact configurations<a class="headerlink" href="#minecraft-artifact-configurations" title="Permanent link">&para;</a></h2>
+<p>Each environment registers resolvable configurations producing the
+Minecraft artifact at each mapping namespace — <code>minecraftRaw</code>,
+<code>minecraftDev</code>, <code>minecraftProd</code> for <code>main</code>, <code>&lt;env&gt;MinecraftRaw</code>, …
+for a named env. Resolve them like any configuration — e.g. custom
+packaging tasks that need the prod artifact read
+<code>configurations.named("minecraftProd")</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Produces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minecraftRaw</code></td>
+<td>MC in the <em>source</em> namespace — the artifact the game ships as (obfuscated for obf-era loaders, intermediary for fabric-family, mojmap for unobf'd releases)</td>
+</tr>
+<tr>
+<td><code>minecraftDev</code></td>
+<td>MC in the <em>dev</em> namespace your sources compile and dev runs launch against</td>
+</tr>
+<tr>
+<td><code>minecraftProd</code></td>
+<td>MC in the <em>production</em> namespace shipped mod jars are remapped to — the <code>remapJar</code> target. Feeds <code>runProd*</code> classpaths and mod-view remap analysis; collapses to the raw artifact when prod == source namespace</td>
+</tr>
+<tr>
+<td><code>minecraftLibraries</code></td>
+<td>the MC library set (version-json + loader libraries)</td>
+</tr>
+</tbody>
+</table>
+<p><code>runProd*</code> resolves <code>minecraftProd</code> by default; loaders whose
+production runtime remaps at launch override the view — FG2-era
+forge (1.7.10–1.12.2) launches <code>minecraftRaw</code> (the shipped obf jar)
+and lets <code>FMLDeobfTweaker</code> remap obf→searge at runtime, matching a
+real installation.</p>
 
 
 

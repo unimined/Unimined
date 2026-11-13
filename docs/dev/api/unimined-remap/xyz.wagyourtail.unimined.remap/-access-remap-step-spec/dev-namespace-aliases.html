@@ -2,7 +2,7 @@
 <html class="no-js" lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>modSourceView</title>
+    <title>devNamespaceAliases</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js", "js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -42,7 +42,7 @@
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
-                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-minecraft/main">jvm</button>
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-remap/main">jvm</button>
             <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
                 <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
                 <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
@@ -53,7 +53,7 @@
                     </div>
                         <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
                             <label class="checkbox">
-                                <input type="checkbox" class="checkbox--input" id=":unimined-minecraft/main" data-filter=":unimined-minecraft/main">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-remap/main" data-filter=":unimined-remap/main">
                                 <span class="checkbox--icon"></span>
                                 jvm
                             </label>
@@ -89,12 +89,12 @@
         </nav>
         <div id="resizer" class="resizer" data-item-type="BAR"></div>
         <div id="main" data-item-type="SECTION" role="main">
-<div class="main-content" data-page-type="member" id="content" pageids="unimined-minecraft::xyz.wagyourtail.unimined.minecraft/MinecraftExtension/modSourceView/#kotlin.String/PointingToDeclaration//-1355253599">
-  <div class="breadcrumbs"><a href="../../index.html">unimined-minecraft</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.minecraft</a><span class="delimiter">/</span><a href="index.html">MinecraftExtension</a><span class="delimiter">/</span><span class="current">modSourceView</span></div>
+<div class="main-content" data-page-type="member" id="content" pageids="unimined-remap::xyz.wagyourtail.unimined.remap/AccessRemapStepSpec/devNamespaceAliases/#/PointingToDeclaration//-584358979">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-remap</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.remap</a><span class="delimiter">/</span><a href="index.html">AccessRemapStepSpec</a><span class="delimiter">/</span><span class="current">devNamespaceAliases</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>mod</span><wbr><span>Source</span><wbr><span><span>View</span></span></h1>
+    <h1 class="cover"><span>dev</span><wbr><span>Namespace</span><wbr><span><span>Aliases</span></span></h1>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="mod-source-view.html"><span class="token function">modSourceView</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">environmentId<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Configuration///PointingToDeclaration/">Configuration</span><span class="token operator">?</span></div><p class="paragraph">The resolvable mod-source-artifact view for <a href="mod-source-view.html">environmentId</a>, if bound.</p></div></div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">var </span><a href="dev-namespace-aliases.html">devNamespaceAliases</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><p class="paragraph">Canonical names that alias to the environment's <i>dev</i> namespace on the input side — embedded AW/CT files may declare <code class="lang-kotlin">named</code> (unimined's own emit, loom-dev artifacts) while the tree's dev column is <code class="lang-kotlin">mojmap</code>/<code class="lang-kotlin">feather</code> under the hood. The dev column name is derived at execution with the same heuristic as <a href="dev-namespace-label.html">devNamespaceLabel</a>, so wiring stays free of mapping resolution. The raw column name needs no alias — it's a tree column and matches directly.</p></div></div>
 </div>
     <div class="footer">
         <div class="footer--container">

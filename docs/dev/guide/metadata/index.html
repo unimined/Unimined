@@ -1614,6 +1614,12 @@ FML (modern <code>SecureJar</code> and legacy <code>CoreModManager</code> alike)
 manifests inside classpath <em>directories</em>, which is how exploded dev
 mods carry <code>FMLModType</code>/<code>MixinConfigs</code>/<code>FMLAT</code>. The file copy is
 excluded from the packed jar; the attrs ride the real manifest.</p>
+<p>Environment-fact attributes (<code>Fabric-Mapping-Namespace</code>,
+<code>MixinConfigs</code>, <code>FMLAT</code>, loader-version stamps, …) describe the
+environment, not your mod's identity, so they emit <strong>even when
+<code>mod { }</code> is unconfigured</strong> — a hand-written metadata file stays
+authoritative for the descriptor documents, but the manifest attrs
+still reach the jar and the dev classpath.</p>
 <p>Era-correct emission per forge-family loader:</p>
 <table>
 <thead>

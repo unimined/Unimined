@@ -1795,8 +1795,47 @@ without <code>mods.toml</code> inside it:</p>
 </div>
 </div>
 </div>
-<p>Unset entries embed untouched — FML's <code>GAMELIBRARY</code> default applies.
-A stamp forces the inner rewrite (the manifest is emitted first so
+<p>Unset entries aren't blindly left alone — during the rewrite pass
+the embedder detects layer-bound signals inside each jar:</p>
+<table>
+<thead>
+<tr>
+<th>Found inside the jar</th>
+<th>Stamps</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>META-INF/services/…​IModLanguageProvider</code> (or <code>IModLanguageLoader</code>)</td>
+<td><code>LANGPROVIDER</code></td>
+<td>providers must be PLUGIN-layer — the Kotlin-for-Forge case</td>
+</tr>
+<tr>
+<td><code>META-INF/mods.toml</code> / <code>neoforge.mods.toml</code></td>
+<td><code>MOD</code></td>
+<td>it is a mod file</td>
+</tr>
+<tr>
+<td><code>Obfuscated-By</code> manifest attribute</td>
+<td><code>GAMELIBRARY</code></td>
+<td>needs game-layer runtime remap</td>
+</tr>
+<tr>
+<td>parent jar's <code>FMLModType</code> is <code>LIBRARY</code>/<code>LANGPROVIDER</code>/<code>CUSTOM</code></td>
+<td><code>LIBRARY</code></td>
+<td>plugin-layer parents propagate to their deps — FML does the same at runtime post-1.20</td>
+</tr>
+</tbody>
+</table>
+<p>Explicit config always wins over detection; <code>LIBRARY</code> is never
+auto-detected (nothing inside a jar proves it doesn't touch game
+classes) beyond the parent-propagation rule. With no signal at all
+the jar embeds unstamped — FML's <code>GAMELIBRARY</code> default applies,
+which can't break anything since GAME sees PLUGIN.</p>
+<p>Detection only rides the rewrite pass: <code>recompress.set(false)</code>
+embeds verbatim with no stamp unless you declare a type explicitly —
+which still forces the rewrite (the manifest is emitted first so
 <code>JarFile</code> sees it). <code>isObfuscated</code> otherwise detects from the
 nested jar's own <code>Obfuscated-By</code> manifest attribute.</p>
 <p><code>include</code> is <strong>not</strong> a classpath dependency — declare
