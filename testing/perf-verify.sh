@@ -36,17 +36,21 @@ GUH="$ROOT/testing/perf/.cold-guh"
 mkdir -p "$GUH"
 LOG="$FIXTURE_DIR/.verify-out.log"
 TASK="resolveDevClasspath"
-# per-fixture thresholds — the -named.jar transform wave and sourceSet
-# classpath size scale with declared mods + loader era. Values are
-# conservative floors (first-run actuals run higher); env overrides win.
+# per-fixture thresholds — the transform-wave artifact pattern and
+# sourceSet classpath size scale with declared mods + loader era.
+# `*-named.jar` is the dev-ns mod/MC remap naming on named-era envs;
+# merged-era envs (ornithe/jarmod) never produce it — their wave is
+# the merged MC jar + runtime exports. Values are conservative floors
+# (first-run actuals run higher); env overrides win.
 case "$FIXTURE" in
-    fabric-modern)    DEF_JARS=60; DEF_CP=100 ;;
-    forge-userdev)    DEF_JARS=10; DEF_CP=30 ;;
-    neoforge)         DEF_JARS=10; DEF_CP=30 ;;
-    legacy-fg2)       DEF_JARS=10; DEF_CP=30 ;;
-    legacy-ornithe)   DEF_JARS=3;  DEF_CP=10 ;;
-    *)                DEF_JARS=5;  DEF_CP=10 ;;
+    fabric-modern)    WAVE_GLOB='*-named.jar';    DEF_JARS=60; DEF_CP=100 ;;
+    forge-userdev)    WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
+    neoforge)         WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
+    legacy-fg2)       WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
+    legacy-ornithe)   WAVE_GLOB='*-merged.jar';   DEF_JARS=1;  DEF_CP=10 ;;
+    *)                WAVE_GLOB='*-named.jar';    DEF_JARS=5;  DEF_CP=10 ;;
 esac
+WAVE_GLOB="${PERF_VERIFY_WAVE_GLOB:-$WAVE_GLOB}"
 MIN_MOD_JARS="${PERF_VERIFY_MIN_MOD_JARS:-$DEF_JARS}"
 MIN_CP_FILES="${PERF_VERIFY_MIN_CP_FILES:-$DEF_CP}"
 MAX_COLD_MS="${PERF_VERIFY_MAX_COLD_MS:-480000}"
@@ -62,12 +66,12 @@ run_gradle() {
 }
 
 count_fresh_jars() {
-    # -named.jar outputs newer than the timestamp file $1
-    find "$GUH/caches" -name "*-named.jar" -newer "$1" 2>/dev/null | wc -l
+    # transform-wave outputs newer than the timestamp file $1
+    find "$GUH/caches" -name "$WAVE_GLOB" -newer "$1" 2>/dev/null | wc -l
 }
 
 count_named_jars() {
-    find "$GUH/caches" -name "*-named.jar" 2>/dev/null | wc -l
+    find "$GUH/caches" -name "$WAVE_GLOB" 2>/dev/null | wc -l
 }
 
 echo "== perf-verify [$FIXTURE] task=$TASK"
@@ -85,8 +89,8 @@ if [ "$QUICK" -eq 0 ]; then
 
     NAMED=$(count_named_jars)
     [ "$NAMED" -ge "$MIN_MOD_JARS" ] \
-        && pass "transform wave executed ($NAMED -named.jar outputs)" \
-        || fail "transform wave missing ($NAMED -named.jar < $MIN_MOD_JARS)"
+        && pass "transform wave executed ($NAMED $WAVE_GLOB outputs)" \
+        || fail "transform wave missing ($NAMED $WAVE_GLOB < $MIN_MOD_JARS)"
 
     CP=$(grep -o 'compileClasspath: [0-9]*' "$LOG" | awk '{print $2}')
     [ "${CP:-0}" -ge "$MIN_CP_FILES" ] \
@@ -140,7 +144,7 @@ fi
 NEW_JARS=$(count_fresh_jars "$MARK")
 [ "$NEW_JARS" -eq 0 ] \
     && pass "zero transform executions on reuse" \
-    || fail "$NEW_JARS -named.jar rewritten on reuse (steady state should be idle)"
+    || fail "$NEW_JARS $WAVE_GLOB rewritten on reuse (steady state should be idle)"
 
 CP2=$(grep -o 'compileClasspath: [0-9]*' "$LOG" | awk '{print $2}')
 [ "${CP2:-0}" -ge "$MIN_CP_FILES" ] \

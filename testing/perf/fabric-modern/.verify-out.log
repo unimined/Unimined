@@ -5,8 +5,8 @@ Reusing configuration cache.
 > Task :classes UP-TO-DATE
 
 > Task :resolveDevClasspath
-compileClasspath: 137 files
-runtimeClasspath: 141 files
+compileClasspath: 138 files
+runtimeClasspath: 142 files
 
 BUILD SUCCESSFUL in 1s
 3 actionable tasks: 1 executed, 2 up-to-date

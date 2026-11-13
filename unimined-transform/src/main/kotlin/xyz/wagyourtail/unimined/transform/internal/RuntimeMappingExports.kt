@@ -125,10 +125,15 @@ object RuntimeMappingExports {
         renamer: ((Namespace) -> Namespace)? = null,
         writer: ((String) -> Unit) -> xyz.wagyourtail.unimined.mapping.sink.MappingSink
     ): ByteArray = buildString {
+        // sort=true is load-bearing: output bytes feed the content-keyed
+        // cache dir + CC file fingerprints — unsorted tree order differs
+        // run-to-run, which rewrote the export to a new sha dir every run
+        // and permanently invalidated the configuration-cache entry
         tree.emit(
             writer(::append),
             nsFilter = if (emitAll) tree.namespaces.toList()
             else listOf(src, dst),
+            sort = true,
             nsRenamer = renamer ?: { it }
         )
     }.toByteArray()
@@ -158,7 +163,7 @@ object RuntimeMappingExports {
             fun csv(
                 w: ((String) -> Unit) -> xyz.wagyourtail.unimined.mapping.sink.MappingSink
             ) = buildString {
-                tree.emit(w(::append), nsFilter = ns)
+                tree.emit(w(::append), nsFilter = ns, sort = true)
             }.replaceFirst("${src.name},${dst.name},", "${src.name},name,")
                 .toByteArray()
             return zipOf(
