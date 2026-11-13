@@ -8,6 +8,6 @@ Reusing configuration cache.
 compileClasspath: 96 files
 runtimeClasspath: 99 files
 
-BUILD SUCCESSFUL in 1s
+BUILD SUCCESSFUL in 2s
 3 actionable tasks: 1 executed, 2 up-to-date
 Configuration cache entry reused.

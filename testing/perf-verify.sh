@@ -44,9 +44,9 @@ TASK="resolveDevClasspath"
 # (first-run actuals run higher); env overrides win.
 case "$FIXTURE" in
     fabric-modern)    WAVE_GLOB='*-named.jar';    DEF_JARS=60; DEF_CP=100 ;;
-    forge-userdev)    WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
-    neoforge)         WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
-    legacy-fg2)       WAVE_GLOB='*-named.jar';    DEF_JARS=10; DEF_CP=30 ;;
+    forge-userdev)    WAVE_GLOB='*-mojmap.jar';   DEF_JARS=1;  DEF_CP=30 ;;
+    neoforge)         WAVE_GLOB='*-mojmap.jar';   DEF_JARS=1;  DEF_CP=30 ;;
+    legacy-fg2)       WAVE_GLOB='*-mcp.jar';      DEF_JARS=2;  DEF_CP=30 ;;
     legacy-ornithe)   WAVE_GLOB='*-merged.jar';   DEF_JARS=1;  DEF_CP=10 ;;
     *)                WAVE_GLOB='*-named.jar';    DEF_JARS=5;  DEF_CP=10 ;;
 esac

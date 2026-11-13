@@ -3,6 +3,9 @@ package xyz.wagyourtail.unimined.transform.internal
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.element.MetadataElement
+import xyz.wagyourtail.unimined.mapping.element.metadata.JavadocElement
+import xyz.wagyourtail.unimined.mapping.sink.MappingSink
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6FieldWriter
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6MethodWriter
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6ParamWriter
@@ -128,15 +131,28 @@ object RuntimeMappingExports {
         // sort=true is load-bearing: output bytes feed the content-keyed
         // cache dir + CC file fingerprints — unsorted tree order differs
         // run-to-run, which rewrote the export to a new sha dir every run
-        // and permanently invalidated the configuration-cache entry
+        // and permanently invalidated the configuration-cache entry.
+        // javadoc is stripped for the same reason: the parser's parse→render
+        // round-trip is lossy on non-link bracket text, so emitted comment
+        // bytes can differ per resolution — and runtimes only read names.
         tree.emit(
-            writer(::append),
+            noJavadoc(writer(::append)),
             nsFilter = if (emitAll) tree.namespaces.toList()
             else listOf(src, dst),
             sort = true,
             nsRenamer = renamer ?: { it }
         )
     }.toByteArray()
+
+    /** Sink wrapper dropping [JavadocElement] pushes — runtime
+     *  exports (loader `mappings.tiny`, srg2mcp, unprotect) carry
+     *  names only; comment bytes are dead weight and their
+     *  parse/render round-trip is not resolution-stable. */
+    private fun noJavadoc(delegate: MappingSink): MappingSink =
+        object : MappingSink by delegate {
+            override fun push(meta: MetadataElement): MetadataElement? =
+                if (meta is JavadocElement) null else delegate.push(meta)
+        }
 
     /** Deterministic zip — fixed-epoch entries in declaration order. */
     private fun zipOf(vararg entries: Pair<String, ByteArray>): ByteArray {
@@ -163,7 +179,7 @@ object RuntimeMappingExports {
             fun csv(
                 w: ((String) -> Unit) -> xyz.wagyourtail.unimined.mapping.sink.MappingSink
             ) = buildString {
-                tree.emit(w(::append), nsFilter = ns, sort = true)
+                tree.emit(noJavadoc(w(::append)), nsFilter = ns, sort = true)
             }.replaceFirst("${src.name},${dst.name},", "${src.name},name,")
                 .toByteArray()
             return zipOf(
