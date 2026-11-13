@@ -88,6 +88,18 @@ interface ModMetadataEmitter {
      */
     fun emit(context: EmitContext): Map<String, ByteArray>
 
+    /**
+     * Environment-fact manifest body — emitted for every loader
+     * environment whether or not the project declares `mod {}`
+     * metadata (hand-written metadata stays authoritative for
+     * [emit]'s documents, but attrs like `Fabric-Mapping-Namespace`
+     * and `MixinConfigs` describe the environment, not the mod's
+     * identity, and must not be skipped on manual-metadata projects).
+     * Implementations must not read `context.metadata.id` — it is
+     * null when `mod {}` is unconfigured.
+     */
+    fun emitManifest(context: EmitContext): ByteArray? = null
+
     companion object {
         /** Reserved [emit] key — manifest merge content, not a file. */
         const val MANIFEST_PATH = "META-INF/MANIFEST.MF"
@@ -157,7 +169,13 @@ interface ModMetadataEmitter {
         /** Dev namespace the environment compiles/runs against. */
         val devNamespace: String,
         /** Production namespaces the environment's artifacts remap to. */
-        val prodNamespaces: List<String>
+        val prodNamespaces: List<String>,
+        /** The resolved *named* namespaces of the environment's mapping
+         *  data — loaders emitting canonical namespace declarations
+         *  (`Fabric-Mapping-Namespace`) use this to classify prod
+         *  namespaces by role. The dev namespace itself is named-role
+         *  even when unflagged, so treat it as a member too. */
+        val namedNamespaces: Set<String> = emptySet()
     ) : Serializable
 
 }

@@ -13,10 +13,12 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
 import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.util.FabricNamespaces
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
@@ -97,6 +99,11 @@ abstract class GenerateModMetadataTask : DefaultTask() {
 
     @get:Input
     abstract val prodNamespaces: ListProperty<String>
+
+    /** The resolved *named* namespaces of the environment's mapping
+     *  data — fed to [ModMetadataEmitter.EmitContext.namedNamespaces]. */
+    @get:Input
+    abstract val namedNamespaces: SetProperty<String>
 
     /** Existing resource roots — scanned for emitted-path merges and
      *  discovered mixin/access files. */
@@ -216,76 +223,92 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             accessFile = accessOutputs.firstOrNull { it.declare }?.path
         }
 
-        // emitters require `id` — an unconfigured `mod {}` in a loader
-        // environment emits nothing so a manual metadata file stays
+        // loader envs emit env-fact manifest attrs unconditionally —
+        // they describe the environment, not the mod's identity; the
+        // metadata documents still require `id` — an unconfigured
+        // `mod {}` emits nothing so a manual metadata file stays
         // authoritative
-        if (loader != null && meta.id != null) {
+        if (loader != null) {
             val emitter = ModMetadataEmitterRegistry().select(loader)
 
             // hand-written mixin configs ship as resources but nothing
-            // references them — surface them to the emitter
+            // references them — surface them to the emitter (feeds
+            // `MixinConfigs` manifest attr even without mod {} DSL)
             val generatedNames = mixins.mapTo(HashSet()) { it.fileName }
             val discovered = ModMetadataScan.discoverMixinConfigs(
                 resourceDirs.files, exclude = generatedNames
             )
-            val mixinClassNames = mixins.flatMap { cfg ->
-                (cfg.mixins + cfg.client + cfg.server)
-                    .map { "${cfg.packageName}.$it" }
-            } + discovered.flatMap { it.second.classes }
 
-            val classDirs = classesDirs.files
             var interfaceInjections = emptyMap<String, List<String>>()
             var classTweakerRefs = emptyList<String>()
             var gametestEntrypoints = emptyList<String>()
             var clientGametestEntrypoints = emptyList<String>()
 
-            if (mixinClassNames.isNotEmpty() && classDirs.isNotEmpty()) {
-                val existing = ModMetadataScan.existingInterfaceRules(
-                    declaredAccessFiles.files + discoverAccessFiles()
-                )
-                interfaceInjections = ModMetadataScan.interfaceInjections(
-                    mixinClassNames, classDirs, existing
-                )
-                if (interfaceInjections.isNotEmpty()) {
-                    val ctPath = GENERATED_CT_PATH
-                    emitted[ctPath] = classTweakerText(
-                        interfaceInjections, devNamespace.get()
+            if (meta.id != null) {
+                // class-dir scans only matter for emitted docs — the
+                // classTweaker file's fmj declaration needs emit()
+                val mixinClassNames = mixins.flatMap { cfg ->
+                    (cfg.mixins + cfg.client + cfg.server)
+                        .map { "${cfg.packageName}.$it" }
+                } + discovered.flatMap { it.second.classes }
+
+                val classDirs = classesDirs.files
+                if (mixinClassNames.isNotEmpty() && classDirs.isNotEmpty()) {
+                    val existing = ModMetadataScan.existingInterfaceRules(
+                        declaredAccessFiles.files + discoverAccessFiles()
                     )
-                    classTweakerRefs = listOf(ctPath)
+                    interfaceInjections = ModMetadataScan.interfaceInjections(
+                        mixinClassNames, classDirs, existing
+                    )
+                    if (interfaceInjections.isNotEmpty()) {
+                        val ctPath = GENERATED_CT_PATH
+                        emitted[ctPath] = classTweakerText(
+                            interfaceInjections,
+                            FabricNamespaces.canonical(
+                                devNamespace.get(), namedNamespaces.get()
+                            )
+                        )
+                        classTweakerRefs = listOf(ctPath)
+                    }
+                }
+                emitter.gametestInterface?.let { iface ->
+                    gametestEntrypoints = ModMetadataScan.gametestClasses(
+                        classDirs, iface.replace('.', '/'),
+                        emitter.gametestAnnotation?.replace('.', '/')
+                    )
+                }
+                emitter.clientGametestInterface?.let { iface ->
+                    clientGametestEntrypoints = ModMetadataScan.gametestClasses(
+                        classDirs, iface.replace('.', '/')
+                    )
                 }
             }
-            emitter.gametestInterface?.let { iface ->
-                gametestEntrypoints = ModMetadataScan.gametestClasses(
-                    classDirs, iface.replace('.', '/'),
-                    emitter.gametestAnnotation?.replace('.', '/')
-                )
-            }
-            emitter.clientGametestInterface?.let { iface ->
-                clientGametestEntrypoints = ModMetadataScan.gametestClasses(
-                    classDirs, iface.replace('.', '/')
-                )
-            }
 
-            emitted += emitter.emit(
-                ModMetadataEmitter.EmitContext(
-                    metadata = meta,
-                    mixinFiles = mixins.map { it.fileName },
-                    discoveredMixinConfigs = discovered.map { it.first },
-                    gametestEntrypoints = gametestEntrypoints,
-                    clientGametestEntrypoints = clientGametestEntrypoints,
-                    interfaceInjections = interfaceInjections,
-                    classTweakerRefs = classTweakerRefs,
-                    accessFile = accessFile,
-                    accessFiles = accessOutputs.map { it.path },
-                    environmentId = environmentId.get(),
-                    minecraftVersion = minecraftVersion.get(),
-                    loaderVersion = loaderVersion.orNull,
-                    manifestAttributes = manifestAttributes.get(),
-                    side = side.get(),
-                    devNamespace = devNamespace.get(),
-                    prodNamespaces = prodNamespaces.get()
-                )
+            val ctx = ModMetadataEmitter.EmitContext(
+                metadata = meta,
+                mixinFiles = mixins.map { it.fileName },
+                discoveredMixinConfigs = discovered.map { it.first },
+                gametestEntrypoints = gametestEntrypoints,
+                clientGametestEntrypoints = clientGametestEntrypoints,
+                interfaceInjections = interfaceInjections,
+                classTweakerRefs = classTweakerRefs,
+                accessFile = accessFile,
+                accessFiles = accessOutputs.map { it.path },
+                environmentId = environmentId.get(),
+                minecraftVersion = minecraftVersion.get(),
+                loaderVersion = loaderVersion.orNull,
+                manifestAttributes = manifestAttributes.get(),
+                side = side.get(),
+                devNamespace = devNamespace.get(),
+                prodNamespaces = prodNamespaces.get(),
+                namedNamespaces = namedNamespaces.get()
             )
+            emitter.emitManifest(ctx)?.let {
+                emitted[ModMetadataEmitter.MANIFEST_PATH] = it
+            }
+            if (meta.id != null) {
+                emitted += emitter.emit(ctx)
+            }
         }
 
         // manifest-attr loaders (foxloader) emit their manifest body
@@ -297,7 +320,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         )
         Files.write(
             manifestFile.get().asFile.toPath(),
-            manifest ?: "Manifest-Version: 1.0\r\n\r\n".toByteArray()
+            stampUniminedMarkers(manifest)
         )
 
         // dev runs scan exploded classpath dirs, not jars — FML (modern
@@ -313,10 +336,10 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 dir.toPath().resolve(ModMetadataEmitter.MANIFEST_PATH)
                     .takeIf(Files::isRegularFile)
             }
-            var bytes = manifest
+            var bytes = stampUniminedMarkers(manifest)
             if (manualMf.isNotEmpty()) {
                 val mf = java.util.jar.Manifest(
-                    java.io.ByteArrayInputStream(manifest))
+                    java.io.ByteArrayInputStream(bytes))
                 for (f in manualMf) {
                     mf.mainAttributes.putAll(
                         Files.newInputStream(f).use {
@@ -529,8 +552,18 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         }
 
         val bytes = when (format) {
+            // header carries the loader-facing canonical label
+            // (`named` for named-role dev columns like `mojmap`);
+            // members were already resolved to the dev column above
             AccessFormatConvert.Format.AW ->
-                AccessFormatConvert.mergeAws(converted, devNs)
+                AccessFormatConvert.mergeAws(
+                    converted,
+                    Namespace(
+                        FabricNamespaces.canonical(
+                            devNs.name, namedNamespaces.get()
+                        )
+                    )
+                )
             else -> {
                 // AT-family: parse each converted doc and emit the union —
                 // ATData equality dedups cross-file repeats
@@ -622,5 +655,29 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             putJsonArray("server") { config.server.forEach { add(JsonPrimitive(it)) } }
         }
     }.toString().toByteArray()
+
+    /** Stamp unimined's provenance marker into a manifest body —
+     *  `Unimined-Version` identifies both that the jar came through
+     *  unimined's packaging and which release built it (the
+     *  `Fabric-Loom-Version` equivalent). `null` yields a bare
+     *  stamped manifest; unparseable bodies pass through unstamped.
+     *  The version resolves from this jar's `Implementation-Version`
+     *  (stamped by the build), `dev` when absent (tests). */
+    private fun stampUniminedMarkers(manifest: ByteArray?): ByteArray {
+        val mf = if (manifest == null) {
+            java.util.jar.Manifest().apply {
+                mainAttributes[java.util.jar.Attributes.Name.MANIFEST_VERSION] = "1.0"
+            }
+        } else {
+            runCatching {
+                java.util.jar.Manifest(java.io.ByteArrayInputStream(manifest))
+            }.getOrNull() ?: return manifest
+        }
+        mf.mainAttributes.putValue(
+            "Unimined-Version",
+            javaClass.`package`?.implementationVersion ?: "dev")
+        return java.io.ByteArrayOutputStream()
+            .also { mf.write(it) }.toByteArray()
+    }
 
 }

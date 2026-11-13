@@ -56,14 +56,29 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
             out["mcmod.info"] = mcmodInfo(meta, context)
         }
 
-        // manifest attrs — `MixinConfigs` is the mixin-config channel on
-        // every loader that lacks TOML `[[mixins]]` support (all forge
-        // versions, cleanroom, lexforge, and NeoForge <20.3); `FMLAT`
-        // names non-canonical access-transformer files on the legacy
-        // era; `FMLModType` is the user's jar-classification stamp.
-        // Env `manifestAttributes` merge last (user override wins).
+        emitManifest(context)?.let {
+            out[ModMetadataEmitter.MANIFEST_PATH] = it
+        }
+        return out
+    }
+
+    /**
+     * Manifest attrs — `MixinConfigs` is the mixin-config channel on
+     * every loader that lacks TOML `[[mixins]]` support (all forge
+     * versions, cleanroom, lexforge, and NeoForge <20.3); `FMLAT`
+     * names non-canonical access-transformer files on the legacy
+     * era; `FMLModType` is the user's jar-classification stamp.
+     * Env `manifestAttributes` merge last (user override wins).
+     * Env facts + discovered files only — `metadata.id` may be null
+     * (manual-metadata projects still need `MixinConfigs`).
+     */
+    override fun emitManifest(context: ModMetadataEmitter.EmitContext): ByteArray? {
+        val meta = context.metadata
+        val section = meta.sections[loader]
+        val mixinRefs = context.mixinFiles + context.discoveredMixinConfigs +
+                section?.mixinConfigs.orEmpty()
         val attrs = linkedMapOf<String, String>()
-        if (mixinRefs.isNotEmpty() && !tomlMixins) {
+        if (mixinRefs.isNotEmpty() && !tomlMixins(context)) {
             attrs["MixinConfigs"] = mixinRefs.joinToString(",")
         }
         section?.fmlModType?.let { attrs["FMLModType"] = it }
@@ -73,15 +88,12 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
             if (extra.isNotEmpty()) attrs["FMLAT"] = extra.joinToString(" ")
         }
         attrs.putAll(context.manifestAttributes)
-        if (attrs.isNotEmpty()) {
-            val mf = java.util.jar.Manifest()
-            mf.mainAttributes[java.util.jar.Attributes.Name.MANIFEST_VERSION] = "1.0"
-            attrs.forEach { (k, v) -> mf.mainAttributes.putValue(k, v) }
-            out[ModMetadataEmitter.MANIFEST_PATH] =
-                java.io.ByteArrayOutputStream()
-                    .also { mf.write(it) }.toByteArray()
-        }
-        return out
+        if (attrs.isEmpty()) return null
+        val mf = java.util.jar.Manifest()
+        mf.mainAttributes[java.util.jar.Attributes.Name.MANIFEST_VERSION] = "1.0"
+        attrs.forEach { (k, v) -> mf.mainAttributes.putValue(k, v) }
+        return java.io.ByteArrayOutputStream()
+            .also { mf.write(it) }.toByteArray()
     }
 
     private fun toml(

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import xyz.wagyourtail.unimined.api.util.FabricNamespaces
 import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
 
 /**
@@ -137,26 +138,43 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
         }
         val emitted = mutableMapOf(
             metadataFileName to json.toString().toByteArray())
-        // 1.x `jarTask.manifest` parity — fabric-family production jars
-        // carried fingerprint attrs; loader-contributed extras
-        // (`Calamus-Generation`, `Legacy-Fabric-Intermediary-Version`)
-        // merge verbatim
-        if (context.loaderVersion != null ||
-            context.manifestAttributes.isNotEmpty()
-        ) {
-            val attrs = buildList {
-                add("Manifest-Version" to "1.0")
-                add("Fabric-Minecraft-Version" to context.minecraftVersion)
-                context.loaderVersion?.let {
-                    add("Fabric-Loader-Version" to it)
-                }
-                context.manifestAttributes.forEach { (k, v) -> add(k to v) }
-            }
-            emitted[ModMetadataEmitter.MANIFEST_PATH] = attrs.joinToString(
-                "\r\n", postfix = "\r\n\r\n"
-            ) { (k, v) -> "$k: $v" }.toByteArray(Charsets.UTF_8)
+        emitManifest(context)?.let {
+            emitted[ModMetadataEmitter.MANIFEST_PATH] = it
         }
         return emitted
+    }
+
+    /**
+     * 1.x `jarTask.manifest` parity — fabric-family production jars
+     * carried fingerprint attrs; loader-contributed extras
+     * (`Calamus-Generation`, `Legacy-Fabric-Intermediary-Version`)
+     * merge verbatim. Env facts only — no `metadata` reads.
+     */
+    override fun emitManifest(context: ModMetadataEmitter.EmitContext): ByteArray? {
+        if (context.loaderVersion == null &&
+            context.manifestAttributes.isEmpty() &&
+            context.prodNamespaces.isEmpty()
+        ) return null
+        val attrs = buildList {
+            add("Manifest-Version" to "1.0")
+            add("Fabric-Minecraft-Version" to context.minecraftVersion)
+            context.loaderVersion?.let {
+                add("Fabric-Loader-Version" to it)
+            }
+            // the shipped artifact's namespace, in fabric's
+            // canonical official/intermediary/named vocabulary —
+            // single-prod-ns envs only (ambiguous otherwise, and
+            // absent is the safe default). devNamespace is
+            // named-role even when unflagged.
+            context.prodNamespaces.singleOrNull()?.let {
+                add("Fabric-Mapping-Namespace" to FabricNamespaces.canonical(
+                    it, context.namedNamespaces + context.devNamespace))
+            }
+            context.manifestAttributes.forEach { (k, v) -> add(k to v) }
+        }
+        return attrs.joinToString(
+            "\r\n", postfix = "\r\n\r\n"
+        ) { (k, v) -> "$k: $v" }.toByteArray(Charsets.UTF_8)
     }
 
 }

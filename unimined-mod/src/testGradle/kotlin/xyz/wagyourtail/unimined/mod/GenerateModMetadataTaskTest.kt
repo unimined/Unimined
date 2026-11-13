@@ -92,6 +92,25 @@ class GenerateModMetadataTaskTest {
     }
 
     @Test
+    fun `emitted AW header collapses internal dev ns to named`() {
+        // dev column `mojmap` is an internal name — the emitted
+        // loader-facing header must read `named` (canonical role)
+        val res = dir.resolve("resources")
+        val authored = write("authored.accesswidener",
+            "accessWidener\tv1\tnamed\naccessible\tclass\texample/Target\n",
+            res)
+        val t = task("fabric", listOf(authored), res)
+        t.devNamespace.set("mojmap")
+        t.namedNamespaces.set(setOf("mojmap"))
+        t.generate()
+
+        val text = dir.resolve("gen/testmod.accesswidener").readText()
+        assertTrue(text.startsWith("accessWidener\tv1\tnamed"),
+            "expected canonical named header, got: $text")
+        assertTrue(text.contains("example/Target"))
+    }
+
+    @Test
     fun `AW converts to AT at the forge canonical path`() {
         val authored = write("mod.accesswidener", aw, dir.resolve("src"))
         val t = task("testforge", listOf(authored))
@@ -162,6 +181,11 @@ class GenerateModMetadataTaskTest {
         assertTrue(mf.contains("Fabric-Minecraft-Version: 1.20.1"))
         assertTrue(mf.contains("Fabric-Loader-Version: 0.16.0"))
         assertTrue(mf.contains("Calamus-Generation: 2"))
+        // shipped-jar namespace + unimined provenance stamps
+        assertTrue(mf.contains("Fabric-Mapping-Namespace: official"),
+            "prod ns stamps as the mapping namespace:\n$mf")
+        assertTrue(mf.contains("Unimined-Version: "),
+            "provenance marker stamps from Implementation-Version:\n$mf")
     }
 
     @Test
@@ -226,6 +250,8 @@ class GenerateModMetadataTaskTest {
             "manual attrs fold into the generated manifest:\n$devMf")
         assertTrue(devMf.contains("FMLModType: LANGPROVIDER"),
             "generated attrs win over manual:\n$devMf")
+        assertTrue(devMf.contains("Unimined-Version:"),
+            "marker survives the manual manifest merge:\n$devMf")
         assertTrue(dir.resolve("gen.merged.txt").readText()
             .contains(manual.toAbsolutePath().toString()))
     }

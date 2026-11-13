@@ -74,6 +74,13 @@ manifests inside classpath *directories*, which is how exploded dev
 mods carry `FMLModType`/`MixinConfigs`/`FMLAT`. The file copy is
 excluded from the packed jar; the attrs ride the real manifest.
 
+Environment-fact attributes (`Fabric-Mapping-Namespace`,
+`MixinConfigs`, `FMLAT`, loader-version stamps, …) describe the
+environment, not your mod's identity, so they emit **even when
+`mod { }` is unconfigured** — a hand-written metadata file stays
+authoritative for the descriptor documents, but the manifest attrs
+still reach the jar and the dev classpath.
+
 Era-correct emission per forge-family loader:
 
 | Loader / MC | Mixin configs | Access transformers |

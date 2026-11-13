@@ -34,6 +34,19 @@ subprojects {
         archivesName.set(publishedName)
     }
 
+    // self-version plumbing — `Implementation-Version` in every module
+    // jar lets runtime code (e.g. GenerateModMetadataTask's
+    // `Unimined-Version` marker) recover which unimined produced an
+    // artifact without a generated constant
+    tasks.withType<Jar>().configureEach {
+        manifest {
+            attributes(
+                "Implementation-Title" to publishedName,
+                "Implementation-Version" to project.version.toString()
+            )
+        }
+    }
+
     val javaVersion = 17
 
     extensions.configure<JavaPluginExtension>("java") {

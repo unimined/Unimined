@@ -54,6 +54,8 @@ class FoxLoaderModMetadataEmitter : ModMetadataEmitter {
             section?.custom?.forEach { (key, value) ->
                 add(key to value.toString())
             }
+            // env-level attrs merge last — user override wins
+            context.manifestAttributes.forEach { (k, v) -> add(k to v) }
         }
         val body = attrs.joinToString(
             "\r\n", postfix = "\r\n\r\n"
@@ -61,6 +63,23 @@ class FoxLoaderModMetadataEmitter : ModMetadataEmitter {
         return mapOf(
             ModMetadataEmitter.MANIFEST_PATH to body.toByteArray(Charsets.UTF_8)
         )
+    }
+
+    /**
+     * The metadata-free slice: `For-FoxLoader-Version` is a
+     * loader requirement, not a mod claim, and env
+     * `manifestAttributes` pass through regardless — everything
+     * else here is metadata-driven and stays in [emit].
+     */
+    override fun emitManifest(context: ModMetadataEmitter.EmitContext): ByteArray? {
+        val attrs = buildList {
+            add("Manifest-Version" to "1.0")
+            add("For-FoxLoader-Version" to "*")
+            context.manifestAttributes.forEach { (k, v) -> add(k to v) }
+        }
+        return attrs.joinToString(
+            "\r\n", postfix = "\r\n\r\n"
+        ) { (k, v) -> "$k: $v" }.toByteArray(Charsets.UTF_8)
     }
 
 }

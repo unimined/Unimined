@@ -74,6 +74,7 @@ internal object ModPackagingWiring {
             t.side.set(environment.side.map { it.name })
             t.devNamespace.set(minecraft.devNamespace(environmentId))
             t.prodNamespaces.set(minecraft.modSourceNamespaces(environmentId))
+            t.namedNamespaces.set(minecraft.namedNamespaces(environmentId))
             // plain paths, not the live FileCollection — the generated
             // srcDir below would otherwise feed the task's own output back
             // as an input and self-depend

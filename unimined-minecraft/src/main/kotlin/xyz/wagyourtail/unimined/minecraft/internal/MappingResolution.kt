@@ -363,6 +363,24 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             }
         })
 
+    /** The resolved named (developer-facing) namespaces for
+     *  [environmentId] — the source-declared flag set
+     *  (`MappingData.namedNamespaces`), filtered to columns present in
+     *  the composed tree. Empty when nothing is flagged — the dev
+     *  namespace may still resolve to an unflagged last column, so
+     *  callers needing "the named role" should union devNamespace.
+     *  Evaluated lazily. */
+    internal fun namedNamespaces(environmentId: String): Provider<Set<String>> =
+        providers.provider {
+            val environment = ext.sourceSet(environmentId)
+            val data = mappingDataProvider(environment).orNull
+                ?: return@provider emptySet()
+            val tree = data.view(MappingTree::class.java)
+                ?: return@provider emptySet()
+            val present = tree.namespaces.mapTo(HashSet()) { it.name }
+            data.namedNamespaces().filterTo(LinkedHashSet()) { it in present }
+        }
+
     /** The raw artifact's namespace for [environmentId] — the resolved
      *  mapping tree's first namespace. Evaluated lazily. */
     internal fun sourceNamespace(environmentId: String): Provider<String> =
