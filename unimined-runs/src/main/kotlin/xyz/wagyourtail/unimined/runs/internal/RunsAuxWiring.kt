@@ -38,7 +38,7 @@ internal object RunsAuxWiring {
             // other envs' runs.all callbacks yet (same reason the
             // auto client/server runs record runEnvironments eagerly)
             extension.runEnvironments[runName] = dataEnv.environmentId
-            if (descriptor?.capabilities?.get("datagenMain") == null) {
+            if (descriptor?.capabilities?.get("datagenMain") == null && (descriptor?.capabilities?.get("datagenArgs") == null || descriptor?.capabilities?.get("datagenJvmArgs") == null)) {
                 project.logger.warn(
                     "[unimined] env '${dataEnv.environmentId}' declares " +
                     "datagen() but loader " +
@@ -61,6 +61,18 @@ internal object RunsAuxWiring {
                                 modIdArg(project, environment.environmentId, resolved))
                         } else {
                             run.programArgs.add(resolved)
+                        }
+                    }
+                }
+                descriptor?.capabilities?.get("datagenJvmArgs")?.let { tpl ->
+                    tpl.split(" ").forEach { arg ->
+                        val resolved = arg.replace("{output}",
+                            "src/${environment.environmentId}/generated")
+                        if ("{modid}" in resolved) {
+                            run.jvmArgs.add(
+                                modIdArg(project, environment.environmentId, resolved))
+                        } else {
+                            run.jvmArgs.add(resolved)
                         }
                     }
                 }
