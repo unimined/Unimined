@@ -32,3 +32,24 @@ kotlin {
         }
     }
 }
+
+// exempted from the root subprojects convention (Gradle-free KMP lib),
+// so the WagYourMaven repo is declared here — without it `publish`
+// is a silent no-op and unimined-runs' dep 404s on the remote
+publishing {
+    repositories {
+        maven {
+            name = "WagYourMaven"
+            url = uri(
+                "https://maven.wagyourtail.xyz/" +
+                        if (project.hasProperty("version_snapshot")) "snapshots/" else "releases/"
+            )
+            credentials {
+                username = (findProperty("mvn.user") as String?)
+                    ?: providers.environmentVariable("USERNAME").orNull
+                password = (findProperty("mvn.key") as String?)
+                    ?: providers.environmentVariable("TOKEN").orNull
+            }
+        }
+    }
+}
