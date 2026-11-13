@@ -146,8 +146,11 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             )
             // 1.x parity: the dev jar's annotation surface is jetbrains
             // (RemapStepSpec.jsr305ToJetbrains, default on) but modern
-            // MC ships neither annotation lib in its version manifest
-            deps.add(project.dependencies.create("org.jetbrains:annotations:24.0.1"))
+            // MC ships neither annotation lib in its version manifest —
+            // the stub repo serves it for repo-less consumers
+            deps.add(project.dependencies.create(
+                "org.jetbrains:annotations:${LocalStubRepo.JETBRAINS_ANNOTATIONS_VERSION}"
+            ))
         }
         // the provider-declared lib set only — no user/transform
         // contributions (client-extra & co carry the raw-artifact

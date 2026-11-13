@@ -259,20 +259,24 @@ class MinecraftExtensionTest {
         ext.sourceSet("fabric").combineWith("main")
 
         val mainOutput = sourceSets.getByName("main").output.files
-        // compile classpath carries classesDirs only — resources on
-        // the compile classpath can cycle through processResources
-        // consumers (e.g. generateModMetadata → aux-env compiles)
-        assertEquals(
-            sourceSets.getByName("main").output.classesDirs.files,
-            project.configurations.getByName(
-                fabricSourceSet.compileClasspathConfigurationName
-            ).files
-        )
-        assertEquals(
-            mainOutput,
+        val fabricCompileFiles = project.configurations.getByName(
+            fabricSourceSet.compileClasspathConfigurationName
+        ).files
+        // compile classpath carries classesDirs — library deps ride
+        // alongside; resource dirs stay off it since processResources
+        // consumers can cycle (e.g. generateModMetadata → compiles)
+        assertTrue(fabricCompileFiles.containsAll(
+            sourceSets.getByName("main").output.classesDirs.files
+        ))
+        assertTrue(fabricCompileFiles.none {
+            it == sourceSets.getByName("main").output.resourcesDir
+        })
+        // runtime classpath legitimately carries library deps too —
+        // outputs must all be present, nothing may be missing
+        assertTrue(
             project.configurations.getByName(
                 fabricSourceSet.runtimeClasspathConfigurationName
-            ).files
+            ).files.containsAll(mainOutput)
         )
         assertEquals(
             mainOutput,
@@ -323,12 +327,20 @@ class MinecraftExtensionTest {
             commonOutput,
             fabric.combinedOutputs.files
         )
-        assertEquals(
+        val fabricCompileFiles = consumer.configurations
+            .getByName("fabricCompileClasspath").files
+        // classesDirs make it across the project boundary; library deps
+        // ride alongside, resource dirs stay off the compile classpath
+        assertTrue(fabricCompileFiles.containsAll(
             common.extensions.getByType(
                 org.gradle.api.tasks.SourceSetContainer::class.java
-            ).getByName("main").output.classesDirs.files,
-            consumer.configurations.getByName("fabricCompileClasspath").files
-        )
+            ).getByName("main").output.classesDirs.files
+        ))
+        assertTrue(fabricCompileFiles.none {
+            it == common.extensions.getByType(
+                org.gradle.api.tasks.SourceSetContainer::class.java
+            ).getByName("main").output.resourcesDir
+        })
     }
 
     @Test
