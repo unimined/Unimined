@@ -61,4 +61,4 @@ you can either re-create a unimined build from a standard gradle project or,
 
 ### third party template (s)
 
-- arch style: https://github.com/firstdarkdev/fdd-xplat or https://github.com/LegacyModdingMC/examplemod
+- *(out of date — check back later)*

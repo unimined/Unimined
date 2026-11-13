@@ -276,6 +276,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                     interfaceInjections = interfaceInjections,
                     classTweakerRefs = classTweakerRefs,
                     accessFile = accessFile,
+                    accessFiles = accessOutputs.map { it.path },
                     environmentId = environmentId.get(),
                     minecraftVersion = minecraftVersion.get(),
                     loaderVersion = loaderVersion.orNull,
@@ -299,9 +300,43 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             manifest ?: "Manifest-Version: 1.0\r\n\r\n".toByteArray()
         )
 
+        // dev runs scan exploded classpath dirs, not jars — FML (modern
+        // SecureJar and legacy CoreModManager alike) parses
+        // META-INF/MANIFEST.MF inside classpath directories, so the
+        // emitted manifest body also lands in generated resources where
+        // runClient/runServer see FMLModType/MixinConfigs/FMLAT. Jar-side
+        // the same body rides manifestFile -> jar.manifest merge; the
+        // packaging wiring excludes this file copy from the packed jar.
+        val out = outputDir.get().asFile.toPath()
+        if (manifest != null) {
+            val manualMf = resourceDirs.files.mapNotNull { dir ->
+                dir.toPath().resolve(ModMetadataEmitter.MANIFEST_PATH)
+                    .takeIf(Files::isRegularFile)
+            }
+            var bytes = manifest
+            if (manualMf.isNotEmpty()) {
+                val mf = java.util.jar.Manifest(
+                    java.io.ByteArrayInputStream(manifest))
+                for (f in manualMf) {
+                    mf.mainAttributes.putAll(
+                        Files.newInputStream(f).use {
+                            java.util.jar.Manifest(it).mainAttributes
+                        })
+                    mergedSources += f.toAbsolutePath().toString()
+                }
+                // generated (DSL) attrs stay authoritative over manual
+                mf.mainAttributes.putAll(java.util.jar.Manifest(
+                    java.io.ByteArrayInputStream(manifest)).mainAttributes)
+                bytes = java.io.ByteArrayOutputStream()
+                    .also { mf.write(it) }.toByteArray()
+            }
+            val target = out.resolve(ModMetadataEmitter.MANIFEST_PATH)
+            Files.createDirectories(target.parent)
+            Files.write(target, bytes)
+        }
+
         // merge emitted files into matching manual resources; record
         // every merged source path so processResources drops them
-        val out = outputDir.get().asFile.toPath()
         for ((path, content) in emitted) {
             val matches = resourceDirs.files.mapNotNull { dir ->
                 val f = dir.toPath().resolve(path)

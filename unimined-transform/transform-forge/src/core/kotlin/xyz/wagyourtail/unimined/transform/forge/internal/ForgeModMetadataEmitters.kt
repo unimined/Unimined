@@ -35,17 +35,51 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
         return mc.firstOrNull()?.let { it in charArrayOf('a', 'b', 'c', 'i') } == true
     }
 
+    /** Whether this loader's TOML descriptor carries `[[mixins]]` —
+     *  a NeoForge-only feature (20.3+); Forge-family loaders ignore the
+     *  table entirely and register mixin configs from the jar
+     *  manifest's `MixinConfigs` attribute instead. */
+    protected open fun tomlMixins(context: ModMetadataEmitter.EmitContext) = false
+
     override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
         val meta = context.metadata
         val out = mutableMapOf<String, ByteArray>()
         val section = meta.sections[loader]
-        val mixinRefs = context.mixinFiles + section?.mixinConfigs.orEmpty()
+        val mixinRefs = context.mixinFiles + context.discoveredMixinConfigs +
+                section?.mixinConfigs.orEmpty()
+        val tomlMixins = tomlMixins(context)
 
         if (!legacyEra(context.minecraftVersion)) {
-            out["META-INF/$tomlFileName"] = toml(meta, mixinRefs, context)
+            out["META-INF/$tomlFileName"] = toml(meta, mixinRefs, context, tomlMixins)
         }
         if (legacyInfo) {
             out["mcmod.info"] = mcmodInfo(meta, context)
+        }
+
+        // manifest attrs — `MixinConfigs` is the mixin-config channel on
+        // every loader that lacks TOML `[[mixins]]` support (all forge
+        // versions, cleanroom, lexforge, and NeoForge <20.3); `FMLAT`
+        // names non-canonical access-transformer files on the legacy
+        // era; `FMLModType` is the user's jar-classification stamp.
+        // Env `manifestAttributes` merge last (user override wins).
+        val attrs = linkedMapOf<String, String>()
+        if (mixinRefs.isNotEmpty() && !tomlMixins) {
+            attrs["MixinConfigs"] = mixinRefs.joinToString(",")
+        }
+        section?.fmlModType?.let { attrs["FMLModType"] = it }
+        if (legacyEra(context.minecraftVersion)) {
+            val canonical = accessPath?.replace("{modid}", meta.id ?: "mod")
+            val extra = context.accessFiles.filterNot { it == canonical }
+            if (extra.isNotEmpty()) attrs["FMLAT"] = extra.joinToString(" ")
+        }
+        attrs.putAll(context.manifestAttributes)
+        if (attrs.isNotEmpty()) {
+            val mf = java.util.jar.Manifest()
+            mf.mainAttributes[java.util.jar.Attributes.Name.MANIFEST_VERSION] = "1.0"
+            attrs.forEach { (k, v) -> mf.mainAttributes.putValue(k, v) }
+            out[ModMetadataEmitter.MANIFEST_PATH] =
+                java.io.ByteArrayOutputStream()
+                    .also { mf.write(it) }.toByteArray()
         }
         return out
     }
@@ -53,7 +87,8 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
     private fun toml(
         meta: xyz.wagyourtail.unimined.mod.ModMetadata,
         mixinRefs: List<String>,
-        context: ModMetadataEmitter.EmitContext
+        context: ModMetadataEmitter.EmitContext,
+        tomlMixins: Boolean
     ): ByteArray = buildString {
         appendLine("modLoader=\"javafml\"")
         appendLine("loaderVersion=\"[1,)\"")
@@ -70,10 +105,12 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
         appendLine("version=\"${meta.version ?: "0.0.0"}\"")
         meta.name?.let { appendLine("displayName=\"$it\"") }
         appendLine()
-        for (ref in mixinRefs) {
-            appendLine("[[mixins]]")
-            appendLine("config=\"$ref\"")
-            appendLine()
+        if (tomlMixins) {
+            for (ref in mixinRefs) {
+                appendLine("[[mixins]]")
+                appendLine("config=\"$ref\"")
+                appendLine()
+            }
         }
         for ((dep, range) in meta.depends) {
             appendLine("[[dependencies.${meta.id}]]")
@@ -123,11 +160,21 @@ class LexforgeModMetadataEmitter : ForgeFamilyMetadataEmitter() {
 }
 
 /** `loader("neoforge")` — `META-INF/neoforge.mods.toml`, no mcmod.info
- *  (NeoForge never ran on pre-1.13 MC). */
+ *  (NeoForge never ran on pre-1.13 MC). `[[mixins]]` in the toml is
+ *  supported since NeoForge 20.3; earlier versions (20.2, MC 1.20.2)
+ *  still register via the `MixinConfigs` manifest attribute. */
 class NeoforgeModMetadataEmitter : ForgeFamilyMetadataEmitter() {
     override val loader = "neoforge"
     override val tomlFileName = "neoforge.mods.toml"
     override val legacyInfo = false
+
+    override fun tomlMixins(context: ModMetadataEmitter.EmitContext): Boolean {
+        val v = context.loaderVersion ?: return false
+        val parts = v.split('.', '-', '+')
+        val major = parts.getOrNull(0)?.toIntOrNull() ?: return false
+        val minor = parts.getOrNull(1)?.toIntOrNull() ?: return false
+        return major > 20 || (major == 20 && minor >= 3)
+    }
 }
 
 /** `loader("cleanroom")` — same files as forge. */

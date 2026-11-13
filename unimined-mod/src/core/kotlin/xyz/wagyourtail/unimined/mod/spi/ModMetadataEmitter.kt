@@ -133,6 +133,11 @@ interface ModMetadataEmitter {
          * emitted.
          */
         val accessFile: String? = null,
+        /** Jar-relative paths of EVERY converted access file the host
+         *  emitted for this environment — canonical + custom-output
+         *  overrides. Manifest-attribute emitters list them where the
+         *  loader's convention requires it (legacy `FMLAT`). */
+        val accessFiles: List<String> = emptyList(),
         /** Owning environment id (the source-set name). */
         val environmentId: String,
         /** Environment's Minecraft version. */

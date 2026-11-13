@@ -83,6 +83,25 @@ launch-property substitution (game_directory, auth_*, classpath, …)
 plus `{modid}` — resolved against `mod { id }` at run time (e.g.
 fabric gametest's `-Dfabric.client.gametest.modid={modid}`).
 
+## Dev-time manifest attributes
+
+Dev runs launch *exploded* output dirs, not a jar — but FML (modern
+`SecureJar` and legacy `CoreModManager`) parses `META-INF/MANIFEST.MF`
+inside classpath **directories**, so manifest attrs still apply.
+`generate<Env>ModMetadata` writes the emitted manifest body into
+generated resources (`build/generated/unimined/mod/<env>`), which the
+source set packs into the resources output — `runClient`/`runServer`
+classify the env's output with `FMLModType`, `MixinConfigs`, `FMLAT`,
+`TweakClass`, … exactly like the built jar. To test a non-`MOD`
+classification in dev, set `mod { loader("forge") { fmlModType("LANGPROVIDER") } }`
+— the attribute reaches both the dev classpath and the shipped jar
+from one declaration.
+
+Loader dev-mode flags are wired per-loader: fabric-family runs get
+`-Dloader.development=true`/`fabric.development` (and quilt's
+`loader.development`) from the env wiring — no run-config edits
+needed. Anything else is ordinary `jvmArgs`/`environmentVariables`.
+
 ## Dry-run
 
 `-Punimined.run.dryRun` prints the assembled launch (main class,

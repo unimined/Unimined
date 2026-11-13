@@ -163,6 +163,11 @@ internal object ModPackagingWiring {
             Jar::class.java
         ) { jar ->
             jar.manifest.from(manifestOut)
+            // generated resources carry META-INF/MANIFEST.MF for the
+            // dev classpath (exploded-dir FML scan) — the packed jar
+            // gets those attrs through the manifest merge above, so
+            // the file copy itself must not ship as an entry
+            jar.exclude("META-INF/MANIFEST.MF")
             jar.dependsOn(task)
         }
 

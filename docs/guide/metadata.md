@@ -18,6 +18,10 @@ mods.toml, …) at build time:
 - `loader("fabric") { }` / `fabric { }` — loader-specific sections
   (entrypoints, extra keys)
 - `mixins { create("name") { } }` — generated `*.mixins.json` configs
+- `fmlModType("LANGPROVIDER")` inside a forge-family `loader` section —
+  stamps the jar's `FMLModType` manifest attribute (`MOD`/`LIBRARY`/
+  `GAMELIBRARY`/`LANGPROVIDER`/`CUSTOM`) for jarjar-layer
+  classification; unset leaves FML's own locator discovery in charge
 
 `--metadata dsl` on the CLI emits this block instead of hardcoding
 values in the loader descriptor.
@@ -59,6 +63,32 @@ Because generation needs compiled classes, it cannot feed the
 project's own compile classpath — casts against injected interfaces
 in first-party sources still need a manual rule. Dependents and the
 runtime packaging are covered automatically.
+
+## Manifest attributes
+
+Manifest-attribute loaders emit a manifest body merged into the env
+jar via `jar.manifest.from(...)`. The same body also lands in
+generated resources (`META-INF/MANIFEST.MF`) so **dev runs see it** —
+FML (modern `SecureJar` and legacy `CoreModManager` alike) parses
+manifests inside classpath *directories*, which is how exploded dev
+mods carry `FMLModType`/`MixinConfigs`/`FMLAT`. The file copy is
+excluded from the packed jar; the attrs ride the real manifest.
+
+Era-correct emission per forge-family loader:
+
+| Loader / MC | Mixin configs | Access transformers |
+|---|---|---|
+| `forge`/`lexforge` (all) | `MixinConfigs` manifest attr — `mods.toml` has no `[[mixins]]` table | `META-INF/accesstransformer.cfg` auto-detected |
+| `neoforge` ≥ 20.3 | `[[mixins]]` in `neoforge.mods.toml` (better errors) | same |
+| `neoforge` < 20.3 | `MixinConfigs` manifest attr | same |
+| `cleanroom` / legacy ≤1.12.2 | `MixinConfigs` manifest attr | canonical cfg auto-detected; non-canonical outputs additionally listed under `FMLAT` |
+
+Loader-contributed extras merge verbatim: `environment.manifestAttributes`
+(env channel — e.g. `manifestAttributes["FMLModType"] = "LANGPROVIDER"`
+or ornithe's `Calamus-Generation`) plus emitter attrs
+(`Fabric-Loader-Version`, …). A hand-written
+`src/.../META-INF/MANIFEST.MF` folds its attributes into the generated
+manifest — generated values win on conflict — rather than colliding.
 
 ## Datagen and gametest envs
 

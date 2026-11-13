@@ -165,6 +165,72 @@ class GenerateModMetadataTaskTest {
     }
 
     @Test
+    fun `emitted manifest also lands in generated resources for the dev classpath`() {
+        // exploded-dir FML scan reads META-INF/MANIFEST.MF inside
+        // classpath directories — the manifest body must reach the dev
+        // output dir, not only the jar's manifest merge
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.toFile()).build()
+        val t = project.tasks.register(
+            "genModMetadata", GenerateModMetadataTask::class.java).get()
+        t.metadata.set(meta)
+        t.mixinConfigs.set(emptyList())
+        t.loaderName.set("fabric")
+        t.environmentId.set("main")
+        t.auxEnv.set(false)
+        t.minecraftVersion.set("1.20.1")
+        t.side.set("CLIENT")
+        t.devNamespace.set("named")
+        t.prodNamespaces.set(listOf("official"))
+        t.manifestAttributes.set(mapOf("FMLModType" to "LANGPROVIDER"))
+        t.outputDir.set(dir.resolve("gen").toFile())
+        t.manifestFile.set(dir.resolve("gen.mf").toFile())
+        t.mergedPathsFile.set(dir.resolve("gen.merged.txt").toFile())
+        t.generate()
+
+        val devMf = dir.resolve("gen/META-INF/MANIFEST.MF")
+        assertTrue(Files.isRegularFile(devMf),
+            "manifest must reach the dev classpath output dir")
+        assertTrue(devMf.readText().contains("FMLModType: LANGPROVIDER"))
+        assertTrue(dir.resolve("gen.mf").readText()
+            .contains("FMLModType: LANGPROVIDER"))
+    }
+
+    @Test
+    fun `manual manifest resource merges generated attrs, generated wins`() {
+        val res = dir.resolve("resources")
+        val manual = write("META-INF/MANIFEST.MF",
+            "Manifest-Version: 1.0\r\nManual-Attr: keep\r\nFMLModType: MOD\r\n\r\n", res)
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.toFile()).build()
+        val t = project.tasks.register(
+            "genModMetadata", GenerateModMetadataTask::class.java).get()
+        t.metadata.set(meta)
+        t.mixinConfigs.set(emptyList())
+        t.loaderName.set("fabric")
+        t.environmentId.set("main")
+        t.auxEnv.set(false)
+        t.minecraftVersion.set("1.20.1")
+        t.side.set("CLIENT")
+        t.devNamespace.set("named")
+        t.prodNamespaces.set(listOf("official"))
+        t.manifestAttributes.set(mapOf("FMLModType" to "LANGPROVIDER"))
+        t.resourceDirs.from(res.toFile())
+        t.outputDir.set(dir.resolve("gen").toFile())
+        t.manifestFile.set(dir.resolve("gen.mf").toFile())
+        t.mergedPathsFile.set(dir.resolve("gen.merged.txt").toFile())
+        t.generate()
+
+        val devMf = dir.resolve("gen/META-INF/MANIFEST.MF").readText()
+        assertTrue(devMf.contains("Manual-Attr: keep"),
+            "manual attrs fold into the generated manifest:\n$devMf")
+        assertTrue(devMf.contains("FMLModType: LANGPROVIDER"),
+            "generated attrs win over manual:\n$devMf")
+        assertTrue(dir.resolve("gen.merged.txt").readText()
+            .contains(manual.toAbsolutePath().toString()))
+    }
+
+    @Test
     fun `accessFile override emits at custom path outside the canonical merge`() {
         val custom = write("custom_at.cfg", at, dir.resolve("src"))
         val declared = write("mod.accesswidener", aw, dir.resolve("src"))

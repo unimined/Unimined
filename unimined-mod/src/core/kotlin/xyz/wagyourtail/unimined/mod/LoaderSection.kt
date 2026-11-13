@@ -28,6 +28,14 @@ open class LoaderSection : Serializable {
     /** Loader metadata environment override (`*`/`client`/`server`). */
     var environment: String? = null
 
+    /** `FMLModType` manifest attribute stamped on the built jar AND the
+     *  exploded dev-classpath output — declares the jar's FML layer
+     *  (`MOD`/`LIBRARY`/`GAMELIBRARY`/`LANGPROVIDER`/`CUSTOM`) without
+     *  `mods.toml` driving it. jarjar-era loaders only (neoforge,
+     *  modern forge); unset leaves FML's own locator classification in
+     *  charge. Ignored by loaders that never emit a manifest body. */
+    var fmlModType: String? = null
+
     /** Arbitrary loader-specific metadata keys, emitted verbatim. */
     val custom: MutableMap<String, Serializable> = linkedMapOf()
 
@@ -49,9 +57,14 @@ open class LoaderSection : Serializable {
         accessWidener = path
     }
 
-    /** Loader-specific environment (`*`, `client`, `server`). */
+    /** Loader-specific environment (`*`, `client`/`server`). */
     fun environment(value: String) {
         environment = value
+    }
+
+    /** Declare this jar's `FMLModType` (see [fmlModType]). */
+    fun fmlModType(value: String) {
+        fmlModType = value
     }
 
     /** Emit an arbitrary key/value pair into this loader's metadata. */
