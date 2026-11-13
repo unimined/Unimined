@@ -1393,6 +1393,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-the-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting the CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#generation-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1446,6 +1457,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-the-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting the CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#generation-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1479,6 +1501,29 @@
 <h1 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h1>
 <p><code>unimined new &lt;name&gt;</code> / <code>unimined init</code> — generate a modding
 environment for any MC version.</p>
+<h2 id="getting-the-cli">Getting the CLI<a class="headerlink" href="#getting-the-cli" title="Permanent link">&para;</a></h2>
+<p>Each release ships two runnable builds — pick by platform:</p>
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unimined-cli.kexe</code> (GitHub release asset)</td>
+<td><code>./unimined-cli.kexe new mymod</code> — self-contained Linux x64 native binary</td>
+</tr>
+<tr>
+<td><code>unimined-cli-node.zip</code> (GH release asset)</td>
+<td>unzip, <code>node unimined-cli.js new mymod</code> — needs Node.js</td>
+</tr>
+</tbody>
+</table>
+<p>On other platforms, build the JVM fat jar from source:
+<code>./gradlew :unimined-cli:fatJar</code> →
+<code>java -jar unimined-cli/build/libs/unimined-cli-fat.jar new mymod</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>new &lt;name&gt;  — generate a project in ./&lt;name&gt;
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>init        — generate in the current directory
 </code></pre></div>
