@@ -856,6 +856,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dev-time-manifest-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev-time manifest attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dry-run" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1558,6 +1569,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dev-time-manifest-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev-time manifest attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dry-run" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1759,6 +1781,22 @@ artifact with your remapped mod jar — the shipped-runtime check
 launch-property substitution (game_directory, auth_*, classpath, …)
 plus <code>{modid}</code> — resolved against <code>mod { id }</code> at run time (e.g.
 fabric gametest's <code>-Dfabric.client.gametest.modid={modid}</code>).</p>
+<h2 id="dev-time-manifest-attributes">Dev-time manifest attributes<a class="headerlink" href="#dev-time-manifest-attributes" title="Permanent link">&para;</a></h2>
+<p>Dev runs launch <em>exploded</em> output dirs, not a jar — but FML (modern
+<code>SecureJar</code> and legacy <code>CoreModManager</code>) parses <code>META-INF/MANIFEST.MF</code>
+inside classpath <strong>directories</strong>, so manifest attrs still apply.
+<code>generate&lt;Env&gt;ModMetadata</code> writes the emitted manifest body into
+generated resources (<code>build/generated/unimined/mod/&lt;env&gt;</code>), which the
+source set packs into the resources output — <code>runClient</code>/<code>runServer</code>
+classify the env's output with <code>FMLModType</code>, <code>MixinConfigs</code>, <code>FMLAT</code>,
+<code>TweakClass</code>, … exactly like the built jar. To test a non-<code>MOD</code>
+classification in dev, set <code>mod { loader("forge") { fmlModType("LANGPROVIDER") } }</code>
+— the attribute reaches both the dev classpath and the shipped jar
+from one declaration.</p>
+<p>Loader dev-mode flags are wired per-loader: fabric-family runs get
+<code>-Dloader.development=true</code>/<code>fabric.development</code> (and quilt's
+<code>loader.development</code>) from the env wiring — no run-config edits
+needed. Anything else is ordinary <code>jvmArgs</code>/<code>environmentVariables</code>.</p>
 <h2 id="dry-run">Dry-run<a class="headerlink" href="#dry-run" title="Permanent link">&para;</a></h2>
 <p><code>-Punimined.run.dryRun</code> prints the assembled launch (main class,
 args, classpath) instead of exec'ing — the quickest way to inspect

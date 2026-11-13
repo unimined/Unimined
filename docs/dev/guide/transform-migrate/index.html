@@ -756,10 +756,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#transform-hooks" class="md-nav__link">
+  <a href="#transform" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Transform hooks
+        Transform
       
     </span>
   </a>
@@ -774,6 +774,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Migrate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task knobs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1459,10 +1487,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#transform-hooks" class="md-nav__link">
+  <a href="#transform" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Transform hooks
+        Transform
       
     </span>
   </a>
@@ -1477,6 +1505,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Migrate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task knobs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1501,14 +1557,154 @@
 
 
 <h1 id="transform-migrate">Transform &amp; Migrate<a class="headerlink" href="#transform-migrate" title="Permanent link">&para;</a></h1>
-<h2 id="transform-hooks">Transform hooks<a class="headerlink" href="#transform-hooks" title="Permanent link">&para;</a></h2>
-<p><code>unimined { transform { } }</code> wires environment transforms — jar merge,
-access transforms/wideners, patch application — the surface the
-<code>transform-*</code> modules plug into.</p>
+<h2 id="transform">Transform<a class="headerlink" href="#transform" title="Permanent link">&para;</a></h2>
+<p><code>unimined { transform { } }</code> is the environment-transform surface the
+<code>transform-*</code> modules plug into — each loader module (forge, fabric,
+jarmod, bukkit, …) registers its pipeline here, and you can hang
+project-local steps on the same hooks.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="c1">// every environment</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">transformer</span><span class="p">(</span><span class="n">MyTransformer</span><span class="p">())</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="c1">// one environment's source-set spec</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">            </span><span class="n">transformer</span><span class="p">(</span><span class="n">EnvOnlyTransformer</span><span class="p">())</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">            </span><span class="n">decorator</span><span class="p">(</span><span class="n">LogOutputDecorator</span><span class="p">())</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="c1">// run-time transform behaviour for a specific run config</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="n">transformRun</span><span class="p">(</span><span class="s">"client"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">}</span>
+</code></pre></div>
+<p>Per environment (<code>sourceSet("&lt;env&gt;") { }</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Knob</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>transformer(t)</code></td>
+<td>append a <code>MinecraftTransformer</code> to the env's jar pipeline</td>
+</tr>
+<tr>
+<td><code>decorator(d)</code></td>
+<td>append a <code>TransformDecorator</code> (log/observe the pipeline)</td>
+</tr>
+<tr>
+<td><code>nestedJars { }</code></td>
+<td>jar-in-jar packaging — see <a href="../dependencies/#jar-in-jar-include">Dependencies</a></td>
+</tr>
+<tr>
+<td><code>features { }</code></td>
+<td>feature flags the env's pipeline consults</td>
+</tr>
+</tbody>
+</table>
+<p>Transformer execution is lazy: each registered transformer becomes a
+Gradle task in the env's chain (<code>prod-&lt;jarTask&gt;</code> → <code>remap&lt;JarTask&gt;</code>),
+with inputs wired through providers so the pipeline stays
+configuration-cache safe.</p>
+<p>Most projects never touch this — loaders wire their own transforms
+(patch apply, userdev pipeline, jar merge) and mod packaging lives in
+<a href="../metadata/">Mod Metadata</a> + <code>remap { }</code> steps
+(<a href="../remap-pipeline/">Remap Pipeline</a>).</p>
 <h2 id="migrate">Migrate<a class="headerlink" href="#migrate" title="Permanent link">&para;</a></h2>
-<p><code>unimined { migrate { } }</code> and <code>migrateMappings(env) { }</code> handle
-updating a project across MC/mappings versions — re-emitting sources,
-moving mappings forward, and fixing up entrypoints for API changes.</p>
+<p><code>unimined { migrate { } }</code> registers <code>migrateMappings</code> — the loom
+<code>migrateMappings</code> equivalent: rewrite your sources onto a different
+mappings release (or a different mapping family) in one pass.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">migrate</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="n">migrateMappings</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">            </span><span class="n">target</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">                </span><span class="n">yarn</span><span class="p">(</span><span class="s">"1.20.2"</span><span class="p">,</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w">      </span><span class="c1">// any mappings {} verb works here</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">migrate</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">migrateMappings</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">            </span><span class="n">target</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">                </span><span class="n">yarn</span><span class="o">(</span><span class="s2">"1.20.2"</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Then:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>migrateMappings<span class="w">          </span><span class="c1"># main env</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>./gradlew<span class="w"> </span>migrateMappingsFabric<span class="w">    </span><span class="c1"># a non-main env</span>
+</code></pre></div>
+<p>Migrated sources land in <code>remappedSrc/</code> — outside <code>src/</code> so they
+can't become an accidental source root. Non-code files copy verbatim;
+rewrites are reported per file and unmapped references come out as
+warnings, not failures.</p>
+<h3 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>The task <strong>grafts</strong> your environment's resolved mapping tree onto the
+target tree through a shared namespace, producing a direct
+<code>devNamespace -&gt; target</code> mapping, then runs a source remapper over
+<code>allSource</code>. The bridge namespace is picked in order:</p>
+<ol>
+<li><code>bridgeNamespace.set("...")</code> if you set it</li>
+<li>the env's production (<code>modSourceNamespaces</code>) namespaces</li>
+<li><code>intermediary</code>, then <code>official</code></li>
+<li>any other namespace the two trees share</li>
+</ol>
+<p>If the trees share nothing it fails listing the candidates — pick
+compatible mappings or set <code>bridgeNamespace</code> explicitly. The target
+column is auto-detected (<code>named</code>/<code>mojmap</code>/<code>yarn</code>/<code>mcp</code>, else last);
+override with <code>targetDevNamespace</code> when the target carries several.</p>
+<h3 id="task-knobs">Task knobs<a class="headerlink" href="#task-knobs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Knob</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target { }</code></td>
+<td>target mappings — the full <code>mappings { }</code> DSL (<code>yarn(...)</code>, <code>mcp(...)</code>, <code>maven(...)</code>, <code>builtin(...)</code>, <code>file(...)</code>, …)</td>
+</tr>
+<tr>
+<td><code>classpath("g:a:v")</code></td>
+<td>extra artifacts on the remapper classpath — e.g. the <em>new-version</em> intermediary jar for cross-MC-version migrations</td>
+</tr>
+<tr>
+<td><code>bridgeNamespace</code></td>
+<td>explicit graft bridge when auto-detection can't find a shared namespace</td>
+</tr>
+<tr>
+<td><code>targetDevNamespace</code></td>
+<td>which target column becomes the new sources' namespace</td>
+</tr>
+<tr>
+<td><code>outputDir</code></td>
+<td>default <code>remappedSrc/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Typical flows: yarn→newer-yarn across MC versions (bridge:
+<code>intermediary</code>, add <code>classpath("net.fabricmc:intermediary:&lt;newMc&gt;")</code>),
+dev-named → mojmap (bridge: <code>official</code>), and MCP/SRG-era upgrades
+(bridge: <code>searge</code>).</p>
+<p>The result is a <em>source</em> rewrite — after diffing <code>remappedSrc/</code> into
+<code>src/</code>, update <code>mappings { }</code> to match the target you migrated to.</p>
 
 
 

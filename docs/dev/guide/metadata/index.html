@@ -946,6 +946,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#manifest-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manifest attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#datagen-and-gametest-envs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1492,6 +1503,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#manifest-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manifest attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#datagen-and-gametest-envs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1544,6 +1566,10 @@ mods.toml, …) at build time:</p>
 <li><code>loader("fabric") { }</code> / <code>fabric { }</code> — loader-specific sections
   (entrypoints, extra keys)</li>
 <li><code>mixins { create("name") { } }</code> — generated <code>*.mixins.json</code> configs</li>
+<li><code>fmlModType("LANGPROVIDER")</code> inside a forge-family <code>loader</code> section —
+  stamps the jar's <code>FMLModType</code> manifest attribute (<code>MOD</code>/<code>LIBRARY</code>/
+  <code>GAMELIBRARY</code>/<code>LANGPROVIDER</code>/<code>CUSTOM</code>) for jarjar-layer
+  classification; unset leaves FML's own locator discovery in charge</li>
 </ul>
 <p><code>--metadata dsl</code> on the CLI emits this block instead of hardcoding
 values in the loader descriptor.</p>
@@ -1580,6 +1606,52 @@ dependency-side classTweaker extraction.</p>
 project's own compile classpath — casts against injected interfaces
 in first-party sources still need a manual rule. Dependents and the
 runtime packaging are covered automatically.</p>
+<h2 id="manifest-attributes">Manifest attributes<a class="headerlink" href="#manifest-attributes" title="Permanent link">&para;</a></h2>
+<p>Manifest-attribute loaders emit a manifest body merged into the env
+jar via <code>jar.manifest.from(...)</code>. The same body also lands in
+generated resources (<code>META-INF/MANIFEST.MF</code>) so <strong>dev runs see it</strong> —
+FML (modern <code>SecureJar</code> and legacy <code>CoreModManager</code> alike) parses
+manifests inside classpath <em>directories</em>, which is how exploded dev
+mods carry <code>FMLModType</code>/<code>MixinConfigs</code>/<code>FMLAT</code>. The file copy is
+excluded from the packed jar; the attrs ride the real manifest.</p>
+<p>Era-correct emission per forge-family loader:</p>
+<table>
+<thead>
+<tr>
+<th>Loader / MC</th>
+<th>Mixin configs</th>
+<th>Access transformers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forge</code>/<code>lexforge</code> (all)</td>
+<td><code>MixinConfigs</code> manifest attr — <code>mods.toml</code> has no <code>[[mixins]]</code> table</td>
+<td><code>META-INF/accesstransformer.cfg</code> auto-detected</td>
+</tr>
+<tr>
+<td><code>neoforge</code> ≥ 20.3</td>
+<td><code>[[mixins]]</code> in <code>neoforge.mods.toml</code> (better errors)</td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>neoforge</code> &lt; 20.3</td>
+<td><code>MixinConfigs</code> manifest attr</td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>cleanroom</code> / legacy ≤1.12.2</td>
+<td><code>MixinConfigs</code> manifest attr</td>
+<td>canonical cfg auto-detected; non-canonical outputs additionally listed under <code>FMLAT</code></td>
+</tr>
+</tbody>
+</table>
+<p>Loader-contributed extras merge verbatim: <code>environment.manifestAttributes</code>
+(env channel — e.g. <code>manifestAttributes["FMLModType"] = "LANGPROVIDER"</code>
+or ornithe's <code>Calamus-Generation</code>) plus emitter attrs
+(<code>Fabric-Loader-Version</code>, …). A hand-written
+<code>src/.../META-INF/MANIFEST.MF</code> folds its attributes into the generated
+manifest — generated values win on conflict — rather than colliding.</p>
 <h2 id="datagen-and-gametest-envs">Datagen and gametest envs<a class="headerlink" href="#datagen-and-gametest-envs" title="Permanent link">&para;</a></h2>
 <p><code>datagen()</code> / <code>gametest()</code> inside an environment declare auxiliary
 source sets (<code>&lt;env&gt;Data</code>, <code>&lt;env&gt;Gametest</code>). They inherit the parent's
