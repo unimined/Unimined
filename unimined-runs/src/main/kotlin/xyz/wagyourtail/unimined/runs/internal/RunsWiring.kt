@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.runs.internal
 
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.file.FileCollection
@@ -119,7 +120,7 @@ internal object RunsWiring {
         // before the sourceSet { } action runs loader()/gametest(), so
         // loaderSpec and the aux-env lists are still empty at bind time
         // (same ordering trap isAuxEnv's managed property documents).
-        project.afterEvaluate {
+        project.afterDslEval {
             RunsAuxWiring.wireAuxEnvs(project, environment, minecraft, extension)
         }
 
@@ -239,16 +240,18 @@ internal object RunsWiring {
                     " (${run.name}, env '$environmentId')"
             task.launchMetadata.set(launchMetadata)
             if (run.prod.get()) {
-                // prod-namespace classpath (1.x runObf parity): the raw
-                // MC artifact (production ships at source namespace),
-                // the project's remapped (mod-source-namespace) jar,
-                // shipped mod jars via `*Direct` pass-through views,
-                // and the env's declared libraries. `*Remapped` views
-                // are dev-namespace — wrong here; and no
-                // sourceSet.output (dev classes don't belong on a prod
-                // classpath).
+                // prod-namespace classpath (1.x runObf parity): MC in
+                // the env's production view — `minecraftProd` (the
+                // mod-ship namespace) by default, overridable to the
+                // raw artifact where production launches via runtime
+                // deobf (FG2-era forge) — plus the project's remapped
+                // (prod-namespace) jar, shipped mod jars via `*Direct`
+                // pass-through views, and the env's declared
+                // libraries. `*Remapped` views are dev-namespace —
+                // wrong here; and no sourceSet.output (dev classes
+                // don't belong on a prod classpath).
                 task.runtimeClasspath.from(
-                    project.configurations.named(environment.minecraftRawViewName),
+                    project.configurations.named(environment.prodRunViewName),
                     project.configurations.named(
                         environment.minecraftLibrariesConfigurationName),
                     project.provider {

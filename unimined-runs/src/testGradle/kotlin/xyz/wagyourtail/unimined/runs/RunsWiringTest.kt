@@ -148,4 +148,67 @@ class RunsWiringTest {
         assertFalse(runDir.resolve("lib/mod.jar").toFile().exists())
     }
 
+    @Test
+    fun `prodClient and prodServer materialize prod run tasks`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+
+        assertTrue(
+            project.tasks.findByName("runProdClient") is MinecraftRunTask)
+        assertTrue(
+            project.tasks.findByName("runProdServer") is MinecraftRunTask)
+
+        val runs = project.extensions.getByType(RunsExtension::class.java)
+        assertTrue(runs.runs.getByName("prodClient").prod.get())
+        assertTrue(runs.runs.getByName("prodServer").prod.get())
+        assertEquals("main", runs.runs.getByName("prodClient").environment.get())
+    }
+
+    @Test
+    fun `prod run classpath resolves the env production MC view`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+
+        val prodConf = project.configurations.getByName("minecraftProd")
+        val task =
+            project.tasks.findByName("runProdClient") as MinecraftRunTask
+        assertTrue(
+            task.runtimeClasspath.from.any {
+                (it as? org.gradle.api.NamedDomainObjectProvider<*>)
+                    ?.orNull === prodConf
+            },
+            "runProdClient classpath should carry the minecraftProd view"
+        )
+    }
+
+    @Test
+    fun `loader override swaps the prod run MC view`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("main") { e ->
+            e.version.set("1.20.1")
+        }
+        // FG2-era forge wiring points prod runs at the raw artifact +
+        // FML's runtime deobf — the prod view would skip the
+        // authentic obf→srg launch path
+        env.prodRunViewName = "minecraftRaw"
+
+        val rawConf = project.configurations.getByName("minecraftRaw")
+        val task =
+            project.tasks.findByName("runProdClient") as MinecraftRunTask
+        assertTrue(
+            task.runtimeClasspath.from.any {
+                (it as? org.gradle.api.NamedDomainObjectProvider<*>)
+                    ?.orNull === rawConf
+            },
+            "prodRunViewName override should route the prod classpath"
+        )
+    }
+
 }

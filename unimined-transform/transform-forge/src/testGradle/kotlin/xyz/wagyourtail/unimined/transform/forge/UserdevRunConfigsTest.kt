@@ -4,7 +4,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
+import xyz.wagyourtail.unimined.transform.forge.internal.isFmlRuntimeDeobfEra
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevRunConfigs
 
 class UserdevRunConfigsTest {
@@ -116,5 +118,40 @@ class UserdevRunConfigsTest {
             ),
             spec.environment["MOD_CLASSES"]
         )
+    }
+
+    @Test
+    fun `legacydev prod swaps deobf-assertion flags for runtime deobf`() {
+        val spec = UserdevRunConfigs.forSide(
+            cfg(""""client": {"main": "net.minecraftforge.legacydev.MainClient"}"""),
+            "client", "FMLTweaker", ctx, prod = true
+        )!!
+        assertTrue(
+            "-Dunimined.fg2.runtimeDeobf" in spec.jvmArgs,
+            "prod launch keeps FML's runtime obf→srg deobf registered"
+        )
+        assertTrue(
+            spec.jvmArgs.none {
+                it.startsWith("-Dfml.deobfuscatedEnvironment")
+            },
+            "prod launch must not assert an already-deobfuscated jar"
+        )
+        assertTrue(
+            spec.jvmArgs.none { "srg-mcp" in it },
+            "the srg→mcp table is dev-mode runtime remapping"
+        )
+    }
+
+    @Test
+    fun `legacydev profiles are the FML runtime-deobf era`() {
+        val legacy = ForgeProfile.Userdev(
+            cfg(""""client": {"main": "net.minecraftforge.legacydev.MainClient"}""")
+        )
+        val modern = ForgeProfile.Userdev(
+            cfg(""""client": {"main": "net.minecraft.client.main.Main"}""")
+        )
+        assertTrue(legacy.isFmlRuntimeDeobfEra())
+        assertFalse(modern.isFmlRuntimeDeobfEra())
+        assertFalse((null as ForgeProfile?).isFmlRuntimeDeobfEra())
     }
 }

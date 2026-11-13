@@ -77,8 +77,8 @@ internal fun contributeRunMutators(
     val devView = project.configurations.findByName(
         environment.minecraftDevViewName
     )
-    val modSourceView = project.configurations.findByName(
-        environment.minecraftModSourceViewName
+    val prodView = project.configurations.findByName(
+        environment.minecraftProdViewName
     )
     // `forge:srgRuntime` — opt-in srg-namespace launch (mod-source
     // view carries the searge artifact for FG2-era envs); read
@@ -100,18 +100,26 @@ internal fun contributeRunMutators(
         }
     }
     // `{minecraft_classpath_file}` — 1.x `legacy_classpath.txt`:
-    // mc libraries + the dev artifact + client-extra (already on
-    // the libs view), newline-joined
-    val classpathFile = project.provider {
-        val file = cacheDir.resolve("classpath-${environment.environmentId}.txt")
+    // mc libraries + the run's MC artifact + client-extra (already
+    // on the libs view), newline-joined. Per-run-name file: dev,
+    // srg-runtime and prod launches carry different MC artifacts and
+    // a shared path would race.
+    fun classpathFileFor(run: xyz.wagyourtail.unimined.api.spec.RunConfigSpec): String {
+        val file = cacheDir.resolve(
+            "classpath-${environment.environmentId}-${run.name}.txt")
         java.nio.file.Files.createDirectories(cacheDir)
-        val jarView = if (srgRuntime.get()) modSourceView else devView
+        val jarView = when {
+            run.prod -> project.configurations.findByName(
+                environment.prodRunViewName)
+            srgRuntime.get() -> prodView
+            else -> devView
+        }
         val files = mcLibs.files + (jarView?.files ?: emptySet())
         java.nio.file.Files.write(
             file,
             files.joinToString("\n") { it.absolutePath }.toByteArray()
         )
-        file.toString()
+        return file.toString()
     }
     // `-DlegacyClassPath` — pathSeparator-joined view of the same file.
     // `CommonDevLaunchHandler.findClassPath` reads this property to
@@ -120,11 +128,10 @@ internal fun contributeRunMutators(
     // `forge-<ver>-userdev.jar` sorts before the transformed artifact —
     // the userdev jar (no MC classes) wins as the `minecraft` module and
     // `Class.forName(module, "net.minecraft.client.main.Main")` fails
-    val legacyClassPath = project.provider {
+    fun legacyClassPathFor(run: xyz.wagyourtail.unimined.api.spec.RunConfigSpec): String =
         java.nio.file.Files.readString(
-            java.nio.file.Path.of(classpathFile.get())
+            java.nio.file.Path.of(classpathFileFor(run))
         ).trim().replace("\n", java.io.File.pathSeparator)
-    }
     // unprotect — always-on for Userdev (1.x FG3 parity:
     // `unprotectRuntime = true`). The agent needs tiny mappings
     // with dst ns literally `named` to identify MC classes
@@ -143,7 +150,7 @@ internal fun contributeRunMutators(
             assetIndex = { artifacts.get().assets.get().id },
             groups = { groupsRef.get() },
             modules = { moduleFiles.get() },
-            minecraftClasspathFile = { classpathFile.get() },
+            minecraftClasspathFile = { classpathFileFor(run) },
             srgToMcpAsSrg = {
                 val tree = artifacts.get().mappings.get()
                 // the runtime deobf table describes the *patched*
@@ -194,7 +201,7 @@ internal fun contributeRunMutators(
             ctx.modules().joinToString(java.io.File.pathSeparator)
         }
         run.properties["minecraft_classpath_file"] =
-            { ctx.minecraftClasspathFile() }
+            { classpathFileFor(run) }
         run.properties["source_roots"] = { ctx.argValue("{source_roots}") }
         run.properties["mcp_mappings"] = { "unimined.stub" }
         when (r.profile) {
@@ -203,7 +210,7 @@ internal fun contributeRunMutators(
                         if (run.name == "server") "FMLServerTweaker" else "FMLTweaker"
                 val spec = UserdevRunConfigs.forSide(
                     r.profile.config,
-                    run.name, defaultTweak, ctx
+                    run.name, defaultTweak, ctx, prod = run.prod
                 ) ?: return@Action
                 run.mainClass = spec.mainClass
                 // strip template args duplicating options unimined
@@ -245,7 +252,7 @@ internal fun contributeRunMutators(
                 run.jvmArgs.addAll(
                     listOf(
                         "-Dunprotect.mappings=${unprotectMappings.get()}",
-                        "-DlegacyClassPath=${legacyClassPath.get()}"
+                        "-DlegacyClassPath=${legacyClassPathFor(run)}"
                     )
                 )
             }
@@ -267,14 +274,20 @@ internal fun contributeRunMutators(
                     }
                 }
                 run.jvmArgs.addAll(
-                    listOf(
-                        "-Dfml.ignoreInvalidMinecraftCertificates=true",
+                    listOf("-Dfml.ignoreInvalidMinecraftCertificates=true") +
+                    if (run.prod) listOf(
+                        // authentic FG2 prod: shipped obf jar + FML's
+                        // runtime obf→srg deobf — keep the
+                        // transformer registered; the dev flags
+                        // would assert an already-deobfuscated jar
+                        "-Dunimined.fg2.runtimeDeobf"
+                    ) else listOf(
                         "-Dfml.deobfuscatedEnvironment=true",
                         "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
                     ) + if (srgRuntime.get()) listOf(
                         // keep FML's deobf transformer registered —
                         // DeobfTweakerTx's strip reads this flag at
-                        // launch; the modSource-view jar is srg-named
+                        // launch; the prod-view jar is srg-named
                         "-Dunimined.fg2.runtimeDeobf"
                     ) else emptyList()
                 )

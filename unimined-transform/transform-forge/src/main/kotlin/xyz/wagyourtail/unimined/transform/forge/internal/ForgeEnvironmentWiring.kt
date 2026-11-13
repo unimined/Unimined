@@ -91,6 +91,10 @@ internal object ForgeEnvironmentWiring {
         // modern universals ship none, which falls back to FORGE_MODERN.
         // FG1-era artifacts get detected from the runtime jar with a
         // warn-on-empty, like 1.x `actualSideMarker`.
+        // `resolved` is absent on non-forge/loaderless envs — `addAll`
+        // of an absent provider poisons the whole property (convention
+        // AND explicit set values), so the contribution must orElse
+        // to a present empty list when the env isn't forge-family
         environment.sideMarkers.addAll(resolved.map { r ->
             r?.let {
                 when {
@@ -114,7 +118,7 @@ internal object ForgeEnvironmentWiring {
                         }?.let(::listOf) ?: emptyList()
                 }
             } ?: emptyList()
-        })
+        }.orElse(emptyList()))
         // forge-era probe — `select("era")` pins resolve against the
         // probed packaging profile (preset names: "forge-userdev",
         // "forge-binpatches"); declared pins override per plan
@@ -215,6 +219,15 @@ internal object ForgeEnvironmentWiring {
         // detached resolution that must land after the env DSL body
         project.afterDslEval {
             val r = resolved.orNull
+            // FG2-era production runs the shipped obf jar under
+            // FML's runtime deobf (FMLDeobfTweaker +
+            // deobf_data.lzma → searge) — the prod view's
+            // pre-mapped jar is dev/analysis material, not what
+            // an installed pack launches
+            if (environment.obfuscated.get() &&
+                r?.profile.isFmlRuntimeDeobfEra()) {
+                environment.prodRunViewName = environment.minecraftRawViewName
+            }
             // cleanroom replaces vanilla 1.12.2's platform libs with
             // modern forks (lwjgl3, netty 4.2, oshi-ffm, icu4j, jna 5)
             // declared in its userdev `libraries` — the vanilla copies

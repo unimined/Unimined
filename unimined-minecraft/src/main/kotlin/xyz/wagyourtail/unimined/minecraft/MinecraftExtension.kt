@@ -158,7 +158,7 @@ abstract class MinecraftExtension @Inject constructor(
 
     internal val rawViewConfigurations = mutableMapOf<String, Configuration>()
 
-    internal val modSourceViewConfigurations = mutableMapOf<String, Configuration>()
+    internal val prodViewConfigurations = mutableMapOf<String, Configuration>()
 
     init {
         environments.maybeCreate("main")
@@ -253,16 +253,16 @@ abstract class MinecraftExtension @Inject constructor(
     /** `artifactType` for the dev-namespace MC artifact view. */
     fun devArtifactType(environmentId: String): String = "unimined-mc-dev-$environmentId"
 
-    /** `artifactType` for the mod-source-namespace MC artifact view —
-     *  `rawArtifactType` when `modSourceNamespaces` equals the
-     *  environment source namespace (nothing to remap). */
-    fun modSourceArtifactType(environmentId: String): String = "unimined-mc-modsource-$environmentId"
+    /** `artifactType` for the production-namespace MC artifact view —
+     *  MC as shipped mod jars see it (`modSourceNamespaces` pick), e.g.
+     *  the searge-named jar for FG2-era forge. */
+    fun prodArtifactType(environmentId: String): String = "unimined-mc-prod-$environmentId"
 
     /** The resolvable raw-artifact view for [environmentId], if bound. */
     fun rawView(environmentId: String): Configuration? = rawViewConfigurations[environmentId]
 
-    /** The resolvable mod-source-artifact view for [environmentId], if bound. */
-    fun modSourceView(environmentId: String): Configuration? = modSourceViewConfigurations[environmentId]
+    /** The resolvable prod-artifact view for [environmentId], if bound. */
+    fun prodView(environmentId: String): Configuration? = prodViewConfigurations[environmentId]
 
     internal fun sideKey(side: Side): ArtifactKey = when (side) {
         Side.CLIENT -> ArtifactKey.CLIENT
@@ -277,6 +277,12 @@ abstract class MinecraftExtension @Inject constructor(
      *  lazily. */
     fun devNamespace(environmentId: String): Provider<String> =
         resolution.devNamespace(environmentId)
+
+    /** The resolved named (developer-facing) namespaces for
+     *  [environmentId] — the source-declared flag set, filtered to
+     *  composed-tree columns. Evaluated lazily. */
+    fun namedNamespaces(environmentId: String): Provider<Set<String>> =
+        resolution.namedNamespaces(environmentId)
 
     /** The raw artifact's namespace for [environmentId] — the resolved
      *  mapping tree's first namespace. Evaluated lazily. */

@@ -144,6 +144,10 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 ext.artifacts(environmentId).get().libraries.get()
                     .filter { dep -> environment.libraryFilters.all { it(dep) } }
             )
+            // 1.x parity: the dev jar's annotation surface is jetbrains
+            // (RemapStepSpec.jsr305ToJetbrains, default on) but modern
+            // MC ships neither annotation lib in its version manifest
+            deps.add(project.dependencies.create("org.jetbrains:annotations:24.0.1"))
         }
         // the provider-declared lib set only — no user/transform
         // contributions (client-extra & co carry the raw-artifact
@@ -181,20 +185,21 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
         }
         ext.rawViewConfigurations[environmentId] = rawView
 
-        // MC in the mod-source namespace — mod-view remap analysis
-        // consumes it so overrides of mapped MC members propagate;
-        // resolves to the raw artifact via a namespace-hop transform
-        // only when modSource differs from the source namespace
-        val modSourceView = project.configurations.create(environment.minecraftModSourceViewName) { conf ->
+        // MC in the production namespace — prod launches and mod-view
+        // remap analysis consume it (the latter so overrides of mapped
+        // MC members propagate); resolves to the raw artifact via a
+        // namespace-hop transform only when the prod namespace differs
+        // from the source namespace
+        val prodView = project.configurations.create(environment.minecraftProdViewName) { conf ->
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.extendsFrom(minecraftBucket)
             conf.attributes.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
-                ext.modSourceArtifactType(environmentId)
+                ext.prodArtifactType(environmentId)
             )
         }
-        ext.modSourceViewConfigurations[environmentId] = modSourceView
+        ext.prodViewConfigurations[environmentId] = prodView
 
         // Picks the raw view when the provider reports an identity pipeline
         // or the resolved dev namespace equals the source namespace, so
@@ -315,7 +320,10 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 p.mergeIncludeGlobs.set(environment.mergeIncludeGlobs)
                 p.mergeExcludeGlobs.set(environment.mergeExcludeGlobs)
                 p.stripBundledServerLibraries.set(environment.stripBundledServerLibraries)
-                p.sideMarkers.set(environment.sideMarkers)
+                // orElse — loader wirings contribute via addAll(provider)
+                // and an absent contribution would otherwise leave the
+                // isolated param with no configured value (2.0.0 defect)
+                p.sideMarkers.set(environment.sideMarkers.orElse(emptyList()))
                 // split-side merged env: remap each side into the
                 // shared (mod-source) namespace before merging — the
                 // raw merge can't pair disjoint obf namespaces.

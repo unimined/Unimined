@@ -120,7 +120,8 @@ internal object UserdevRunConfigs {
         config: UserdevConfig,
         side: String,
         defaultTweakClass: String,
-        ctx: Ctx
+        ctx: Ctx,
+        prod: Boolean = false,
     ): RunSpec? {
         val run = config.runs[side] ?: return null
         val rawMain = run["main"]?.jsonPrimitive?.content ?: return null
@@ -132,8 +133,15 @@ internal object UserdevRunConfigs {
                 mainClass = "net.minecraft.launchwrapper.Launch",
                 args = listOf("--tweakClass", tweakClass ?: defaultTweakClass),
                 jvmArgs = listOf(
-                    "-Dfml.deobfuscatedEnvironment=true",
                     "-Dfml.ignoreInvalidMinecraftCertificates=true",
+                ) + if (prod) listOf(
+                    // authentic FG2 prod: shipped obf jar + FML's
+                    // runtime obf→srg deobf (deobf_data.lzma) — keep
+                    // the transformer registered; the dev flags
+                    // would assert the jar is already deobfuscated
+                    "-Dunimined.fg2.runtimeDeobf"
+                ) else listOf(
+                    "-Dfml.deobfuscatedEnvironment=true",
                     "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
                 ),
                 environment = mapOf("MOD_CLASSES" to ctx.groupsString()),

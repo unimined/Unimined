@@ -513,14 +513,27 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             "${environmentId}MinecraftDeclaredLibraries"
         }
 
-    /** Resolvable view producing the mod-source-namespace MC artifact —
-     *  the mod-view remap-analysis classpath entry. */
-    val minecraftModSourceViewName: String
+    /** Resolvable view producing the production-namespace MC artifact —
+     *  the `prodClient`/`prodServer` launch classpath entry and the
+     *  mod-view remap-analysis classpath entry. "Prod" means the
+     *  namespace shipped mod jars are mapped to, which for runtime-deobf
+     *  loaders (FG2-era forge) is MC's *post-deobf* state, not the
+     *  literal jar Mojang ships. */
+    val minecraftProdViewName: String
         get() = if (environmentId == "main") {
-            "minecraftModSource"
+            "minecraftProd"
         } else {
-            "${environmentId}MinecraftModSource"
+            "${environmentId}MinecraftProd"
         }
+
+    /** The MC artifact view `prodClient`/`prodServer` put on the
+     *  launch classpath — [minecraftProdViewName] by default (MC in
+     *  the mod-ship namespace); loader wiring overrides where
+     *  production launches on the shipped artifact plus a runtime
+     *  remap (FG2-era forge: raw obf jar + FMLDeobfTweaker → searge).
+     *  Wiring surface, not user DSL — set during environment wiring,
+     *  read at run-task realization. */
+    var prodRunViewName: String = minecraftProdViewName
 
     /** Dependency bucket for mods used to compile this environment. */
     val modImplementationConfigurationName: String

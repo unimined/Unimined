@@ -2,11 +2,13 @@ package xyz.wagyourtail.unimined.transform.internal
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.SourceSet
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.util.MavenCoords
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
@@ -38,11 +40,11 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
  * lazy providers — namespace resolution never runs at configuration
  * time.
  *
- * The swap happens in [Project.afterEvaluate]: the user's
+ * The swap happens post-DSL (via [afterDslEval]): the user's
  * `archiveClassifier`/`defaultRemapJar` settings must be final before
- * the suffix is appended and the output name captured. `afterEvaluate`
- * runs during configuration, so configuration-cache compatibility is
- * preserved — at the documented cost of eagerly realizing the jar task.
+ * the suffix is appended and the output name captured. Deferring
+ * within configuration keeps configuration-cache compatibility — at
+ * the documented cost of eagerly realizing the jar task.
  */
 internal object ProductionJarWiring {
 
@@ -52,7 +54,7 @@ internal object ProductionJarWiring {
         sourceSet: SourceSet,
         nestedJars: NestedJarsPlan? = null
     ) {
-        project.afterEvaluate {
+        project.afterDslEval {
             wireProductionJar(project, environment, sourceSet, nestedJars)
         }
     }
@@ -79,24 +81,7 @@ internal object ProductionJarWiring {
         val environmentId = environment.environmentId
 
         val devNamespace = minecraft.devNamespace(environmentId)
-        val prodNamespace = minecraft.modSourceNamespaces(environmentId).map { namespaces ->
-            if (namespaces.size == 1) namespaces.single() else {
-                // multi-source envs (bukkit: "spigot" + "spigotProd")
-                // — the loader's declared prodNamespace is the
-                // production target when it's one of the env's mod
-                // sources (1.x defaultProdNamespace); anything else
-                // stays ambiguous
-                environment.loaderSpec.orNull
-                    ?.let { LoaderRegistry.resolveBuiltin(it.name)?.prodNamespace }
-                    ?.takeIf { it in namespaces }
-                    ?: throw GradleException(
-                        "environment '$environmentId' declares " +
-                                "${namespaces.size} mod source namespaces — " +
-                                "default production remap needs exactly one; " +
-                                "use remap.remappedViews(...) for mixed inputs"
-                    )
-            }
-        }
+        val prodNamespace = prodNamespace(minecraft, environment)
 
         // task-produced bundle (producer task dep flows through
         // mappingFile) — unlike transform params, tasks are in the graph
@@ -333,4 +318,31 @@ internal object ProductionJarWiring {
 
     private fun String.cap(): String = replaceFirstChar(Char::uppercase)
 
+}
+
+/** The environment's production namespace — the single entry of
+ *  [MinecraftExtension.modSourceNamespaces], or for multi-source envs
+ *  (bukkit: "spigot" + "spigotProd") the loader's declared
+ *  `prodNamespace` when it's one of the env's mod sources (1.x
+ *  `defaultProdNamespace`); anything else stays ambiguous. Shared by
+ *  the prod jar remap and the `minecraftProd` MC view so both agree on
+ *  what "prod" means for the environment. */
+internal fun prodNamespace(
+    minecraft: MinecraftExtension,
+    environment: MinecraftEnvironment,
+): Provider<String> {
+    val environmentId = environment.environmentId
+    return minecraft.modSourceNamespaces(environmentId).map { namespaces ->
+        if (namespaces.size == 1) namespaces.single() else {
+            environment.loaderSpec.orNull
+                ?.let { LoaderRegistry.resolveBuiltin(it.name)?.prodNamespace }
+                ?.takeIf { it in namespaces }
+                ?: throw GradleException(
+                    "environment '$environmentId' declares " +
+                            "${namespaces.size} mod source namespaces — " +
+                            "default production namespace needs exactly one; " +
+                            "use remap.remappedViews(...) for mixed inputs"
+                )
+        }
+    }
 }

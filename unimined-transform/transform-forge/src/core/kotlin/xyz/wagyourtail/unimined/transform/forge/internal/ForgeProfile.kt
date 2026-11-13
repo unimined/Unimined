@@ -259,3 +259,19 @@ internal fun JsonObject.versionLibraries(): List<String> =
     (this["libraries"] as? JsonArray)?.mapNotNull {
         (it as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull
     } ?: emptyList()
+
+/** FG2-era (launchwrapper + `FMLDeobfTweaker`): production launches
+ *  the shipped obf MC jar and remaps obf→srg at class-load via
+ *  `deobf_data.lzma` — `Binpatches` profiles and `Userdev` configs
+ *  whose dev.json run mains are `net.minecraftforge.legacydev.*`
+ *  (the detection `UserdevRunConfigs.forSide` applies to pick the
+ *  launchwrapper shape). Later eras install a pre-mapped patched
+ *  jar — no launch-time class rename. */
+fun ForgeProfile?.isFmlRuntimeDeobfEra(): Boolean = when (this) {
+    is ForgeProfile.Binpatches -> true
+    is ForgeProfile.Userdev -> config.runs.values.any {
+        it["main"]?.jsonPrimitive?.content
+            ?.startsWith("net.minecraftforge.legacydev") == true
+    }
+    else -> false
+}

@@ -8,6 +8,7 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
@@ -54,7 +55,7 @@ internal object EnvironmentClasspathWiring {
         project.extensions.findByType(TransformExtension::class.java)
             ?.sourceSet(environmentId)
             ?.let { spec ->
-                project.afterEvaluate {
+                project.afterDslEval {
                     spec.applyDeclaredPipeline(project, environment)
                 }
             }
@@ -229,10 +230,10 @@ internal object EnvironmentClasspathWiring {
             }
         }
 
-        // MC in the mod-source namespace — only resolved when
-        // modSource differs from the source namespace (fabric's
-        // `intermediary` case); the modsource view consumes it on
-        // the mod-remap analysis classpath
+        // MC in the production namespace — only resolved when prod
+        // differs from the source namespace (userdev forge's searge
+        // case); the prod view consumes it for prod launches and on the
+        // mod-remap analysis classpath
         project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
             t.from.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
@@ -240,22 +241,13 @@ internal object EnvironmentClasspathWiring {
             )
             t.to.attribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
-                minecraft.modSourceArtifactType(environmentId)
+                minecraft.prodArtifactType(environmentId)
             )
             t.parameters { p ->
-                p.label.set("$environmentId/modsource")
+                p.label.set("$environmentId/prod")
                 p.sourceNamespace.set(devSrcNamespace)
                 p.envSide.set(environment.side.map { it.name })
-                p.targetNamespace.set(
-                    minecraft.modSourceNamespaces(environmentId).map { namespaces ->
-                        require(namespaces.size == 1) {
-                            "environment '$environmentId' declares ${namespaces.size} " +
-                                    "mod source namespaces — the modsource MC view needs " +
-                                    "exactly one"
-                        }
-                        namespaces.single()
-                    }
-                )
+                p.targetNamespace.set(prodNamespace(minecraft, environment))
                 p.mappingFile.set(mcBundleFile)
                 p.classpath.from(libraries)
                 // remap-only — the dev pipeline's jar processors are

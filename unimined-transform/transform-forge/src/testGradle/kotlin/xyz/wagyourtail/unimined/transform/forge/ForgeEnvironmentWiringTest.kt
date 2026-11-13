@@ -86,6 +86,14 @@ class ForgeEnvironmentWiringTest {
         // `minecraft-<env>-<version>` base name (ebaf7bb8) — forge
         // conventions contribute the loader-specific name only
         assertEquals("minecraft-notforge-1.20.1", env.artifactBaseName.orNull)
+        // 2.0.0 regression — the loader-resolution provider is absent
+        // on non-forge envs and `addAll(absent)` poisoned the whole
+        // property (convention AND explicit set both ignored), so
+        // ProductArtifactTransform isolation failed with
+        // "Property 'sideMarkers' doesn't have a configured value"
+        assertTrue(env.sideMarkers.isPresent,
+            "non-forge env must keep sideMarkers resolvable")
+        assertTrue(env.sideMarkers.get().isEmpty())
     }
 
     @Test
