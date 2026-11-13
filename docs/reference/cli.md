@@ -3,6 +3,19 @@
 `unimined new <name>` / `unimined init` — generate a modding
 environment for any MC version.
 
+## Getting the CLI
+
+Each release ships two runnable builds — pick by platform:
+
+| Artifact | Run |
+|---|---|
+| `unimined-cli.kexe` (GitHub release asset) | `./unimined-cli.kexe new mymod` — self-contained Linux x64 native binary |
+| `unimined-cli-node.zip` (GH release asset) | unzip, `node unimined-cli.js new mymod` — needs Node.js |
+
+On other platforms, build the JVM fat jar from source:
+`./gradlew :unimined-cli:fatJar` →
+`java -jar unimined-cli/build/libs/unimined-cli-fat.jar new mymod`.
+
 ```
 new <name>  — generate a project in ./<name>
 init        — generate in the current directory

@@ -5,11 +5,14 @@ Unified Minecraft modding environment with support for legacy environments.
 for details on usage, see [the docs](https://wagyourtail.github.io/unimined/docs/latest/)
 (sources in [`docs/`](docs/index.md))
 
-> **Note:** this branch is the in-progress **2.0 modular rewrite** — the
-> monolithic plugin is being split into small composable plugins
+> **Note:** the **2.0 modular rewrite** is out as a **prerelease** —
+> the monolithic plugin is now small composable plugins
 > (`unimined-api`, `unimined-remap`, `unimined-minecraft`,
 > `unimined-transform`, `unimined-runs`, `unimined-source`, and the
-> `unimined` frontend). The 1.x codebase lives on the `lts/*` branches.
+> `unimined` frontend). Loader support is *preliminary* — expect some
+> jank while it beds in. The 1.x codebase lives on the `lts/*`
+> branches; 1.x users should see
+> [the migration guide](https://wagyourtail.github.io/unimined/docs/latest/migration-1x-to-2.0/).
 
 ## Requirements
 
@@ -37,6 +40,9 @@ By consequence, seeing as it's only bugfixes, snapshots on the LTS branch are co
 
 - [Fabric](https://fabricmc.net)
 - [Quilt](https://quiltmc.org)
+- [Legacy Fabric](https://legacyfabric.net)
+- [Babric](https://babric.github.io)
+- [Ornithe](https://ornithemc.net)
 - [Minecraft Forge](https://minecraftforge.net)
 - [Neoforge](https://neoforged.net)
 - [Cleanroom](https://cleanroommc.com)
@@ -73,17 +79,6 @@ dir.
 
 ## TODO
 
-- stop using artifactural
-- rework mcpconfig runner to be more kotlin and less old version of arch-loom code
-- Support for launch configs in other dev envs
-    * vscode
-    * eclipse
-- support to login to minecraft in dev
-- support to launch with the prod jar
-- add datagen support
-    * forge datagen
-    * fabric datagen
-    * quilt datagen
 - fix yarn on neoforge (these will probably be agents, possibly in separate projects and pulled like JarModAgent)
     * inject remapper into ASMAPI
     * reflection remapper (also for forge potentially, or in general).
@@ -91,9 +86,10 @@ dir.
 
 ## Recommended Setup
 
-1. take one of the versions from [testing](./testing)
-1. remove `includeBuild('../../')` from `settings.gradle`
-1. put a proper version number for the plugin in `build.grade`
+- `unimined new <name>` with the [CLI](docs/reference/cli.md), or
+- grab a starter from [Unimined-Templates](https://github.com/unimined/Unimined-Templates), or
+- add `id("xyz.wagyourtail.unimined") version "2.0.0"` to your `plugins { }` block — see
+  [the getting-started guide](https://wagyourtail.github.io/unimined/docs/latest/)
 
 ## Other Setups
 
@@ -104,5 +100,4 @@ dir.
 
 ### third party template (s)
 
-- arch style: https://github.com/firstdarkdev/fdd-xplat or https://github.com/LegacyModdingMC/examplemod
-- //todo: add more
+- *(out of date — check back later)*
