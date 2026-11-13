@@ -1,0 +1,234 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>xyz.wagyourtail.unimined.jvmdg</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.1
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-adapters:adapter-jvmdg/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-adapters:adapter-jvmdg/main" data-filter=":unimined-adapters:adapter-jvmdg/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="adapter-jvmdg::xyz.wagyourtail.unimined.jvmdg////PointingToDeclaration//-1028722198">
+  <div class="breadcrumbs"><a href="../index.html">adapter-jvmdg</a><span class="delimiter">/</span><span class="current">xyz.wagyourtail.unimined.jvmdg</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button><button class="section-tab" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="465248998%2FClasslikes%2F-1028722198" anchor-label="DowngradeClassesTask" id="465248998%2FClasslikes%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-downgrade-classes-task/index.html"><span>Downgrade</span><wbr><span>Classes</span><wbr><span><span>Task</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="465248998%2FClasslikes%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.work/DisableCachingByDefault///PointingToDeclaration/"><span class="token annotation builtin">DisableCachingByDefault</span></span><span class="token punctuation">(</span><span>because<span class="token operator"> = </span><span class="breakable-word"><span class="token string">"jvmdg engine output isn't relocation-verified; up-to-date checks cover the rerun cost"</span></span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-downgrade-classes-task/index.html">DowngradeClassesTask</a> : <span data-unresolved-link="org.gradle.api/DefaultTask///PointingToDeclaration/">DefaultTask</span></div><div class="brief "><p class="paragraph">Downgrades every directory in <a href="-downgrade-classes-task/input-dirs.html">inputDirs</a> to <a href="-downgrade-classes-task/class-version.html">classVersion</a> via JvmDowngrader, mirroring each input dir to <code class="lang-kotlin">outputDir/&lt;index&gt;</code> so classpath order is preserved. Registered per-environment by the <code class="lang-kotlin">unimined-jvmdg</code> compat plugin when the env's <code class="lang-kotlin">jvmdowngrader</code> extension is enabled — old-loader runtimes (FG-era LaunchWrapper/FML ship ASM 4/5.2 and cannot read &gt;v52 classes) launch against the downgraded dirs instead of the raw compile outputs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="187512610%2FClasslikes%2F-1028722198" anchor-label="GradlePlugin" id="187512610%2FClasslikes%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-gradle-plugin/index.html"><span>Gradle</span><wbr><span><span>Plugin</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="187512610%2FClasslikes%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-gradle-plugin/index.html">GradlePlugin</a> : <span data-unresolved-link="org.gradle.api/Plugin///PointingToDeclaration/">Plugin</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Plugin id <code class="lang-kotlin">xyz.wagyourtail.unimined.jvmdg</code> — the optional JvmDowngrader compat layer. Applying it is what wires jvmdg into Unimined (core carries no jvmdg surface):</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1161536536%2FClasslikes%2F-1028722198" anchor-label="JvmDgEnvSpec" id="1161536536%2FClasslikes%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jvm-dg-env-spec/index.html"><span>Jvm</span><wbr><span>Dg</span><wbr><span>Env</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1161536536%2FClasslikes%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a></div><div class="brief "><p class="paragraph">Per-environment JvmDowngrader settings, contributed by the <code class="lang-kotlin">xyz.wagyourtail.unimined.jvmdg</code> plugin as an extension named <code class="lang-kotlin">jvmdowngrader</code> on each <a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a>. <strong>On by default</strong> — applying the plugin is the opt-in, so every environment downgrades unless <code class="lang-kotlin">enabled.set(false)</code> opts it back out.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1073293313%2FClasslikes%2F-1028722198" anchor-label="JvmDowngradeStepSpec" id="1073293313%2FClasslikes%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jvm-downgrade-step-spec/index.html"><span>Jvm</span><wbr><span>Downgrade</span><wbr><span>Step</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1073293313%2FClasslikes%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-jvm-downgrade-step-spec/index.html">JvmDowngradeStepSpec</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span></div><div class="brief "><p class="paragraph">Spec for the <code class="lang-kotlin">downgrade</code> step: rewrites class files to an older class-file major version via JvmDowngrader, backporting newer JDK API calls onto its <code class="lang-kotlin">java-api</code> stub implementations.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1523625314%2FClasslikes%2F-1028722198" anchor-label="JvmDowngradeStepType" id="1523625314%2FClasslikes%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jvm-downgrade-step-type/index.html"><span>Jvm</span><wbr><span>Downgrade</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1523625314%2FClasslikes%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jvm-downgrade-step-type/index.html">JvmDowngradeStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-jvm-downgrade-step-spec/index.html">JvmDowngradeStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">downgrade</code> implementation backed by JvmDowngrader's <span data-unresolved-link="xyz.wagyourtail.jvmdg.compile/ZipDowngrader///PointingToDeclaration/">ZipDowngrader</span>: rewrites every class in the artifact to the target class-file version, backporting newer JDK API usage onto the java-api stub jar.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="EXTENSION_FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="1652509958%2FFunctions%2F-1028722198" anchor-label="downgrade" id="1652509958%2FFunctions%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="downgrade.html"><span><span>downgrade</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1652509958%2FFunctions%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../unimined-remap/xyz.wagyourtail.unimined.remap/-remap-surface-spec/index.html">RemapSurfaceSpec</a><span class="token punctuation">.</span><a href="downgrade.html"><span class="token function">downgrade</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><a href="-jvm-downgrade-step-spec/index.html">JvmDowngradeStepSpec</a><span class="token operator">&gt;</span><span class="token operator"> = </span>Action {}</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-jvm-downgrade-step-spec/index.html">JvmDowngradeStepSpec</a></div><div class="brief "><p class="paragraph">Kotlin-DSL sugar: <code class="lang-kotlin">jar { downgrade { target.set(JavaVersion.VERSION_1_8) } }</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2051470114%2FFunctions%2F-1028722198" anchor-label="jvmdowngrader" id="-2051470114%2FFunctions%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jvmdowngrader.html"><span><span>jvmdowngrader</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2051470114%2FFunctions%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a><span class="token punctuation">.</span><a href="jvmdowngrader.html"><span class="token function">jvmdowngrader</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">jvmdowngrader(8)</code> — shorthand: sets <a href="-jvm-dg-env-spec/target.html">JvmDgEnvSpec.target</a> (enabled is already on by default).</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a><span class="token punctuation">.</span><a href="jvmdowngrader.html"><span class="token function">jvmdowngrader</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a></div><div class="brief "><p class="paragraph">DSL accessor for the env's <code class="lang-kotlin">jvmdowngrader</code> extension: <code class="lang-kotlin">sourceSet("main") { jvmdowngrader { target.set(8) } }</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-extension/index.html">MinecraftExtension</a><span class="token punctuation">.</span><a href="jvmdowngrader.html"><span class="token function">jvmdowngrader</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">minecraft { jvmdowngrader(8) }</code> — <a href="jvmdowngrader.html">jvmdowngrader</a> on <code class="lang-kotlin">main</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-extension/index.html">MinecraftExtension</a><span class="token punctuation">.</span><a href="jvmdowngrader.html"><span class="token function">jvmdowngrader</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-jvm-dg-env-spec/index.html">JvmDgEnvSpec</a></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">minecraft {}</code> block configures the <code class="lang-kotlin">main</code> environment — these forward there so <code class="lang-kotlin">unimined { minecraft { jvmdowngrader(8) } }</code> works alongside the per-env <code class="lang-kotlin">sourceSet("client") { jvmdowngrader { } }</code> form for non-main envs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

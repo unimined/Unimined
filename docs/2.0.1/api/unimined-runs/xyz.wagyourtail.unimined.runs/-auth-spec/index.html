@@ -1,0 +1,273 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>AuthSpec</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.1
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-runs/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-runs/main" data-filter=":unimined-runs/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-runs::xyz.wagyourtail.unimined.runs/AuthSpec///PointingToDeclaration//-2080664318">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-runs</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.runs</a><span class="delimiter">/</span><span class="current">AuthSpec</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Auth</span><wbr><span><span>Spec</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">AuthSpec</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div><p class="paragraph">Per-run auth specification — how the launch's <span data-unresolved-link="xyz.wagyourtail.unimined.mclauncher/Session///PointingToDeclaration/">xyz.wagyourtail.unimined.mclauncher.Session</span> is produced. Replaces the 1.x project-global <code class="lang-kotlin">runs.auth</code>: each <a href="../-run-config/index.html">RunConfig</a> carries its own typed spec, so a <code class="lang-kotlin">client</code> run can log in while a <code class="lang-kotlin">server</code> run stays offline.</p><p class="paragraph">Session materialization happens at task-execution time only — no token ever lands on the configuration model or the config cache.</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">runs.named("client") { auth { microsoft() } }<br>runs.named("server") { auth { offline("DevServer") } }<br>runs.configureEach { auth { custom(MyProvider()) } }</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="97211574%2FConstructors%2F-2080664318" anchor-label="AuthSpec" id="97211574%2FConstructors%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-auth-spec.html"><span>Auth</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="97211574%2FConstructors%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span></div></div><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="1740126639%2FClasslikes%2F-2080664318" anchor-label="Kind" id="1740126639%2FClasslikes%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-kind/index.html"><span><span>Kind</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1740126639%2FClasslikes%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-kind/index.html">Kind</a> : <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><a href="-kind/index.html">AuthSpec.Kind</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Session kind — defaults to <a href="-kind/-o-f-f-l-i-n-e/index.html">Kind.OFFLINE</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-1035025670%2FProperties%2F-2080664318" anchor-label="kind" id="-1035025670%2FProperties%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="kind.html"><span><span>kind</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1035025670%2FProperties%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="kind.html">kind</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="-kind/index.html">AuthSpec.Kind</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="975624893%2FProperties%2F-2080664318" anchor-label="provider" id="975624893%2FProperties%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="provider.html"><span><span>provider</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="975624893%2FProperties%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Internal///PointingToDeclaration/"><span class="token annotation builtin">Internal</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="provider.html">provider</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.mclauncher/AuthProvider///PointingToDeclaration/">AuthProvider</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Custom <span data-unresolved-link="xyz.wagyourtail.unimined.mclauncher/AuthProvider///PointingToDeclaration/">AuthProvider</span> for <a href="-kind/-c-u-s-t-o-m/index.html">Kind.CUSTOM</a> — the extension point for third-party auth (Ely.by, CI token injection). Never persisted: the provider runs at task execution.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="308212600%2FProperties%2F-2080664318" anchor-label="username" id="308212600%2FProperties%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="username.html"><span><span>username</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="308212600%2FProperties%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="username.html">username</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Player name for <a href="-kind/-o-f-f-l-i-n-e/index.html">Kind.OFFLINE</a> sessions.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-2004965386%2FFunctions%2F-2080664318" anchor-label="custom" id="-2004965386%2FFunctions%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="custom.html"><span><span>custom</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2004965386%2FFunctions%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="custom.html"><span class="token function">custom</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">provider<span class="token operator">: </span><span data-unresolved-link="xyz.wagyourtail.unimined.mclauncher/AuthProvider///PointingToDeclaration/">AuthProvider</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Session produced by <a href="custom.html">provider</a> at execution time.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1140648486%2FFunctions%2F-2080664318" anchor-label="injected" id="1140648486%2FFunctions%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="injected.html"><span><span>injected</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1140648486%2FFunctions%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="injected.html"><span class="token function">injected</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">prefix<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"UNIMINED_AUTH_"</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">CI/headless auth — session read from <code class="lang-kotlin">UNIMINED_AUTH_*</code> environment variables at execution time (<a href="injected.html">prefix</a> overridable). No credential is stored or configured.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1205479202%2FFunctions%2F-2080664318" anchor-label="microsoft" id="-1205479202%2FFunctions%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="microsoft.html"><span><span>microsoft</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1205479202%2FFunctions%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="microsoft.html"><span class="token function">microsoft</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Microsoft account login — consumed from the credential store (populated by <code class="lang-kotlin">:loginMicrosoft</code>) with silent refresh.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="476241499%2FFunctions%2F-2080664318" anchor-label="offline" id="476241499%2FFunctions%2F-2080664318" data-filterable-set=":unimined-runs/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-runs/main" data-filterable-set=":unimined-runs/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="offline.html"><span><span>offline</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="476241499%2FFunctions%2F-2080664318"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-runs/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="offline.html"><span class="token function">offline</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Offline session named <a href="offline.html">name</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

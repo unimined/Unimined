@@ -1,0 +1,535 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>TransformEnvironmentSpec</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.1
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-transform/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-transform/main" data-filter=":unimined-transform/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-transform::xyz.wagyourtail.unimined.transform/TransformEnvironmentSpec///PointingToDeclaration//-1569051040">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-transform</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.transform</a><span class="delimiter">/</span><span class="current">TransformEnvironmentSpec</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Transform</span><wbr><span>Environment</span><wbr><span><span>Spec</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">TransformEnvironmentSpec</a></div><p class="paragraph">The ordered transformer and decorator registrations for one Minecraft source-set environment.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="450461658%2FProperties%2F-1569051040" anchor-label="bundledResources" id="450461658%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="bundled-resources.html"><span>bundled</span><wbr><span><span>Resources</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="450461658%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="bundled-resources.html">bundledResources</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform/-bundled-resource/index.html">BundledResource</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Embedded-classpath artifacts the contributing transform declares for this env (<code class="lang-kotlin">BundledResourceChannel.materialize</code> turns each into a file dep) — provider-facing channel for payload jars with no maven home (FG1's <code class="lang-kotlin">/fmllibs/</code> set).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1567507963%2FProperties%2F-1569051040" anchor-label="decorators" id="-1567507963%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="decorators.html"><span><span>decorators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1567507963%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="decorators.html">decorators</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../xyz.wagyourtail.unimined.transform.spi/-transform-decorator/index.html">TransformDecorator</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Cross-cutting decorators in application order.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-441602064%2FProperties%2F-1569051040" anchor-label="envArtifactBindings" id="-441602064%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="env-artifact-bindings.html"><span>env</span><wbr><span>Artifact</span><wbr><span><span>Bindings</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-441602064%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="env-artifact-bindings.html">envArtifactBindings</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html">Path</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loader-bound named artifact sets surfaced through <code class="lang-kotlin">JarProcessor.SpecContext.envArtifacts</code> — e.g. <code class="lang-kotlin">"jarmod:merge"</code> → the loader's resolved merge-input jars. Lambdas evaluate at spec-build time (inside deferred providers), so they may back lazy artifact resolution.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-502077937%2FProperties%2F-1569051040" anchor-label="environmentId" id="-502077937%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="environment-id.html"><span>environment</span><wbr><span><span>Id</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-502077937%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="environment-id.html">environmentId</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Stable source-set/environment id.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-172953344%2FProperties%2F-1569051040" anchor-label="features" id="-172953344%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="features.html"><span><span>features</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-172953344%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="features.html">features</a><span class="token operator">: </span><a href="../-features-spec/index.html">FeaturesSpec</a></div><div class="brief "><p class="paragraph">Declared capability bindings — <code class="lang-kotlin">features { nestedJars("jarjar") }</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-649273919%2FProperties%2F-1569051040" anchor-label="jarProcessors" id="-649273919%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jar-processors.html"><span>jar</span><wbr><span><span>Processors</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-649273919%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jar-processors.html">jarProcessors</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/index.html">JarProcessor</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/index.html">JarProcessor</a> declarations in execution order — their specs run over the dev-Minecraft artifact via the <code class="lang-kotlin">jar-processors</code> pipeline step, and any <code class="lang-kotlin">processMappings</code> halves through the environment's mapping enrichment.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1662494912%2FProperties%2F-1569051040" anchor-label="jarProcessorSpecContext" id="-1662494912%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jar-processor-spec-context.html"><span>jar</span><wbr><span>Processor</span><wbr><span>Spec</span><wbr><span><span>Context</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1662494912%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="jar-processor-spec-context.html">jarProcessorSpecContext</a><span class="token operator">: </span><span class="token punctuation">(</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html">Path</a><span class="token operator">&gt;</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/-spec-context/index.html">JarProcessor.SpecContext</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Loader-supplied spec-context factory — fabric installs an fmj-aware <a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/-mod-jar-info/index.html">JarProcessor.ModJarInfo</a> so processors can read <code class="lang-kotlin">custom</code> metadata keys. <code class="lang-kotlin">null</code> = file-only mod infos.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="757082670%2FProperties%2F-1569051040" anchor-label="nestedJars" id="757082670%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars.html"><span>nested</span><wbr><span><span>Jars</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="757082670%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="nested-jars.html">nestedJars</a><span class="token operator">: </span><a href="../-nested-jars-spec/index.html">NestedJarsSpec</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Jar-in-jar packaging knobs — <code class="lang-kotlin">nestedJars { recompress.set(false) }</code>; the env's <code class="lang-kotlin">include</code> dependency bucket feeds it. The embed format comes from the declared <code class="lang-kotlin">features { nestedJars("…") }</code> binding.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="791918139%2FProperties%2F-1569051040" anchor-label="pipeline" id="791918139%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="pipeline.html"><span><span>pipeline</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="791918139%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="pipeline.html">pipeline</a><span class="token operator">: </span><a href="../-pipeline-spec/index.html">PipelineSpec</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Declared step pipeline — <code class="lang-kotlin">pipeline { binpatches { } … }</code>. Empty for environments driven by <a href="transformers.html">transformers</a> (the monolith path still resolves while modules port to declared steps).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1657468989%2FProperties%2F-1569051040" anchor-label="postPipelineJarProcessors" id="-1657468989%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="post-pipeline-jar-processors.html"><span>post</span><wbr><span>Pipeline</span><wbr><span>Jar</span><wbr><span><span>Processors</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1657468989%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="post-pipeline-jar-processors.html">postPipelineJarProcessors</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform.processor/-jar-processor/index.html">JarProcessor</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Jar processors that run <strong>after</strong> declared-pipeline step contributions — for loader wiring that must patch the merged output (e.g. the FG1 checksum patch needs the forge zip's <code class="lang-kotlin">CoreFMLLibraries</code> already merged in). Registered eagerly like <a href="jar-processors.html">jarProcessors</a>, flattened last in <a href="../../../unimined-transform/xyz.wagyourtail.unimined.transform/-transform-environment-spec/effective-jar-processors.html">effectiveJarProcessors</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1483375968%2FProperties%2F-1569051040" anchor-label="prepareTaskMutators" id="-1483375968%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="prepare-task-mutators.html"><span>prepare</span><wbr><span>Task</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1483375968%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="prepare-task-mutators.html">prepareTaskMutators</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Task///PointingToDeclaration/">Task</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Mutators applied to the <code class="lang-kotlin">prepare&lt;run&gt;</code> task — staging that must materialize <i>before</i> the run task executes (run-dir contents, mod staging, dyn-lib copies). The prepare task carries the same <code class="lang-kotlin">runDirectory</code> property, so mutators shape it identically.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1379028537%2FProperties%2F-1569051040" anchor-label="probeResolver" id="-1379028537%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="probe-resolver.html"><span>probe</span><wbr><span><span>Resolver</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1379028537%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="probe-resolver.html">probeResolver</a><span class="token operator">: </span><span class="token punctuation">(</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Probe resolver for <code class="lang-kotlin">select(key)</code> pipeline nodes — env wiring (forge's artifact probe picks the era; a declared pin provides <code class="lang-kotlin">("era" -&gt; "userdev")</code>-style results) installs a resolver that maps probe keys to results. Unresolved keys return null — selecting nothing, so a selector with no null-branch fails at realization per <a href="../-pipeline-spec/-selector-node/branch.html">PipelineSpec.SelectorNode.branch</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1685429471%2FProperties%2F-1569051040" anchor-label="runMutators" id="-1685429471%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="run-mutators.html"><span>run</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1685429471%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="run-mutators.html">runMutators</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/RunConfigSpec///PointingToDeclaration/">RunConfigSpec</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Run-config adjustments applied after all declared transformers — contributed by loader plugins that wire run behavior without a full transform task (e.g. fabric swapping the launch main class).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="220217244%2FProperties%2F-1569051040" anchor-label="runTaskMutators" id="220217244%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="run-task-mutators.html"><span>run</span><wbr><span>Task</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="220217244%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="run-task-mutators.html">runTaskMutators</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Task///PointingToDeclaration/">Task</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Mutators applied to the registered run <i>task</i> after spec-level <a href="run-mutators.html">runMutators</a> — for actions needing task state (e.g. runDirectory for copying files into the run dir), which the spec cannot see.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1208208679%2FProperties%2F-1569051040" anchor-label="transformerRegistry" id="1208208679%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="transformer-registry.html"><span>transformer</span><wbr><span><span>Registry</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1208208679%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="transformer-registry.html">transformerRegistry</a><span class="token operator">: </span><a href="../../xyz.wagyourtail.unimined.transform.spi/-transformer-registry/index.html">TransformerRegistry</a></div><div class="brief "><p class="paragraph">Registry claims resolve through — plugins may register additional claims programmatically (ServiceLoader builtins still apply via <a href="../../xyz.wagyourtail.unimined.transform.spi/-transformer-registry/-companion/builtins.html">TransformerRegistry.builtins</a>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1807344285%2FProperties%2F-1569051040" anchor-label="transformers" id="-1807344285%2FProperties%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="transformers.html"><span><span>transformers</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1807344285%2FProperties%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="transformers.html">transformers</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../xyz.wagyourtail.unimined.transform.spi/-minecraft-transformer/index.html">MinecraftTransformer</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Declared transformers in execution order.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1382474990%2FFunctions%2F-1569051040" anchor-label="binding" id="-1382474990%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="binding.html"><span><span>binding</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1382474990%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="binding.html"><span class="token function">binding</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Declare a capability binding — <code class="lang-kotlin">binding("nestedJars", "jarjar")</code>; top-level alias for <code class="lang-kotlin">features.binding(...)</code> so env-side <code class="lang-kotlin">loader(n, v) { }</code> closures reach it without a <code class="lang-kotlin">features { }</code> nest.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="80470627%2FFunctions%2F-1569051040" anchor-label="decorator" id="80470627%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="decorator.html"><span><span>decorator</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="80470627%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="decorator.html"><span class="token function">decorator</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">decorator<span class="token operator">: </span><a href="../../xyz.wagyourtail.unimined.transform.spi/-transform-decorator/index.html">TransformDecorator</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Add a decorator to this environment's Minecraft artifact.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="118540655%2FFunctions%2F-1569051040" anchor-label="effectivePrepareTaskMutators" id="118540655%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="effective-prepare-task-mutators.html"><span>effective</span><wbr><span>Prepare</span><wbr><span>Task</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="118540655%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="effective-prepare-task-mutators.html"><span class="token function">effectivePrepareTaskMutators</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">visiting<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Task///PointingToDeclaration/">Task</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Prepare task mutators compose like <a href="effective-run-task-mutators.html">effectiveRunTaskMutators</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-250729616%2FFunctions%2F-1569051040" anchor-label="effectiveRunMutators" id="-250729616%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="effective-run-mutators.html"><span>effective</span><wbr><span>Run</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-250729616%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="effective-run-mutators.html"><span class="token function">effectiveRunMutators</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">visiting<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/RunConfigSpec///PointingToDeclaration/">RunConfigSpec</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Run mutators compose like decorators: inherited before local.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-278306837%2FFunctions%2F-1569051040" anchor-label="effectiveRunTaskMutators" id="-278306837%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="effective-run-task-mutators.html"><span>effective</span><wbr><span>Run</span><wbr><span>Task</span><wbr><span><span>Mutators</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-278306837%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="effective-run-task-mutators.html"><span class="token function">effectiveRunTaskMutators</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">visiting<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/Task///PointingToDeclaration/">Task</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Run task mutators compose like <a href="effective-run-mutators.html">effectiveRunMutators</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="480084562%2FFunctions%2F-1569051040" anchor-label="features" id="480084562%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="features.html"><span><span>features</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="480084562%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="features.html"><span class="token function">features</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span><span class="token annotation builtin">@</span><span data-unresolved-link="groovy.lang/DelegatesTo///PointingToDeclaration/"><span class="token annotation builtin">DelegatesTo</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><a href="../-features-spec/index.html">FeaturesSpec::class</a><span class="token punctuation">, </span></span><wbr><span>strategy<span class="token operator"> = </span><span class="breakable-word"><span class="token constant">1</span></span></span><wbr><span class="token punctuation">)</span>&nbsp;</span>action<span class="token operator">: </span><span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Groovy DSL overload — <code class="lang-kotlin">features { nestedJars("jarjar") }</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="features.html"><span class="token function">features</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../-features-spec/index.html">FeaturesSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">features { }</code> DSL verb.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-507491460%2FFunctions%2F-1569051040" anchor-label="inheritedEnvironmentReferences" id="-507491460%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="inherited-environment-references.html"><span>inherited</span><wbr><span>Environment</span><wbr><span><span>References</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-507491460%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="inherited-environment-references.html"><span class="token function">inheritedEnvironmentReferences</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="../../../unimined-api/xyz.wagyourtail.unimined.api.environment/-environment-reference/index.html">EnvironmentReference</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The environments this one inherits transforms from — the 2.0 <code class="lang-kotlin">combineWith</code> analog. Exposed for run mutators that need group attribution (e.g. forge <code class="lang-kotlin">MOD_CLASSES</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="283012885%2FFunctions%2F-1569051040" anchor-label="installClaimContext" id="283012885%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="install-claim-context.html"><span>install</span><wbr><span>Claim</span><wbr><span><span>Context</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="283012885%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="install-claim-context.html"><span class="token function">installClaimContext</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span><span class="token punctuation">, </span></span><span class="parameter ">descriptor<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span data-unresolved-link="xyz.wagyourtail.unimined.transform.loader/LoaderDescriptor///PointingToDeclaration/">LoaderDescriptor</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">minecraft<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a><span class="token operator">?</span><span class="token operator"> = </span>{ null }</span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Install the claim context — called by environment wiring that knows the env's loader descriptor (resolved lazily at selection time, so <code class="lang-kotlin">loader(...)</code> may be declared after this installs).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1848519012%2FFunctions%2F-1569051040" anchor-label="nestedJars" id="1848519012%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nested-jars.html"><span>nested</span><wbr><span><span>Jars</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1848519012%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="nested-jars.html"><span class="token function">nestedJars</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span><span class="token annotation builtin">@</span><span data-unresolved-link="groovy.lang/DelegatesTo///PointingToDeclaration/"><span class="token annotation builtin">DelegatesTo</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><a href="../-nested-jars-spec/index.html">NestedJarsSpec::class</a><span class="token punctuation">, </span></span><wbr><span>strategy<span class="token operator"> = </span><span class="breakable-word"><span class="token constant">1</span></span></span><wbr><span class="token punctuation">)</span>&nbsp;</span>action<span class="token operator">: </span><span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Groovy DSL overload — <code class="lang-kotlin">nestedJars { recompress.set(false) }</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="nested-jars.html"><span class="token function">nestedJars</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../-nested-jars-spec/index.html">NestedJarsSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">nestedJars { }</code> DSL verb.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1906086377%2FFunctions%2F-1569051040" anchor-label="pipeline" id="-1906086377%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="pipeline.html"><span><span>pipeline</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1906086377%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="pipeline.html"><span class="token function">pipeline</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span><span class="token annotation builtin">@</span><span data-unresolved-link="groovy.lang/DelegatesTo///PointingToDeclaration/"><span class="token annotation builtin">DelegatesTo</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><a href="../-pipeline-spec/index.html">PipelineSpec::class</a><span class="token punctuation">, </span></span><wbr><span>strategy<span class="token operator"> = </span><span class="breakable-word"><span class="token constant">1</span></span></span><wbr><span class="token punctuation">)</span>&nbsp;</span>action<span class="token operator">: </span><span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Groovy DSL overload — <code class="lang-kotlin">pipeline { binpatches { } }</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="pipeline.html"><span class="token function">pipeline</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">action<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Action///PointingToDeclaration/">Action</span><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../-pipeline-spec/index.html">PipelineSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">pipeline { }</code> DSL verb.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1148599396%2FFunctions%2F-1569051040" anchor-label="transformer" id="1148599396%2FFunctions%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="transformer.html"><span><span>transformer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1148599396%2FFunctions%2F-1569051040"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="transformer.html"><span class="token function">transformer</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">transformer<span class="token operator">: </span><a href="../../xyz.wagyourtail.unimined.transform.spi/-minecraft-transformer/index.html">MinecraftTransformer</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Add a transformer to this environment's pipeline.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
