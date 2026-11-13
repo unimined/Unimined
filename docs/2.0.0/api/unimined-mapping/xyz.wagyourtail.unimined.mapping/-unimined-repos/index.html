@@ -1,0 +1,824 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>UniminedRepos</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-mapping/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-mapping/main" data-filter=":unimined-mapping/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-mapping::xyz.wagyourtail.unimined.mapping/UniminedRepos///PointingToDeclaration//956863234">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-mapping</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.mapping</a><span class="delimiter">/</span><span class="current">UniminedRepos</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Unimined</span><wbr><span><span>Repos</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">UniminedRepos</a></div><p class="paragraph">The full known-repository catalog — every repo the 1.x <code class="lang-kotlin">unimined.*Maven</code>/<code class="lang-kotlin">mcphackersIvy</code> helper verbs registered, as data, plus lookups.</p><p class="paragraph"><code class="lang-kotlin">UniminedRepos</code> is a class bound to a <span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span> (or <code class="lang-kotlin">null</code> for the unbound bootstrap instance): constructing an instance registers its catalog entries into the static maps on first touch and exposes each repo pre-bound —</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">UniminedRepos(project).fabric.ensure()           // project repos<br>UniminedRepos(settings.dependencyResolutionManagement.repositories)<br>    .glassLauncher.ensure("babric")              // settings repos</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">The companion holds the static API: <a href="ensure-for-notation.html">ensureForNotation</a>, the deprecated name-keyed <a href="ensure.html">ensure</a>, and the prop-name lookups used by the bound accessors.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="-1473336053%2FClasslikes%2F956863234" anchor-label="BoundParameterizedRepo" id="-1473336053%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-bound-parameterized-repo/index.html"><span>Bound</span><wbr><span>Parameterized</span><wbr><span><span>Repo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1473336053%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-bound-parameterized-repo/index.html">BoundParameterizedRepo</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">delegate<span class="token operator">: </span><a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a><span class="token punctuation">, </span></span><span class="parameter ">handler<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span> : <a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a></div><div class="brief "><p class="paragraph">A catalog <a href="-parameterized-repo/index.html">ParameterizedRepo</a> pre-bound to this instance's handler — <code class="lang-kotlin">ensure(suffix)</code> needs only the 1.x verb's suffix.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1696714086%2FClasslikes%2F956863234" anchor-label="BoundRepo" id="-1696714086%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-bound-repo/index.html"><span>Bound</span><wbr><span><span>Repo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1696714086%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-bound-repo/index.html">BoundRepo</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>delegate<span class="token operator">: </span><a href="-repo/index.html">UniminedRepos.Repo</a><span class="token punctuation">, </span></span><span class="parameter ">handler<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span> : <a href="-repo/index.html">UniminedRepos.Repo</a></div><div class="brief "><p class="paragraph">A catalog <a href="-repo/index.html">Repo</a> pre-bound to this instance's handler — <code class="lang-kotlin">ensure()</code> needs no argument; all other members delegate to the catalog entry.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-887210722%2FClasslikes%2F956863234" anchor-label="Companion" id="-887210722%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-companion/index.html"><span><span>Companion</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-887210722%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1934888450%2FClasslikes%2F956863234" anchor-label="Ivy" id="-1934888450%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-ivy/index.html"><span><span>Ivy</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1934888450%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-ivy/index.html">Ivy</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>url<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>artifactPattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeModules<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>servedGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()</span></span><span class="token punctuation">)</span> : <a href="-repo/index.html">UniminedRepos.Repo</a></div><div class="brief "><p class="paragraph">Ivy repo with a custom artifact pattern — for feeds that aren't maven-shaped at all (mcphackers <code class="lang-kotlin">versionsV2</code>, GitHub release download pages).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="398680063%2FClasslikes%2F956863234" anchor-label="Maven" id="398680063%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-maven/index.html"><span><span>Maven</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="398680063%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-maven/index.html">Maven</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>url<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>artifactFallback<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeGroupRegex<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>excludeGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>servedGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()</span></span><span class="token punctuation">)</span> : <a href="-repo/index.html">UniminedRepos.Repo</a></div><div class="brief "><p class="paragraph">Maven repo with optional artifact-only metadata fallback — pre-maven-era artifacts often ship no POM.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2103374459%2FClasslikes%2F956863234" anchor-label="ParameterizedIvy" id="-2103374459%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-parameterized-ivy/index.html"><span>Parameterized</span><wbr><span><span>Ivy</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2103374459%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-parameterized-ivy/index.html">ParameterizedIvy</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>namePattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>urlPattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>artifactPattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeModules<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>servedGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyMap()</span></span><span class="token punctuation">)</span> : <a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a></div><div class="brief "><p class="paragraph">A parameterized ivy feed — the suffix fills <code class="lang-kotlin">{name}</code> slots in <a href="../../../unimined-mapping/xyz.wagyourtail.unimined.mapping/-unimined-repos/-parameterized-ivy/--root--.html">namePattern</a>/<a href="../../../unimined-mapping/xyz.wagyourtail.unimined.mapping/-unimined-repos/-parameterized-ivy/--root--.html">urlPattern</a>. For feeds that aren't maven-shaped at all, e.g. GitHub release download pages (<code class="lang-kotlin">github.com/{owner}/{repo}/releases/download/{tag}/{file}</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1692382662%2FClasslikes%2F956863234" anchor-label="ParameterizedMaven" id="1692382662%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-parameterized-maven/index.html"><span>Parameterized</span><wbr><span><span>Maven</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1692382662%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-parameterized-maven/index.html">ParameterizedMaven</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>namePattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>urlPattern<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>artifactFallback<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptySet()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>includeGroupRegex<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>servedGroups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyMap()</span></span><span class="token punctuation">)</span> : <a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a></div><div class="brief "><p class="paragraph">A 1.x parameterized maven — the suffix fills <code class="lang-kotlin">{name}</code> slots in <a href="../../../unimined-mapping/xyz.wagyourtail.unimined.mapping/-unimined-repos/-parameterized-maven/--root--.html">namePattern</a>/<a href="../../../unimined-mapping/xyz.wagyourtail.unimined.mapping/-unimined-repos/-parameterized-maven/--root--.html">urlPattern</a> (<code class="lang-kotlin">glassLauncherMaven("snapshots")</code> → <code class="lang-kotlin">maven.glass-launcher.net/snapshots/</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="928614463%2FClasslikes%2F956863234" anchor-label="ParameterizedRepo" id="928614463%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-parameterized-repo/index.html"><span>Parameterized</span><wbr><span><span>Repo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="928614463%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">interface </span><a href="-parameterized-repo/index.html">ParameterizedRepo</a></div><div class="brief "><p class="paragraph">A parameterized catalog entry — a <a href="-repo/index.html">Repo</a> factory keyed on a suffix (the 1.x <code class="lang-kotlin">*Maven("snapshots")</code> verb form).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1856713446%2FClasslikes%2F956863234" anchor-label="Repo" id="1856713446%2FClasslikes%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-repo/index.html"><span><span>Repo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1856713446%2FClasslikes%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">interface </span><a href="-repo/index.html">Repo</a></div><div class="brief "><p class="paragraph">A catalog repo — registerable on a <span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-936103673%2FProperties%2F956863234" anchor-label="arcseekers" id="-936103673%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="arcseekers.html"><span><span>arcseekers</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-936103673%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="arcseekers.html">arcseekers</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1226149483%2FProperties%2F956863234" anchor-label="betaCurse" id="-1226149483%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="beta-curse.html"><span>beta</span><wbr><span><span>Curse</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1226149483%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="beta-curse.html">betaCurse</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1648427443%2FProperties%2F956863234" anchor-label="cleanroom" id="1648427443%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="cleanroom.html"><span><span>cleanroom</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1648427443%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="cleanroom.html">cleanroom</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-197857147%2FProperties%2F956863234" anchor-label="curse" id="-197857147%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="curse.html"><span><span>curse</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-197857147%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="curse.html">curse</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1658910942%2FProperties%2F956863234" anchor-label="fabric" id="1658910942%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fabric.html"><span><span>fabric</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1658910942%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="fabric.html">fabric</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1615674221%2FProperties%2F956863234" anchor-label="fox2Code" id="-1615674221%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fox2-code.html"><span><span>fox2Code</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1615674221%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="fox2-code.html">fox2Code</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1432986784%2FProperties%2F956863234" anchor-label="github" id="-1432986784%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="github.html"><span><span>github</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1432986784%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="github.html">github</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div><div class="brief "><p class="paragraph">GitHub release downloads as an ivy feed — <code class="lang-kotlin">github("wagyourtail")</code> resolves <code class="lang-kotlin">github.com/wagyourtail/&lt;repo&gt;/releases/download/ &lt;tag&gt;/&lt;artifact&gt;-&lt;tag&gt;.&lt;ext&gt;</code>; assumes the conventional <code class="lang-kotlin">artifact-version.ext</code> attachment naming.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-284562661%2FProperties%2F956863234" anchor-label="glassLauncher" id="-284562661%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="glass-launcher.html"><span>glass</span><wbr><span><span>Launcher</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-284562661%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="glass-launcher.html">glassLauncher</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div><div class="brief "><p class="paragraph">1.x parameterized repos — the property name is the 1.x verb; the suffix fills <code class="lang-kotlin">{name}</code> slots in the repo's name/url.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1897440863%2FProperties%2F956863234" anchor-label="jetbrainsIntellijDependencies" id="-1897440863%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jetbrains-intellij-dependencies.html"><span>jetbrains</span><wbr><span>Intellij</span><wbr><span><span>Dependencies</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1897440863%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jetbrains-intellij-dependencies.html">jetbrainsIntellijDependencies</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1511967200%2FProperties%2F956863234" anchor-label="jetbrainsIntellijRepository" id="1511967200%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jetbrains-intellij-repository.html"><span>jetbrains</span><wbr><span>Intellij</span><wbr><span><span>Repository</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1511967200%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jetbrains-intellij-repository.html">jetbrainsIntellijRepository</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1121058665%2FProperties%2F956863234" anchor-label="jitpack" id="1121058665%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jitpack.html"><span><span>jitpack</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1121058665%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jitpack.html">jitpack</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="916918101%2FProperties%2F956863234" anchor-label="legacyFabric" id="916918101%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="legacy-fabric.html"><span>legacy</span><wbr><span><span>Fabric</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="916918101%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="legacy-fabric.html">legacyFabric</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="374051778%2FProperties%2F956863234" anchor-label="liteloader" id="374051778%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="liteloader.html"><span><span>liteloader</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="374051778%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="liteloader.html">liteloader</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-515221703%2FProperties%2F956863234" anchor-label="mavenCentral" id="-515221703%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="maven-central.html"><span>maven</span><wbr><span><span>Central</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-515221703%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="maven-central.html">mavenCentral</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div><div class="brief "><p class="paragraph">Maven Central — named <code class="lang-kotlin">MavenRepo</code> so it dedupes against Gradle's own <code class="lang-kotlin">mavenCentral()</code> (settings-mode checks are name-keyed). The excludes mirror 1.x: <code class="lang-kotlin">com.mojang</code> artifacts live authoritatively on Mojang's host, and <code class="lang-kotlin">org.lwjgl</code> must resolve there too — 1.21's <code class="lang-kotlin">natives-macos-patch</code> classifier is absent from central, and Gradle pins a module's artifacts to whichever repo served its metadata. Registering central FIRST keeps its classifiers reachable for modules both hosts carry (netty natives — libraries.minecraft.net serves the POM + main jar but not the <code class="lang-kotlin">linux-x86_64</code> classifier).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="979764600%2FProperties%2F956863234" anchor-label="mcphackers" id="979764600%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mcphackers.html"><span><span>mcphackers</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="979764600%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="mcphackers.html">mcphackers</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1700281193%2FProperties%2F956863234" anchor-label="minecraftForge" id="1700281193%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="minecraft-forge.html"><span>minecraft</span><wbr><span><span>Forge</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1700281193%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="minecraft-forge.html">minecraftForge</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1698436218%2FProperties%2F956863234" anchor-label="modrinth" id="1698436218%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="modrinth.html"><span><span>modrinth</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1698436218%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="modrinth.html">modrinth</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1799899472%2FProperties%2F956863234" anchor-label="mojangLibraries" id="1799899472%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mojang-libraries.html"><span>mojang</span><wbr><span><span>Libraries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1799899472%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="mojang-libraries.html">mojangLibraries</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-614234142%2FProperties%2F956863234" anchor-label="neoForged" id="-614234142%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="neo-forged.html"><span>neo</span><wbr><span><span>Forged</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-614234142%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="neo-forged.html">neoForged</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1974989028%2FProperties%2F956863234" anchor-label="ornithe" id="1974989028%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="ornithe.html"><span><span>ornithe</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1974989028%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="ornithe.html">ornithe</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-692843317%2FProperties%2F956863234" anchor-label="paper" id="-692843317%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="paper.html"><span><span>paper</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-692843317%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="paper.html">paper</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1044897485%2FProperties%2F956863234" anchor-label="parchment" id="-1044897485%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="parchment.html"><span><span>parchment</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1044897485%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="parchment.html">parchment</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="282163818%2FProperties%2F956863234" anchor-label="quilt" id="282163818%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="quilt.html"><span><span>quilt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="282163818%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="quilt.html">quilt</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2040472867%2FProperties%2F956863234" anchor-label="signalum" id="2040472867%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="signalum.html"><span><span>signalum</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2040472867%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="signalum.html">signalum</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1612036390%2FProperties%2F956863234" anchor-label="sleepingTown" id="1612036390%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="sleeping-town.html"><span>sleeping</span><wbr><span><span>Town</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1612036390%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="sleeping-town.html">sleepingTown</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-414153371%2FProperties%2F956863234" anchor-label="sonatypeStaging" id="-414153371%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="sonatype-staging.html"><span>sonatype</span><wbr><span><span>Staging</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-414153371%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="sonatype-staging.html">sonatypeStaging</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1134949757%2FProperties%2F956863234" anchor-label="spigot" id="-1134949757%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="spigot.html"><span><span>spigot</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1134949757%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="spigot.html">spigot</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1672229961%2FProperties%2F956863234" anchor-label="sponge" id="1672229961%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="sponge.html"><span><span>sponge</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1672229961%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="sponge.html">sponge</a><span class="token operator">: </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1876342729%2FProperties%2F956863234" anchor-label="wagYourTail" id="-1876342729%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="wag-your-tail.html"><span>wag</span><wbr><span>Your</span><wbr><span><span>Tail</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1876342729%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="wag-your-tail.html">wagYourTail</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1735795017%2FProperties%2F956863234" anchor-label="wispForest" id="-1735795017%2FProperties%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="wisp-forest.html"><span>wisp</span><wbr><span><span>Forest</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1735795017%2FProperties%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="wisp-forest.html">wispForest</a><span class="token operator">: </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1856340200%2FFunctions%2F956863234" anchor-label="ensure" id="-1856340200%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="ensure.html"><span><span>ensure</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1856340200%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="ensure.html"><span class="token function"><strike>ensure</strike></span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Register the repo named <a href="ensure.html">name</a> when not already present — parameterized entries use <code class="lang-kotlin">"verb:suffix"</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="752799453%2FFunctions%2F956863234" anchor-label="ensureForNotation" id="752799453%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="ensure-for-notation.html"><span>ensure</span><wbr><span>For</span><wbr><span><span>Notation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="752799453%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="ensure-for-notation.html"><span class="token function">ensureForNotation</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Register the repo a maven <a href="ensure-for-notation.html">notation</a> resolves through, keyed on its group — e.g. <code class="lang-kotlin">net.ornithemc:feather:...</code> registers the Ornithe maven. No-op for groups outside the catalog (those resolve through the project's own declared repos).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="869233226%2FFunctions%2F956863234" anchor-label="ensureParameterized" id="869233226%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="ensure-parameterized.html"><span>ensure</span><wbr><span><span>Parameterized</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="869233226%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="ensure-parameterized.html"><span class="token function"><strike>ensureParameterized</strike></span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">verb<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">suffix<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The 1.x parameterized form — <code class="lang-kotlin">ensureParameterized("glassLauncher", "snapshots", project)</code> registers <code class="lang-kotlin">maven.glass-launcher.net/snapshots/</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1205887252%2FFunctions%2F956863234" anchor-label="parameterizedForProp" id="1205887252%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="parameterized-for-prop.html"><span>parameterized</span><wbr><span>For</span><wbr><span><span>Prop</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1205887252%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="parameterized-for-prop.html"><span class="token function">parameterizedForProp</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">prop<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a></div><div class="brief "><p class="paragraph">Look up a parameterized factory by its delegated property name — the 1.x verb, e.g. <code class="lang-kotlin">"glassLauncher"</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="557416519%2FFunctions%2F956863234" anchor-label="provideDelegate" id="557416519%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="provide-delegate.html"><span>provide</span><wbr><span><span>Delegate</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="557416519%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="provide-delegate.html">T</a><span class="token operator"> : </span><a href="-parameterized-repo/index.html">UniminedRepos.ParameterizedRepo</a><span class="token operator">&gt; </span><a href="provide-delegate.html">T</a><span class="token punctuation">.</span><a href="provide-delegate.html"><span class="token function">provideDelegate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="index.html">UniminedRepos</a><span class="token punctuation">, </span></span><span class="parameter ">property<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-property/index.html">KProperty</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.properties/-read-only-property/index.html">ReadOnlyProperty</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token punctuation">, </span><a href="-bound-parameterized-repo/index.html">UniminedRepos.BoundParameterizedRepo</a><span class="token operator">&gt;</span></div><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="provide-delegate.html">T</a><span class="token operator"> : </span><a href="-repo/index.html">UniminedRepos.Repo</a><span class="token operator">&gt; </span><a href="provide-delegate.html">T</a><span class="token punctuation">.</span><a href="provide-delegate.html"><span class="token function">provideDelegate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="index.html">UniminedRepos</a><span class="token punctuation">, </span></span><span class="parameter ">property<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-property/index.html">KProperty</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.properties/-read-only-property/index.html">ReadOnlyProperty</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token punctuation">, </span><a href="-bound-repo/index.html">UniminedRepos.BoundRepo</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1406458172%2FFunctions%2F956863234" anchor-label="repoFor" id="-1406458172%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="repo-for.html"><span>repo</span><wbr><span><span>For</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1406458172%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="repo-for.html"><span class="token function">repoFor</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-repo/index.html">UniminedRepos.Repo</a></div><div class="brief "><p class="paragraph">Look up a catalog repo by display name, or <code class="lang-kotlin">"verb:suffix"</code> for parameterized entries.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1182141831%2FFunctions%2F956863234" anchor-label="repoForProp" id="1182141831%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="repo-for-prop.html"><span>repo</span><wbr><span>For</span><wbr><span><span>Prop</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1182141831%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="repo-for-prop.html"><span class="token function">repoForProp</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">prop<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-repo/index.html">UniminedRepos.Repo</a></div><div class="brief "><p class="paragraph">Look up a plain catalog repo by its delegated property name — e.g. <code class="lang-kotlin">"fabric"</code> → the Fabric maven.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
