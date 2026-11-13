@@ -2,6 +2,9 @@
 
 - [Fabric](https://fabricmc.net)
 - [Quilt](https://quiltmc.org)
+- [LegacyFabric](https://legacyfabric.net)
+- [Ornithe](https://ornithemc.net)
+- [Babric](https://babric.github.io)
 - [Minecraft Forge](https://minecraftforge.net)
 - [NeoForge](https://neoforged.net)
 - [Cleanroom](https://cleanroommc.com)
@@ -30,4 +33,4 @@ and its `buildsrc` dir for an example.
 - [Minecraft](https://minecraft.net)
 - [Minecraft: ReIndev](https://reindev.miraheze.org/wiki/Reindev_Wiki)
 - [Minecraft: Better Than Adventure](https://betterthanadventure.net)
-- [Not So Seecret Saturday](https://www.notsoseecretsaturday.net) *(planned)*
+- [Not So Seecret Saturday](https://www.notsoseecretsaturday.net)

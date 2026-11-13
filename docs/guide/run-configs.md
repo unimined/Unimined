@@ -13,9 +13,14 @@ configurations from `genIdeRuns`.
 | datagen envs | the env's own name (e.g. `data` → `runData`) |
 | gametest envs | `<env>Client`/`<env>Server` plus `test`-task wiring |
 
-The `prod*` variants launch the *production-namespace* Minecraft
-artifact with your remapped mod jar — the shipped-runtime check
-(1.x `runObfClient`/`runObfServer` parity).
+The `prod*` variants launch against `minecraftProd` — Minecraft in
+the namespace shipped mod jars are remapped to — with your `remapJar`
+output and *direct* (un-remapped) mod dependencies: the
+shipped-runtime check (1.x `runObfClient`/`runObfServer` parity).
+FG2-era forge is the exception: real production launches the shipped
+obf jar and lets `FMLDeobfTweaker` remap obf→searge at runtime, so
+`prodClient`/`prodServer` there resolve `minecraftRaw` plus the
+runtime-deobf flags instead of the pre-deobfed artifact.
 
 ## Reaching runs
 

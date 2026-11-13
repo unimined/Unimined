@@ -86,3 +86,25 @@ Everything below lives inside an env block (`minecraft { … }` or
 - `combinedSources` / `combinedOutputs` — file collections
   populated by `combineWith`; read-mostly, used by generated
   source jars and mod packaging.
+
+## Minecraft artifact configurations
+
+Each environment registers resolvable configurations producing the
+Minecraft artifact at each mapping namespace — `minecraftRaw`,
+`minecraftDev`, `minecraftProd` for `main`, `<env>MinecraftRaw`, …
+for a named env. Resolve them like any configuration — e.g. custom
+packaging tasks that need the prod artifact read
+`configurations.named("minecraftProd")`.
+
+| Configuration | Produces |
+|---|---|
+| `minecraftRaw` | MC in the *source* namespace — the artifact the game ships as (obfuscated for obf-era loaders, intermediary for fabric-family, mojmap for unobf'd releases) |
+| `minecraftDev` | MC in the *dev* namespace your sources compile and dev runs launch against |
+| `minecraftProd` | MC in the *production* namespace shipped mod jars are remapped to — the `remapJar` target. Feeds `runProd*` classpaths and mod-view remap analysis; collapses to the raw artifact when prod == source namespace |
+| `minecraftLibraries` | the MC library set (version-json + loader libraries) |
+
+`runProd*` resolves `minecraftProd` by default; loaders whose
+production runtime remaps at launch override the view — FG2-era
+forge (1.7.10–1.12.2) launches `minecraftRaw` (the shipped obf jar)
+and lets `FMLDeobfTweaker` remap obf→searge at runtime, matching a
+real installation.
