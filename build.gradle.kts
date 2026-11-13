@@ -25,7 +25,10 @@ subprojects {
         autoVersion()
     }
 
-    val publishedName = if (name.startsWith("${rootProject.name}-")) name else "${rootProject.name}-$name"
+    // artifactId mirrors the plugin-id layout: `unimined-minecraft`
+    // publishes as `xyz.wagyourtail.unimined:minecraft` so the real
+    // artifact lives in the same dir as its plugin-marker group
+    val publishedName = name.removePrefix("${rootProject.name}-")
 
     extensions.configure<BasePluginExtension>("base") {
         archivesName.set(publishedName)

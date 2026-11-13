@@ -2,7 +2,7 @@
 
 Adapters are opt-in Gradle plugins that bridge third-party tools
 into Unimined. They live in `unimined-adapters/` and publish as
-`xyz.wagyourtail.unimined:unimined-adapter-<tool>`.
+`xyz.wagyourtail.unimined:adapter-<tool>`.
 
 They share a common shape:
 

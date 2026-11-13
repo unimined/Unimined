@@ -1,7 +1,7 @@
 # Forgix (loader-jar merge)
 
 Adapter plugin `xyz.wagyourtail.unimined.adapter-forgix`
-(`unimined-adapter-forgix`) merges per-loader production jars with
+(`adapter-forgix`) merges per-loader production jars with
 [Forgix](https://github.com/PacifistMC/Forgix)'s engine
 (`Forgix.mergeLoaders`) and publishes the result on the consumable
 `mergedElements` configuration (classifier `merged`).
