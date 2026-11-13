@@ -49,8 +49,14 @@ internal class McpConfigDescriptorFormat : PipelineDescriptorFormat {
             }
             val functions = config["functions"]!!.jsonObject.mapValues { (n, f) ->
                 val o = f.jsonObject
+                // spec ≥6 (26.x neoform): `classpath` is a coord list
+                // and `main_class` may pin the entry point; older
+                // descriptors carry a single `version` coord instead
                 DeclaredTool(
-                    o["version"]!!.jsonPrimitive.content,
+                    o["classpath"]?.jsonArray
+                        ?.map { it.jsonPrimitive.content }
+                        ?: listOf(o["version"]!!.jsonPrimitive.content),
+                    mainClass = o["main_class"]?.jsonPrimitive?.content,
                     args = UserdevConfig.flattenArgs(o["args"]),
                     jvmArgs = UserdevConfig.flattenArgs(o["jvmargs"]),
                     javaVersion = o["java_version"]?.jsonPrimitive?.content
@@ -91,7 +97,7 @@ internal class McpConfigDescriptorFormat : PipelineDescriptorFormat {
                         functions.putIfAbsent(
                             "mcpconfig:diffpatch",
                             DeclaredTool(
-                                "net.minecraftforge:DiffPatch:2.0.12",
+                                listOf("net.minecraftforge:DiffPatch:2.0.12"),
                                 args = listOf(
                                     "-p", "-m", "FUZZY", "-P", "{prefix}",
                                     "-A", "ZIP", "-o", "{output}",

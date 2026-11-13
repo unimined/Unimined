@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -137,6 +139,115 @@ class McpConfigRunnerTest {
         assertTrue(outArg.fileName.toString().startsWith("."))
         assertTrue(outArg.fileName.toString().endsWith(".tmp"))
         assertEquals(listOf("-Xmx1G"), call.jvmArgs)
+    }
+
+    /** Spec ≥6 (26.x neoform descriptors): `functions.*` carry
+     *  `classpath` (a coord LIST) and optional `main_class` instead
+     *  of a single `version` coord — the 2.0.0 NPE was `o["version"]!!`
+     *  on these entries. */
+    @Test
+    fun `spec6 classpath and main_class functions`() {
+        val toolA = jar("vineflower.jar", emptyMap())
+        val toolB = jar("vineflower-plugins.jar", emptyMap())
+        val zip = configZip(
+            mapOf(
+                "config.json" to """{
+              "spec": 6, "version": "26.3", "java_target": 25,
+              "data": {},
+              "functions": {
+                "decompile": {
+                  "classpath": ["org.vineflower:vineflower:1.12.0",
+                                "net.neoforged:vineflower-plugins:0.1.6"],
+                  "main_class": "org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler",
+                  "args": ["--in", "{input}", "--out", "{output}"],
+                  "jvmargs": [],
+                  "java_version": 25
+                }
+              },
+              "steps": {"client": [
+                {"type": "downloadClient"},
+                {"type": "decompile", "input": "{downloadClientOutput}"}
+              ]}
+            }"""
+            )
+        )
+        val requested = mutableListOf<String>()
+        val calls = mutableListOf<ExecCall>()
+        val r = runner(zip, calls, toolClasspath = { coord ->
+            requested.add(coord)
+            if (coord.contains("plugins")) listOf(toolB) else listOf(toolA)
+        })
+        val result = r.resultFor("decompile")
+        assertTrue(result.output!!.exists() || calls.isNotEmpty())
+        // every classpath coord resolved individually, exec classpath
+        // is the union, main class came from `main_class` (tool jars
+        // carry no manifest here — a manifest scan would have failed)
+        assertEquals(
+            listOf("org.vineflower:vineflower:1.12.0",
+                "net.neoforged:vineflower-plugins:0.1.6"),
+            requested
+        )
+        assertEquals(listOf(toolA, toolB), calls[0].cp)
+        assertEquals(
+            "org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler",
+            calls[0].main
+        )
+        assertEquals(25, calls[0].java)
+    }
+
+    @Test
+    fun `spec6 descriptor format parses classpath and main_class`() {
+        val zip = configZip(
+            mapOf(
+                "config.json" to """{
+              "spec": 6, "data": {},
+              "functions": {
+                "preProcessJar": {
+                  "classpath": ["net.neoforged.installertools:installertools:4.0.17:fatjar"],
+                  "args": ["--task", "PROCESS_MINECRAFT_JAR"],
+                  "jvmargs": [],
+                  "java_version": 25
+                },
+                "decompile": {
+                  "classpath": ["org.vineflower:vineflower:1.12.0",
+                                "net.neoforged:vineflower-plugins:0.1.6"],
+                  "main_class": "org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler",
+                  "args": ["-e", "{inputLibraries}"],
+                  "jvmargs": []
+                }
+              },
+              "steps": {"joined": [
+                {"type": "preProcessJar",
+                 "inputClientJar": "{downloadClientOutput}",
+                 "inputServerJar": "{downloadServerOutput}"},
+                {"type": "decompile",
+                 "input": "{preProcessJarOutput}",
+                 "inputLibraries": "{listLibrariesOutput}"}
+              ]}
+            }"""
+            )
+        )
+        val parsed = McpConfigDescriptorFormat().parse(
+            zip.toFile(),
+            object : FormatContext {
+                override val side = "joined"
+                override val bindingNames = emptySet<String>()
+            }
+        )
+        val decompile = parsed.functions.getValue("decompile")
+        assertEquals(
+            listOf("org.vineflower:vineflower:1.12.0",
+                "net.neoforged:vineflower-plugins:0.1.6"),
+            decompile.coords
+        )
+        assertEquals(
+            "org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler",
+            decompile.mainClass
+        )
+        assertEquals(25, parsed.functions.getValue("preProcessJar").javaVersion)
+        // function-typed steps dispatch through `in functions.keys`
+        assertEquals("preProcessJar", parsed.steps[0].function)
+        assertEquals("decompile", parsed.steps[1].function)
     }
 
     @Test

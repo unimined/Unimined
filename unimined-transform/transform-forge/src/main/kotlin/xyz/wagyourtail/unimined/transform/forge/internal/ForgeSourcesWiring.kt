@@ -165,7 +165,7 @@ internal fun contributeDevSources(
                     )
                 }
             )
-            (parsed.functions.values.map { it.coord } + listOf(
+            (parsed.functions.values.flatMap { it.coords } + listOf(
                 "net.minecraftforge:mcpcleanup:2.3.6",
                 "net.minecraftforge:DiffPatch:2.0.12"
             )).toSet().associateWith { coord ->
@@ -307,9 +307,11 @@ internal fun mcpconfigCleanJar(
                     }
                 )
                 parsed.functions.values.flatMap { tool ->
-                    project.configurations.detachedConfiguration(
-                        project.dependencies.create(tool.coord)
-                    ).apply { isTransitive = true }.files
+                    tool.coords.flatMap { coord ->
+                        project.configurations.detachedConfiguration(
+                            project.dependencies.create(coord)
+                        ).apply { isTransitive = true }.files
+                    }
                 }
             })
             p.toolJarPaths.putAll(project.provider {
@@ -325,15 +327,17 @@ internal fun mcpconfigCleanJar(
                         )
                     }
                 )
-                parsed.functions.values.associate { tool ->
-                    tool.coord to
-                        project.configurations.detachedConfiguration(
-                            project.dependencies.create(tool.coord)
-                        ).apply { isTransitive = true }
-                            .files.joinToString(java.io.File.pathSeparator) {
-                                it.absolutePath
-                            }
-                }
+                parsed.functions.values.flatMap { tool ->
+                    tool.coords.map { coord ->
+                        coord to
+                            project.configurations.detachedConfiguration(
+                                project.dependencies.create(coord)
+                            ).apply { isTransitive = true }
+                                .files.joinToString(java.io.File.pathSeparator) {
+                                    it.absolutePath
+                                }
+                    }
+                }.toMap()
             })
             p.side.set(side)
             p.notchObf.set(project.provider {

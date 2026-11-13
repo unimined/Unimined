@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.internal.EnvironmentClasspathWiring
@@ -47,7 +48,7 @@ class GradlePlugin : Plugin<Project> {
                 // until the `minecraft {}` DSL runs, so evaluate after
                 // the project configures — the applied plugin's own
                 // `onEnvironmentBound` replays bound environments.
-                target.afterEvaluate {
+                target.afterDslEval {
                     for (environment in minecraft.environments) {
                         val spec = environment.loaderSpec.orNull ?: continue
                         val descriptor = LoaderRegistry.resolveBuiltin(spec.name)

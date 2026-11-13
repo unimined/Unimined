@@ -112,7 +112,10 @@ internal class McpConfigRunner(
     }
 
     data class Function(
-        val version: String,
+        /** Tool coords — spec ≥6 declares `classpath` (a list);
+         *  older `version` (single coord) folds into it. */
+        val classpath: List<String>,
+        val mainClass: String?,
         val javaVersion: String?,
         val args: List<String>,
         val jvmArgs: List<String>
@@ -122,7 +125,10 @@ internal class McpConfigRunner(
         configJson["functions"]!!.jsonObject.mapValues { (_, f) ->
             val obj = f.jsonObject
             Function(
-                obj["version"]!!.jsonPrimitive.content,
+                obj["classpath"]?.jsonArray
+                    ?.map { it.jsonPrimitive.content }
+                    ?: listOf(obj["version"]!!.jsonPrimitive.content),
+                obj["main_class"]?.jsonPrimitive?.content,
                 obj["java_version"]?.jsonPrimitive?.content,
                 xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig.flattenArgs(obj["args"]),
                 xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig.flattenArgs(obj["jvmargs"])
@@ -366,15 +372,18 @@ internal class McpConfigRunner(
         override fun execute(dir: Path): StepResult {
             val output = dir.resolve("${name}Output.jar")
             if (!output.exists()) {
-                val classpath = env.toolClasspath(function.version)
-                val mainClass = classpath.firstNotNullOfOrNull { jar ->
-                    runCatching {
-                        JarFile(jar.toFile()).use {
-                            it.manifest.mainAttributes
-                                .getValue(java.util.jar.Attributes.Name.MAIN_CLASS)
-                        }
-                    }.getOrNull()
-                } ?: error("could not determine main class for ${function.version}")
+                val classpath = function.classpath.flatMap(env.toolClasspath)
+                val mainClass = function.mainClass
+                    ?: classpath.firstNotNullOfOrNull { jar ->
+                        runCatching {
+                            JarFile(jar.toFile()).use {
+                                it.manifest.mainAttributes
+                                    .getValue(java.util.jar.Attributes.Name.MAIN_CLASS)
+                            }
+                        }.getOrNull()
+                    } ?: error(
+                        "could not determine main class for ${function.classpath}"
+                    )
                 // the tool writes {output} — point it at a temp file and
                 // move on success so a killed javaexec can't leave a
                 // partial jar that `!output.exists()` would skip (#78)
@@ -398,8 +407,8 @@ internal class McpConfigRunner(
         variables: MutableMap<String, () -> String>
     ) : FunctionStep(
         name, prev, variables, Function(
-            "net.minecraftforge:DiffPatch:2.0.12",
-            null,
+            listOf("net.minecraftforge:DiffPatch:2.0.12"),
+            null, null,
             listOf(
                 "-p", "-m", "FUZZY", "-P", "{prefix}", "-A", "ZIP",
                 "-o", "{output}", "-r", "{reject}", "-H", "ZIP", "-s",

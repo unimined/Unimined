@@ -82,14 +82,14 @@ class SubpipelineExecutor(
                     tool: DeclaredTool,
                     args: List<String>, jvmArgs: List<String>
                 ) {
-                    val cp = toolResolver(tool.coord)
+                    val cp = tool.coords.flatMap { toolResolver(it) }
                     // ports expect a resolved main class (1.x
                     // manifest-scan parity — DeclaredTool leaves it
                     // null when the descriptor omits one)
-                    // manifest scan prefers jars matching the coord's
-                    // artifact name — callers may pass a union
+                    // manifest scan prefers jars matching the first
+                    // coord's artifact name — callers may pass a union
                     // classpath of all tools
-                    val artifact = tool.coord
+                    val artifact = tool.coords.first()
                         .substringAfter(':').substringBefore(':')
                     val scanOrder = cp.sortedByDescending {
                         it.fileName.toString().contains(artifact)

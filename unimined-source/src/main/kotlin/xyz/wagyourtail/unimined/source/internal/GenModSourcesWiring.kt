@@ -8,6 +8,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
@@ -45,7 +46,7 @@ internal object GenModSourcesWiring {
         environment: MinecraftEnvironment,
         @Suppress("unused") sourceSet: SourceSet
     ) {
-        project.afterEvaluate {
+        project.afterDslEval {
             wireTask(project, environment)
         }
     }

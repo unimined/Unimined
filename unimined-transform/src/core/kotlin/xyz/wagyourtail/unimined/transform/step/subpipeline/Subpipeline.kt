@@ -35,9 +35,11 @@ data class SubStep(
 
 /** A resolved external tool — one `functions.<name>` entry. */
 data class DeclaredTool(
-    /** Maven-ish coordinate resolved via the exec-context
-     *  `toolResolver`. */
-    val coord: String,
+    /** Maven-ish coordinates resolved via the exec-context
+     *  `toolResolver` (one call per coord; the union is the exec
+     *  classpath). Spec ≥6 descriptors declare `classpath` (a coord
+     *  list); older `version` (single coord) folds into it. */
+    val coords: List<String>,
     val mainClass: String? = null,
     val args: List<String> = emptyList(),
     val jvmArgs: List<String> = emptyList(),

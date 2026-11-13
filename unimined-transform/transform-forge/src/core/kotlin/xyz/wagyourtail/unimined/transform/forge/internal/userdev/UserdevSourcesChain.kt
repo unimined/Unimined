@@ -93,7 +93,7 @@ internal object UserdevSourcesChain {
                 )
             )
             tools["forge:mcpCleanup"] = DeclaredTool(
-                "net.minecraftforge:mcpcleanup:2.3.6", null,
+                listOf("net.minecraftforge:mcpcleanup:2.3.6"), null,
                 listOf("--input", "{input}", "--output", "{output}"),
                 emptyList()
             )
@@ -123,7 +123,7 @@ internal object UserdevSourcesChain {
         tools.putIfAbsent(
             "mcpconfig:diffpatch",
             DeclaredTool(
-                "net.minecraftforge:DiffPatch:2.0.12",
+                listOf("net.minecraftforge:DiffPatch:2.0.12"),
                 args = listOf(
                     "-p", "-m", "FUZZY", "-P", "{prefix}",
                     "-A", "ZIP", "-o", "{output}",
