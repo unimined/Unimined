@@ -295,9 +295,33 @@ internal object JarModEnvironmentWiring {
                 useAsm52 = JarModEnvState.useAsm52(envId),
             )
         }
+        val remap = project.extensions.getByType(xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+        // dev-side access apply — user-declared AT/AW/CT docs widen
+        // the artifact `compileJava` sees, mirroring the loader
+        // family wirings (the runtime agent still applies them at
+        // launch). `accessTransformers` also carries the FG1 forge-zip
+        // extraction above — those `*_at.cfg`s are obf/legacy-named
+        // installer files, never dev-applied: filter by the known
+        // extraction dir. User headerless ATs are dev-named.
+        val jarmodApplySpec = project.objects.newInstance(
+            xyz.wagyourtail.unimined.remapper.access
+                .ApplyClassTweakerStepSpec::class.java)
+        jarmodApplySpec.classTweakerFiles.from(
+            environment.accessWideners,
+            environment.generatedAccessFiles,
+            project.provider {
+                val fg1Ats = project.layout.buildDirectory
+                    .dir("unimined/fg1-ats/$envId").get().asFile.toPath()
+                environment.accessTransformers.files.filter {
+                    !it.toPath().startsWith(fg1Ats) }
+            })
+        jarmodApplySpec.headerlessNamespace.set(environment.devNamespace)
+        remap.sourceSet(envId).contributeStep(
+            xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
+            jarmodApplySpec
+        )
         // modloader-only: ModLoader dev fixes (URI/package patches)
         // — exists-gated internally, so harmless on plain jarmod envs
-        val remap = project.extensions.getByType(xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
         remap.sourceSet(envId).contributeStep(
             xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
             project.objects.newInstance(

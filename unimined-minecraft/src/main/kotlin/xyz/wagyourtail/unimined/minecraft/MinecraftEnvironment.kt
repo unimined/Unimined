@@ -238,8 +238,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         val parent = project.extensions
             .getByType(MinecraftExtension::class.java).environment(ref)
         transitiveAccessWideners.convention(parent.transitiveAccessWideners)
+        interfaceInjectionScan.convention(parent.interfaceInjectionScan)
+        discoverMixinConfigs.convention(parent.discoverMixinConfigs)
+        discoverGametestEntrypoints.convention(parent.discoverGametestEntrypoints)
         accessWideners.from(parent.accessWideners)
         accessTransformers.from(parent.accessTransformers)
+        inheritedAccessSpecs += parent.inheritedAccessSpecs + parent.accessDsl
         // DEPENDENCIES covers both the mod buckets and the plain
         // sourceSet buckets (implementation/compileOnly/runtimeOnly/
         // api) — see MinecraftEnvironmentCopyHandler.wireDependencies
@@ -395,6 +399,89 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         objects.property(Boolean::class.java).convention(true)
 
     /**
+     * Inline access declarations — the spec behind `access { }`.
+     * Rules are stored semantically and materialized as a generated
+     * document in the loader's consumed format, riding the same
+     * apply/ship/remap channels as file-declared access files.
+     */
+    val accessDsl: AccessDslSpec = objects.newInstance(AccessDslSpec::class.java)
+
+    /** `access { }` DSL verb — declare access directives inline:
+     *  `accessible`/`extendable`/`mutable` (+ `transitive-*` twins),
+     *  `injectInterface`, `extendEnum`, `at` (FML AT entries),
+     *  `fileName` for the merged doc's shipped path. */
+    fun access(action: Action<in AccessDslSpec>) {
+        action.execute(accessDsl)
+    }
+
+    /** Groovy DSL twin of [access]. */
+    fun access(
+        @DelegatesTo(value = AccessDslSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(accessDsl)
+
+    /**
+     * Jar path the environment's merged access document ships at —
+     * plumbing for `access { fileName = "..." }` (set there in DSL;
+     * this property is the task-input channel). A direct set and a
+     * spec `fileName` must agree — conflicts error at wiring.
+     */
+    val accessFileName: Property<String> =
+        objects.property(String::class.java)
+
+    /**
+     * Format the environment's merged access document emits in —
+     * plumbing for `access { format = "..." }`; default is the
+     * loader's consumed format (`emitter.accessFormat`). Same
+     * must-agree rule as [accessFileName].
+     */
+    val accessFileFormat: Property<String> =
+        objects.property(String::class.java)
+
+    /** `interfaceInjection(target, signature)` — shorthand for
+     *  `access { transitiveInjectInterface(...) }` (transitive, so the
+     *  injection propagates to dependents like loom's
+     *  `injected_interfaces` model). */
+    fun interfaceInjection(owner: String, signature: String) =
+        accessDsl.transitiveInjectInterface(owner, signature)
+
+    /**
+     * Whether compiled mixin classes are scanned for implemented
+     * interfaces and the results emitted as generated
+     * `inject-interface` rules. Default `false` — opt-in: the scan
+     * runs on compiled classes, so it can never provide an injection
+     * the project's own sources need to compile; declaring rules via
+     * `access { injectInterface(...) }` covers both. Restores the
+     * scan for projects that want zero declarations.
+     */
+    val interfaceInjectionScan: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(false)
+
+    /**
+     * Whether `*.mixins.json` files discovered in the env's resources
+     * auto-fill the generated metadata's `mixins` array
+     * (default `true`). Disable to require explicit `mod { }`
+     * declaration of every config.
+     */
+    val discoverMixinConfigs: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /**
+     * Whether compiled classes are scanned for loader gametest
+     * implementations and emitted as `fabric-gametest`/
+     * `fabric-client-gametest` entrypoints (default `true`). Disable
+     * to require explicit entrypoint declaration.
+     */
+    val discoverGametestEntrypoints: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /** Access-spec instances this env inherits rules from — parent env
+     *  specs contributed by `combineWith`, unioned lazily at
+     *  materialization so declarations made later in the parent's DSL
+     *  body are still seen. */
+    val inheritedAccessSpecs = mutableListOf<AccessDslSpec>()
+
+    /**
      * Access-transformer files applied to this environment's dev
      * Minecraft artifact (Forge/FML-family `accesstransformer.cfg` /
      * `*_at.cfg` files) — populated directly or by loader transforms.
@@ -402,6 +489,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * dependencies — FML has no transitive-gated subset.
      */
     val accessTransformers: ConfigurableFileCollection = objects.fileCollection()
+
+    /**
+     * Access documents *generated* for this environment — the
+     * `access { }` DSL's materialized doc lands here rather than in
+     * [accessWideners]/[accessTransformers]. Consumers (dev-jar apply,
+     * packaging, remap access-model) read it alongside the declared
+     * collections, but `combineWith` does **not** propagate it —
+     * children re-emit the rules from `inheritedAccessSpecs` in their
+     * own loader's format, so shipping the parent's generated file
+     * downstream would duplicate every rule.
+     */
+    val generatedAccessFiles: ConfigurableFileCollection = objects.fileCollection()
 
     /** Per-file access-declaration overrides (plan escape hatch) —
      *  files declared via [accessFile] emit as independent conversions

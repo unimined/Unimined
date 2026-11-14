@@ -19,9 +19,11 @@ import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
  * Emission covers the loader-neutral model plus host-discovered data:
  * generated *and* resource-discovered mixin configs land in `mixins`,
  * [ModMetadataEmitter.gametestInterface] implementors land under
- * [gametestEntrypointKey], generated classTweaker files land in
- * `classTweakers`, and mixin-derived interface injections land in
- * `custom.<[injectedInterfacesKey]>`.
+ * [gametestEntrypointKey], and interface injections land in
+ * `custom.<[injectedInterfacesKey]>` (on CT-capable loader versions
+ * they also merge into the declared access doc itself — fmj v1 has no
+ * separate `classTweakers` key; the loader reads CT-format content
+ * through the `accessWidener` path).
  */
 abstract class FabricModJsonEmitter : ModMetadataEmitter {
 
@@ -118,11 +120,9 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
             if (mixinRefs.isNotEmpty()) {
                 putJsonArray("mixins") { mixinRefs.forEach { add(JsonPrimitive(it)) } }
             }
-            if (context.classTweakerRefs.isNotEmpty()) {
-                putJsonArray("classTweakers") {
-                    context.classTweakerRefs.forEach { add(JsonPrimitive(it)) }
-                }
-            }
+            // fmj v1 has no `classTweakers` array — CT-format content is
+            // consumed through the `accessWidener` file itself on
+            // CT-capable loaders, so no refs emit here
             if (meta.depends.isNotEmpty()) {
                 putJsonObject("depends") {
                     meta.depends.forEach { (modId, range) -> put(modId, range) }

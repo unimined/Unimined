@@ -291,4 +291,137 @@ class GenerateModMetadataTaskTest {
                 dir.resolve("gen/META-INF/accesstransformer.cfg")))
     }
 
+    private val ct = """
+        classTweaker v1 named
+        accessible class example/Target
+        inject-interface example/Target com/example/IFoo
+    """.trimIndent()
+
+    @Test
+    fun `CT doc merges into canonical classTweaker on fabric 0_18`() {
+        val authored = write("mod.classtweaker", ct, dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.loaderVersion.set("0.18.0")
+        t.generate()
+
+        val canon = dir.resolve("gen/testmod.accesswidener")
+        assertTrue(Files.isRegularFile(canon))
+        val text = canon.readText()
+        assertTrue(text.startsWith("classTweaker"))
+        assertTrue(Regex("accessible\\s+class\\s+example/Target")
+            .containsMatchIn(text))
+        assertTrue(Regex(
+            "inject-interface\\s+example/Target\\s+com/example/IFoo")
+                .containsMatchIn(text))
+        // the doc still declares through `accessWidener` — fmj v1's
+        // only access field; 0.18 parses CT content through it
+        assertTrue(dir.resolve("gen/fabric.mod.json").readText()
+            .contains("\"accessWidener\""))
+    }
+
+    @Test
+    fun `CT directives drop below fabric 0_18`() {
+        val authored = write("mod.classtweaker", ct, dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.loaderVersion.set("0.17.9")
+        t.generate()
+
+        val text = dir.resolve("gen/testmod.accesswidener").readText()
+        assertTrue(text.startsWith("accessWidener"))
+        assertTrue(text.contains("example/Target"))
+        assertFalse(text.contains("inject-interface"))
+    }
+
+    @Test
+    fun `CT doc on an AT loader keeps only access directives`() {
+        val authored = write("mod.classtweaker", ct, dir.resolve("src"))
+        val t = task("testforge", listOf(authored))
+        t.generate()
+
+        val text = dir.resolve("gen/META-INF/accesstransformer.cfg")
+            .readText()
+        assertTrue(text.contains("public example.Target"))
+        assertFalse(text.contains("inject-interface"))
+    }
+
+    @Test
+    fun `declared interface injections ride the loom key`() {
+        val t = task("fabric", emptyList())
+        t.declaredInterfaceInjections.set(
+            mapOf("net/minecraft/Target" to listOf("com/example/IFoo")))
+        t.generate()
+        val fmj = dir.resolve("gen/fabric.mod.json").readText()
+        assertTrue(fmj.contains("loom:injected_interfaces"))
+        assertTrue(fmj.contains("com/example/IFoo"))
+    }
+
+    @Test
+    fun `discoverMixinConfigs flag off skips resource configs`() {
+        val res = dir.resolve("resources")
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": []}""", res)
+        val t = task("fabric", emptyList(), res)
+        t.discoverMixinConfigs.set(false)
+        t.generate()
+        assertFalse(dir.resolve("gen/fabric.mod.json").readText()
+            .contains("testmod.mixins.json"))
+    }
+
+    @Test
+    fun `accessPathOverride renames the canonical doc and declaration`() {
+        val authored = write("authored.accesswidener", aw,
+            dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.accessPathOverride.set("custom.ct")
+        t.generate()
+
+        val canon = dir.resolve("gen/custom.ct")
+        assertTrue(Files.isRegularFile(canon))
+        assertTrue(canon.readText().contains("example/Target"))
+        // nothing lands at the conventional path, and fmj declares the
+        // custom name through `accessWidener`
+        assertFalse(Files.exists(dir.resolve("gen/testmod.accesswidener")))
+        assertTrue(dir.resolve("gen/fabric.mod.json").readText()
+            .contains("custom.ct"))
+    }
+
+    @Test
+    fun `accessPathOverride still expands modid`() {
+        val authored = write("authored.accesswidener", aw,
+            dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.accessPathOverride.set("META-INF/{modid}.ct")
+        t.generate()
+        assertTrue(Files.isRegularFile(
+            dir.resolve("gen/META-INF/testmod.ct")))
+    }
+
+    @Test
+    fun `accessFormatOverride re-emits canonical doc in that format`() {
+        val authored = write("authored.accesswidener", aw,
+            dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.accessFormatOverride.set("at")
+        t.generate()
+
+        // AW input converted to AT rows — no AW header, `public` rows
+        val canon = dir.resolve("gen/testmod.accesswidener")
+        assertTrue(Files.isRegularFile(canon))
+        val text = canon.readText()
+        assertFalse(text.contains("accessWidener"))
+        // AT rows use Forge's dotted-class form
+        assertTrue(text.contains("public example.Target"))
+    }
+
+    @Test
+    fun `accessFormatOverride rejects unknown format names`() {
+        val authored = write("authored.accesswidener", aw,
+            dir.resolve("src"))
+        val t = task("fabric", listOf(authored))
+        t.accessFormatOverride.set("bogus")
+        org.junit.jupiter.api.assertThrows<org.gradle.api.GradleException> {
+            t.generate()
+        }
+    }
+
 }

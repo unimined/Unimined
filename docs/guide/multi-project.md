@@ -114,3 +114,47 @@ Cross-project inheritance uses the `<project>:<env>` path form —
 `combineWith(":common:main")` pulls the `common` project's `main`
 env (classpath included, so shared code resolves); `copyFrom`
 reuses sections without composing output.
+
+### Access declarations in `common`
+
+A loader-less env applies access files to its own dev artifact the
+same as a loader env — the apply step is contributed by the shared
+wiring rather than a loader family, so `access { }`, `from(...)`
+files, and AT/AW/CT files under `common/src/main/resources` all
+take effect where `common` compiles. Downstream envs get the same
+rules through `combineWith`: `access { }` rules re-emit in each
+child loader's consumed format (AW/CT for fabric, AT for forge),
+while declared/discovered files propagate through the file
+collections and merge into each child's canonical doc. Per-file
+options (`from(path) { output }`), `fileName`, and `format` follow
+the same propagation — a child's own `access { }` block wins when
+it redeclares a name or format.
+
+Dependency-declared access applies to a `common` env too (loom
+`transitiveAccessWideners` parity): `modImplementation`/
+`modRuntimeOnly` jars are scanned for conventional access docs —
+`*.accesswidener`/`.classtweaker` entries, `fabric.mod.json`
+`accessWidener`/`classTweakers` refs, `META-INF/accesstransformer.cfg`
++ `FMLAT` manifest entries, and `custom.*injected_interfaces` keys
+(synthesized as `transitive-inject-interface` rules). AW/CT docs
+apply their `transitive-*` rules only; ATs apply in full (FML
+semantics). Headerless dep docs need an unambiguous
+`modSourceNamespaces` entry to interpret — skipped with a warning
+otherwise. Dep jars' embedded access docs are also rebased during
+their prod→dev remap (`remap-access` step), matching the loader
+envs.
+
+A `common` env's access declarations also ship **inside its jar**
+— the `architectury.common.json` equivalent. The canonical doc
+emits as a self-describing `classTweaker` file at
+`<env>-access.classtweaker` (`access { format = "at" }` switches
+to `META-INF/<env>-access_at.cfg`, `"aw"` to `.accesswidener`,
+and `access { fileName }` overrides the whole path), and
+`from(path) { output }`/declared files land at their output or a
+conventional path. Dependents that consume `common` as a plain
+dependency — no `combineWith` — pick these up through the same
+dep scan: **`transitive-*` rules cross to dependents**, the rest
+stay env-local (loom `transitiveAccessWideners` semantics). The
+production remap rebases the embedded doc alongside the jar's
+other contents, so the published artifact declares it in the
+production namespace.

@@ -207,7 +207,10 @@ internal fun contributeAccessSteps(
     ).devNamespace(environment.environmentId)
 
     val userSpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
-    userSpec.classTweakerFiles.from(environment.accessTransformers)
+    userSpec.classTweakerFiles.from(
+        environment.accessWideners, environment.accessTransformers,
+        environment.generatedAccessFiles
+    )
     userSpec.headerlessNamespace.set(effectiveDevNs)
 
     // the remap-analysis overlay: declared ATs plus every extracted
@@ -217,7 +220,9 @@ internal fun contributeAccessSteps(
         val obfNs = mapOf("source" to extractedObfNs.get())
         AccessModel(
             buildList {
-                environment.accessTransformers.files
+                (environment.accessWideners.files +
+                        environment.accessTransformers.files +
+                        environment.generatedAccessFiles.files)
                     .filter { it.isFile }
                     .mapTo(this) {
                         ClassTweaker.parse(it.name, it.readText(), devNs)

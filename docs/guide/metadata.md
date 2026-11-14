@@ -38,31 +38,70 @@ from `processResources`. Non-JSON collisions still fail the build.
 ## Discovery
 
 `generate<Env>ModMetadata` scans the environment's resources and
-compiled classes at execution time:
+compiled classes at execution time, gated by three env flags:
 
 - `*.mixins.json` files found in resources are referenced from the
   `mixins` array automatically (generated and hand-written configs
-  union, deduplicated).
+  union, deduplicated) — `discoverMixinConfigs`, default `true`.
 - Classes implementing the loader's gametest interface are added to
   the `fabric-gametest` entrypoint; `FabricClientGameTest`
-  implementors land under `fabric-client-gametest`.
+  implementors land under `fabric-client-gametest` —
+  `discoverGametestEntrypoints`, default `true`.
 - Mixin classes are scanned for `@Mixin` targets × implemented
-  interfaces; each pair becomes a `transitive-inject-interface`
-  classTweaker rule (generated under
-  `META-INF/unimined/injected-interfaces.ct`, referenced via
-  `classTweakers`) and a `custom.loom:injected_interfaces` entry.
-  Rules already present in the project's own CT/AW files are not
-  re-emitted, and duplicates are suppressed.
+  interfaces — `interfaceInjectionScan`, default `false` (opt-in).
+  Each pair becomes an `inject-interface` rule: on loaders whose
+  access doc can carry classTweaker directives (fabric ≥ `0.18.0`)
+  the rules merge into the canonical `*.accesswidener` file, and on
+  every loader they emit a `custom.loom:injected_interfaces` entry
+  for IDE/dependents. Rules already present in the project's own
+  CT/AW files or `access { }` declarations are not re-emitted.
 
 Interface-injection names are emitted in the dev namespace; the
 production repack rebases the metadata keys to the published
 namespace. Dependent projects receive the injections through the
 dependency-side classTweaker extraction.
 
-Because generation needs compiled classes, it cannot feed the
+Because the scan needs compiled classes, it cannot feed the
 project's own compile classpath — casts against injected interfaces
-in first-party sources still need a manual rule. Dependents and the
-runtime packaging are covered automatically.
+in first-party sources need a declared rule (`access {
+injectInterface(...) }`), which applies to the dev artifact *and*
+ships for dependents. The scan only adds dependents-facing metadata.
+
+## Access files
+
+No DSL is required — an access file under the environment's
+resource roots (`*.accesswidener`, `*.classtweaker`/`.ct`,
+`accesstransformer.cfg`/`*_at.cfg`) is picked up automatically.
+
+All declared access files — `accessWideners`/`accessTransformers`
+collections, `access { }` rules, `accessFile(...)` overrides, and
+the auto-discovered resource files — convert into
+the loader's consumed format and merge into one canonical file at
+the loader's conventional path (`{modid}.accesswidener`,
+`META-INF/accesstransformer.cfg`), which the metadata then declares
+(`accessWidener` field, `FMLAT` manifest attribute). `classTweaker`
+documents merge their AW-compatible directives and keep CT-only
+directives (`inject-interface`, `extend-enum`) when the loader
+version can parse them — fabric ≥ `0.18.0` reads CT content through
+the `accessWidener` file — otherwise those directives drop with a
+warning.
+
+The emitted format is always the env loader's consumed one —
+conversion is bidirectional, so a modern AT input on an FG1-era env
+re-emits as legacy `*_at.cfg` rows, a legacy file on modern forge
+emits modern `at` rows, and either emits AW/CT on fabric-family.
+
+Two naming controls exist where the loader's metadata declares the
+path: the merged canonical doc's jar path is overridable via
+`access { fileName = "…" }` / `accessFileName` (`{modid}` expands),
+and individual files carry their own shipped path via
+`accessFile(path) { output = "…" }` or `access { from(path) {
+output = "…" } }` — `declare=false` applies a file to the dev
+artifact without shipping it, and `format` forces the source
+interpretation (`"aw"`/`"at"`/`"legacy_at"`, plus long names;
+classTweaker is detected by header only). On loaders with no
+access-file convention the canonical-name override is ignored
+(warn-only).
 
 ## Manifest attributes
 

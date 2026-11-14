@@ -8,6 +8,9 @@ dependencies {
     "coreApi"(project(":unimined-api"))
     "coreApi"(libs.asm)
     api(project(":unimined-remap"))
+    // dev-artifact access apply for loader-less (common) envs;
+    // family wirings carry their own dependency on this module
+    implementation(project(":unimined-remap:remapper-access"))
     "coreApi"(libs.classtransform)
     "coreApi"(libs.classtransform.acp)
     api(libs.classtransform)

@@ -129,6 +129,134 @@ class EnvironmentClasspathWiringTest {
     }
 
     @Test
+    fun `loaderless env wires access apply and env-local generated doc`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.main
+        env.devNamespace.set("named")
+        env.access { it.accessible("a/B") }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        // generated doc is env-local — not in the combine-propagated
+        // collections (children re-emit inherited rules themselves)
+        assertTrue(env.generatedAccessFiles.from.isNotEmpty())
+        assertTrue(
+            env.accessWideners.from.none { it is org.gradle.api.provider.Provider<*> }
+        )
+
+        // no loader family claims the apply step — the universal
+        // wiring contributes two JAR-surface classTweaker applies:
+        // the own-declarations spec feeding all three collections
+        // (headerless ATs bound to the dev ns) plus a dep-declared
+        // spec, and the `remap-access` step for dep-jar embedded docs
+        val remap = project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+        val steps = remap.sourceSet("main")
+            .contributedSteps(xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR)
+        val applySpecs = steps.filterIsInstance<
+                xyz.wagyourtail.unimined.remapper.access
+                        .ApplyClassTweakerStepSpec>()
+        assertEquals(2, applySpecs.size)
+        val ownSpec = applySpecs.single { spec ->
+            spec.classTweakerFiles.from.containsAll(
+                listOf(env.accessWideners, env.accessTransformers,
+                    env.generatedAccessFiles))
+        }
+        assertEquals("named",
+            ownSpec.headerlessNamespace.get())
+        assertTrue(steps.any {
+            it is xyz.wagyourtail.unimined.remap.AccessRemapStepSpec })
+
+        // canonical doc emits classTweaker (self-describing, all rule
+        // kinds) under the jar-layout dir — the env's own jar embeds
+        // it for dependents to discover via the dep-access scan
+        val gen = env.generatedAccessFiles.files.single()
+        assertEquals("main-access.classtweaker", gen.name)
+        assertTrue(gen.readText()
+            .startsWith("classTweaker\tv1\tnamed"))
+        assertTrue(gen.path.replace('\\', '/')
+            .contains("unimined/access/main/jar/"))
+    }
+
+    @Test
+    fun `loaderless access doc honors format and fileName`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.main
+        env.devNamespace.set("named")
+        env.access {
+            it.format = "at"
+            it.fileName = "META-INF/custom_at.cfg"
+            it.accessible("a/B")
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val gen = env.generatedAccessFiles.files.single()
+        assertEquals("META-INF/custom_at.cfg",
+            gen.relativeTo(
+                dir.resolve("build/unimined/access/main/jar").toFile()
+            ).path.replace('\\', '/'))
+        assertEquals("public a/B", gen.readText().trim())
+    }
+
+    @Test
+    fun `dep access scan buckets headered, headerless, and II docs`() {
+        // fixture dep jar: conventional AW + META-INF AT + fmj
+        // accessWidener field + loom injected_interfaces
+        val jar = dir.resolve("dep-1.0.jar")
+        java.util.jar.JarOutputStream(
+            java.io.FileOutputStream(jar.toFile()),
+            java.util.jar.Manifest().apply {
+                mainAttributes.putValue("Manifest-Version", "1.0")
+                mainAttributes.putValue("FMLAT", "custom/at_file.cfg")
+            }).use { out ->
+            fun put(name: String, content: String) {
+                out.putNextEntry(java.util.jar.JarEntry(name))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+            put("modid.accesswidener",
+                "accessWidener\tv2\tintermediary\n" +
+                        "transitive-accessible\tclass\ta/B\n")
+            put("META-INF/accesstransformer.cfg",
+                "public a.B\n")
+            put("custom/at_file.cfg", "public a.B\n")
+            put("fabric.mod.json", """{"id":"dep",
+                "accessWidener":"odd/name.txt",
+                "custom":{"loom:injected_interfaces":
+                    {"net/mc/A":["com/x/II"]}}}""")
+            put("odd/name.txt",
+                "accessWidener\tv2\tintermediary\n" +
+                        "transitive-accessible\tclass\ta/C\n")
+        }
+        val warnings = mutableListOf<String>()
+        val result = xyz.wagyourtail.unimined.transform.internal
+            .DepAccessScan.scan(
+                jar, dir.resolve("cache"), "intermediary", warnings::add)
+
+        // AW extension + fmj-referenced doc → dep channel
+        assertEquals(3, result.declared.size)
+        assertTrue(result.declared.any {
+            it.fileName.toString().contains("modid.accesswidener") })
+        assertTrue(result.declared.any {
+            it.fileName.toString().contains("name.txt") })
+        // synthesized II doc carries transitive inject-interface rows
+        val ii = result.declared.single {
+            it.fileName.toString().contains("injected-interfaces") }
+        assertTrue(ii.toFile().readText().contains(
+            "transitive-inject-interface\tnet/mc/A\tcom/x/II"))
+        // conventional + FMLAT-listed ATs → unconditional channel
+        assertEquals(2, result.ats.size)
+
+        // without a dep ns, headerless docs are skipped with a warn
+        val noNs = xyz.wagyourtail.unimined.transform.internal
+            .DepAccessScan.scan(
+                jar, dir.resolve("cache2"), null, warnings::add)
+        assertEquals(0, noNs.ats.size)
+        assertTrue(warnings.any { it.contains("accesstransformer.cfg") })
+    }
+
+    @Test
     fun `default production wiring swaps jar classifier and registers remapJar`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

@@ -5,6 +5,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.mod.LoaderSection
@@ -22,8 +23,7 @@ class FabricModMetadataEmitterTest {
         discoveredMixinConfigs: List<String> = emptyList(),
         gametestEntrypoints: List<String> = emptyList(),
         clientGametestEntrypoints: List<String> = emptyList(),
-        interfaceInjections: Map<String, List<String>> = emptyMap(),
-        classTweakerRefs: List<String> = emptyList()
+        interfaceInjections: Map<String, List<String>> = emptyMap()
     ) = ModMetadataEmitter.EmitContext(
         metadata = metadata,
         mixinFiles = mixinFiles,
@@ -31,7 +31,6 @@ class FabricModMetadataEmitterTest {
         gametestEntrypoints = gametestEntrypoints,
         clientGametestEntrypoints = clientGametestEntrypoints,
         interfaceInjections = interfaceInjections,
-        classTweakerRefs = classTweakerRefs,
         environmentId = "main",
         minecraftVersion = "1.20.1",
         side = "MERGED",
@@ -184,14 +183,13 @@ class FabricModMetadataEmitterTest {
     }
 
     @Test
-    fun `interface injections emit loom key and classTweakers refs`() {
+    fun `interface injections emit loom key`() {
         val out = emitter.emit(
             context(
                 metadata(),
                 interfaceInjections = mapOf(
                     "net/minecraft/class_161" to listOf("com/example/ExampleInterface")
-                ),
-                classTweakerRefs = listOf("META-INF/unimined/injected-interfaces.ct")
+                )
             )
         )
         val json = Json.parseToJsonElement(
@@ -204,10 +202,18 @@ class FabricModMetadataEmitterTest {
             injected["net/minecraft/class_161"]!!.jsonArray
                 .map { it.jsonPrimitive.content }
         )
-        assertEquals(
-            listOf("META-INF/unimined/injected-interfaces.ct"),
-            json["classTweakers"]!!.jsonArray.map { it.jsonPrimitive.content }
-        )
+        // fmj v1 has no `classTweakers` key — CT rules merge into the
+        // declared access doc on CT-capable loaders instead
+        assertFalse(json.containsKey("classTweakers"))
+    }
+
+    @Test
+    fun `accessDocCtCapable gates on loader 0_18_0`() {
+        assertFalse(emitter.accessDocCtCapable(null))
+        assertFalse(emitter.accessDocCtCapable("0.17.9"))
+        assertFalse(emitter.accessDocCtCapable("0.16.9"))
+        assertTrue(emitter.accessDocCtCapable("0.18.0"))
+        assertTrue(emitter.accessDocCtCapable("0.19.2"))
     }
 
     @Test

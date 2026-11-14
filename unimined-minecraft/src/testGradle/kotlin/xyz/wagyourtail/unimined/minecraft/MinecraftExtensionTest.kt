@@ -50,6 +50,28 @@ class MinecraftExtensionTest {
     }
 
     @Test
+    fun `access fileName conflicts fail while same name merges`() {
+        val ext = project().extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.main
+        env.access { it.fileName = "a.ct" }
+        // same name is idempotent — rules still merge into one doc
+        env.access {
+            it.fileName = "a.ct"
+            it.accessible("a/B")
+        }
+        assertEquals("a.ct", env.accessDsl.fileName)
+        assertEquals(1, env.accessDsl.rules.size)
+        assertThrows<org.gradle.api.GradleException> {
+            env.access { it.fileName = "b.ct" }
+        }
+        env.access { it.format = "legacy_at" }
+        assertEquals("legacy_at", env.accessDsl.format)
+        assertThrows<org.gradle.api.GradleException> {
+            env.access { it.format = "at" }
+        }
+    }
+
+    @Test
     fun `dsl override selects by name`() {
         val ext = project().extensions.getByType(MinecraftExtension::class.java)
         ext.version.set("9.9") // not supported — override bypasses supports()

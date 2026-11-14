@@ -154,6 +154,54 @@ abstract class GenerateModMetadataTask : DefaultTask() {
     @get:Input
     abstract val customAccessFiles: ListProperty<DeclaredAccessFile>
 
+    /** Interface injections declared on the env (`access {
+     *  injectInterface(...) }` + `interfaceInjection(...)`) — target
+     *  internal name → interface internal names in the dev namespace.
+     *  Carried into `loom:injected_interfaces`-style metadata on every
+     *  loader (IDE/dependents' compile surface); on CT-capable loaders
+     *  the canonical access doc already carries the runtime form. */
+    @get:Input
+    abstract val declaredInterfaceInjections: MapProperty<String, List<String>>
+
+    /** Env `discoverMixinConfigs` flag — `*.mixins.json` files in
+     *  resources auto-fill the `mixins` array. */
+    @get:Input
+    abstract val discoverMixinConfigs: Property<Boolean>
+
+    /** Env `discoverGametestEntrypoints` flag — compiled classes are
+     *  scanned for loader gametest interfaces/annotations. */
+    @get:Input
+    abstract val discoverGametestEntrypoints: Property<Boolean>
+
+    /** Env `interfaceInjectionScan` flag — compiled mixin classes are
+     *  scanned for implemented interfaces (opt-in; `access {
+     *  injectInterface(...) }` is the always-on declaration path). */
+    @get:Input
+    abstract val interfaceInjectionScan: Property<Boolean>
+
+    /** Env `accessFileName` — overrides the emitter's conventional
+     *  canonical access-doc path where the loader declares it in
+     *  metadata (`{modid}` expands). `null` keeps the convention. */
+    @get:Input
+    @get:Optional
+    abstract val accessPathOverride: Property<String>
+
+    /** Env `access { format }` — overrides the emitted access doc's
+     *  format (default `emitter.accessFormat`, the loader's consumed
+     *  one). `null` keeps the loader default. */
+    @get:Input
+    @get:Optional
+    abstract val accessFormatOverride: Property<String>
+
+    init {
+        // defaults match the env conventions — packaging wiring always
+        // `set`s from the env, these keep direct task construction sane
+        declaredInterfaceInjections.convention(emptyMap())
+        discoverMixinConfigs.convention(true)
+        discoverGametestEntrypoints.convention(true)
+        interfaceInjectionScan.convention(false)
+    }
+
     /** Generated output; wired into the source set's resources. */
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -211,17 +259,11 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         // format at its canonical jar path — resource shaping, so it
         // runs identically on identity-mapped envs (unobfuscated 26.x)
         // where the remap pipeline never fires; remap-access still
-        // owns namespace translation on remapping envs
+        // owns namespace translation on remapping envs. Conversion runs
+        // after the discovery scans so scan-derived interface
+        // injections can merge into a CT-capable canonical doc
         var accessFile: String? = null
         var accessOutputs = emptyList<AccessOutput>()
-        if (loader != null) {
-            val emitter = ModMetadataEmitterRegistry().select(loader)
-            accessOutputs = convertDeclaredAccess(
-                emitter, meta.id, mergedSources)
-            // metadata declares the first emitted file — the canonical
-            // output when the default merge produced one
-            accessFile = accessOutputs.firstOrNull { it.declare }?.path
-        }
 
         // loader envs emit env-fact manifest attrs unconditionally —
         // they describe the environment, not the mod's identity; the
@@ -235,54 +277,72 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             // references them — surface them to the emitter (feeds
             // `MixinConfigs` manifest attr even without mod {} DSL)
             val generatedNames = mixins.mapTo(HashSet()) { it.fileName }
-            val discovered = ModMetadataScan.discoverMixinConfigs(
-                resourceDirs.files, exclude = generatedNames
-            )
+            val discovered = if (discoverMixinConfigs.get()) {
+                ModMetadataScan.discoverMixinConfigs(
+                    resourceDirs.files, exclude = generatedNames
+                )
+            } else emptyList()
 
-            var interfaceInjections = emptyMap<String, List<String>>()
-            var classTweakerRefs = emptyList<String>()
+            // env-declared II rules ride `loom:injected_interfaces`-
+            // style metadata on every loader; the opt-in class scan
+            // unions in on top
+            var scanInjections = emptyMap<String, List<String>>()
             var gametestEntrypoints = emptyList<String>()
             var clientGametestEntrypoints = emptyList<String>()
 
             if (meta.id != null) {
                 // class-dir scans only matter for emitted docs — the
-                // classTweaker file's fmj declaration needs emit()
-                val mixinClassNames = mixins.flatMap { cfg ->
-                    (cfg.mixins + cfg.client + cfg.server)
-                        .map { "${cfg.packageName}.$it" }
-                } + discovered.flatMap { it.second.classes }
-
+                // access doc's fmj declaration needs emit()
                 val classDirs = classesDirs.files
-                if (mixinClassNames.isNotEmpty() && classDirs.isNotEmpty()) {
-                    val existing = ModMetadataScan.existingInterfaceRules(
-                        declaredAccessFiles.files + discoverAccessFiles()
-                    )
-                    interfaceInjections = ModMetadataScan.interfaceInjections(
-                        mixinClassNames, classDirs, existing
-                    )
-                    if (interfaceInjections.isNotEmpty()) {
-                        val ctPath = GENERATED_CT_PATH
-                        emitted[ctPath] = classTweakerText(
-                            interfaceInjections,
-                            FabricNamespaces.canonical(
-                                devNamespace.get(), namedNamespaces.get()
-                            )
+                if (interfaceInjectionScan.get() && classDirs.isNotEmpty()) {
+                    val mixinClassNames = mixins.flatMap { cfg ->
+                        (cfg.mixins + cfg.client + cfg.server)
+                            .map { "${cfg.packageName}.$it" }
+                    } + discovered.flatMap { it.second.classes }
+                    if (mixinClassNames.isNotEmpty()) {
+                        val existing = ModMetadataScan.existingInterfaceRules(
+                            declaredAccessFiles.files + discoverAccessFiles()
                         )
-                        classTweakerRefs = listOf(ctPath)
+                        scanInjections = ModMetadataScan.interfaceInjections(
+                            mixinClassNames, classDirs, existing
+                        )
                     }
                 }
-                emitter.gametestInterface?.let { iface ->
-                    gametestEntrypoints = ModMetadataScan.gametestClasses(
-                        classDirs, iface.replace('.', '/'),
-                        emitter.gametestAnnotation?.replace('.', '/')
-                    )
-                }
-                emitter.clientGametestInterface?.let { iface ->
-                    clientGametestEntrypoints = ModMetadataScan.gametestClasses(
-                        classDirs, iface.replace('.', '/')
-                    )
+                if (discoverGametestEntrypoints.get()) {
+                    emitter.gametestInterface?.let { iface ->
+                        gametestEntrypoints = ModMetadataScan.gametestClasses(
+                            classDirs, iface.replace('.', '/'),
+                            emitter.gametestAnnotation?.replace('.', '/')
+                        )
+                    }
+                    emitter.clientGametestInterface?.let { iface ->
+                        clientGametestEntrypoints = ModMetadataScan.gametestClasses(
+                            classDirs, iface.replace('.', '/')
+                        )
+                    }
                 }
             }
+
+            val interfaceInjections =
+                declaredInterfaceInjections.get().toMutableMap().apply {
+                    scanInjections.forEach { (target, ifaces) ->
+                        merge(target, ifaces) { a, b -> (a + b).distinct() }
+                    }
+                }
+
+            // scan-derived II rules additionally merge into the
+            // canonical access doc as CT rows when the loader version
+            // can parse them — declared rules already ride their own
+            // generated doc through declaredAccessFiles
+            accessOutputs = convertDeclaredAccess(
+                emitter, meta.id, mergedSources,
+                extraCtRows = scanInjections.flatMap { (target, ifaces) ->
+                    ifaces.map { "transitive-inject-interface\t$target\t$it" }
+                }
+            )
+            // metadata declares the first emitted file — the canonical
+            // output when the default merge produced one
+            accessFile = accessOutputs.firstOrNull { it.declare }?.path
 
             val ctx = ModMetadataEmitter.EmitContext(
                 metadata = meta,
@@ -291,7 +351,6 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 gametestEntrypoints = gametestEntrypoints,
                 clientGametestEntrypoints = clientGametestEntrypoints,
                 interfaceInjections = interfaceInjections,
-                classTweakerRefs = classTweakerRefs,
                 accessFile = accessFile,
                 accessFiles = accessOutputs.map { it.path },
                 environmentId = environmentId.get(),
@@ -432,18 +491,46 @@ abstract class GenerateModMetadataTask : DefaultTask() {
     private fun convertDeclaredAccess(
         emitter: ModMetadataEmitter,
         modId: String?,
-        mergedSources: MutableSet<String>
+        mergedSources: MutableSet<String>,
+        extraCtRows: List<String> = emptyList()
     ): List<AccessOutput> {
-        val format = emitter.accessFormat
+        val format = accessFormatOverride.orNull?.let { name ->
+            AccessFormatConvert.Format.byName(name)
+                ?: throw GradleException(
+                    "access { format = '$name' } isn't a known access " +
+                            "format (aw, at, legacy_at)")
+        } ?: emitter.accessFormat
             ?.let(AccessFormatConvert.Format::byName)
         val pathTemplate = emitter.accessPath
         if (format == null || pathTemplate.isNullOrEmpty()) {
+            if (accessPathOverride.isPresent ||
+                accessFormatOverride.isPresent
+            ) {
+                logger.warn(
+                    "[unimined] accessFileName/access { format } " +
+                            "ignored — loader has no access-file " +
+                            "convention"
+                )
+            }
             return emptyList()
         }
+        if (accessFormatOverride.isPresent &&
+            accessFormatOverride.get() != emitter.accessFormat
+        ) {
+            logger.warn(
+                "[unimined] access doc emits as '${format.name}' " +
+                        "instead of the loader's conventional " +
+                        "'${emitter.accessFormat}' — ensure the " +
+                        "loader parses it at that path"
+            )
+        }
+        // whether the canonical doc may carry classTweaker directives —
+        // fabric >= 0.18 parses CT content through `accessWidener`
+        val ctCapable = emitter.accessDocCtCapable(loaderVersion.orNull)
 
         val overrides = customAccessFiles.get()
-        val canonical = pathTemplate.replace(
-            "{modid}", modId ?: "mod")
+        val canonical = (accessPathOverride.orNull ?: pathTemplate)
+            .replace("{modid}", modId ?: "mod")
         // forced source formats must be registered before any
         // conversion runs (canonical merge included)
         specSourceFormats.clear()
@@ -475,12 +562,16 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 overrides.filter { it.output == null }
                     .map { Paths.get(it.path) }
         val outputs = mutableListOf<AccessOutput>()
-        if (canonicalInputs.isNotEmpty()) {
-            outputs += AccessOutput(
-                canonical,
-                convertMerge(canonicalInputs, format, mergedSources),
-                declare = true
+        if (canonicalInputs.isNotEmpty() || extraCtRows.isNotEmpty()) {
+            val bytes = convertMerge(
+                canonicalInputs, format, mergedSources,
+                ctCapable, extraCtRows
             )
+            // a CT-row-only merge on a non-CT loader drops every rule —
+            // no point shipping a header-only file
+            if (canonicalInputs.isNotEmpty() || ctCapable) {
+                outputs += AccessOutput(canonical, bytes, declare = true)
+            }
         }
         // custom-output overrides emit independently — grouped so two
         // overrides to the same path merge like the canonical set does
@@ -489,7 +580,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             val files = specs.map { Paths.get(it.path) }
             outputs += AccessOutput(
                 out,
-                convertMerge(files, format, mergedSources),
+                convertMerge(files, format, mergedSources, ctCapable),
                 declare = specs.any { it.declare }
             )
         }
@@ -502,11 +593,18 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         HashMap<java.nio.file.Path, AccessFormatConvert.Format>()
 
     /** Convert + merge one set of access inputs to the target format,
-     *  recording every consumed source in [mergedSources]. */
+     *  recording every consumed source in [mergedSources].
+     *  `classTweaker`-format inputs split into their AW-shapeable
+     *  access directives (merged normally) and CT-only directives —
+     *  which join [extraCtRows] verbatim: on a [ctCapable] AW-family
+     *  canonical doc they emit as-is (the doc upgrades to
+     *  `classTweaker`); anywhere else they drop with a warning. */
     private fun convertMerge(
         files: List<Path>,
         format: AccessFormatConvert.Format,
-        mergedSources: MutableSet<String>
+        mergedSources: MutableSet<String>,
+        ctCapable: Boolean,
+        extraCtRows: List<String> = emptyList()
     ): ByteArray {
         val devNs = Namespace(devNamespace.get())
         val tree by lazy(LazyThreadSafetyMode.NONE) {
@@ -516,20 +614,30 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             }
         }
         val warn: (String) -> Unit = { logger.warn("[unimined] $it") }
+        val ctRows = extraCtRows.toMutableList()
         val converted = files.map { f ->
             val bytes = Files.readAllBytes(f)
-            val src = specSourceFormats[
+            var src = specSourceFormats[
                 f.toAbsolutePath().normalize()]
                 ?: AccessFormatConvert.detect(f, bytes)
-                ?: throw GradleException(
-                    "env-declared access file '$f' isn't an AT/AW " +
-                            "document (no recognized header/directive) — " +
-                            "CT/classTweaker files don't convert; declare " +
-                            "them via the classTweaker channel"
-                )
+            var doc = bytes
+            if (src == null && isClassTweakerDoc(bytes)) {
+                // CT doc — access directives ride the AW merge; CT-only
+                // directives accumulate for the emit decision below
+                doc = ctDocToAw(bytes, ctRows)
+                    ?: throw GradleException(
+                        "access file '$f' has a classTweaker header but " +
+                                "malformed content"
+                    )
+                src = AccessFormatConvert.Format.AW
+            }
+            src ?: throw GradleException(
+                "env-declared access file '$f' isn't an AT/AW/CT " +
+                        "document (no recognized header/directive)"
+            )
             try {
                 AccessFormatConvert.convert(
-                    bytes, src, format,
+                    doc, src, format,
                     tree = tree,
                     targetNs = devNs,
                     warn = warn
@@ -555,8 +663,8 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             // header carries the loader-facing canonical label
             // (`named` for named-role dev columns like `mojmap`);
             // members were already resolved to the dev column above
-            AccessFormatConvert.Format.AW ->
-                AccessFormatConvert.mergeAws(
+            AccessFormatConvert.Format.AW -> {
+                val merged = AccessFormatConvert.mergeAws(
                     converted,
                     Namespace(
                         FabricNamespaces.canonical(
@@ -564,9 +672,33 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                         )
                     )
                 )
+                when {
+                    ctRows.isEmpty() -> merged
+                    ctCapable -> upgradeToCtDoc(
+                        merged, ctRows,
+                        FabricNamespaces.canonical(
+                            devNs.name, namedNamespaces.get()
+                        )
+                    )
+                    else -> {
+                        ctRows.distinct().forEach {
+                            warn(
+                                "dropping classTweaker directive — " +
+                                        "loader can't parse CT-format " +
+                                        "access docs: $it"
+                            )
+                        }
+                        merged
+                    }
+                }
+            }
             else -> {
                 // AT-family: parse each converted doc and emit the union —
-                // ATData equality dedups cross-file repeats
+                // ATData equality dedups cross-file repeats; CT-only
+                // directives have no AT analog
+                ctRows.distinct().forEach {
+                    warn("dropping classTweaker directive (no AT analog): $it")
+                }
                 val reader = { b: ByteArray ->
                     StringCharReader(b.toString(Charsets.UTF_8))
                 }
@@ -589,6 +721,68 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         return bytes
     }
 
+    /** `classTweaker` directives AW can't express — emitted verbatim on
+     *  CT-capable docs, dropped elsewhere. */
+    private val ctOnlyDirectives = setOf(
+        "inject-interface", "transitive-inject-interface",
+        "extend-enum", "transitive-extend-enum"
+    )
+
+    /** Whether [bytes] is a `classTweaker` document (header line). */
+    private fun isClassTweakerDoc(bytes: ByteArray): Boolean =
+        bytes.toString(Charsets.UTF_8).lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+            ?.startsWith("classTweaker") == true
+
+    /**
+     * Split a `classTweaker` doc: CT-only directives append to
+     * [ctRows]; the rest re-emits as an `accessWidener` doc under the
+     * same namespace token so it flows through the AW merge path.
+     */
+    private fun ctDocToAw(
+        bytes: ByteArray,
+        ctRows: MutableList<String>
+    ): ByteArray? {
+        val text = bytes.toString(Charsets.UTF_8)
+        val content = text.lineSequence().map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .toList()
+        val header = content.firstOrNull()
+            ?.takeIf { it.startsWith("classTweaker") } ?: return null
+        val ns = header.split(Regex("\\s+")).getOrNull(2) ?: "named"
+        val keep = content.drop(1).filter { line ->
+            val directive = line.substringBefore('\t').substringBefore(' ')
+            if (directive in ctOnlyDirectives) {
+                ctRows += line
+                false
+            } else true
+        }
+        return (listOf("accessWidener\tv1\t$ns") + keep)
+            .joinToString("\n", postfix = "\n").toByteArray()
+    }
+
+    /** Re-emit a merged AW doc as `classTweaker` (v2 when `extend-enum`
+     *  rules are present — fabric requires the v2 header + loader
+     *  0.19.0 for them), with the CT directives appended. */
+    private fun upgradeToCtDoc(
+        aw: ByteArray,
+        ctRows: List<String>,
+        ns: String
+    ): ByteArray {
+        val body = aw.toString(Charsets.UTF_8).lines()
+            .filterIndexed { i, l -> i > 0 || !l.startsWith("accessWidener") }
+            .filter { it.isNotBlank() }
+        val needsV2 = ctRows.any {
+            it.substringBefore('\t').substringBefore(' ')
+                .removePrefix("transitive-") == "extend-enum"
+        }
+        return (listOf(
+            "classTweaker\t${if (needsV2) "v2" else "v1"}\t$ns"
+        ) + body + ctRows.distinct().sorted())
+            .joinToString("\n", postfix = "\n").toByteArray()
+    }
+
     /** CT/AW/AT-looking files under the resource roots — hand-written
      *  access files that may already declare inject-interface rules. */
     private fun discoverAccessFiles(): List<java.io.File> {
@@ -608,11 +802,6 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         return out
     }
 
-    /** Jar-relative path of the generated interface-injection CT. */
-    private companion object {
-        const val GENERATED_CT_PATH = "META-INF/unimined/injected-interfaces.ct"
-    }
-
     private fun validate(meta: ModMetadata) {
         if (meta.sections.isEmpty() && mixinConfigs.get().isEmpty()) return
         val id = meta.id ?: throw GradleException(
@@ -621,23 +810,6 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         require(id.matches(Regex("[a-z][a-z0-9_-]*"))) {
             "mod.id '$id' is invalid — must match [a-z][a-z0-9_-]*"
         }
-    }
-
-    /** `classTweaker v1 <dev ns>` + one `transitive-inject-interface`
-     *  row per (target, interface) — sorted for deterministic output.
-     *  Transitive so dependents' compile artifacts get the injection
-     *  too (fabric-loader's own semantics for `loom:injected_interfaces`). */
-    private fun classTweakerText(
-        injections: Map<String, List<String>>,
-        namespace: String
-    ): ByteArray {
-        val sb = StringBuilder("classTweaker\tv1\t$namespace\n")
-        for ((target, ifaces) in injections.toSortedMap()) {
-            for (iface in ifaces.sorted()) {
-                sb.append("transitive-inject-interface\t$target\t$iface\n")
-            }
-        }
-        return sb.toString().toByteArray()
     }
 
     private fun mixinJson(config: MixinConfigData): ByteArray = buildJsonObject {

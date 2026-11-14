@@ -7,8 +7,11 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.spec.DeclaredAccessFile
+import xyz.wagyourtail.unimined.api.util.FabricNamespaces
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.minecraft.AccessDslSpec
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
@@ -16,8 +19,12 @@ import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ModArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
+import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
+import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.loader.AccessDiscovery
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 
 /**
@@ -59,6 +66,11 @@ internal object EnvironmentClasspathWiring {
                     spec.applyDeclaredPipeline(project, environment)
                 }
             }
+
+        // inline `access { }` declarations + AT/AW/CT files discovered
+        // in the env's resources — registered below `modBatch` (the
+        // dep-declared access scan needs the raw dep jars); still
+        // executes post-DSL once the env's loader + DSL are settled
 
         // the loader-declared java floor (cleanroom→21, ornithe→17, …)
         // raises the environment's effective java version — a
@@ -127,6 +139,13 @@ internal object EnvironmentClasspathWiring {
             project, environment.modRuntimeOnlyConfigurationName
         )
         val modBatch = project.files(modImplementationDirect, modRuntimeOnlyDirect)
+
+        // inline `access { }` declarations + AT/AW/CT files discovered
+        // in the env's resources — materialized once the env's loader
+        // (consumed document format) and DSL body are both settled
+        project.afterDslEval {
+            wireAccessFiles(project, environment, sourceSet, remap, modBatch)
+        }
 
         // env-declared jar processors: jar mutation rides the
         // dev-Minecraft transform as a `jar-processors` step; mapping
@@ -401,6 +420,408 @@ internal object EnvironmentClasspathWiring {
                     remap.sourceSet(environmentId).accessModelProviders.map { it.get() }
                 ).serialize()
             })
+        }
+    }
+
+    /**
+     * Materialize access declarations into the env's declared file
+     * collections so they apply to the dev Minecraft artifact (and ride
+     * the packaging/remap channels like any declared file):
+     *
+     *  - inline `access { }` rules (own spec + parent-chain specs from
+     *    `combineWith`) — emitted in the env's consumed document
+     *    format: an `accesstransformer.cfg` doc on AT-family loaders
+     *    (FML's `META_INF_ACCESSTRANSFORMER`/`FMLAT_MANIFEST`
+     *    discovery), otherwise an `accessWidener` doc, upgraded to
+     *    `classTweaker v1` when CT directives are present. Rules with
+     *    no analog in the consumed format are dropped with a log note.
+     *  - AT/AW/CT files found under the env's resource roots —
+     *    classified by header then extension and added to the
+     *    format-matching collection (an `accessWidener`/`classTweaker`
+     *    doc joins `accessWideners`, FML AT files join
+     *    `accessTransformers`); mismatched loaders simply don't apply
+     *    them, while packaging still ships/converts correctly.
+     */
+    private fun wireAccessFiles(
+        project: Project,
+        environment: MinecraftEnvironment,
+        sourceSet: SourceSet,
+        remap: RemapExtension,
+        depJars: org.gradle.api.file.FileCollection
+    ) {
+        val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
+        val envId = environment.environmentId
+
+        // consumed document format — AT-family loaders discover via
+        // FML's mechanisms; everything else takes the AW/CT doc
+        val descriptor = environment.loaderSpec.orNull?.name
+            ?.let { LoaderRegistry.resolveBuiltin(it) }
+        val atFamily = descriptor?.metadata?.accessDiscovery.orEmpty().any {
+            it == AccessDiscovery.META_INF_ACCESSTRANSFORMER ||
+                it == AccessDiscovery.FMLAT_MANIFEST
+        }
+
+        val specs = environment.inheritedAccessSpecs + environment.accessDsl
+
+        // `access { format = "..." }` — last declaration across the
+        // combine chain wins; must agree with a direct
+        // `accessFileFormat` property set. Resolved ahead of doc
+        // generation: loaderless envs emit the generated doc directly
+        // in this format (there is no packaging merge to re-format
+        // downstream); loader envs keep it as the canonical packaging
+        // override only
+        specs.lastOrNull { it.format != null }?.format?.let { fmt ->
+            if (environment.accessFileFormat.isPresent &&
+                environment.accessFileFormat.get() != fmt
+            ) throw GradleException(
+                "conflicting access doc formats: accessFileFormat=" +
+                        "'${environment.accessFileFormat.get()}' vs " +
+                        "access { format = '$fmt' }")
+            environment.accessFileFormat.set(fmt)
+        }
+
+        // emit syntax for the generated doc — AT-family: AT rows;
+        // loaderless: `access { format }` else CT (the jar-shipped
+        // canonical doc — self-describing header, carries every rule
+        // kind, and dependents discover it via the dep-access scan);
+        // loader envs: AW (packaging upgrades the merge to CT/AT)
+        val format = when {
+            atFamily -> AccessDslSpec.Format.AT
+            descriptor == null -> when (
+                environment.accessFileFormat.orNull?.lowercase()) {
+                null, "ct", "classtweaker" -> AccessDslSpec.Format.CT
+                "aw", "accesswidener" -> AccessDslSpec.Format.AW
+                "at", "accesstransformer",
+                "legacy_at", "legacyat" -> AccessDslSpec.Format.AT
+                else -> throw GradleException(
+                    "unimined: environment '$envId' — unknown access doc " +
+                            "format '${environment.accessFileFormat.get()}' " +
+                            "(expected aw/ct/at)")
+            }
+            else -> AccessDslSpec.Format.AW
+        }
+
+        // loaderless docs write under a `/jar` subtree — the jar task
+        // consumes that dir so jar-path layout (META-INF/) is
+        // preserved; loader envs keep the flat collection layout
+        val genDir = project.layout.buildDirectory.dir(
+            "unimined/access/$envId" +
+                    if (descriptor == null) "/jar" else "")
+
+        // 1. inline access {} rules → one generated doc under build/
+        if (specs.any { it.rules.isNotEmpty() }) {
+            val dropped = mutableListOf<String>()
+            val lines = specs.flatMap { it.emit(format, dropped) }
+            if (dropped.isNotEmpty()) {
+                project.logger.warn(
+                    "unimined: environment '$envId' — ${dropped.size} access " +
+                            "rule(s) dropped: no ${format.name}-format equivalent " +
+                            "(${dropped.joinToString(", ")})"
+                )
+            }
+            if (lines.isNotEmpty()) {
+                val ctDoc = !atFamily && (format == AccessDslSpec.Format.CT ||
+                        specs.any { it.needsClassTweaker })
+                // loaderless names are jar paths — `*_at.cfg` needs
+                // META-INF/ for dep-scan discovery; `access { fileName }`
+                // overrides the whole path. Loader names are collection
+                // labels only (packaging picks the canonical path)
+                val name = when {
+                    format == AccessDslSpec.Format.AT ->
+                        if (descriptor == null) "META-INF/$envId-access_at.cfg"
+                        else "accesstransformer.cfg"
+                    ctDoc -> "$envId-access.classtweaker"
+                    else -> "$envId-access.accesswidener"
+                }
+                // materialize on resolution — the dev-namespace header
+                // needs mapping data that isn't known at config time;
+                // the label canonicalizes like the packaging merge
+                // (mojmap-family dev ns → `named`)
+                val generated = project.provider {
+                    val devNs = FabricNamespaces.canonical(
+                        minecraft.devNamespace(envId).get(),
+                        minecraft.namedNamespaces(envId).get()
+                    )
+                    val header = when {
+                        format == AccessDslSpec.Format.AT -> null
+                        ctDoc -> "classTweaker\tv1\t$devNs"
+                        else -> "accessWidener\tv1\t$devNs"
+                    }
+                    val rel = if (descriptor == null) {
+                        environment.accessFileName.orNull ?: name
+                    } else name
+                    val target = genDir.get().asFile.resolve(rel)
+                    val body = (listOfNotNull(header) + lines)
+                        .joinToString("\n", postfix = "\n")
+                    if (!target.isFile || target.readText() != body) {
+                        target.parentFile.mkdirs()
+                        target.writeText(body)
+                    }
+                    target
+                }
+                // env-local collection — children re-emit inherited
+                // rules in their own format instead of inheriting
+                // this file through `combineWith` (double-apply)
+                environment.generatedAccessFiles.from(generated)
+            }
+        }
+
+        // 2. `access { from(...) }` file declarations — resolved lazily
+        //    (provider-backed paths stay deferred), routed by format;
+        //    `from(path) { }` optioned entries ride the
+        //    `accessFileOverrides` channel like `accessFile(path) { }`
+        val fromArgs = specs.flatMap { it.files }
+        if (fromArgs.isNotEmpty()) {
+            environment.accessWideners.from(project.provider {
+                project.files(*fromArgs.toTypedArray()).files.filter {
+                    classifyAccessFile(it).let { c ->
+                        c == AccessDslSpec.Format.AW || c == AccessDslSpec.Format.CT
+                    }
+                }
+            })
+            environment.accessTransformers.from(project.provider {
+                project.files(*fromArgs.toTypedArray()).files.filter {
+                    classifyAccessFile(it) == AccessDslSpec.Format.AT
+                }
+            })
+        }
+        for (nf in specs.flatMap { it.namedFiles }) {
+            val file = project.files(nf.path).files.singleOrNull()
+                ?: throw GradleException(
+                    "access { from(${nf.path}) { } } must resolve to " +
+                            "exactly one file")
+            environment.accessFileOverrides.add(
+                DeclaredAccessFile(
+                    file.absolutePath, nf.format, nf.output, nf.declare
+                )
+            )
+        }
+        // `access { fileName = "..." }` — last declaration across the
+        // combine chain wins; must agree with a direct
+        // `accessFileName` property set
+        specs.lastOrNull { it.fileName != null }?.fileName?.let { name ->
+            if (environment.accessFileName.isPresent &&
+                environment.accessFileName.get() != name
+            ) throw GradleException(
+                "conflicting access doc names: accessFileName=" +
+                        "'${environment.accessFileName.get()}' vs " +
+                        "access { fileName = '$name' }")
+            environment.accessFileName.set(name)
+        }
+
+        // loader-less env (a multi-module `common`) — no family
+        // wiring claims the apply steps, so the collections would
+        // never reach the dev artifact. Contribute the same defaults
+        // a loader env gets: own declarations + dep-declared access
+        // docs (loom `transitiveAccessWideners` parity — the class
+        // tweaker apply parses AW/CT/AT docs uniformly) + the access
+        // model for remap analysis + `remap-access` so dep jars'
+        // embedded docs rebase through the mod remap.
+        if (descriptor == null) {
+            val envSpec = remap.sourceSet(envId)
+
+            // own declarations — headerless user ATs are dev-named
+            // (1.x `at2aw` convention)
+            val ownSpec = project.objects.newInstance(
+                ApplyClassTweakerStepSpec::class.java)
+            ownSpec.classTweakerFiles.from(
+                environment.accessWideners,
+                environment.accessTransformers,
+                environment.generatedAccessFiles,
+            )
+            ownSpec.headerlessNamespace.set(environment.devNamespace)
+
+            // dep-declared access docs — generic jar-entry scan;
+            // headerless dep ATs bind to the env's single declared
+            // mod source ns (ambiguous/absent → skipped + warned)
+            val depCache = UniminedCache.global(project)
+                .resolve("dep-access/$envId")
+            val depScan = project.provider {
+                val depNs = environment.modSourceNamespaces
+                    .orNull?.singleOrNull()
+                depJars.files.filter { it.isFile && it.extension == "jar" }
+                    .map { jar ->
+                        DepAccessScan.scan(
+                            jar.toPath(), depCache, depNs
+                        ) { msg ->
+                            project.logger.warn(
+                                "unimined: environment '$envId' — $msg")
+                        }
+                    }
+            }
+            val depSpec = project.objects.newInstance(
+                ApplyClassTweakerStepSpec::class.java)
+            // dep ATs — FML semantics apply them in full
+            depSpec.classTweakerFiles.from(depScan.map { results ->
+                results.flatMap { it.ats }.map { it.toFile() }
+            })
+            depSpec.headerlessNamespace.set(
+                environment.modSourceNamespaces.map { it.singleOrNull() })
+            // dep AW/CT/synth docs — only `transitive-*` rules cross
+            // to dependents; flag-gated like the loader wirings
+            depSpec.dependencyClassTweakerFiles.from(project.provider {
+                if (!environment.transitiveAccessWideners.get()) {
+                    emptyList()
+                } else depScan.get().flatMap { it.declared }
+                    .map { it.toFile() }
+                    .filter { f ->
+                        runCatching {
+                            ClassTweaker.parse(
+                                f.name, f.readText()).hasTransitiveRules
+                        }.getOrDefault(false)
+                    }
+            })
+
+            // remap-analysis overlay (plan §3 role 1): own + dep
+            // rules in full — engines rebase sections through the
+            // tree, so widened members resolve correctly when mod
+            // deps are remapped
+            envSpec.contributeAccessModel(project.provider {
+                AccessModel(
+                    (environment.accessWideners.files +
+                            environment.accessTransformers.files +
+                            environment.generatedAccessFiles.files)
+                        .filter { it.isFile }
+                        .map {
+                            ClassTweaker.parse(it.name, it.readText())
+                                .toAccessModelSection(it.name)
+                        } +
+                            depScan.get().flatMap { r ->
+                                (r.declared + r.ats).map {
+                                    ClassTweaker.parse(
+                                        it.fileName.toString(),
+                                        it.toFile().readText())
+                                        .toAccessModelSection(
+                                            it.fileName.toString())
+                                }
+                            }
+                )
+            })
+
+            envSpec.contributeStep(RemapSurface.JAR, ownSpec)
+            envSpec.contributeStep(RemapSurface.JAR, depSpec)
+            // dep jars' embedded access docs rebase through their
+            // prod→dev remap (formats default to aw/at/ct)
+            envSpec.contributeStep(
+                RemapSurface.JAR, AccessRemapStepSpec())
+
+            // ship the access docs inside the env's jar — dependents
+            // consuming a `common` module as a plain dependency
+            // discover them through the same scan loaderless dep
+            // jars get (loom `architectury.common.json` semantics:
+            // `transitive-*` rules cross to dependents, the rest stay
+            // env-local). remapJar mirrors jar.rootSpec, so the
+            // embedded doc is rebased dev→prod alongside the jar's
+            // other contents
+            project.tasks.matching { it.name == sourceSet.jarTaskName }
+                .withType(org.gradle.jvm.tasks.Jar::class.java)
+                .configureEach { jar ->
+                    // generated canonical doc — the provider resolves
+                    // the env-local collection first so the doc is
+                    // written before the dir is consumed
+                    jar.from(project.provider {
+                        environment.generatedAccessFiles.files
+                            .firstOrNull { it.isFile }
+                            ?.let { genDir.get().asFile }
+                    })
+                    // `from(path) { output = ... }` — declared jar
+                    // paths; `declare=false` marks dev-apply-only
+                    // files that must not ship
+                    for (ov in environment.accessFileOverrides.get()) {
+                        if (!ov.declare) continue
+                        val rel = ov.output
+                            ?: accessJarEntry(java.io.File(ov.path).name)
+                            ?: continue
+                        jar.from(ov.path) { spec ->
+                            val dir = rel.substringBeforeLast('/', "")
+                            if (dir.isNotEmpty()) spec.into(dir)
+                            spec.rename { rel.substringAfterLast('/') }
+                        }
+                    }
+                    // collection files outside the resource roots —
+                    // they wouldn't reach the jar otherwise; files
+                    // under srcDirs already ship at their resource path
+                    jar.from(project.provider {
+                        val resRoots = sourceSet.resources.srcDirs
+                            .map { it.canonicalFile.path + "/" }
+                        val declared = environment.accessFileOverrides
+                            .get()
+                            .map { java.io.File(it.path).canonicalFile }
+                            .toSet()
+                        (environment.accessWideners.files +
+                                environment.accessTransformers.files)
+                            .map { it.canonicalFile }
+                            .filter { it.isFile }
+                            .filter { f ->
+                                resRoots.none { f.path.startsWith(it) } &&
+                                        f !in declared
+                            }
+                    }) { spec ->
+                        spec.eachFile { d ->
+                            accessJarEntry(d.name)?.let { d.path = it }
+                        }
+                    }
+                }
+        }
+
+        // 3. AT/AW/CT files discovered under the env's resource roots —
+        //    header first, extension fallback; format-matched collection
+        val awFiles = mutableListOf<java.io.File>()
+        val atFiles = mutableListOf<java.io.File>()
+        for (dir in sourceSet.resources.srcDirs) {
+            if (!dir.isDirectory) continue
+            dir.walkTopDown().forEach { f ->
+                if (!f.isFile) return@forEach
+                when (classifyAccessFile(f)) {
+                    AccessDslSpec.Format.AT -> atFiles += f
+                    AccessDslSpec.Format.AW, AccessDslSpec.Format.CT -> awFiles += f
+                    null -> {}
+                }
+            }
+        }
+        environment.accessWideners.from(awFiles)
+        environment.accessTransformers.from(atFiles)
+    }
+
+    /** Jar path a bundled access file is discoverable at — headered
+     *  docs ride the root, headerless ATs need `META-INF/` for the
+     *  `accesstransformer.cfg`/`*_at.cfg` dep-scan conventions.
+     *  `null` for names no convention can reach. */
+    private fun accessJarEntry(name: String): String? {
+        val lower = name.lowercase()
+        return when {
+            lower.endsWith(".accesswidener") || lower.endsWith(".aw") ||
+                    lower.endsWith(".classtweaker") ||
+                    lower.endsWith(".ct") -> name
+            lower == "accesstransformer.cfg" ||
+                    lower.endsWith("_at.cfg") -> "META-INF/$name"
+            lower.endsWith(".at") ->
+                "META-INF/${name.substringBeforeLast('.')}_at.cfg"
+            else -> null
+        }
+    }
+
+    /** Classify a resource file as an access document — `accessWidener`
+     *  /`classTweaker` headers win over extension (`accesstransformer.cfg`
+     *  and `*_at.cfg` name conventions, `.aw`/`.accesswidener`,
+     *  `.ct`/`.classtweaker`, `.at`). Non-access files return `null`. */
+    private fun classifyAccessFile(file: java.io.File): AccessDslSpec.Format? {
+        val name = file.name.lowercase()
+        if (name == "accesstransformer.cfg" || name.endsWith("_at.cfg")) {
+            return AccessDslSpec.Format.AT
+        }
+        val header = runCatching {
+            file.bufferedReader().use { it.readLine() }
+        }.getOrNull()?.trim() ?: ""
+        return when {
+            header.startsWith("accessWidener") -> AccessDslSpec.Format.AW
+            header.startsWith("classTweaker") -> AccessDslSpec.Format.CT
+            name.endsWith(".accesswidener") || name.endsWith(".aw") ->
+                AccessDslSpec.Format.AW
+            name.endsWith(".classtweaker") || name.endsWith(".ct") ->
+                AccessDslSpec.Format.CT
+            name.endsWith(".at") -> AccessDslSpec.Format.AT
+            else -> null
         }
     }
 

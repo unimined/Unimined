@@ -23,4 +23,23 @@ class FabricModMetadataEmitter : FabricModJsonEmitter() {
     override val clientGametestInterface =
         "net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest"
 
+    /**
+     * Fabric loader `0.18.0` added classTweaker support — CT-format
+     * content is parsed through the declared `accessWidener` file
+     * (`extend-enum` additionally needs `0.19.0`, enforced by the
+     * loader at parse time). Unpinned versions stay AW-only — a
+     * CT-shaped canonical doc would hard-fail truly-old loaders.
+     */
+    override fun accessDocCtCapable(loaderVersion: String?): Boolean {
+        val m = CT_MIN_VERSION.find(loaderVersion ?: return false)
+            ?: return false
+        val major = m.groupValues[1].toInt()
+        val minor = m.groupValues[2].toInt()
+        return major > 0 || minor >= 18
+    }
+
+    private companion object {
+        val CT_MIN_VERSION = Regex("""(\d+)\.(\d+)\.\d+""")
+    }
+
 }

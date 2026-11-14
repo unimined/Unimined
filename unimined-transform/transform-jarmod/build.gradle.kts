@@ -8,6 +8,8 @@ dependencies {
     "coreApi"(libs.asm)
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    // access-doc apply step for user-declared AT/AW/CT files
+    implementation(project(":unimined-remap:remapper-access"))
     "coreApi"(project(":unimined-mod"))
     api(project(":unimined-mod"))
 

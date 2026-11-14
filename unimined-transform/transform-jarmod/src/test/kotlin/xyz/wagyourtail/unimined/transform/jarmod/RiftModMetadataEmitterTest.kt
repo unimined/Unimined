@@ -23,7 +23,6 @@ class RiftModMetadataEmitterTest {
         gametestEntrypoints = emptyList(),
         clientGametestEntrypoints = emptyList(),
         interfaceInjections = emptyMap(),
-        classTweakerRefs = emptyList(),
         environmentId = "main",
         minecraftVersion = "1.13.2",
         side = "MERGED",

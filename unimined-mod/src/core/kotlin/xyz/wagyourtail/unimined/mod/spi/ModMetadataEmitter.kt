@@ -66,6 +66,18 @@ interface ModMetadataEmitter {
     val accessPath: String? get() = null
 
     /**
+     * Whether the canonical access doc emitted at [accessPath] may
+     * carry `classTweaker` directives (`inject-interface`,
+     * `extend-enum`) at this loader version — i.e. the loader parses
+     * CT-format content through its access-file declaration. Fabric
+     * loader does so from `0.18.0` (the singular `accessWidener` field
+     * accepts CT docs); `false` keeps the canonical doc AW-only and
+     * CT-only rules drop with a warning (interface injections still
+     * ride `loom:injected_interfaces`-style metadata where the
+     * emitter writes one). */
+    fun accessDocCtCapable(loaderVersion: String?): Boolean = false
+
+    /**
      * The DSL section created for `loader("<name>") { }` — subclass
      * [LoaderSection] for loader-specific fields, or return the base for
      * the shared bag only. Invoked at configuration time; the returned
@@ -123,19 +135,16 @@ interface ModMetadataEmitter {
          *  discovered by the same class scan as [gametestEntrypoints]. */
         val clientGametestEntrypoints: List<String> = emptyList(),
         /**
-         * Interface injections derived from the environment's mixin
-         * classes — target internal name → implemented interface
-         * internal names, in the dev namespace. Emitters may declare
-         * them in loader metadata (e.g. `loom:injected_interfaces`);
-         * the host also emits them as a classTweaker file referenced
-         * through [classTweakerRefs].
+         * Interface injections declared for the environment —
+         * `access { injectInterface(...) }` rules plus, when the env's
+         * `interfaceInjectionScan` flag is on, injections derived from
+         * compiled mixin classes. Target internal name → implemented
+         * interface internal names, in the dev namespace. Emitters may
+         * declare them in loader metadata (e.g.
+         * `loom:injected_interfaces`); on CT-capable loaders the rules
+         * also merge into the canonical access doc itself.
          */
         val interfaceInjections: Map<String, List<String>> = emptyMap(),
-        /** Jar-relative paths of classTweaker files the host generated
-         *  for this environment (interface injections) — emitters
-         *  declare them under the loader's `classTweakers` metadata
-         *  key so dependents discover them. */
-        val classTweakerRefs: List<String> = emptyList(),
         /**
          * Jar-relative path of the environment's converted access file
          * when the host emitted one ([accessFormat]/[accessPath]) —

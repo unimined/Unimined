@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.minecraft.AccessDslSpec
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mod.ModExtension
@@ -110,11 +111,31 @@ internal object ModPackagingWiring {
             })
             t.declaredAccessFiles.from(
                 environment.accessWideners, environment.accessTransformers,
+                environment.generatedAccessFiles,
                 environment.accessFileOverrides.map { specs ->
                     specs.map { java.io.File(it.path) }
                 }
             )
             t.customAccessFiles.set(environment.accessFileOverrides)
+            // `access { fileName/format }` — renames/reformats the
+            // canonical doc where the loader declares it
+            t.accessPathOverride.set(environment.accessFileName)
+            t.accessFormatOverride.set(environment.accessFileFormat)
+            // env `access { }` / `interfaceInjection(...)` declarations —
+            // the loom-style metadata key carries them on every loader
+            t.declaredInterfaceInjections.set(project.provider {
+                (environment.inheritedAccessSpecs + environment.accessDsl)
+                    .flatMap { it.rules }
+                    .filterIsInstance<AccessDslSpec.Rule.InjectInterface>()
+                    // loom keys are dependents-facing — non-transitive
+                    // declarations stay own-env only
+                    .filter { it.transitive }
+                    .groupBy({ it.owner }, { it.signature })
+            })
+            t.discoverMixinConfigs.set(environment.discoverMixinConfigs)
+            t.discoverGametestEntrypoints.set(
+                environment.discoverGametestEntrypoints)
+            t.interfaceInjectionScan.set(environment.interfaceInjectionScan)
             // loader packaging facts — version feeds manifest attrs
             // (`Fabric-Loader-Version`), manifestAttributes carries
             // loader-contributed extras (ornithe `Calamus-Generation`)

@@ -144,7 +144,14 @@ internal object FabricEnvironmentWiring {
         }
 
         val applySpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
-        applySpec.classTweakerFiles.from(environment.accessWideners)
+        applySpec.classTweakerFiles.from(
+            environment.accessWideners, environment.accessTransformers,
+            environment.generatedAccessFiles
+        )
+        // user-authored headerless ATs (`accesstransformer.cfg`,
+        // `*_at.cfg` in resources/`accessFile`) are dev-named —
+        // 1.x `at2aw` convention
+        applySpec.headerlessNamespace.set(environment.devNamespace)
         // dep-declared classTweakers use the loader family's generic
         // `intermediary` header; the tree's prod column may be named
         // otherwise (Ornithe's is `calamus`) — alias rather than fail.
@@ -173,7 +180,8 @@ internal object FabricEnvironmentWiring {
         // namespace through the mapping tree
         environmentSpec.contributeAccessModel(project.provider {
             AccessModel(
-                environment.accessWideners.files
+                (environment.accessWideners.files +
+                        environment.generatedAccessFiles.files)
                     .filter { it.isFile }
                     .map {
                         ClassTweaker.parse(it.name, it.readText()).toAccessModelSection(it.name)
