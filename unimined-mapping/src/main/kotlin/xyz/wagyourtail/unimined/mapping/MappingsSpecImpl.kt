@@ -95,7 +95,7 @@ class MappingsSpecImpl(
      * separate `calamusGen<N>`/`featherGen<N>` namespace so both gens
      * can be imported at once (per-call `gen` params override this).
      */
-    var ornitheGenVersion: Int = 1
+    var ornitheGenVersion: Int = 2
 
     /**
      * Suppress loader-contributed intermediary mapping sources — set

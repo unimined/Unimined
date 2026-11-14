@@ -215,7 +215,7 @@ class FabricEnvironmentWiringTest {
         val cases = listOf(
             FamilyCase("quilt", "0.25.0", "org.quiltmc:quilt-loader:0.25.0", "net.fabricmc:intermediary:1.20.1:v2"),
             FamilyCase("legacyfabric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.legacyfabric:intermediary:1.20.1:v2"),
-            FamilyCase("babric", "0.16.0", "babric:fabric-loader:0.16.0", "babric:intermediary-upstream:1.20.1:v2"),
+            FamilyCase("babric", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "babric:intermediary-upstream:1.20.1:v2"),
             FamilyCase("ornithe", "0.16.0", "net.fabricmc:fabric-loader:0.16.0", "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2"),
             // flint removed — maven.flintloader.net offline
         )
@@ -322,9 +322,9 @@ class FabricEnvironmentWiringTest {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         val cases = mapOf(
-            "legacyfabric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
-            "babric" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
-            "ornithe" to ("org.lwjgl" to "2.9.4+legacyfabric.8"),
+            "legacyfabric" to ("org.lwjgl" to "2.9.4+legacyfabric.18"),
+            "babric" to ("org.lwjgl" to "2.9.4+legacyfabric.18"),
+            "ornithe" to ("org.lwjgl" to "2.9.4+legacyfabric.18"),
             // flint removed — maven.flintloader.net offline
         )
         // spec() resolves each env's own loader+intermediary coords —
@@ -346,8 +346,7 @@ class FabricEnvironmentWiringTest {
             }
         }
         listOf(
-            "net.fabricmc:fabric-loader:1.0",       // legacyfabric + ornithe
-            "babric:fabric-loader:1.0",
+            "net.fabricmc:fabric-loader:1.0",
             "net.legacyfabric:intermediary:1.20.1:v2",
             "babric:intermediary-upstream:1.20.1:v2",
             "net.ornithemc:calamus-intermediary-gen2:1.20.1:v2",

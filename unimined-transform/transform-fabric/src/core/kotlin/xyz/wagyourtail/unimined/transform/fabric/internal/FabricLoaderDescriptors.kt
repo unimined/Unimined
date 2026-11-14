@@ -27,12 +27,8 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             capabilities = mapOf(
                 // loom convention — `fabricApi.configureDataGeneration`:
                 // fabric-api's executor boots the datagen entrypoints
-                "datagenMain" to
-                    "net.fabricmc.fabric.impl.datagen." +
-                    "FabricDataGenHelper\$FabricDatagenExecutor",
-                "datagenArgs" to
-                    "--modid {modid} --output {output} --strict-validation",
-                "datagenClientArg" to "--client",
+                "datagenJvmArgs" to
+                    "-Dfabric-api.datagen -Dfabric-api.datagen.output-dir={output} -Dfabric-api.datagen.modid={modid}",
                 // junit-driven gametest launches
                 "gametestJunit" to "net.fabricmc:fabric-loader-junit:{loader}",
                 // client gametests ride the env's auto `<env>Client`
@@ -98,15 +94,17 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // 1.x legacyFabricRevisionTransform: generation-keyed group
             intermediaryCoords = { mc -> "net.legacyfabric:intermediary:$mc:v2" },
             capabilities = mapOf(
-                "replaceLwjgl" to "2.9.4+legacyfabric.8",
-                // 1.x Legacy-Fabric-Intermediary-Version manifest attr —
-                // the gen baked into intermediaryCoords above (v2)
-                "manifestAttr.Legacy-Fabric-Intermediary-Version" to "2",
+                "replaceLwjgl" to "2.9.4+legacyfabric.18",
+                // 1.x Legacy-Fabric-Intermediary-Version manifest attr
+                "manifestAttr.Legacy-Fabric-Intermediary-Version" to "1",
                 "skipMcProvider" to "-Dfabric.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
-                accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
+                accessDiscovery = setOf(
+                    AccessDiscovery.METADATA_KEY,
+                    AccessDiscovery.METADATA_CLASS_TWEAKERS
+                ),
                 nestedJarsKey = "jars"
             )
         ),
@@ -120,7 +118,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // legacyfabric.8`) is published on legacyfabric's maven
                 LoaderRepo.Maven("https://maven.legacyfabric.net")
             ),
-            loaderCoords = { _, v -> "babric:fabric-loader:$v" },
+            loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
             // babric targets beta only — client/server obf spaces are
@@ -131,7 +129,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                     "intermediary"
                 ),
             capabilities = mapOf(
-                "replaceLwjgl" to "2.9.4+legacyfabric.8",
+                "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 // b1.7.3 ships argo/** inside the server jar — keep it
                 // through the merge library-strip (1.x includeGlobs)
                 "mergeIncludeGlobs" to "argo/**",
@@ -139,7 +137,10 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
-                accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
+                accessDiscovery = setOf(
+                    AccessDiscovery.METADATA_KEY,
+                    AccessDiscovery.METADATA_CLASS_TWEAKERS
+                ),
                 nestedJarsKey = "jars"
             )
         ),
@@ -163,15 +164,19 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // -client/-server suffix and namespace relabels
             upstreamMappingChannel = "calamus",
             capabilities = mapOf(
-                "replaceLwjgl" to "2.9.4+legacyfabric.8",
+                // OSL takes care of datagen
+                "datagenJvmArgs" to
+                        "-Dfabric-api.datagen -Dfabric-api.datagen.output-dir={output} -Dfabric-api.datagen.modid={modid}",
+                "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 "libraryOverlayMeta" to "https://meta.ornithemc.net",
                 "skipMcProvider" to "-Dfabric.skipMcProvider"
             ),
-            // ornithe runs on Java 17
-            javaVersion = { _, _ -> 17 },
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
-                accessDiscovery = setOf(AccessDiscovery.METADATA_KEY),
+                accessDiscovery = setOf(
+                    AccessDiscovery.METADATA_KEY,
+                    AccessDiscovery.METADATA_CLASS_TWEAKERS
+                ),
                 nestedJarsKey = "jars"
             )
         ),
