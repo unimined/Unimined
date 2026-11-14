@@ -599,6 +599,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-declarations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access declarations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Access declarations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-fill-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-fill flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#minecraft-artifact-configurations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1470,6 +1498,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-declarations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access declarations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Access declarations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-fill-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-fill flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#minecraft-artifact-configurations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1564,7 +1620,9 @@ dependency configurations.</p>
   file collections of <code>*.accesswidener</code> / <code>accesstransformer.cfg</code>
   applied to the dev artifact; <code>transitiveAccessWideners</code> (default
   <code>true</code>) lets AW <code>transitive-*</code> directives from compile-classpath
-  mods contribute — set <code>false</code> to isolate the dev jar.</li>
+  mods contribute — set <code>false</code> to isolate the dev jar. The
+  <a href="#access-declarations"><code>access { }</code> block</a> below covers inline
+  rules, file declarations, and resource auto-discovery.</li>
 <li><strong>Prod packaging</strong> — <code>defaultRemapJar</code> (default <code>true</code>) auto-wires
   <code>remap&lt;JarTask&gt;</code> so the jar task's input gains a <code>-dev</code> classifier
   and the remap task produces the prod-namespace artifact;
@@ -1588,6 +1646,168 @@ dependency configurations.</p>
   populated by <code>combineWith</code>; read-mostly, used by generated
   source jars and mod packaging.</li>
 </ul>
+<h2 id="access-declarations">Access declarations<a class="headerlink" href="#access-declarations" title="Permanent link">&para;</a></h2>
+<p>Everything in this section is <strong>optional</strong> — dropping a
+<code>*.accesswidener</code>, <code>*.classtweaker</code>/<code>.ct</code>, or
+<code>accesstransformer.cfg</code>/<code>*_at.cfg</code> file under the environment's
+resource roots is all a file-based setup needs: it's detected,
+applied to the dev artifact, shipped in the jar, and declared in
+loader metadata with zero DSL. The <code>access { }</code> block below is for
+declaring rules <em>inline</em> (no file at all) or attaching packaging
+options to specific files.</p>
+<p><code>access { }</code> declares every access rule — inline directives,
+existing files via <code>from(...)</code>, and interface injections — stored
+semantically and emitted in whichever document format the
+environment's loader consumes (<code>accessWidener</code>/<code>classTweaker</code> on
+fabric-family, FML <code>accesstransformer.cfg</code> on forge-family). Rules
+the target format can't express are converted when possible or
+dropped with a build warning (<code>inject-interface</code>/<code>extend-enum</code> have
+no AT analog; narrowing <code>at()</code> access has no AW form).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">                </span><span class="c1">// rename / reformat the merged canonical doc</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">                </span><span class="c1">// (where the loader declares it in metadata) —</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">                </span><span class="c1">// here a legacy-FML-style AT at a custom `_at.cfg`</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">                </span><span class="c1">// path; format: "aw", "at", "legacy_at", default</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">                </span><span class="c1">// is the loader's consumed format</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/{modid}_at.cfg"</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">                </span><span class="c1">// existing files — format detected per file,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">                </span><span class="c1">// routed like accessWideners.from(...) /</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">                </span><span class="c1">// accessTransformers.from(...)</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/testmod.accesswidener"</span><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">                </span><span class="c1">// per-file packaging options where the loader</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">                </span><span class="c1">// declares the path — rides the accessFile(...){}</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">                </span><span class="c1">// channel: `output` ships the file at a custom jar</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">                </span><span class="c1">// path, `declare=false` applies it dev-side only,</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">                </span><span class="c1">// `format` forces interpretation when detection</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">                </span><span class="c1">// can't (e.g. a legacy-AT file with an odd name):</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">                </span><span class="c1">// "aw"/"accesswidener", "at"/"accesstransformer",</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">                </span><span class="c1">// "legacy_at"/"legacyat" — classTweaker is</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">                </span><span class="c1">// detected by its header, not settable</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/extra.cfg"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/extra.cfg"</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">                    </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">                </span><span class="p">}</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">                </span><span class="c1">// AW directives (+ transitive* twins)</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">)</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span><span class="w"> </span><span class="s">"method_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"()V"</span><span class="p">)</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">                </span><span class="n">extendable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">)</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">                </span><span class="n">mutable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">,</span><span class="w"> </span><span class="s">"field_7"</span><span class="p">,</span><span class="w"> </span><span class="s">"I"</span><span class="p">)</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">                </span><span class="c1">// CT directives — interface injection / enum</span>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">                </span><span class="c1">// extension (dev jar + shipped CT where the loader</span>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">                </span><span class="c1">// parses it)</span>
+<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">                </span><span class="n">injectInterface</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span>
+<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">                    </span><span class="s">"com/example/IThing"</span><span class="p">)</span>
+<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">                </span><span class="n">extendEnum</span><span class="p">(</span><span class="s">"net/minecraft/class_789"</span><span class="p">,</span><span class="w"> </span><span class="s">"MY_CONST"</span><span class="p">)</span>
+<a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a>
+<a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">                </span><span class="c1">// raw FML AT entries — `at("public-f", "a/B", "f", "I")`</span>
+<a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">                </span><span class="n">at</span><span class="p">(</span><span class="s">"public"</span><span class="p">,</span><span class="w"> </span><span class="s">"com/example/Opened"</span><span class="p">)</span>
+<a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/{modid}_at.cfg"</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"legacy_at"</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/testmod.accesswidener"</span><span class="o">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/extra.cfg"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/extra.cfg"</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">                </span><span class="o">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">                </span><span class="n">accessible</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">                </span><span class="n">injectInterface</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">,</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">                    </span><span class="s2">"com/example/IThing"</span><span class="o">)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">                </span><span class="n">at</span><span class="o">(</span><span class="s2">"public"</span><span class="o">,</span><span class="w"> </span><span class="s2">"com/example/Opened"</span><span class="o">)</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<ul>
+<li>Every verb has a <code>transitive*</code> twin (<code>transitiveAccessible</code>, …)
+  matching loom's dependents-visible semantics.</li>
+<li><code>interfaceInjection(target, signature)</code> on the env is shorthand for
+  <code>access { transitiveInjectInterface(...) }</code>.</li>
+<li><strong>Dev artifact</strong> — generated declarations and discovered files apply
+  to the dev Minecraft artifact before your sources compile, so
+  widened members and injected interfaces resolve in <code>compileJava</code>.</li>
+<li><strong>Shipping</strong> — the same declarations ride the declared-file channel:
+  they convert into the loader's consumed format at the canonical jar
+  path (<code>{modid}.accesswidener</code>, <code>META-INF/accesstransformer.cfg</code>) and
+  are declared in loader metadata (<code>accessWidener</code> field / <code>FMLAT</code>
+  manifest attribute). On fabric loader ≥ <code>0.18.0</code> the canonical doc
+  upgrades to <code>classTweaker</code> when CT rules are present; older loaders
+  get an AW-only doc and interface injections ride the
+  <code>loom:injected_interfaces</code> custom key instead. A loaderless
+  (<code>common</code>) env skips metadata entirely — the canonical doc ships
+  <em>inside the jar</em> instead as a self-describing <code>classTweaker</code>
+  (<code>format</code> also accepts <code>"ct"</code> there), so dependents discover it on
+  their dependency scan and inherit its <code>transitive-*</code> rules.</li>
+<li><strong>Naming</strong> — rules from <em>all</em> <code>access { }</code> calls merge into one
+  canonical doc; <code>fileName = "..."</code> inside the block (or the
+  <code>accessFileName</code> property) renames where that merged doc ships,
+  where the loader's metadata declares the path (<code>{modid}</code> still
+  expands). <code>format = "…"</code> inside the block (<code>"aw"</code>/<code>"at"</code>/
+  <code>"legacy_at"</code>) overrides the emitted format — the default is the
+  loader's consumed format, and overriding warns since the loader
+  parses the declared path in its own expected format. Setting two
+  <em>different</em> names is a configuration error, not two files — for
+  multiple shipped access documents use <code>from(path) { output = "..." }</code>,
+  which emits each named file independently. On loaders with no
+  access-file convention the canonical name is ignored (warn-only).</li>
+<li><strong>Auto-discovery</strong> — resource-side access files (patterns above)
+  join the same channels without any declaration: dev-artifact
+  application, canonical merge, metadata reference.</li>
+<li><code>combineWith</code> propagates access rules alongside the declared file
+  collections, so combined environments share declarations.</li>
+</ul>
+<h3 id="auto-fill-flags">Auto-fill flags<a class="headerlink" href="#auto-fill-flags" title="Permanent link">&para;</a></h3>
+<p>Metadata auto-discovery toggles (see
+<a href="../metadata/#discovery">metadata</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Default</th>
+<th>Gates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>discoverMixinConfigs</code></td>
+<td><code>true</code></td>
+<td><code>*.mixins.json</code> resources auto-fill the <code>mixins</code> array</td>
+</tr>
+<tr>
+<td><code>discoverGametestEntrypoints</code></td>
+<td><code>true</code></td>
+<td>compiled-class scan for loader gametest interfaces/annotations</td>
+</tr>
+<tr>
+<td><code>interfaceInjectionScan</code></td>
+<td><code>false</code></td>
+<td>mixin-class scan deriving <code>inject-interface</code> rules (opt-in — <code>access { injectInterface(...) }</code> is the always-on path)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="minecraft-artifact-configurations">Minecraft artifact configurations<a class="headerlink" href="#minecraft-artifact-configurations" title="Permanent link">&para;</a></h2>
 <p>Each environment registers resolvable configurations producing the
 Minecraft artifact at each mapping namespace — <code>minecraftRaw</code>,

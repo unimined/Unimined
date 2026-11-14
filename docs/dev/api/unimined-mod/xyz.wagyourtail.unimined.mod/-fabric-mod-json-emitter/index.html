@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.1
+        <div class="library-version" id="library-version">2.0.3
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../index.html">unimined-mod</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.mod</a><span class="delimiter">/</span><span class="current">FabricModJsonEmitter</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Fabric</span><wbr><span>Mod</span><wbr><span>Json</span><wbr><span><span>Emitter</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">FabricModJsonEmitter</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.mod.spi/ModMetadataEmitter///PointingToDeclaration/">ModMetadataEmitter</span></div><p class="paragraph">Shared <code class="lang-kotlin">fabric.mod.json</code> emitter for the fabric-loader document shape (fabric itself plus fabric-fork loaders like ornithe/babric). Loader subclasses only declare their <a href="index.html#-752839983%2FProperties%2F1402879926">ModMetadataEmitter.loader</a> name and may override the loader-specific metadata keys below.</p><p class="paragraph">Emission covers the loader-neutral model plus host-discovered data: generated <i>and</i> resource-discovered mixin configs land in <code class="lang-kotlin">mixins</code>, <a href="index.html#870905121%2FProperties%2F1402879926">ModMetadataEmitter.gametestInterface</a> implementors land under <a href="../../../unimined-mod/xyz.wagyourtail.unimined.mod/-fabric-mod-json-emitter/gametest-entrypoint-key.html">gametestEntrypointKey</a>, generated classTweaker files land in <code class="lang-kotlin">classTweakers</code>, and mixin-derived interface injections land in <code class="lang-kotlin">custom.&lt;[injectedInterfacesKey]&gt;</code>.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">FabricModJsonEmitter</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.mod.spi/ModMetadataEmitter///PointingToDeclaration/">ModMetadataEmitter</span></div><p class="paragraph">Shared <code class="lang-kotlin">fabric.mod.json</code> emitter for the fabric-loader document shape (fabric itself plus fabric-fork loaders like ornithe/babric). Loader subclasses only declare their <a href="index.html#-752839983%2FProperties%2F1402879926">ModMetadataEmitter.loader</a> name and may override the loader-specific metadata keys below.</p><p class="paragraph">Emission covers the loader-neutral model plus host-discovered data: generated <i>and</i> resource-discovered mixin configs land in <code class="lang-kotlin">mixins</code>, <a href="index.html#870905121%2FProperties%2F1402879926">ModMetadataEmitter.gametestInterface</a> implementors land under <a href="../../../unimined-mod/xyz.wagyourtail.unimined.mod/-fabric-mod-json-emitter/gametest-entrypoint-key.html">gametestEntrypointKey</a>, and interface injections land in <code class="lang-kotlin">custom.&lt;[injectedInterfacesKey]&gt;</code> (on CT-capable loader versions they also merge into the declared access doc itself — fmj v1 has no separate <code class="lang-kotlin">classTweakers</code> key; the loader reads CT-format content through the <code class="lang-kotlin">accessWidener</code> path).</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -213,7 +213,22 @@
       </div>
       <div data-togglable="FUNCTION">
         <h2 class="tableheader">Functions</h2>
-        <div class="table"><a data-name="808420333%2FFunctions%2F1402879926" anchor-label="createSection" id="808420333%2FFunctions%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+        <div class="table"><a data-name="-536923428%2FFunctions%2F1402879926" anchor-label="accessDocCtCapable" id="-536923428%2FFunctions%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-536923428%2FFunctions%2F1402879926"><span>access</span><wbr><span>Doc</span><wbr><span>Ct</span><wbr><span><span>Capable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-536923428%2FFunctions%2F1402879926"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mod/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#-536923428%2FFunctions%2F1402879926"><span class="token function">accessDocCtCapable</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">loaderVersion<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="808420333%2FFunctions%2F1402879926" anchor-label="createSection" id="808420333%2FFunctions%2F1402879926" data-filterable-set=":unimined-mod/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-mod/main" data-filterable-set=":unimined-mod/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">

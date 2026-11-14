@@ -988,6 +988,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Multi-module: common + per-loader subprojects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-declarations-in-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access declarations in common
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1512,6 +1529,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Multi-module: common + per-loader subprojects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-declarations-in-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access declarations in common
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1647,6 +1681,46 @@ Cross-project inheritance uses the <code>&lt;project&gt;:&lt;env&gt;</code> path
 <code>combineWith(":common:main")</code> pulls the <code>common</code> project's <code>main</code>
 env (classpath included, so shared code resolves); <code>copyFrom</code>
 reuses sections without composing output.</p>
+<h3 id="access-declarations-in-common">Access declarations in <code>common</code><a class="headerlink" href="#access-declarations-in-common" title="Permanent link">&para;</a></h3>
+<p>A loader-less env applies access files to its own dev artifact the
+same as a loader env — the apply step is contributed by the shared
+wiring rather than a loader family, so <code>access { }</code>, <code>from(...)</code>
+files, and AT/AW/CT files under <code>common/src/main/resources</code> all
+take effect where <code>common</code> compiles. Downstream envs get the same
+rules through <code>combineWith</code>: <code>access { }</code> rules re-emit in each
+child loader's consumed format (AW/CT for fabric, AT for forge),
+while declared/discovered files propagate through the file
+collections and merge into each child's canonical doc. Per-file
+options (<code>from(path) { output }</code>), <code>fileName</code>, and <code>format</code> follow
+the same propagation — a child's own <code>access { }</code> block wins when
+it redeclares a name or format.</p>
+<p>Dependency-declared access applies to a <code>common</code> env too (loom
+<code>transitiveAccessWideners</code> parity): <code>modImplementation</code>/
+<code>modRuntimeOnly</code> jars are scanned for conventional access docs —
+<code>*.accesswidener</code>/<code>.classtweaker</code> entries, <code>fabric.mod.json</code>
+<code>accessWidener</code>/<code>classTweakers</code> refs, <code>META-INF/accesstransformer.cfg</code>
++ <code>FMLAT</code> manifest entries, and <code>custom.*injected_interfaces</code> keys
+(synthesized as <code>transitive-inject-interface</code> rules). AW/CT docs
+apply their <code>transitive-*</code> rules only; ATs apply in full (FML
+semantics). Headerless dep docs need an unambiguous
+<code>modSourceNamespaces</code> entry to interpret — skipped with a warning
+otherwise. Dep jars' embedded access docs are also rebased during
+their prod→dev remap (<code>remap-access</code> step), matching the loader
+envs.</p>
+<p>A <code>common</code> env's access declarations also ship <strong>inside its jar</strong>
+— the <code>architectury.common.json</code> equivalent. The canonical doc
+emits as a self-describing <code>classTweaker</code> file at
+<code>&lt;env&gt;-access.classtweaker</code> (<code>access { format = "at" }</code> switches
+to <code>META-INF/&lt;env&gt;-access_at.cfg</code>, <code>"aw"</code> to <code>.accesswidener</code>,
+and <code>access { fileName }</code> overrides the whole path), and
+<code>from(path) { output }</code>/declared files land at their output or a
+conventional path. Dependents that consume <code>common</code> as a plain
+dependency — no <code>combineWith</code> — pick these up through the same
+dep scan: <strong><code>transitive-*</code> rules cross to dependents</strong>, the rest
+stay env-local (loom <code>transitiveAccessWideners</code> semantics). The
+production remap rebases the embedded doc alongside the jar's
+other contents, so the published artifact declares it in the
+production namespace.</p>
 
 
 

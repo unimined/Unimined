@@ -946,6 +946,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#manifest-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1503,6 +1514,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#manifest-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1582,30 +1604,64 @@ values win. Only the merged copy ships — the source file is excluded
 from <code>processResources</code>. Non-JSON collisions still fail the build.</p>
 <h2 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h2>
 <p><code>generate&lt;Env&gt;ModMetadata</code> scans the environment's resources and
-compiled classes at execution time:</p>
+compiled classes at execution time, gated by three env flags:</p>
 <ul>
 <li><code>*.mixins.json</code> files found in resources are referenced from the
   <code>mixins</code> array automatically (generated and hand-written configs
-  union, deduplicated).</li>
+  union, deduplicated) — <code>discoverMixinConfigs</code>, default <code>true</code>.</li>
 <li>Classes implementing the loader's gametest interface are added to
   the <code>fabric-gametest</code> entrypoint; <code>FabricClientGameTest</code>
-  implementors land under <code>fabric-client-gametest</code>.</li>
+  implementors land under <code>fabric-client-gametest</code> —
+  <code>discoverGametestEntrypoints</code>, default <code>true</code>.</li>
 <li>Mixin classes are scanned for <code>@Mixin</code> targets × implemented
-  interfaces; each pair becomes a <code>transitive-inject-interface</code>
-  classTweaker rule (generated under
-  <code>META-INF/unimined/injected-interfaces.ct</code>, referenced via
-  <code>classTweakers</code>) and a <code>custom.loom:injected_interfaces</code> entry.
-  Rules already present in the project's own CT/AW files are not
-  re-emitted, and duplicates are suppressed.</li>
+  interfaces — <code>interfaceInjectionScan</code>, default <code>false</code> (opt-in).
+  Each pair becomes an <code>inject-interface</code> rule: on loaders whose
+  access doc can carry classTweaker directives (fabric ≥ <code>0.18.0</code>)
+  the rules merge into the canonical <code>*.accesswidener</code> file, and on
+  every loader they emit a <code>custom.loom:injected_interfaces</code> entry
+  for IDE/dependents. Rules already present in the project's own
+  CT/AW files or <code>access { }</code> declarations are not re-emitted.</li>
 </ul>
 <p>Interface-injection names are emitted in the dev namespace; the
 production repack rebases the metadata keys to the published
 namespace. Dependent projects receive the injections through the
 dependency-side classTweaker extraction.</p>
-<p>Because generation needs compiled classes, it cannot feed the
+<p>Because the scan needs compiled classes, it cannot feed the
 project's own compile classpath — casts against injected interfaces
-in first-party sources still need a manual rule. Dependents and the
-runtime packaging are covered automatically.</p>
+in first-party sources need a declared rule (<code>access {
+injectInterface(...) }</code>), which applies to the dev artifact <em>and</em>
+ships for dependents. The scan only adds dependents-facing metadata.</p>
+<h2 id="access-files">Access files<a class="headerlink" href="#access-files" title="Permanent link">&para;</a></h2>
+<p>No DSL is required — an access file under the environment's
+resource roots (<code>*.accesswidener</code>, <code>*.classtweaker</code>/<code>.ct</code>,
+<code>accesstransformer.cfg</code>/<code>*_at.cfg</code>) is picked up automatically.</p>
+<p>All declared access files — <code>accessWideners</code>/<code>accessTransformers</code>
+collections, <code>access { }</code> rules, <code>accessFile(...)</code> overrides, and
+the auto-discovered resource files — convert into
+the loader's consumed format and merge into one canonical file at
+the loader's conventional path (<code>{modid}.accesswidener</code>,
+<code>META-INF/accesstransformer.cfg</code>), which the metadata then declares
+(<code>accessWidener</code> field, <code>FMLAT</code> manifest attribute). <code>classTweaker</code>
+documents merge their AW-compatible directives and keep CT-only
+directives (<code>inject-interface</code>, <code>extend-enum</code>) when the loader
+version can parse them — fabric ≥ <code>0.18.0</code> reads CT content through
+the <code>accessWidener</code> file — otherwise those directives drop with a
+warning.</p>
+<p>The emitted format is always the env loader's consumed one —
+conversion is bidirectional, so a modern AT input on an FG1-era env
+re-emits as legacy <code>*_at.cfg</code> rows, a legacy file on modern forge
+emits modern <code>at</code> rows, and either emits AW/CT on fabric-family.</p>
+<p>Two naming controls exist where the loader's metadata declares the
+path: the merged canonical doc's jar path is overridable via
+<code>access { fileName = "…" }</code> / <code>accessFileName</code> (<code>{modid}</code> expands),
+and individual files carry their own shipped path via
+<code>accessFile(path) { output = "…" }</code> or <code>access { from(path) {
+output = "…" } }</code> — <code>declare=false</code> applies a file to the dev
+artifact without shipping it, and <code>format</code> forces the source
+interpretation (<code>"aw"</code>/<code>"at"</code>/<code>"legacy_at"</code>, plus long names;
+classTweaker is detected by header only). On loaders with no
+access-file convention the canonical-name override is ignored
+(warn-only).</p>
 <h2 id="manifest-attributes">Manifest attributes<a class="headerlink" href="#manifest-attributes" title="Permanent link">&para;</a></h2>
 <p>Manifest-attribute loaders emit a manifest body merged into the env
 jar via <code>jar.manifest.from(...)</code>. The same body also lands in
