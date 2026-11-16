@@ -1,7 +1,10 @@
 # Loaders
 
-One loader per environment; multi-loader means one env per loader.
-Declare it inside the env block — `loader("<name>", "<version>")`:
+Each environment declares its loaders inside the env block —
+`loader("<name>", "<version>")`. Multi-loader projects either use
+one env per loader or repeat `loader(...)` on a single merged env
+where the extra loaders are compile-only secondaries
+([merged multi-loader](multi-project.md#merged-several-loaders-on-one-environment)):
 
 === "Kotlin `build.gradle.kts`"
     ```kotlin
