@@ -54,6 +54,14 @@ present).
   (`unimined-api/.../util/UniminedExt.kt`). Env-scoped adapter
   extensions (`jvmdowngrader`, `expectPlatform`, `patchBase`) stay
   nested inside env objects.
+- **Env-scoped task names**: `verb<Env>Noun` — the capitalized env id
+  sits between verb and object (`genFabricSources`,
+  `validateForgeAccess`, `remapClientJar`); `main` elides it
+  (`genSources`, `validateAccess`, `remapJar`). Generation verbs use
+  the `gen` abbreviation (not `generate`). Renamed tasks keep their
+  pre-convention name as a deprecated alias via
+  `registerDeprecatedTaskAlias`
+  (`unimined-api/.../util/TaskAliases.kt`).
 - **Config-cache contract** (`../Docs/plan.md` §CC): no `Project`/
   `Configuration` held by tasks; task inputs via providers only; no
   `tasks.create` (use `register`); no `System.getenv` captured at

@@ -5,7 +5,7 @@ commons = "1.1.2"
 commons-lib = "1.1.2"
 kotlinx-serialization = "1.12.0"
 xmlutil = "0.91.3"
-unimined-mapping-library = "2.7.2"
+unimined-mapping-library = "2.7.3"
 tiny-remapper = "0.15.0"
 jst-cli = "2.0.11"
 classtransform = "1.15.1"
@@ -35,6 +35,7 @@ tiny-remapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tiny-rem
 
 jvmdowngrader = { module = "xyz.wagyourtail.jvmdowngrader:jvmdowngrader", version.ref = "jvmdowngrader" }
 jvmdowngrader-java-api = { module = "xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api", version.ref = "jvmdowngrader" }
+jvmdowngrader-gradle-plugin = { module = "xyz.wagyourtail.jvmdowngrader:gradle-plugin", version.ref = "jvmdowngrader" }
 
 asm = { module = "org.ow2.asm:asm", version = "9.9" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version = "9.9" }
