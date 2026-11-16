@@ -7,5 +7,12 @@ enum class ArtifactKey {
     CLIENT,
     SERVER,
     MERGED,
-    SOURCES
+    SOURCES,
+
+    /**
+     * Intersection of the [CLIENT] and [SERVER] distributions — the
+     * "common" jar used when environment source sets are split. Providers
+     * without genuinely split distributions alias this to [MERGED].
+     */
+    COMMON
 }

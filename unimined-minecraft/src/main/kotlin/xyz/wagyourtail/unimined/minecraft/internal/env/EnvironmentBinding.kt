@@ -1,12 +1,16 @@
-package xyz.wagyourtail.unimined.minecraft.internal
+package xyz.wagyourtail.unimined.minecraft.internal.env
 
-import org.gradle.api.GradleException
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.UniminedCache
-import xyz.wagyourtail.unimined.minecraft.ProductArtifactProducerRegistry
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifactProducerRegistry
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
+import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
+import xyz.wagyourtail.unimined.minecraft.internal.provider.LocalStubRepo
+import xyz.wagyourtail.unimined.minecraft.internal.provider.ProviderCacheSettings
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
 import xyz.wagyourtail.unimined.minecraft.transform.ProductArtifactTransform
@@ -151,6 +155,14 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             deps.add(project.dependencies.create(
                 "org.jetbrains:annotations:${LocalStubRepo.JETBRAINS_ANNOTATIONS_VERSION}"
             ))
+            // `lwjgl3 {}` swap — lwjgl3 jars land on the same classpath
+            // conf the version-JSON libraries feed (the lwjgl2 drop
+            // rides the shared libraryCoordFilters pipeline)
+            if (environment.lwjgl3.enabled.get()) {
+                environment.lwjgl3.jarCoords().forEach {
+                    deps.add(project.dependencies.create(it))
+                }
+            }
         }
         // the provider-declared lib set only — no user/transform
         // contributions (client-extra & co carry the raw-artifact
@@ -289,7 +301,7 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 p.loaderVersion.set(environment.loaderSpec.map { it.version })
                 p.product.set(environment.product)
                 p.declaredSource.set(providers.provider {
-                    environment.legacyDist.declaration()?.source
+                    environment.legacyDist.declaration()
                 })
                 p.cacheDir.set(cacheDir.toString())
                 p.offline.set(cacheSettings.offline)
@@ -302,7 +314,11 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                         version = RuntimeVersionSpec(environment.version.get()),
                         side = environment.side.get(),
                         loader = null,
-                        product = environment.product.get()
+                        product = environment.product.get(),
+                        // carry the declaration so declared-source envs
+                        // price the producer that will actually run
+                        // (legacydist/devbundle), not the native floor
+                        declaredSource = environment.legacyDist.declaration()
                     )
                     ProductArtifactProducerRegistry()
                         .select(spec, environment.provider.orNull)
@@ -335,16 +351,19 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 p.mergeNamespace.set(providers.provider {
                     if (environment.mappingsSpec.splitOfficial) {
                         ext.modSourceNamespaces(environmentId).orNull?.let { ns ->
-                            ns.singleOrNull() ?: throw GradleException(
+                            ns.singleOrNull() ?: project.failProblem(
+                                "env/split-official-namespaces",
                                 "unimined: environment '$environmentId' is " +
                                 "split-official but has ${ns.size} mod source " +
-                                "namespaces — the merged remap needs exactly " +
-                                "one; declare remap.remappedViews for mixed inputs"
+                                "namespaces",
+                                "the merged remap needs exactly one; declare " +
+                                "remap.remappedViews for mixed inputs"
                             )
-                        } ?: throw GradleException(
+                        } ?: project.failProblem(
+                            "env/mod-source-namespace",
                             "unimined: environment '$environmentId' has no mod " +
-                            "source namespace — declare a loader or set " +
-                            "modSourceNamespaces"
+                            "source namespace",
+                            "declare a loader or set modSourceNamespaces"
                         )
                     } else null
                 })
@@ -360,7 +379,8 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                                 environmentId,
                                 ext.artifacts(environmentId).map {
                                     it.mappings.orNull?.namespaces?.firstOrNull()?.name
-                                        ?: throw GradleException(
+                                        ?: project.failProblem(
+                                            "env/mapping-tree",
                                             "unimined: environment " +
                                             "'$environmentId' produced no " +
                                             "mapping tree"

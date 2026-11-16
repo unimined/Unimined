@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.provider.conversion
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -65,6 +67,7 @@ class ConversionLaunchMetadata(
     @Transient
     private var backendFactory: (() -> Pair<ManifestResolver, Downloader>)? = null
 
+    @NoGroovyTwin("test/provider injection seam — not a DSL verb")
     fun withBackendFactory(
         factory: () -> Pair<ManifestResolver, Downloader>
     ) = apply { backendFactory = factory }

@@ -11,7 +11,10 @@ import org.gradle.api.Project
  * never an implicit download. Works without `provider-native`:
  * `supports()` claims any spec whose env declares a legacydist
  * source, including non-MC-version jars (BTA/ReIndev overlays,
- * pre-1.8 bukkit, offline builds).
+ * pre-1.8 bukkit, offline builds). ServiceLoader registers both the
+ * config-time [ProductProvider] and the transform-time
+ * [ProductArtifactProducer] so declared artifacts materialize inside
+ * the raw-artifact transform like every other provider.
  */
 class GradlePlugin : Plugin<Project> {
 

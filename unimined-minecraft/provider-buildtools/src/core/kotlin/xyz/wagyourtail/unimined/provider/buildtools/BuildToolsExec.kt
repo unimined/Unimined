@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.provider.buildtools
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
+import xyz.wagyourtail.unimined.api.util.produceCached
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import java.nio.channels.FileChannel
 import java.nio.file.Path
@@ -25,6 +28,7 @@ import kotlin.io.path.listDirectoryEntries
  * environments in one build and concurrent Gradle daemons sharing
  * the project cache.
  */
+@NoGroovyTwin("internal BuildTools exec wrapper — not a DSL surface")
 internal class BuildToolsExec(
     private val downloader: Downloader,
     private val workDir: Path,
@@ -122,10 +126,9 @@ internal class BuildToolsExec(
                     val entry = zip.getEntry("META-INF/libraries/$name")
                         ?: return@mapNotNull null
                     val dest = outDir.resolve(name)
-                    if (!dest.exists()) {
-                        dest.parent.createDirectories()
+                    dest.produceCached { tmp ->
                         zip.getInputStream(entry).use { input ->
-                            java.nio.file.Files.copy(input, dest)
+                            java.nio.file.Files.copy(input, tmp)
                         }
                     }
                     dest

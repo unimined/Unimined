@@ -1,11 +1,16 @@
 package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.MissingMethodException
+import groovy.lang.MissingPropertyException
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import xyz.wagyourtail.unimined.api.util.delegatingTo
+import xyz.wagyourtail.unimined.api.util.dependencyNotationPredicate
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import org.gradle.api.Action
-import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Named
 import org.gradle.api.Project
@@ -22,7 +27,9 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
-import xyz.wagyourtail.unimined.minecraft.internal.EnvironmentInheritance
+import xyz.wagyourtail.unimined.minecraft.internal.env.EnvironmentInheritance
+import xyz.wagyourtail.unimined.minecraft.internal.env.parseEnvironmentPath
+import xyz.wagyourtail.unimined.minecraft.spi.TransformExtensionFacade
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 import xyz.wagyourtail.unimined.api.spec.DeclaredAccessFile
@@ -52,26 +59,293 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Groovy DSL dispatch for extension-registered verbs like
      *  `env.jarmod("0.1.5")` / `env.fg1("1.0.0")`: a non-closure call
-     *  `verb(args)` can't reach a named extension's methods through
-     *  Gradle's dynamic dispatch, so route it here — the verb name
-     *  matches the extension name (`jarmod`, `fg1`, ...) and the
-     *  same-named method on that extension object is invoked. A
-     *  `verb { }` closure call still configures the extension
-     *  directly, so both forms work. */
+     *  `verb(args)` can't reach extension objects' methods through
+     *  Gradle's dynamic dispatch, so route it here — a same-named
+     *  extension's method wins, otherwise the first extension object
+     *  carrying a compatible method (`jarmod`'s extension also serves
+     *  `fg1`/`customSearge`). A `verb { }` closure call still
+     *  configures the extension directly, so both forms work. 1.x
+     *  verbs removed in 2.0 emit migration notes before falling
+     *  through to missing-method. */
     fun methodMissing(name: String, args: Any): Any? {
         val argArray = args as Array<*>
         val target = extensions.findByName(name)
-            ?: throw MissingMethodException(name, javaClass,
-                argArray.filterNotNull().toTypedArray())
-        val method = target.javaClass.methods.filter {
-            it.name == name && it.parameterCount == argArray.size
-        }.firstOrNull { m ->
-            argArray.indices.all { i ->
-                argArray[i] == null || m.parameterTypes[i].isInstance(argArray[i])
+        if (target != null) {
+            // `Method.invoke` on a Unit/void verb yields null — the
+            // null check must wrap the lookup, not the invocation
+            val method = methodFor(target, name, argArray)
+                ?: fail(name, argArray,
+                    "extension exists but no matching overload")
+            return method.invoke(target, *argArray)
+        }
+        // the verb may live on a differently-named extension object —
+        // `env.fg1(v)` dispatches to `jarmod`'s `fg1` method
+        for (schema in extensions.extensionsSchema.elements) {
+            val ext = extensions.findByName(schema.name) ?: continue
+            methodFor(ext, name, argArray)
+                ?.let { return it.invoke(ext, *argArray) }
+        }
+        removed1xVerbs[name]?.let { note ->
+            project.failProblem(
+                "env/removed-1x-verb",
+                "unimined: environment '$environmentId' — '$name' " +
+                        "was removed in Unimined 2.0",
+                note
+            )
+        }
+        pluginVerbs[name]?.let { plugin ->
+            project.failProblem(
+                "env/verb-plugin-missing",
+                "unimined: environment '$environmentId' — verb " +
+                        "'$name' is contributed by the '$plugin' " +
+                        "plugin, which is not applied",
+                "apply `id \"$plugin\"` to use `$name` on " +
+                        "environments"
+            )
+        }
+        fail(name, argArray, "no DSL verb or extension")
+    }
+
+    /** The [name]-named method on [ext] whose parameter count and
+     *  types are assignment-compatible with [argArray] — first match
+     *  wins, mirroring Groovy's own overload ordering. */
+    private fun methodFor(
+        ext: Any, name: String, argArray: Array<*>
+    ): java.lang.reflect.Method? = ext.javaClass.methods.filter {
+        it.name == name && it.parameterCount == argArray.size
+    }.firstOrNull { m ->
+        argArray.indices.all { i ->
+            argArray[i] == null || m.parameterTypes[i].isInstance(argArray[i])
+        }
+    }
+
+    /**
+     * 1.x env-scoped DSL verbs removed or re-shaped in 2.0 — Groovy
+     *  calls on the env hit [methodMissing] and get a migration note
+     *  instead of a bare missing-method error. Consulted only after
+     *  the named-extension lookup fails, so live extension verbs
+     *  (`jarmod`, `forge`, `patchBase`, `jvmdowngrader`,
+     *  `expectPlatform`, `devBundleExport`, `transform`) always win.
+     */
+    private val removed1xVerbs: Map<String, String> = buildMap {
+        val loader = { verb: String, id: String ->
+            "1.x `$verb { }` patcher blocks became " +
+                    "`loader(\"$id\", \"<version>\")` in 2.0 " +
+                    "(see docs/migration-1x-to-2.0.md)"
+        }
+        // loader patcher blocks → loader("name", "version")
+        this["fabric"] = loader("fabric", "fabric")
+        this["quilt"] = loader("quilt", "quilt")
+        this["forge"] = loader("forge", "forge")
+        this["minecraftForge"] = loader("minecraftForge", "forge")
+        this["neoForge"] = loader("neoForge", "neoforge")
+        this["neoForged"] = loader("neoForged", "neoforge")
+        this["neoforge"] = loader("neoforge", "neoforge")
+        this["cleanroom"] = loader("cleanroom", "cleanroom")
+        this["legacyFabric"] = loader("legacyFabric", "legacyfabric")
+        this["babric"] = loader("babric", "babric")
+        this["ornitheFabric"] = loader("ornitheFabric", "ornithe")
+        this["ornithe"] = loader("ornithe", "ornithe")
+        this["modloader"] =
+            "ModLoader-era mods run under jarmod in 2.0 — " +
+                    "`loader(\"jarmod\")` + a " +
+                    "`jarMod(\"risugami:modloader:<mc>\")` dependency " +
+                    "(auto-patched by jarmod-modloader-fixes)"
+        this["risugami"] = this["modloader"]!!
+        this["nil"] = "NilLoader has no 2.0 loader descriptor — " +
+                "planned, not yet supported"
+        this["jarMod"] = loader("jarMod", "jarmod")
+        this["foxLoader"] = loader("foxLoader", "foxloader")
+        this["liteloader"] = loader("liteloader", "liteloader")
+        this["rift"] = loader("rift", "rift")
+        this["spigot"] = loader("spigot", "spigot")
+        this["paper"] = loader("paper", "paper")
+        this["folia"] = "Folia has no 2.0 loader descriptor — " +
+                "paper covers Paper; Folia support is planned"
+        this["arch"] = "Arch-based loaders have no 2.0 descriptor — " +
+                "use the specific loader verb (`loader(\"forge\")`, " +
+                "`loader(\"fabric\")`, …)"
+        // "bukkit" is the family name — craftbukkit is the descriptor
+        this["bukkit"] = loader("bukkit", "craftbukkit")
+        this["craftBukkit"] = loader("craftBukkit", "craftbukkit")
+        this["flint"] =
+            "flint loader support was removed — maven.flintloader.net " +
+                    "is offline, so `net.flintloader:*` artifacts are " +
+                    "unresolvable. Reintroduce via LoaderRegistry + a " +
+                    "mirrored repo if the host returns."
+        // merged-env patcher block → implicit merge semantics
+        this["merged"] =
+            "merged-env patching is implicit in 2.0 — declare merges " +
+                    "via `combineWith`/`from`; there is no patcher block"
+        // standalone access patchers → access { } / file collections
+        this["accessWidener"] =
+            "declare access-widener files via `access { }` " +
+                    "(`from(\"path\")`) or `accessWideners.from(...)` in 2.0"
+        this["accessTransformer"] =
+            "declare access-transformer files via `access { }` " +
+                    "(`from(\"path\")`) or `accessTransformers.from(...)` " +
+                    "in 2.0"
+        // removed SPI callbacks (docs/migration-1x-to-2.0.md §Removed
+        // extension points)
+        val spi = "1.x patcher/remapper extension points were removed — " +
+                "declare transforms via `transform { }`/transformer " +
+                "claims and remap tuning via `remap { }` step specs " +
+                "(see docs/migration-1x-to-2.0.md)"
+        this["customPatcher"] = spi
+        this["mcPatcher"] = spi
+        this["minecraftRemapper"] = spi
+        this["remapper"] = spi
+        this["tinyRemapperConf"] = spi
+        this["addResourceRemapper"] = spi
+        this["addExtension"] = spi
+        // env-nested sections that moved to top level
+        this["runs"] =
+            "`runs { }` moved to top level in 2.0 (`runs { }` / " +
+                    "`unimined.runs { }`) — it is not per-env"
+        this["source"] =
+            "decompile-engine config moved to `unimined.source { }` " +
+                    "(top level) in 2.0"
+        // 1.x env remap-task verbs → auto-wired prod tasks / surfaces
+        this["remap"] =
+            "production remap tasks are auto-wired (`remap<Env>Jar`) — " +
+                    "custom artifact remaps go through `unimined.remap { }` " +
+                    "surfaces"
+        this["remapSources"] =
+            "production sources remaps are auto-wired " +
+                    "(`remap<Env>SourcesJar`) — see `unimined.remap { }`"
+        // 1.x preset name kept on the frontend only
+        this["reIndev"] = "`reIndev` is `reindev { }` in 2.0"
+        // Property assignments written in call form
+        this["version"] = "`version` is a Property — assign with " +
+                "`version = \"x\"` or `version.set(\"x\")`"
+        this["side"] = "`side` is a Property — assign with " +
+                "`side = Side.SERVER` or `side.set(...)`"
+    }
+
+    /**
+     * Env verbs contributed by optional transform/adapter plugins —
+     * when the plugin isn't applied the verb never reaches Groovy
+     * dispatch, so name the plugin instead of a bare missing-method
+     * error. (`jarmod`'s extension object carries the `fg1`/
+     * `customSearge` methods too — one plugin entry covers the set.)
+     */
+    private val pluginVerbs: Map<String, String> = mapOf(
+        "jarmod" to "xyz.wagyourtail.unimined.transform.jarmod",
+        "fg1" to "xyz.wagyourtail.unimined.transform.jarmod",
+        "customSearge" to "xyz.wagyourtail.unimined.transform.jarmod",
+        "patchBase" to "xyz.wagyourtail.unimined.adapter-patchbase",
+        "patchBaseCreator" to "xyz.wagyourtail.unimined.adapter-patchbase",
+        "jvmdowngrader" to "xyz.wagyourtail.unimined.jvmdg",
+        "expectPlatform" to "xyz.wagyourtail.unimined.adapter-expectplatform",
+        "devBundleExport" to "xyz.wagyourtail.unimined.provider.devbundle",
+        "transform" to "xyz.wagyourtail.unimined.transform",
+    )
+
+    /**
+     * Groovy property-write bridge: 1.x scalar env properties were
+     * plain `var`s — `env.version = "1.2.3"` worked verbatim. 2.0
+     * exposes `Property` fields, which Groovy treats as read-only
+     * without a generated setter; route the surviving names to
+     * `Property.set` and fail removed names with migration notes.
+     */
+    fun propertyMissing(name: String, value: Any?): Any? {
+        when (name) {
+            "version" -> {
+                version.set(value.toString())
+                return null
             }
-        } ?: throw MissingMethodException(name, javaClass,
+            "side" -> {
+                side.set(
+                    when (val v = value.toString().lowercase()) {
+                        // 1.x `side "joined"`/`side "combined"` forms
+                        "joined", "combined" -> Side.MERGED
+                        else -> try {
+                            Side.valueOf(v.uppercase())
+                        } catch (e: IllegalArgumentException) {
+                            throw MissingPropertyException(
+                                name, javaClass, e)
+                        }
+                    })
+                return null
+            }
+        }
+        removed1xProperties[name]?.let { note ->
+            project.failProblem(
+                "env/removed-1x-property",
+                "unimined: environment '$environmentId' — '$name' was " +
+                        "removed in Unimined 2.0",
+                note
+            )
+        }
+        throw MissingPropertyException(name, javaClass)
+    }
+
+    /** Read counterpart of [propertyMissing] — Groovy property reads
+     *  (`env.mcPatcher`) on removed 1.x members get the same note. */
+    fun propertyMissing(name: String): Any? {
+        removed1xProperties[name]?.let { note ->
+            project.failProblem(
+                "env/removed-1x-property",
+                "unimined: environment '$environmentId' — '$name' was " +
+                        "removed in Unimined 2.0",
+                note
+            )
+        }
+        throw MissingPropertyException(name, javaClass)
+    }
+
+    /** 1.x env-scoped *properties* removed in 2.0 — Groovy reads and
+     *  writes both land in `propertyMissing`. */
+    private val removed1xProperties: Map<String, String> = buildMap {
+        val remapKnob =
+            "production jar wiring is automatic in 2.0 — remap/" +
+                    "sources-jar opt-outs live on `mod { }` packaging, " +
+                    "not the env"
+        this["defaultRemapJar"] =
+            "`defaultRemapJar` is a live `Property<Boolean>` in 2.0 — " +
+                    "assign with `.set(false)` (`=` writes hit this " +
+                    "handler in Groovy)"
+        this["defaultRemapSourcesJar"] = remapKnob
+        this["createJarTask"] = remapKnob
+        this["canCombine"] =
+            "merge semantics are fixed in 2.0 — declare merges via " +
+                    "`combineWith`/`from`"
+        this["useUnionRelaunch"] = "removed in Unimined 2.0 — no " +
+                "equivalent (see docs/migration-1x-to-2.0.md)"
+        this["onMergeFail"] = "removed in Unimined 2.0 — merge failure " +
+                "handling is fixed"
+        this["obfuscated"] = "removed in Unimined 2.0 — the provider " +
+                "pipeline tracks namespaces internally"
+        val internals = "removed in Unimined 2.0 — provider internals; " +
+                "no DSL equivalent (see docs/migration-1x-to-2.0.md)"
+        this["mcPatcher"] = internals
+        this["minecraftRemapper"] = internals
+        this["tinyRemapperConf"] = internals
+        this["minecraftData"] = internals
+        this["minecraftDependency"] = internals
+        this["minecraftFileDev"] = internals
+        this["minecraftSourceFileDev"] = internals
+        this["mergedOfficialMinecraftFile"] = internals
+        this["forgeMCVersion"] = internals
+        this["isMinecraftJar"] = internals
+        this["combinedWithList"] = internals
+        this["localCache"] = internals
+    }
+
+    private fun fail(
+        name: String, argArray: Array<*>, why: String
+    ): Nothing {
+        project.reportProblem(
+            "env/method-missing",
+            "unimined: environment '$environmentId' has no method " +
+                "'$name'",
+            "$why — call was ${name}(" +
+                argArray.joinToString { arg ->
+                    arg?.toString() ?: "null" } + ")",
+            UniminedProblems.Severity.ERROR
+        )
+        throw MissingMethodException(name, javaClass,
             argArray.filterNotNull().toTypedArray())
-        return method.invoke(target, *argArray)
     }
 
     override fun getName(): String = environmentId
@@ -105,6 +379,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  [datagen]/[gametest] mark the env. */
     val isAuxEnv: Property<Boolean> =
         objects.property(Boolean::class.java).convention(false)
+
+    /** Environment id carrying this env's client split — set on `main`
+     *  by [MinecraftExtension.splitEnvironmentSourceSets]. Client-side
+     *  runs conventionally bound to this env redirect to the split
+     *  client env: this env's artifact is the client∩server
+     *  intersection jar (it cannot launch a client), while the client
+     *  env carries the full client artifact plus this env's output via
+     *  the implicit-parent combine. Wiring consumers (runs, IDE
+     *  emitters, packaging) read this lazily — the flag lands during
+     *  DSL evaluation, after env binding. */
+    val splitClientEnvironment: Property<String> =
+        objects.property(String::class.java)
 
     /** Declare a datagen source-set env ([name] defaults to
      *  `<env>Data` — `fabric` → `fabricData`, `main` → `data`). The env
@@ -192,13 +478,13 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     ): MinecraftEnvironment =
         sourceSet(sourceSetName, Action { action.delegatingTo(it) })
 
-    /** Apply the recorded implicit-parent combine, unless opted out or
-     *  the parent was already combined/copied explicitly. Deferred so
-     *  [inheritParent] can be set inside the configure block. */
     /** Aux-env section inheritance runs once — [applyImplicitParent]
      *  fires on every [combinedWith] read. */
     private var auxSectionsInherited = false
 
+    /** Apply the recorded implicit-parent combine, unless opted out or
+     *  the parent was already combined/copied explicitly. Deferred so
+     *  [inheritParent] can be set inside the configure block. */
     internal fun applyImplicitParent() {
         if (environmentId == parentEnvId) return
         if (!inheritParent.get()) return
@@ -238,12 +524,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         val parent = project.extensions
             .getByType(MinecraftExtension::class.java).environment(ref)
         transitiveAccessWideners.convention(parent.transitiveAccessWideners)
+        dependencyInterfaceInjection.convention(parent.dependencyInterfaceInjection)
+        patchLvts.convention(parent.patchLvts)
+        applyPreen.convention(parent.applyPreen)
+        autoNests.convention(parent.autoNests)
         interfaceInjectionScan.convention(parent.interfaceInjectionScan)
         discoverMixinConfigs.convention(parent.discoverMixinConfigs)
         discoverGametestEntrypoints.convention(parent.discoverGametestEntrypoints)
         accessWideners.from(parent.accessWideners)
         accessTransformers.from(parent.accessTransformers)
+        consumedAccessDocs.from(parent.consumedAccessDocs)
         inheritedAccessSpecs += parent.inheritedAccessSpecs + parent.accessDsl
+        inheritedModSpecs += parent.inheritedModSpecs + parent.mods
         // DEPENDENCIES covers both the mod buckets and the plain
         // sourceSet buckets (implementation/compileOnly/runtimeOnly/
         // api) — see MinecraftEnvironmentCopyHandler.wireDependencies
@@ -256,11 +548,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             val other = project.extensions
                 .getByType(MinecraftExtension::class.java)
                 .environment(source).version.orNull ?: continue
-            if (other != target) throw GradleException(
+            if (other != target) project.failProblem(
+                "env/version-conflict",
                 "Minecraft environment '$environmentId' inherits from " +
                     "'${source.projectPath}:${source.environmentId}' " +
-                    "(minecraft $other) but declares version $target; " +
-                    "environments sharing sections must use the same " +
+                    "(minecraft $other) but declares version $target",
+                "environments sharing sections must use the same " +
                     "minecraft version")
         }
     }
@@ -291,6 +584,29 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                 .environments.findByName(parentEnvId)?.side?.orNull
                 ?: Side.MERGED
         })
+
+    /** Set [side] by name, case-insensitively — `side("client")` ≡
+     *  `side = Side.CLIENT`. Handy in Groovy, where
+     *  `side = Side.CLIENT` needs the enum on the script classpath;
+     *  in Kotlin `side = "client"` is rejected (`side` is a
+     *  `Property<Side>`), so the call form is the string route there
+     *  too. 1.x `joined`/`combined` are accepted as [Side.MERGED]
+     *  aliases, matching [propertyMissing]. */
+    fun side(side: String) {
+        this.side.set(
+            when (side.lowercase()) {
+                "joined", "combined" -> Side.MERGED
+                else -> Side.entries.firstOrNull {
+                    it.name.equals(side, ignoreCase = true)
+                } ?: project.failProblem("env/invalid-side",
+                    "unimined: environment '$environmentId' — " +
+                            "unknown side \"$side\"",
+                    "expected one of: joined, combined, " +
+                            Side.entries.joinToString {
+                                it.name.lowercase()
+                            })
+            })
+    }
 
     /** Optional provider override for this source set. Convention
      *  inherits the implicit parent's provider lazily — see [side] for
@@ -328,10 +644,43 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val customGameProvider: Property<Boolean> =
         objects.property(Boolean::class.java).convention(false)
 
-    /** Declared modloader for this environment — read by transform plugins
-     *  to contribute loader-specific wiring (dependency defaults, namespace
-     *  conventions, transformers). */
+    /** Primary declared modloader for this environment — read by transform
+     *  plugins to contribute loader-specific wiring (dependency defaults,
+     *  namespace conventions, transformers). The primary carries all of the
+     *  environment's loader semantics — production namespace, remap,
+     *  metadata emission, and run configs; additional loaders declared by
+     *  repeated [loader] calls merge onto the compile classpath only (see
+     *  [loaderSpecs]). */
     val loaderSpec: Property<LoaderSpec> = objects.property(LoaderSpec::class.java)
+
+    /** Loaders declared on this environment by `loader(...)`, in
+     *  declaration order — the first is the primary ([loaderSpec]). */
+    internal val declaredLoaderSpecs = mutableListOf<LoaderSpec>()
+
+    /** LOADER-section copy sources — `combineWith`/`copyFrom` envs whose
+     *  non-primary loaders propagate here as compile-classpath
+     *  secondaries (resolved lazily in [loaderSpecs]). */
+    internal val inheritedLoaderSources =
+        linkedSetOf<EnvironmentReference>()
+
+    /**
+     * Every loader applying to this environment — the primary
+     * ([loaderSpec]) first, then further declared loaders, then
+     * LOADER-section-inherited ones. More than one entry = a merged
+     * multi-loader environment (the 1.x `merged { fabric; forge }`
+     * analog): each loader contributes its product/libraries to the
+     * compile classpath, while production, remapping, metadata, and
+     * run semantics stay with the primary.
+     */
+    val loaderSpecs: List<LoaderSpec>
+        get() {
+            val inherited = inheritedLoaderSources.flatMap { ref ->
+                project.extensions.getByType(MinecraftExtension::class.java)
+                    .environment(ref).loaderSpecs.drop(1)
+            }
+            return (listOfNotNull(loaderSpec.orNull) +
+                    declaredLoaderSpecs + inherited).distinct()
+        }
 
     /**
      * Base filename for the produced Minecraft artifacts — downstream
@@ -399,12 +748,121 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         objects.property(Boolean::class.java).convention(true)
 
     /**
+     * Whether `injected_interfaces` declared by compile-classpath mod
+     * dependencies (fmj `custom.*injected_interfaces`, qmj
+     * `quilt_loom.injected_interfaces`, `architectury.common.json`)
+     * apply to this environment's dev Minecraft artifact — loom's
+     * `interfaceInjection.enableDependencyInterfaceInjection` toggle
+     * (default `true`). Independent of [transitiveAccessWideners]:
+     * dep-declared interface injection can run without dep-declared
+     * access widening, and vice versa.
+     */
+    val dependencyInterfaceInjection: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /**
+     * Ornithe local-variable-table patching (Ploceus `patchLvts`,
+     * default `true`) — when the loader is `ornithe` and the
+     * environment's Minecraft version normalizes inside
+     * `(0.32.0, 1.8.2-rc.5)` — every alpha/beta build and every
+     * release/snapshot before 1.8.2, excluding the 15w14a
+     * april-fools build — a `condor` step synthesizes
+     * `LocalVariableTable` debug info on the environment artifact so
+     * decompilers and Mixin `@Local` captures see real variable slots.
+     * Ignored by non-ornithe loaders. Disable via [disableLvtPatch].
+     */
+    val patchLvts: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /** Opt out of the auto-applied `condor` LVT pass — Ploceus
+     *  `disableLvtPatch()` parity. Only meaningful on `ornithe`
+     *  environments. */
+    fun disableLvtPatch() = patchLvts.set(false)
+
+    /**
+     * Ornithe bridge-method repair (Ploceus applies `preen`
+     * unconditionally; default `true`) — when the loader is `ornithe`,
+     * a `preen` step splits ProGuard-merged bridge methods on the
+     * environment artifact back into `ACC_BRIDGE` delegates so the
+     * bytecode shape matches javac output. Ignored by non-ornithe
+     * loaders. Disable via [disablePreen].
+     */
+    val applyPreen: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /** Opt out of the auto-applied `preen` bridge-method pass. Only
+     *  meaningful on `ornithe` environments. */
+    fun disablePreen() = applyPreen.set(false)
+
+    /**
+     * Ornithe nests auto-application (Ploceus's always-appended
+     * `NestsMappingSpec` mapping layer, default `true`) — when the
+     * loader is `ornithe`, the latest `net.ornithemc:nests` build
+     * published for the environment's Minecraft version + side is
+     * contributed to the mapping spec automatically, grafting
+     * inner-class metadata through the remap so produced artifacts
+     * carry `InnerClasses` attributes. An explicit
+     * `mappings { nests(build) }` declaration suppresses the
+     * contribution. Disable via [disableNests].
+     */
+    val autoNests: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /** Opt out of the auto-contributed `nests` enricher source —
+     *  Ploceus `nestsProvider` opt-out parity (declare nothing and
+     *  the layer stays inert). Only meaningful on `ornithe`
+     *  environments. */
+    fun disableNests() = autoNests.set(false)
+
+    /**
      * Inline access declarations — the spec behind `access { }`.
      * Rules are stored semantically and materialized as a generated
      * document in the loader's consumed format, riding the same
      * apply/ship/remap channels as file-declared access files.
      */
     val accessDsl: AccessDslSpec = objects.newInstance(AccessDslSpec::class.java)
+
+    /**
+     * Named mod classpath groups — the `mods { "<id>" { } }` container.
+     * Each group names the source-set outputs (+ extra files) that make
+     * up one logical mod on a dev launch. Runs serialize the selected
+     * groups for loaders that group classpath entries by mod:
+     * fabric-family → `fabric.classPathGroups` system property,
+     * forge-family → `MOD_CLASSES` environment entries
+     * (Loom `loom.mods` parity). `RunConfig.loadedMods` selects a
+     * subset per run; empty means all declared groups.
+     */
+    val mods: org.gradle.api.NamedDomainObjectContainer<ModGroupSpec> =
+        objects.domainObjectContainer(ModGroupSpec::class.java) { name ->
+            objects.newInstance(ModGroupSpec::class.java, name, project)
+        }
+
+    /** Mod-group specs inherited from the implicit/copy parent —
+     *  parallel to [inheritedAccessSpecs]. Effective groups are
+     *  `inheritedModSpecs + mods`. */
+    internal val inheritedModSpecs = mutableListOf<ModGroupSpec>()
+
+    /** All mod groups visible to this environment — own declarations
+     *  first (a child re-declaring a parent's group name shadows it),
+     *  then inherited ones. */
+    fun effectiveModGroups(): List<ModGroupSpec> =
+        (mods.toList() + inheritedModSpecs).distinctBy { it.name }
+
+    /** `mods { }` DSL verb — declare named mod classpath groups:
+     *  `mods { "mymod" { sourceSet("main") } }`. */
+    fun mods(
+        action: Action<in org.gradle.api.NamedDomainObjectContainer<ModGroupSpec>>
+    ) {
+        action.execute(mods)
+    }
+
+    /** Groovy DSL twin of [mods]. */
+    fun mods(
+        @DelegatesTo(
+            value = org.gradle.api.NamedDomainObjectContainer::class,
+            strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(mods)
 
     /** `access { }` DSL verb — declare access directives inline:
      *  `accessible`/`extendable`/`mutable` (+ `transitive-*` twins),
@@ -502,6 +960,17 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      */
     val generatedAccessFiles: ConfigurableFileCollection = objects.fileCollection()
 
+    /**
+     * Access documents consumed from dependency *coordinates* — the
+     * resolvable `unimined<Env>AccessTransformer` configuration feeds
+     * here (plan §4.1, NG `accessTransformer` / MDG `accessTransformers`
+     * parity). Dep-authored docs join the environment's dependency
+     * class-tweaker channel: they bind like dep-jar access docs
+     * (producer-namespace semantics), are never validated, and are not
+     * shipped inside this project's own jar.
+     */
+    val consumedAccessDocs: ConfigurableFileCollection = objects.fileCollection()
+
     /** Per-file access-declaration overrides (plan escape hatch) —
      *  files declared via [accessFile] emit as independent conversions
      *  (custom `output`, `declare` suppression, forced `format`)
@@ -522,8 +991,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         declare: Boolean = true
     ) {
         val file = project.files(path).files.singleOrNull()
-            ?: throw GradleException(
-                "accessFile($path) must resolve to exactly one file")
+            ?: project.failProblem(
+                "env/access-file",
+                "unimined: environment '$environmentId' — " +
+                    "accessFile($path) must resolve to exactly one file")
         accessFileOverrides.add(
             DeclaredAccessFile(
                 file.absolutePath, format, output, declare))
@@ -569,6 +1040,43 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     fun libraryFilter(filter: (org.gradle.api.artifacts.Dependency) -> Boolean) {
         libraryFilters += filter
     }
+
+    /** Groovy DSL overload — `libraryFilter { it.group == "com.example" }`. */
+    fun libraryFilter(filter: Closure<Boolean>) =
+        libraryFilter { dep -> filter.call(dep) }
+
+    /**
+     * Per-dependency force-remap filters for this environment's `mod*`
+     * buckets — the user-side escape of `Fabric-Loom-Remap:true` for
+     * deps too plain to self-describe (unmarked jars referencing
+     * mapped classes where the `refs:` scan can't see them). Each
+     * filter is a `(Dependency) -> Boolean` evaluated against the mod
+     * buckets' declared dependencies; matching deps' own artifacts
+     * (never their transitives) remap unconditionally, bypassing the
+     * marker scan.
+     */
+    val forceRemapFilters: MutableList<(org.gradle.api.artifacts.Dependency) -> Boolean> =
+        mutableListOf()
+
+    /** Force-remap `mod*` deps matching [filter] — see [forceRemapFilters]. */
+    fun forceRemap(filter: (org.gradle.api.artifacts.Dependency) -> Boolean) {
+        forceRemapFilters += filter
+    }
+
+    /** Groovy DSL overload — `forceRemap { it.group == "com.example" }`. */
+    fun forceRemap(filter: Closure<Boolean>) =
+        forceRemap { dep -> filter.call(dep) }
+
+    /** Force-remap `mod*` deps by `group:name[:version]` coordinate —
+     *  malformed notation fails with an actionable error naming this
+     *  environment (see [dependencyNotationPredicate]). */
+    fun forceRemap(notation: String) =
+        forceRemap(
+            dependencyNotationPredicate(
+                notation,
+                "forceRemap on minecraft environment '$environmentId'"
+            )
+        )
 
     /** Dependency bucket for the generated Minecraft artifact stub. */
     val minecraftConfigurationName: String
@@ -633,6 +1141,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  Wiring surface, not user DSL — set during environment wiring,
      *  read at run-task realization. */
     var prodRunViewName: String = minecraftProdViewName
+
+    /** Resolvable+declarable conf for coordinate-consumed access docs
+     *  (`unimined<Env>AccessTransformer("g:a:v")` — plan §4.1, NG
+     *  `accessTransformer` parity). */
+    val accessTransformerConfName: String
+        get() = "unimined${environmentId.replaceFirstChar(Char::uppercase)}AccessTransformer"
+
+    /** Consumable conf carrying this env's own access docs on the
+     *  `unimined<Env>` component (plan §4.1, NG `accessTransformerElements`
+     *  parity). */
+    val accessTransformerElementsConfName: String
+        get() = "unimined${environmentId.replaceFirstChar(Char::uppercase)}AccessTransformerElements"
 
     /** Dependency bucket for mods used to compile this environment. */
     val modImplementationConfigurationName: String
@@ -720,27 +1240,47 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         // in a named env a single arg that isn't the env's own name is
         // the version — `sourceSet("fabric") { loader("0.20.1") }` reads
         // as `loader("fabric", "0.20.1")`; env "main" keeps it as a name
-        loaderSpec.set(
+        declareLoader(
             if (environmentId == "main" || name == environmentId)
                 RuntimeLoaderSpec(name, "")
             else {
                 // `loader("quilt")` inside env "fabric" is almost
                 // certainly a two-arg typo — the single arg is the
                 // version slot, the env id is the inferred loader name
-                project.logger.warn(
-                    "[unimined] env '$environmentId': the single " +
-                    "loader() arg is the version slot — loader($name) " +
-                    "resolves as loader $environmentId:$name; for a " +
-                    "different loader use loader(name, version)"
+                project.reportProblem(
+                    "env/loader-single-arg",
+                    "unimined: environment '$environmentId' — the single " +
+                        "loader() arg is the version slot",
+                    "loader($name) resolves as loader " +
+                        "$environmentId:$name; for a different loader " +
+                        "use loader(name, version)"
                 )
                 RuntimeLoaderSpec(environmentId, name)
             }
         )
     }
 
-    /** Configure this environment's modloader and version. */
+    /**
+     * Configure this environment's modloader and version. The first
+     * `loader(...)` declaration is the environment's primary loader —
+     * it owns production namespace, remapping, metadata emission, and
+     * run configs. Further `loader(...)` calls declare a merged
+     * multi-loader environment (1.x `merged { }` parity): each
+     * additional loader merges its product onto this environment's
+     * compile classpath so one source set can compile against several
+     * loaders' APIs; it does not merge client/server distributions
+     * ([Side.MERGED] is the other axis).
+     */
     fun loader(name: String, version: String) {
-        loaderSpec.set(RuntimeLoaderSpec(name, version))
+        declareLoader(RuntimeLoaderSpec(name, version))
+    }
+
+    /** Record a `loader(...)` declaration — the first becomes the
+     *  primary ([loaderSpec]); later declarations join [loaderSpecs]
+     *  as compile-classpath secondaries. */
+    private fun declareLoader(spec: RuntimeLoaderSpec) {
+        declaredLoaderSpecs += spec
+        if (declaredLoaderSpecs.size == 1) loaderSpec.set(spec)
     }
 
     /**
@@ -784,10 +1324,11 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         extensions.findByName("transform")?.let { return it }
         val ext = project.extensions.findByName("uniminedTransform")
             as? TransformExtensionFacade
-            ?: throw GradleException(
-                "env '$environmentId': transform { } and " +
-                "loader(...) { } require the unimined-transform " +
-                "plugin (uniminedTransform extension)"
+            ?: project.failProblem(
+                "env/transform-extension-missing",
+                "unimined: environment '$environmentId' — transform { } " +
+                    "and loader(...) { } require the unimined-transform " +
+                    "plugin (uniminedTransform extension)"
             )
         return ext.environmentSpec(environmentId).also { spec ->
             extensions.add("transform", spec)
@@ -806,7 +1347,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     ) {
         action.delegate = mappingsSpec
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /**
@@ -1017,6 +1558,47 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     fun libraryCoordFilter(filter: Closure<String?>) =
         libraryCoordFilter { filter.call(it) }
 
+    /** The `lwjgl3 { }` spec — see [Lwjgl3Spec]. Inert until the
+     *  verb runs ([Lwjgl3Spec.enabled]). */
+    val lwjgl3: Lwjgl3Spec = objects.newInstance(Lwjgl3Spec::class.java)
+
+    /** Whether the lwjgl2 coord-drop filter has been contributed —
+     *  installed once on the first [lwjgl3] call; the filter reads the
+     *  final [Lwjgl3Spec.enabled] flag at resolution. */
+    private var lwjgl3FilterInstalled = false
+
+    /**
+     * Swap the environment's lwjgl2 bindings for lwjgl3 — the
+     * RetroFuturaGradle `lwjgl3*` parity surface for running old
+     * Minecraft on modern JVMs. Drops every `org.lwjgl.lwjgl:*`
+     * library (jars and natives entries) through [libraryCoordFilters]
+     * and puts `org.lwjgl:lwjgl` + the declared [Lwjgl3Spec.bindings]
+     * on the environment's library classpath and host natives set.
+     *
+     * The whole swap gates on the *final* [Lwjgl3Spec.enabled] flag —
+     * `lwjgl3 { enabled.set(false) }` retracts it: the coord-drop
+     * filter reads `enabled` when the library substitutions apply at
+     * resolution, and the jar/natives contributions check it lazily.
+     */
+    fun lwjgl3(action: Action<Lwjgl3Spec>) {
+        if (!lwjgl3FilterInstalled) {
+            lwjgl3FilterInstalled = true
+            libraryCoordFilters += { c ->
+                if (lwjgl3.enabled.get() &&
+                    c.startsWith("org.lwjgl.lwjgl:")
+                ) null else c
+            }
+        }
+        lwjgl3.enabled.set(true)
+        action.execute(lwjgl3)
+    }
+
+    /** Groovy-DSL counterpart to [lwjgl3]. */
+    fun lwjgl3(
+        @DelegatesTo(value = Lwjgl3Spec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = lwjgl3(Action<Lwjgl3Spec> { action.delegatingTo(it) })
+
     /** Additional ordered version-manifest locations searched after
      *  Mojang's official manifest (first match wins; e.g.
      *  `ManifestResolver.SKYRISING_MC_VERSIONS` to restore removed
@@ -1041,13 +1623,21 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /**
      * Declare this environment's game jar as a user-declared source
      * (file/maven/URL+sha256/producer) — selects
-     * `provider("legacydist")` implicitly. Works for jars with no
-     * manifest-backed provider: BTA/ReIndev, pre-1.8 bukkit,
-     * offline/air-gapped artifacts.
+     * `provider("legacydist")` implicitly, or the provider named by
+     * `format` when it matches a registered provider (e.g.
+     * `format = "devbundle"` for a paperweight dev-bundle zip).
+     * Content hints that aren't provider names (`"obf"`) keep the
+     * legacydist default.
      */
     fun legacydist(action: org.gradle.api.Action<LegacyDistSpec>) {
-        provider.set("legacydist")
         action.execute(legacyDist)
+        provider.set(
+            legacyDist.format?.takeIf {
+                it in project.extensions
+                    .getByType(MinecraftExtension::class.java)
+                    .registry.registered()
+            } ?: "legacydist"
+        )
     }
 
     /** Groovy-DSL counterpart to [legacydist]. */
@@ -1057,8 +1647,25 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     ) {
         action.delegate = legacyDist
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        legacydist(Action<LegacyDistSpec> { action.call() })
+        legacydist(Action<LegacyDistSpec> { action.callDelegate() })
     }
+
+    /**
+     * Configure this environment against a paperweight dev-bundle zip
+     * — `provider("devbundle")` + `format = "devbundle"` preset;
+     * declare the bundle with `file()`/`url()`/`producer()` inside
+     * (see [DistSpec]). Requires the
+     * `xyz.wagyourtail.unimined.provider.devbundle` plugin.
+     */
+    fun devbundle(action: Action<DistSpec>) {
+        provider.set("devbundle")
+        legacyDist.format = "devbundle"
+        action.execute(DistSpec(this))
+    }
+
+    /** Groovy-DSL counterpart to [devbundle]. */
+    fun devbundle(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
+        devbundle(Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.callDelegate() })
 
     private fun conversionDist(productId: String, action: Action<DistSpec>) {
         provider.set("conversion")
@@ -1073,7 +1680,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Groovy-DSL counterpart to [bta]. */
     fun bta(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
-        conversionDist("bta", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+        conversionDist("bta", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.callDelegate() })
 
     /** Configure this environment as a ReIndev dist —
      *  `provider("conversion")` + `product("minecraft:reindev")` preset. */
@@ -1081,7 +1688,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Groovy-DSL counterpart to [reindev]. */
     fun reindev(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
-        conversionDist("reindev", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+        conversionDist("reindev", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.callDelegate() })
 
     /** Configure this environment as an NSSS dist —
      *  `provider("conversion")` + `product("minecraft:nsss")` preset;
@@ -1090,7 +1697,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Groovy-DSL counterpart to [nsss]. */
     fun nsss(@DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
-        conversionDist("nsss", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+        conversionDist("nsss", Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.callDelegate() })
 
     /**
      * Configure this environment against a user-supplied dist jar —
@@ -1107,7 +1714,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /** Groovy-DSL counterpart to [custom]. */
     fun custom(name: String, @DelegatesTo(value = DistSpec::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) =
-        custom(name, Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.call() })
+        custom(name, Action { action.delegate = it; action.resolveStrategy = Closure.DELEGATE_FIRST; action.callDelegate() })
 
     /** Build the provider-facing immutable spec for this environment. */
     fun spec(): ProductSpec {
@@ -1116,10 +1723,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             environmentId = environmentId,
             sourceSetName = environmentId,
             version = RuntimeVersionSpec(
-                version.orNull ?: throw org.gradle.api.GradleException(
-                    "unimined: environment '$environmentId' has no minecraft " +
-                    "version — set version = <mc version> in the " +
-                    "minecraft {} / sourceSet($environmentId) {} block"
+                version.orNull ?: project.failProblem(
+                    "env/missing-version",
+                    "unimined: environment '$environmentId' has no " +
+                        "minecraft version",
+                    "set version = <mc version> in the minecraft {} / " +
+                        "sourceSet($environmentId) {} block"
                 )
             ),
             side = side.get(),
@@ -1179,9 +1788,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
 
     /**
      * Effective java requirement — the version-json `javaVersion`
-     * (provider capabilities) raised by [javaVersion]. Feeds the
-     * compile toolchain / `release`, run launchers, and tool-exec
-     * fallbacks.
+     * (provider capabilities) raised by [javaVersion]. Feeds run
+     * launchers and tool-exec fallbacks, and is the default compile
+     * level via [compileJavaVersion].
      */
     val requiredJavaVersion: Provider<Int> = project.provider {
         maxOf(
@@ -1190,6 +1799,19 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             javaVersion.getOrElse(0)
         )
     }
+
+    /**
+     * The Java level the environment's `compile*` tasks emit at —
+     * conventions to [requiredJavaVersion]. Adapters that rewrite
+     * class files after `javac` (the jvmdg downgrader) raise it so
+     * sources can use newer Java while emitted artifacts are
+     * downgraded to the era level; the run JVM floor stays
+     * [requiredJavaVersion]. Setting it directly is an escape hatch —
+     * nothing post-processes the higher bytecode unless an adapter
+     * does.
+     */
+    val compileJavaVersion: Property<Int> =
+        objects.property(Int::class.java).convention(requiredJavaVersion)
 
     internal fun bindSourceSet(sourceSet: SourceSet) {
         // consumption-time deferral — lifecycle hooks (afterEvaluate,
@@ -1223,12 +1845,14 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     }
 
     /**
-     * Sets the environment's java requirement ([requiredJavaVersion])
-     * on its compile tasks: toolchain compiler + `--release` when
-     * [useToolchains] is on (release only for required >= 9 — javac 8
+     * Sets the environment's compile level ([compileJavaVersion]) on
+     * its compile tasks: toolchain compiler + `--release` when
+     * [useToolchains] is on (release only for levels >= 9 — javac 8
      * rejects the flag); source/target compatibility always (in
-     * `doFirst`, where the lazy requirement resolves) + the build-JVM
-     * floor check when toolchains are off (1.x opt-out semantics).
+     * `doFirst`, where the lazy level resolves) + the build-JVM floor
+     * check when toolchains are off (1.x opt-out semantics). The level
+     * may exceed [requiredJavaVersion] when an adapter post-processes
+     * the class files (jvmdg).
      */
     private fun wireJavaCompatibility(sourceSet: SourceSet) {
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
@@ -1236,49 +1860,59 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             .configureEach { task ->
             val compile = task as? JavaCompile ?: return@configureEach
             compile.options.release.set(
-                requiredJavaVersion.map { if (it <= 8) null else it })
+                compileJavaVersion.map { if (it <= 8) null else it })
             compile.javaCompiler.set(project.providers.provider {
                 if (!useToolchains.get()) null
                 else toolchains.compilerFor {
-                    it.languageVersion.set(requiredJavaVersion.map(JavaLanguageVersion::of))
+                    it.languageVersion.set(compileJavaVersion.map(JavaLanguageVersion::of))
                 }.orNull
             })
             // locals only — a `this` capture serializes the whole
-            // environment graph (config cache)
-            val required = requiredJavaVersion
+            // environment graph (config cache); `objects` rides the
+            // service-reference codec so the action can still report
+            // through the Problems API — `task.project` can't be
+            // touched at execution time under the config cache
+            val compileLevel = compileJavaVersion
             val toolchainsOn = useToolchains
             val envId = environmentId
+            val objects = project.objects
             compile.doFirst("unimined java compat") {
-                val req = required.get()
-                compile.sourceCompatibility = req.toString()
-                compile.targetCompatibility = req.toString()
-                checkJavaFloor(toolchainsOn, envId, req)
+                val level = compileLevel.get()
+                compile.sourceCompatibility = level.toString()
+                compile.targetCompatibility = level.toString()
+                checkJavaFloor(compile.logger, objects, toolchainsOn, envId, level)
             }
         }
         project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
             KotlinWiring.wire(
                 project, sourceSet, environmentId,
-                requiredJavaVersion, useToolchains
+                compileJavaVersion, useToolchains
             )
         }
     }
 
     private companion object {
 
-        /** The build-JVM floor check for the toolchains-off path. */
+        /** The build-JVM floor check for the toolchains-off path —
+         *  compiles run on the daemon JVM, so it must satisfy the
+         *  environment's *compile* level ([compileJavaVersion]). */
         private fun checkJavaFloor(
+            logger: org.gradle.api.logging.Logger,
+            objects: ObjectFactory,
             useToolchains: Provider<Boolean>,
             environmentId: String,
-            required: Int
+            compileLevel: Int
         ) {
             if (!useToolchains.get() &&
-                JavaVersion.current() < JavaVersion.toVersion(required)) {
-                throw GradleException(
-                    "unimined: environment '$environmentId' requires " +
-                        "Java $required but toolchains are disabled " +
-                        "and the build JVM is ${JavaVersion.current()} — " +
-                        "either run Gradle on Java $required+ or re-enable " +
-                        "toolchains (minecraft.useToolchains)")
+                JavaVersion.current() < JavaVersion.toVersion(compileLevel)) {
+                UniminedProblems.fail(
+                    logger, objects,
+                    "env/java-floor",
+                    "unimined: environment '$environmentId' compiles at " +
+                        "Java $compileLevel but toolchains are disabled " +
+                        "and the build JVM is ${JavaVersion.current()}",
+                    "either run Gradle on Java $compileLevel+ or " +
+                        "re-enable toolchains (minecraft.useToolchains)")
             }
         }
     }
@@ -1295,7 +1929,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             project: Project,
             sourceSet: SourceSet,
             environmentId: String,
-            requiredJavaVersion: Provider<Int>,
+            compileJavaVersion: Provider<Int>,
             useToolchains: Provider<Boolean>
         ) {
             val toolchains = project.extensions
@@ -1313,7 +1947,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                                 if (!use) project.provider { null }
                                 else toolchains.launcherFor {
                                     it.languageVersion.set(
-                                        requiredJavaVersion.map(JavaLanguageVersion::of))
+                                        compileJavaVersion.map(JavaLanguageVersion::of))
                                 }
                             }
                         )
@@ -1322,27 +1956,38 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                     val compile = task as? org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<
                         org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions>
                     if (compile == null) {
-                        task.logger.warn(
-                            "unimined: '${task.name}' is not a KotlinCompilationTask — jvmTarget not set")
+                        project.reportProblem(
+                            "env/kotlin-toolchain",
+                            "unimined: '${task.name}' is not a " +
+                                "KotlinCompilationTask — jvmTarget not set")
                     } else {
                         compile.compilerOptions.jvmTarget.set(
-                            requiredJavaVersion.map(::jvmTarget))
+                            compileJavaVersion.map(::jvmTarget))
                     }
                 } catch (e: NoClassDefFoundError) {
-                    task.logger.warn(
+                    project.reportProblem(
+                        "env/kotlin-toolchain",
                         "unimined: could not wire '${task.name}' — " +
-                            "Kotlin Gradle plugin is too old for the compilerOptions API", e)
+                            "Kotlin Gradle plugin is too old for the " +
+                            "compilerOptions API")
                 }
+                // `objects` is a CC-restorable service reference — the
+                // action can't reach `task.project` at execution time
+                val objects = project.objects
                 task.doFirst("unimined kotlin java floor") {
-                    val required = requiredJavaVersion.get()
+                    val compileLevel = compileJavaVersion.get()
                     if (!useToolchains.get() &&
-                        JavaVersion.current() < JavaVersion.toVersion(required)) {
-                        throw GradleException(
-                            "unimined: environment '$environmentId' requires " +
-                                "Java $required but toolchains are disabled " +
-                                "and the build JVM is ${JavaVersion.current()} — " +
-                                "either run Gradle on Java $required+ or " +
-                                "re-enable toolchains (minecraft.useToolchains)")
+                        JavaVersion.current() < JavaVersion.toVersion(compileLevel)) {
+                        UniminedProblems.fail(
+                            task.logger, objects,
+                            "env/java-floor",
+                            "unimined: environment '$environmentId' " +
+                                "compiles at Java $compileLevel but " +
+                                "toolchains are disabled and the build " +
+                                "JVM is ${JavaVersion.current()}",
+                            "either run Gradle on Java $compileLevel+ or " +
+                                "re-enable toolchains " +
+                                "(minecraft.useToolchains)")
                     }
                 }
             }

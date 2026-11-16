@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.minecraft.manifest.VersionJson
 import xyz.wagyourtail.unimined.minecraft.metadata.MinecraftMetadataAssembler
+import xyz.wagyourtail.unimined.api.util.produceCached
 import java.io.File
 import java.util.Locale
 
@@ -47,13 +48,16 @@ internal class ConversionArtifacts(
         buildMap {
             put(
                 spec.side.artifactKey(),
-                jars.map { it.getValue(
-                    if (spec.side == Side.MERGED) Side.CLIENT else spec.side
-                ) }.let(ctx.layout::file)
+                jars.map { it[spec.side] ?: it.getValue(Side.CLIENT) }
+                    .let(ctx.layout::file)
             )
-            // sided fetches for a MERGED env also expose the raw sides
-            // so the merge step has its inputs
-            if (spec.side == Side.MERGED) {
+            // sided fetches for a combined env also expose the raw
+            // sides — the merge/intersection producer's inputs, and
+            // the bytecode-fill scan on split-official chains
+            if (spec.side == Side.MERGED || spec.side == Side.COMMON) {
+                put(ArtifactKey.CLIENT, jars.map {
+                    it.getValue(Side.CLIENT)
+                }.let(ctx.layout::file))
                 put(ArtifactKey.SERVER, jars.map {
                     it[Side.SERVER] ?: it.getValue(Side.CLIENT)
                 }.let(ctx.layout::file))
@@ -63,7 +67,7 @@ internal class ConversionArtifacts(
             // FoxLoader 2.x's unified patcher builds its superset
             // patch input from both dists. Never on the classpath.
             val productId = spec.product.removePrefix("minecraft:")
-            if (spec.side != Side.MERGED &&
+            if (spec.side != Side.MERGED && spec.side != Side.COMMON &&
                     ConversionProvider.PRODUCTS[productId]
                         ?.fetchBothSides == true) {
                 val other = if (spec.side == Side.CLIENT)
@@ -137,12 +141,10 @@ internal class ConversionArtifacts(
         MinecraftMetadataAssembler.assemble(versionJson(), rootDocument.get())
 
     private fun emptyAssetIndex(): java.nio.file.Path =
-        downloader.cacheDir.resolve("assets/empty-index.json").also {
-            if (!java.nio.file.Files.exists(it)) {
-                it.parent.toFile().mkdirs()
-                java.nio.file.Files.writeString(it, "{\"objects\":{}}")
+        downloader.cacheDir.resolve("assets/empty-index.json")
+            .produceCached { tmp ->
+                java.nio.file.Files.writeString(tmp, "{\"objects\":{}}")
             }
-        }
 
     private class ConversionAssetIndex(
         override val id: String,
@@ -155,4 +157,5 @@ internal fun Side.artifactKey() = when (this) {
     Side.CLIENT -> ArtifactKey.CLIENT
     Side.SERVER -> ArtifactKey.SERVER
     Side.MERGED -> ArtifactKey.MERGED
+    Side.COMMON -> ArtifactKey.COMMON
 }

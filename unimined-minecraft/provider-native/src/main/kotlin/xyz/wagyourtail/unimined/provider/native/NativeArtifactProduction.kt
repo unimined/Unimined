@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.provider.native
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import org.gradle.api.GradleException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -30,6 +32,7 @@ import java.util.concurrent.ExecutionException
  * these calls in `Provider`s) and [NativeArtifactProducer] (which calls
  * them directly inside artifact-transform execution).
  */
+@NoGroovyTwin("internal artifact-production pipeline — not a DSL surface")
 internal object NativeArtifactProduction {
 
     fun metadata(
@@ -127,6 +130,7 @@ internal object NativeArtifactProduction {
                 ArtifactKey.CLIENT -> emptyJar(downloader.cacheDir, "versions/$versionId/client.jar")
                 ArtifactKey.SERVER -> emptyJar(downloader.cacheDir, "versions/$versionId/server.jar")
                 ArtifactKey.MERGED -> emptyJar(downloader.cacheDir, "versions/$versionId/merged.jar")
+                ArtifactKey.COMMON -> emptyJar(downloader.cacheDir, "versions/$versionId/common.jar")
                 else -> throw GradleException("native provider cannot produce artifact key $key")
             }
         }
@@ -139,58 +143,94 @@ internal object NativeArtifactProduction {
                 versionId, downloader.cacheDir, rebuild
             )
 
-            ArtifactKey.MERGED -> {
-                val versionMetadata = metadata(versionId, resolver)
-                val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
-                    ?: throw GradleException("Minecraft $versionId has no client jar download")
-                // pre-1.6 metadata carries no server download —
-                // downloadReference falls back to the betacraft
-                // archive; only the sha1 (for merge caching) is absent
-                val serverRef = versionMetadata.downloads[ArtifactKey.SERVER]
-                // client download and the server download+unbundle chain
-                // are independent fetches — overlap them; dests are
-                // disjoint (client.jar vs server.jar/unbundled) and the
-                // downloader's temp names are unique per writer
-                val serverFuture = CompletableFuture.supplyAsync {
-                    unbundleServer(
-                        downloadReference(
-                            ArtifactKey.SERVER, versionMetadata, versionId, downloader
-                        ),
-                        versionId, downloader.cacheDir, rebuild
+            ArtifactKey.MERGED, ArtifactKey.COMMON -> {
+                val inputs = sidedInputs(
+                    versionId, downloader, resolver, rebuild, preMerge
+                )
+                if (key == ArtifactKey.MERGED) {
+                    mergePath(
+                        downloader.cacheDir, versionId,
+                        inputs.client, inputs.server,
+                        inputs.clientTag, inputs.serverTag,
+                        rebuild, mergeOptions
+                    )
+                } else {
+                    commonPath(
+                        downloader.cacheDir, versionId,
+                        inputs.client, inputs.server,
+                        inputs.clientTag, inputs.serverTag,
+                        rebuild
                     )
                 }
-                var client = downloadReference(
-                    ArtifactKey.CLIENT, versionMetadata, versionId, downloader
-                )
-                var server = try {
-                    serverFuture.get()
-                } catch (e: ExecutionException) {
-                    throw (e.cause as? Exception) ?: e
-                }
-                // split-era versions (no manifest server download) have
-                // disjoint client/server obf namespaces — the caller's
-                // hook remaps both sides into a shared namespace before
-                // the member-level merge
-                var clientTag = clientRef.sha1
-                var serverTag = serverRef?.sha1
-                preMerge?.let { hook ->
-                    if (serverRef == null) {
-                        val (c, s) = hook(client, server)
-                        client = c; server = s
-                        // hook outputs replace the merge inputs — key
-                        // the cache on their content, not the raw jars
-                        clientTag = contentSha1(client)
-                        serverTag = contentSha1(server)
-                    }
-                }
-                mergePath(
-                    downloader.cacheDir, versionId, client, server,
-                    clientTag, serverTag, rebuild, mergeOptions
-                )
             }
 
             else -> throw GradleException("native provider cannot produce artifact key $key")
         }
+    }
+
+    /** The resolved client+server jars a combined artifact derives
+     *  from — shared by [ArtifactKey.MERGED] and [ArtifactKey.COMMON]
+     *  production. Fetches overlap, split-era jars pass through
+     *  [preMerge] first (disjoint obf namespaces must land in a shared
+     *  one before either a member merge or an entry intersection can
+     *  pair same-named classes), and the returned tags key the output
+     *  cache on hook outputs rather than raw downloads. */
+    private class SidedInputs(
+        val client: Path, val server: Path,
+        val clientTag: String?, val serverTag: String?
+    )
+
+    private fun sidedInputs(
+        versionId: String,
+        downloader: Downloader,
+        resolver: ManifestResolver,
+        rebuild: Boolean,
+        preMerge: ((client: Path, server: Path) -> Pair<Path, Path>)?
+    ): SidedInputs {
+        val versionMetadata = metadata(versionId, resolver)
+        val clientRef = versionMetadata.downloads[ArtifactKey.CLIENT]
+            ?: throw GradleException("Minecraft $versionId has no client jar download")
+        // pre-1.6 metadata carries no server download —
+        // downloadReference falls back to the betacraft
+        // archive; only the sha1 (for merge caching) is absent
+        val serverRef = versionMetadata.downloads[ArtifactKey.SERVER]
+        // client download and the server download+unbundle chain
+        // are independent fetches — overlap them; dests are
+        // disjoint (client.jar vs server.jar/unbundled) and the
+        // downloader's temp names are unique per writer
+        val serverFuture = CompletableFuture.supplyAsync {
+            unbundleServer(
+                downloadReference(
+                    ArtifactKey.SERVER, versionMetadata, versionId, downloader
+                ),
+                versionId, downloader.cacheDir, rebuild
+            )
+        }
+        var client = downloadReference(
+            ArtifactKey.CLIENT, versionMetadata, versionId, downloader
+        )
+        var server = try {
+            serverFuture.get()
+        } catch (e: ExecutionException) {
+            throw (e.cause as? Exception) ?: e
+        }
+        // split-era versions (no manifest server download) have
+        // disjoint client/server obf namespaces — the caller's
+        // hook remaps both sides into a shared namespace before
+        // the member-level merge
+        var clientTag = clientRef.sha1
+        var serverTag = serverRef?.sha1
+        preMerge?.let { hook ->
+            if (serverRef == null) {
+                val (c, s) = hook(client, server)
+                client = c; server = s
+                // hook outputs replace the merge inputs — key
+                // the cache on their content, not the raw jars
+                clientTag = contentSha1(client)
+                serverTag = contentSha1(server)
+            }
+        }
+        return SidedInputs(client, server, clientTag, serverTag)
     }
 
 
@@ -273,6 +313,38 @@ internal object NativeArtifactProduction {
             }
         }
         return merged
+    }
+
+    /**
+     * The `common` (client∩server intersection) artifact — the
+     * `splitEnvironmentSourceSets` `main` source set's compile view.
+     * Cached beside [mergePath]; the intersection ignores every merge
+     * option (no library strip, globs, or side markers apply), so the
+     * cache key folds only the input tags.
+     */
+    fun commonPath(
+        cacheDir: Path,
+        versionId: String,
+        client: Path,
+        server: Path,
+        clientSha1: String?,
+        serverSha1: String?,
+        rebuild: Boolean
+    ): Path {
+        val clientTag = safeHashTag(clientSha1)
+        val serverTag = safeHashTag(serverSha1)
+        val common = cacheDir.resolve(
+            "versions/$versionId/common-${JarMerger.FORMAT_VERSION}-$clientTag-$serverTag.jar"
+        )
+        if (Files.exists(common) && !rebuild) return common
+
+        Files.createDirectories(common.parent)
+        common.writeAtomically {
+            Perf.span("common", "version" to versionId) {
+                JarMerger.common(client, server, it)
+            }
+        }
+        return common
     }
 
     /** cached zero-byte file at [relPath] under the cache dir — used for

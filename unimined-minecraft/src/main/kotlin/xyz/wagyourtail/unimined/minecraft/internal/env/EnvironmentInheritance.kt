@@ -1,7 +1,7 @@
-package xyz.wagyourtail.unimined.minecraft.internal
+package xyz.wagyourtail.unimined.minecraft.internal.env
 
-import org.gradle.api.GradleException
 import org.gradle.api.tasks.SourceSet
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
@@ -67,8 +67,10 @@ internal class EnvironmentInheritance(private val env: MinecraftEnvironment) {
 
     private fun checkSelfReference(source: EnvironmentReference) {
         if (source.projectPath == project.path && source.environmentId == env.environmentId) {
-            throw GradleException(
-                "Minecraft environment '${env.environmentId}' cannot copy or combine with itself"
+            project.failProblem(
+                "env/self-copy",
+                "Minecraft environment '${env.environmentId}' cannot " +
+                    "copy or combine with itself"
             )
         }
     }
@@ -112,7 +114,8 @@ internal class EnvironmentInheritance(private val env: MinecraftEnvironment) {
         }
         val sourceSets = sourceProject.extensions.findByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ) ?: throw GradleException(
+        ) ?: project.failProblem(
+            "env/source-sets-missing",
             "Cannot combine '${project.path}:${env.environmentId}' with " +
                     "'${source.projectPath}:${source.environmentId}': the source " +
                     "project has no Java source sets"

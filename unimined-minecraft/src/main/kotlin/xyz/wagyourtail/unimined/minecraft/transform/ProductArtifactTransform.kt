@@ -18,7 +18,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.Perf
-import xyz.wagyourtail.unimined.minecraft.ProductArtifactProducerRegistry
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifactProducerRegistry
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
@@ -83,13 +83,16 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
         @get:Input
         val product: Property<String>
 
-        /** User-declared dist source (`legacydist {}`) — Serializable
-         *  so producers that materialize declared artifacts
-         *  (total-conversion dists without an index) can see it on the
-         *  rebuilt spec. */
+        /** User-declared dist source spec (`legacydist {}`) —
+         *  Serializable so producers that materialize declared
+         *  artifacts (legacydist, devbundle, total-conversion dists
+         *  without an index) see the source *and* its
+         *  `namespace`/`format` markers on the rebuilt spec — the
+         *  format tag is what keeps `devbundle`-marked declarations
+         *  negotiated to the devbundle producer. */
         @get:Optional
         @get:Input
-        val declaredSource: Property<xyz.wagyourtail.unimined.api.spec.DeclaredSource>
+        val declaredSource: Property<xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec>
 
         /** Selected producer's output-format version — bumps the cache
          *  key whenever the production pipeline's output changes for
@@ -194,11 +197,10 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
             sideMarkers = p.sideMarkers.get(),
             product = p.product.orNull
                 ?: xyz.wagyourtail.unimined.api.spec.ProductSpec.PRODUCT_NATIVE,
-            // namespace/format defaults suffice here — only producers
-            // consume this spec and they read just the source
-            declaredSource = p.declaredSource.orNull?.let {
-                xyz.wagyourtail.unimined.api.spec.DeclaredSourceSpec(it)
-            }
+            // the full declared spec rides the transform so producers
+            // can negotiate on `format` markers the same way providers
+            // do (devbundle's tag claims ahead of legacydist's floor)
+            declaredSource = p.declaredSource.orNull
         )
         val producer = ProductArtifactProducerRegistry()
             .select(spec, p.producerName.orNull)

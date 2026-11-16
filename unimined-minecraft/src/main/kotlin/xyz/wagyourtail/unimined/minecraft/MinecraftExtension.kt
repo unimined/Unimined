@@ -2,10 +2,10 @@ package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.api.Deprecations
 import org.gradle.api.Action
-import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -21,6 +21,9 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
@@ -32,12 +35,12 @@ import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
-import xyz.wagyourtail.unimined.minecraft.internal.DefaultProviderContext
-import xyz.wagyourtail.unimined.minecraft.internal.EnvironmentBinding
-import xyz.wagyourtail.unimined.minecraft.internal.CombinationValidation
-import xyz.wagyourtail.unimined.minecraft.internal.LocalStubRepo
+import xyz.wagyourtail.unimined.minecraft.internal.env.CombinationValidation
+import xyz.wagyourtail.unimined.minecraft.internal.env.EnvironmentBinding
 import xyz.wagyourtail.unimined.minecraft.internal.MappingResolution
-import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
+import xyz.wagyourtail.unimined.minecraft.internal.provider.DefaultProviderContext
+import xyz.wagyourtail.unimined.minecraft.internal.provider.LocalStubRepo
+import xyz.wagyourtail.unimined.minecraft.internal.provider.ProviderCacheSettings
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeVersionSpec
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
@@ -156,6 +159,22 @@ abstract class MinecraftExtension @Inject constructor(
      */
     val modDevViewConfigurations = mutableMapOf<String, Configuration>()
 
+    /**
+     * Resolvable dev-namespace views over the mod dependency buckets'
+     * `-sources.jar` docs variants, keyed like
+     * [modDevViewConfigurations] — populated by the transform host's
+     * classpath wiring for IDE source attach (the sources-surface
+     * counterpart of [modDevViewConfigurations]). Identity
+     * environments have `*SourcesDirect` pass-through twins on the
+     * `<bucket>SourcesDirect` name — consumers pick by
+     * [isIdentityRemap] like the `*Direct` jar views.
+     *
+     * Resolve leniently and filter to module/project component ids:
+     * components with no sources variant contribute nothing, and
+     * file deps would otherwise contribute their own jar.
+     */
+    val modDevSourcesViewConfigurations = mutableMapOf<String, Configuration>()
+
     internal val rawViewConfigurations = mutableMapOf<String, Configuration>()
 
     internal val prodViewConfigurations = mutableMapOf<String, Configuration>()
@@ -179,6 +198,25 @@ abstract class MinecraftExtension @Inject constructor(
                 registerModConfigurations(
                     environment,
                     sourceSets.maybeCreate(environment.environmentId))
+                // contribute this env's run-group entry — consumers
+                // (forge MOD_CLASSES) read the shared model at
+                // execution instead of reaching across projects, so
+                // no projectsEvaluated recompute is needed
+                xyz.wagyourtail.unimined.api.util.RunGroupModel.of(project)
+                    .contribute(
+                        project,
+                        environment.environmentId,
+                        project.provider {
+                            val ss = sourceSets
+                                .findByName(environment.environmentId)
+                            listOfNotNull(
+                                ss?.output?.resourcesDir?.absolutePath) +
+                                (ss?.output?.classesDirs?.files
+                                    ?.map { it.absolutePath }
+                                    ?: emptyList())
+                        },
+                        environment.loaderSpec.map { it.name }
+                    )
             }
         }
         project.afterDslEval {
@@ -191,6 +229,27 @@ abstract class MinecraftExtension @Inject constructor(
             // lazily; conf edges cannot. The lazy trigger stays as a
             // fallback for envs created inside later lifecycle hooks.
             environments.forEach(MinecraftEnvironment::applyImplicitParent)
+
+            // `java` may never arrive when this plugin is used without
+            // the frontend — the `withPlugin("java")` gate above then
+            // leaves every declared env inert (no source set, no
+            // configurations, no classpath). Warn rather than stay
+            // silent; the frontend applies `java` itself.
+            if (!project.pluginManager.hasPlugin("java") &&
+                environments.any {
+                    it.version.isPresent || it.loaderSpec.isPresent
+                }) {
+                project.reportProblem(
+                    "env/no-java-plugin",
+                    "unimined: minecraft environments are declared but " +
+                            "the `java` plugin is not applied — envs " +
+                            "bind to Gradle source sets, so nothing is " +
+                            "wired without it",
+                    "apply the `java` plugin (the " +
+                            "`xyz.wagyourtail.unimined` frontend applies " +
+                            "it for you)"
+                )
+            }
         }
     }
 
@@ -268,6 +327,7 @@ abstract class MinecraftExtension @Inject constructor(
         Side.CLIENT -> ArtifactKey.CLIENT
         Side.SERVER -> ArtifactKey.SERVER
         Side.MERGED -> ArtifactKey.MERGED
+        Side.COMMON -> ArtifactKey.COMMON
     }
 
     /** The dev namespace for [environmentId] — explicit
@@ -348,7 +408,99 @@ abstract class MinecraftExtension @Inject constructor(
     ): MinecraftEnvironment = sourceSet(sourceSetName).also { environment ->
         action.delegate = environment
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
+    }
+
+    /**
+     * Loom `splitEnvironmentSourceSets()` parity — retarget this
+     * project to a compile-time split environment:
+     *
+     * - `main` becomes the *common* source set — [Side.COMMON] —
+     *   compiling against the client∩server intersection artifact, so
+     *   common code can't reference client-only classes;
+     * - a `client` environment compiles against the full client jar
+     *   and sees `main`'s output through the implicit-parent combine
+     *   (its classesDirs reach `client`'s compile classpath, the full
+     *   output reaches its runtime classpath). The env is marked
+     *   `isAuxEnv`: it inherits main's loader/dependency/access
+     *   sections, produces no separate published artifact or mod
+     *   metadata, and gets no `remapClientJar` — the mod artifact is
+     *   `main`'s;
+     * - `jar` folds client output in (and `remapJar`/`remapSourcesJar`
+     *   mirror the jar's copy spec, so the fold carries through
+     *   production), `sourcesJar` gains the client sources, and the
+     *   `test` source set inherits the client's classpath view;
+     * - client-side runs conventionally bound to `main`
+     *   (`runClient`, `runProdClient`, a user's `runs { client {} }`)
+     *   launch through the client environment; `runServer`/
+     *   `runProdServer` stay on `main` — on modern bundled-server
+     *   versions the common jar is the server's view.
+     *
+     * Providers without genuinely split distributions (declared
+     * legacydist jars, dev bundles, BuildTools outputs, non-mergeable
+     * conversion products) alias `COMMON` to their single artifact —
+     * the compile-time fence then only guards client-only code the
+     * shared jar genuinely lacks.
+     *
+     * Idempotent — a second call is a no-op. A pre-existing
+     * `sourceSet("client")` env is repurposed as the split client
+     * (its [MinecraftEnvironment.side] becomes [Side.CLIENT]).
+     */
+    fun splitEnvironmentSourceSets() {
+        val clientEnvId = "client"
+        val mainEnv = main
+        if (mainEnv.splitClientEnvironment.orNull != null) return
+        mainEnv.splitClientEnvironment.set(clientEnvId)
+        mainEnv.side.set(Side.COMMON)
+        sourceSetInternal(clientEnvId, "main") { env ->
+            // a user-declared client env gets repurposed — split
+            // semantics pin its side; aux env so the packaged mod is
+            // one artifact and main's loader/dependency/access
+            // sections flow in
+            env.isAuxEnv.set(true)
+            env.side.set(Side.CLIENT)
+            env.defaultRemapJar.set(false)
+        }
+        project.pluginManager.withPlugin("java") {
+            val javaExt = project.extensions.getByType(
+                org.gradle.api.plugins.JavaPluginExtension::class.java)
+            val mainSourceSet = javaExt.sourceSets.getByName(
+                SourceSet.MAIN_SOURCE_SET_NAME)
+            val clientSourceSet = javaExt.sourceSets.getByName(clientEnvId)
+            // loom: `jar.from(clientOnlySourceSet.output)` — the
+            // output FileCollection carries the client compile +
+            // processResources task dependencies implicitly
+            project.tasks.named(
+                mainSourceSet.jarTaskName,
+                org.gradle.jvm.tasks.Jar::class.java
+            ) { jar ->
+                jar.from(providers.provider { clientSourceSet.output })
+            }
+            // `sourcesJar` may register later (the production wiring
+            // creates it lazily) — matching+configureEach catches it
+            // whenever it lands
+            project.tasks.matching {
+                it.name == mainSourceSet.sourcesJarTaskName &&
+                        it is org.gradle.jvm.tasks.Jar
+            }.configureEach {
+                (it as org.gradle.jvm.tasks.Jar).from(
+                    providers.provider { clientSourceSet.allSource })
+            }
+            // loom parity: `test` compiles and runs on the client's
+            // view — its classpath unions cover the client jar,
+            // `main`'s output, and the inherited buckets
+            javaExt.sourceSets.findByName(SourceSet.TEST_SOURCE_SET_NAME)
+                ?.let { testSourceSet ->
+                    testSourceSet.compileClasspath +=
+                        clientSourceSet.compileClasspath
+                    testSourceSet.runtimeClasspath +=
+                        clientSourceSet.runtimeClasspath
+                    project.dependencies.add(
+                        testSourceSet.implementationConfigurationName,
+                        project.files(
+                            providers.provider { clientSourceSet.output }))
+                }
+        }
     }
 
     /** Resolve a stable same-/cross-project environment reference. */
@@ -359,18 +511,21 @@ abstract class MinecraftExtension @Inject constructor(
             project.project(reference.projectPath)
         }
         val extension = sourceProject.extensions.findByType(MinecraftExtension::class.java)
-            ?: throw GradleException(
+            ?: project.failProblem(
+                "env/extension-missing",
                 "Project '${sourceProject.path}' does not have a Unimined Minecraft " +
-                        "extension; apply the minecraft or frontend plugin before sharing " +
+                        "extension",
+                "apply the minecraft or frontend plugin before sharing " +
                         "environment '${reference.environmentId}'"
             )
         return extension.environments.findByName(reference.environmentId)
-            ?: throw GradleException(
+            ?: project.failProblem(
+                "env/unknown",
                 "unimined: no minecraft environment named " +
                 "'${reference.environmentId}' in project " +
-                "'${sourceProject.path}' (referenced from environment " +
-                "'${project.path}') — declared envs: " +
-                extension.environments.names.joinToString()
+                "'${sourceProject.path}'",
+                "referenced from environment '${project.path}' — declared " +
+                "envs: ${extension.environments.names.joinToString()}"
             )
     }
 
@@ -640,19 +795,23 @@ abstract class MinecraftExtension @Inject constructor(
     ): Provider<RegularFile> = resolution.mappingBundleFile(environmentId, from, to)
 
     /**
-     * Register the `exportMappings` task (`exportMappings<Ss>` for
+     * Register the `exportMappings` task (`export<Ss>Mappings` for
      * non-main) — declare `export { }` specs inside [action]; each
      * writes the environment's resolved mappings through a UML writer
      * (1.x `exportMappings` parity). Registration is on-demand like
      * `migrateMappings`, so no mapping resolution is wired into
-     * projects that never export.
+     * projects that never export. The pre-convention
+     * `exportMappings<Ss>` name is kept as a deprecated alias.
      */
     fun exportMappings(
         environmentId: String,
         action: Action<xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask>
     ) {
-        val name = "exportMappings" + if (environmentId == "main") ""
-            else environmentId.replaceFirstChar(Char::uppercase)
+        // verb<Env>Noun naming: `exportFabricMappings` — `exportMappings`
+        // stays the main-env (bare) form
+        val envCap = environmentId.replaceFirstChar(Char::uppercase)
+        val name = if (environmentId == "main") "exportMappings"
+            else "export${envCap}Mappings"
         // registers its own produceMappingBundle task — must happen
         // outside the tasks.register below (nested registration is
         // illegal)
@@ -661,7 +820,7 @@ abstract class MinecraftExtension @Inject constructor(
             devNamespace(environmentId),
             modSourceNamespaces(environmentId).map { it.first() }
         )
-        project.tasks.register(
+        val task = project.tasks.register(
             name,
             xyz.wagyourtail.unimined.mapping.task.ExportMappingsTask::class.java
         ) { t ->
@@ -670,6 +829,9 @@ abstract class MinecraftExtension @Inject constructor(
             t.environmentId.set(environmentId)
             t.inputBundleFile.set(inputBundle)
             action.execute(t)
+        }
+        if (environmentId != "main") {
+            project.registerDeprecatedTaskAlias("exportMappings$envCap", task)
         }
     }
 

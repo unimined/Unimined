@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft
+package xyz.wagyourtail.unimined.minecraft.spi
 
 import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spi.SpiSelector

@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.metadata
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import kotlinx.serialization.json.JsonObject
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
@@ -29,6 +31,7 @@ class NativeLaunchMetadata(
     @Transient
     private var resolverFactory: (() -> ManifestResolver)? = null
 
+    @NoGroovyTwin("test/provider injection seam — not a DSL verb")
     fun withResolverFactory(factory: () -> ManifestResolver) = apply {
         resolverFactory = factory
     }

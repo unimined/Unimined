@@ -222,12 +222,24 @@ internal object ClassNodeEquality {
                             bLabels: Map<LabelNode, Int>) =
         aLabels[a] == bLabels[b]
 
+    /** Desc-only by design: a type can only appear once on a member
+     *  or class, so a value divergence isn't a dual-emittable conflict
+     *  — equality here only decides whether the merge keeps one node
+     *  (policy picks the server copy for members; the class-level
+     *  union keeps the client's). Comparing `values` would turn a
+     *  diff the merge can't express into a spurious conflict — or
+     *  emit an invalid duplicate at class level. */
     fun areAnnotationNodesEqual(a: AnnotationNode, b: AnnotationNode): Boolean {
-        return a.desc == b.desc // TODO: check values, maybe?
+        return a.desc == b.desc
     }
 
+    /** Type-only by design: `attrs` carries only ASM-unparsed custom
+     *  attributes (standard ones are parsed into node fields), and
+     *  [Attribute] exposes no portable value accessor. The known
+     *  same-type-content gap — a class-level `BootstrapMethods` dedup
+     *  rather than union — is documented on [DispatchMerger]. */
     fun areAttributesEqual(a: Attribute, b: Attribute): Boolean {
-        return a.type == b.type // TODO: check values, maybe?
+        return a.type == b.type
     }
 
     /** Operand-aware instruction equality — opcode, node type,

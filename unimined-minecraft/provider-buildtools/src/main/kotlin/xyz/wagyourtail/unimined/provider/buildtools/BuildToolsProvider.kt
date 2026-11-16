@@ -127,7 +127,10 @@ class BuildToolsProvider : ProductProvider {
         return object : ProductArtifacts by base {
             override val artifacts = base.artifacts + mapOf(
                 ArtifactKey.SERVER to serverFile,
-                ArtifactKey.MERGED to serverFile
+                ArtifactKey.MERGED to serverFile,
+                // bukkit-family dists are server-only — a "common"
+                // request degrades to the same jar MERGED aliases
+                ArtifactKey.COMMON to serverFile
             )
             override val extraDependencies = ctx.objects.fileCollection()
                 .from(base.extraDependencies, embeddedLibs)

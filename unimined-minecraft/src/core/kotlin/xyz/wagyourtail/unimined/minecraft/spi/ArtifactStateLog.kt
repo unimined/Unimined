@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.spi
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 /**
  * Ordered log of pipeline stage markers an artifact carries —
  * provider-reported prefix ++ step-appended states, in order.
@@ -10,6 +12,7 @@ package xyz.wagyourtail.unimined.minecraft.spi
  * namespaced by step type (`forge:binpatch`, `paperclip:libraryExtract`)
  * and owned by the step-type registry.
  */
+@NoGroovyTwin("positional step-state read model — programmatic SPI")
 class ArtifactStateLog private constructor(
     private val states: List<String>
 ) {

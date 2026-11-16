@@ -174,6 +174,97 @@ class JarMergerTest {
     }
 
     @Test
+    fun `common emits only shared entries with server bytes`() {
+        // loom MinecraftJarSplitter parity — the
+        // `splitEnvironmentSourceSets` main source set compiles
+        // against client∩server, and shared entries carry the server
+        // jar's bytes (server code supersedes client stubs)
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, mapOf(
+            "a/ClientOnly.class" to "client-only",
+            "shared/Cls.class" to "client-shared",
+            "shared/Res.txt" to "client-res"
+        ))
+        jar(server, mapOf(
+            "b/ServerOnly.class" to "server-only",
+            "shared/Cls.class" to "server-shared",
+            "shared/Res.txt" to "server-res"
+        ))
+
+        val out = dir.resolve("common.jar")
+        JarMerger.common(client, server, out)
+
+        assertEquals(
+            setOf("shared/", "shared/Cls.class", "shared/Res.txt"),
+            entryNames(out)
+        )
+        ZipFile(out.toFile()).use { z ->
+            assertEquals("server-shared", z.getInputStream(
+                z.getEntry("shared/Cls.class")).readBytes().decodeToString())
+            assertEquals("server-res", z.getInputStream(
+                z.getEntry("shared/Res.txt")).readBytes().decodeToString())
+        }
+    }
+
+    @Test
+    fun `common filters META-INF like merge — services survive`() {
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, mapOf(
+            "META-INF/MANIFEST.MF" to "client-manifest",
+            "META-INF/services/spi.Provider" to "client.Provider",
+            "game/Main.class" to "client-game"
+        ))
+        jar(server, mapOf(
+            "META-INF/MANIFEST.MF" to "server-manifest",
+            // bundler metadata is side-specific — never intersects
+            "META-INF/versions.list" to "1.0",
+            "META-INF/services/spi.Provider" to "server.Provider",
+            "game/Main.class" to "server-game"
+        ))
+
+        val out = dir.resolve("common.jar")
+        JarMerger.common(client, server, out)
+
+        assertEquals(
+            setOf("META-INF/", "META-INF/services/",
+                "META-INF/services/spi.Provider",
+                "game/", "game/Main.class"),
+            entryNames(out)
+        )
+        ZipFile(out.toFile()).use { z ->
+            // SPI wiring comes from the server jar like every other
+            // shared entry
+            assertEquals("server.Provider", z.getInputStream(
+                z.getEntry("META-INF/services/spi.Provider"))
+                    .readBytes().decodeToString())
+        }
+    }
+
+    @Test
+    fun `common output is byte-deterministic`() {
+        // the common jar is a transform INPUT like the merged one —
+        // entry timestamps must not vary or the downstream
+        // artifact-transform cache misses on every produce
+        val client = dir.resolve("client.jar")
+        val server = dir.resolve("server.jar")
+        jar(client, mapOf("a/Foo.class" to "client-foo", "s.txt" to "c"))
+        jar(server, mapOf("b/Bar.class" to "server-bar", "s.txt" to "s"))
+
+        val out1 = dir.resolve("common1.jar")
+        val out2 = dir.resolve("common2.jar")
+        JarMerger.common(client, server, out1)
+        Thread.sleep(1100) // cross a DOS-time tick
+        JarMerger.common(client, server, out2)
+
+        org.junit.jupiter.api.Assertions.assertArrayEquals(
+            java.nio.file.Files.readAllBytes(out1),
+            java.nio.file.Files.readAllBytes(out2)
+        )
+    }
+
+    @Test
     fun `merge output is byte-deterministic`() {
         // the merged jar is a transform INPUT — entry timestamps must
         // not vary between runs or the downstream artifact-transform

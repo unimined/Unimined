@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.util.delegatingTo
 import javax.inject.Inject
 
@@ -19,7 +21,7 @@ import javax.inject.Inject
  * `accessWidener` field on fabric-family / `FMLAT` manifest on forge),
  * and propagated to aux environments through `combineWith`.
  */
-open class AccessDslSpec @Inject constructor() {
+open class AccessDslSpec @Inject constructor(objects: ObjectFactory) {
 
     /** Declared rules, in declaration order — plumbing view for env
      *  materialization (emit per consumed format); not part of the
@@ -68,6 +70,36 @@ open class AccessDslSpec @Inject constructor() {
                             "set '$value'")
             field = value
         }
+
+    /**
+     * Fail the build when a declared access rule matches nothing in the
+     * dev Minecraft artifact — MDG/NFRT `validateAccessTransformers`
+     * parity (`--validated-access-transformer`). Covers every own
+     * declaration channel feeding `apply-class-tweaker`: `access { }`
+     * rules, `from(...)` files, and the `accessWideners`/
+     * `accessTransformers` collections. Dependency-declared docs are
+     * never validated (their targets are the dep's responsibility,
+     * same as NFRT). Inherits through `combineWith` — once on in the
+     * parent chain it stays on. Default false.
+     *
+     * The flag is read inside the apply-class-tweaker wiring's
+     * deferred providers, so a lazy value is meaningful —
+     * [setValidate] accepts a [Provider] that resolves when those
+     * providers evaluate, never during configuration. `validate =`
+     * assignment (Kotlin + Groovy) stays the direct-value form.
+     */
+    var validate: Boolean
+        get() = validateBacking.get()
+        set(value) = validateBacking.set(value)
+
+    private val validateBacking =
+        objects.property(Boolean::class.java).apply { convention(false) }
+
+    /** Provider setter for [validate] — the provider resolves inside
+     *  the apply-class-tweaker wiring's deferred providers, not during
+     *  configuration. */
+    fun setValidate(value: Provider<out Boolean>) =
+        validateBacking.set(value)
 
     /** `from(...)` file declarations — routed by detected format into
      *  `accessWideners`/`accessTransformers` at materialization. */

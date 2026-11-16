@@ -16,6 +16,7 @@ import xyz.wagyourtail.commonskt.utils.toHex
 import xyz.wagyourtail.unimined.api.spec.DeclaredSource
 import xyz.wagyourtail.unimined.api.spec.ProductSpec
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.produceCached
 import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.minecraft.spi.ProductProvider
 import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
@@ -65,10 +66,10 @@ class ConversionProvider : ProductProvider {
             // unknown `minecraft:`-family products resolve only via a
             // declared source, on the spec's own version's launch doc
             ?: ConversionProduct(baseVersion = spec.version.version)
-        require(spec.side != Side.MERGED ||
+        require((spec.side != Side.MERGED && spec.side != Side.COMMON) ||
                 spec.declaredSource != null ||
                 product.mergeable) {
-            "conversion '$productId' can't produce a merged " +
+            "conversion '$productId' can't produce a merged or common " +
                     "artifact — its dists are independently-built forks " +
                     "with divergent shared classes; declare side = " +
                     "CLIENT or SERVER (upstream ships real sided jars)"
@@ -379,7 +380,10 @@ class ConversionProvider : ProductProvider {
                 )
             )
             val needed = if (spec.side == Side.MERGED ||
+                    spec.side == Side.COMMON ||
                     product.fetchBothSides) {
+                // COMMON is the intersection artifact — both sided
+                // dists are its inputs, same as MERGED
                 setOf(Side.CLIENT, Side.SERVER)
             } else setOf(spec.side)
             return needed.mapNotNull { side ->
@@ -411,23 +415,32 @@ class ConversionProvider : ProductProvider {
                     if (!src.exists()) throw GradleException(
                         "conversion declared file not found: ${declared.path}"
                     )
-                    src.copyTo(jar, overwrite = true)
+                    // always re-produces (the local source may have
+                    // changed) — temp+move so a concurrent reader never
+                    // sees a partial copy
+                    jar.toPath().produceCached(force = true) { tmp ->
+                        src.copyTo(tmp.toFile(), overwrite = true)
+                    }
                 }
                 is DeclaredSource.Url -> {
                     if (jar.exists() && !ctx.refreshUniminedDownloads && !ctx.offline) {
                         // reused
                     } else {
-                        val bytes = uriFetch(declared.url)
-                        declared.sha256?.let { expected ->
-                            val actual = MessageDigest.getInstance("SHA-256")
-                                .digest(bytes).toHex()
-                            if (!actual.equals(expected, ignoreCase = true)) {
-                                throw GradleException(
-                                    "sha256 mismatch for ${declared.url} — expected $expected"
-                                )
+                        jar.toPath().produceCached(
+                            force = ctx.refreshUniminedDownloads
+                        ) { tmp ->
+                            val bytes = uriFetch(declared.url)
+                            declared.sha256?.let { expected ->
+                                val actual = MessageDigest.getInstance("SHA-256")
+                                    .digest(bytes).toHex()
+                                if (!actual.equals(expected, ignoreCase = true)) {
+                                    throw GradleException(
+                                        "sha256 mismatch for ${declared.url} — expected $expected"
+                                    )
+                                }
                             }
+                            tmp.toFile().writeBytes(bytes)
                         }
-                        jar.writeBytes(bytes)
                     }
                 }
                 else -> throw GradleException(
@@ -438,6 +451,7 @@ class ConversionProvider : ProductProvider {
         }
 
         val needed = if (spec.side == Side.MERGED ||
+                spec.side == Side.COMMON ||
                 product.fetchBothSides) {
             setOf(Side.CLIENT, Side.SERVER)
         } else setOf(spec.side)

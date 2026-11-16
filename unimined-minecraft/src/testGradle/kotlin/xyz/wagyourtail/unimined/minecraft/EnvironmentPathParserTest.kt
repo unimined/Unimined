@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.minecraft
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import xyz.wagyourtail.unimined.minecraft.internal.env.parseEnvironmentPath
 
 class EnvironmentPathParserTest {
 

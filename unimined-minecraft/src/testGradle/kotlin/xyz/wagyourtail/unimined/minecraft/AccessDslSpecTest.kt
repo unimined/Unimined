@@ -1,9 +1,12 @@
 package xyz.wagyourtail.unimined.minecraft
 
+import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * `access { }` semantic rules emit in each consumed document format —
@@ -12,8 +15,15 @@ import org.junit.jupiter.api.Test
  */
 class AccessDslSpecTest {
 
+    @TempDir
+    lateinit var dir: Path
+
     private fun spec(block: AccessDslSpec.() -> Unit) =
-        AccessDslSpec().apply(block)
+        AccessDslSpec(
+            ProjectBuilder.builder()
+                .withProjectDir(dir.toFile())
+                .build().objects
+        ).apply(block)
 
     @Test
     fun `aw directives emit on AW and CT`() {
@@ -165,5 +175,27 @@ class AccessDslSpecTest {
                 )
             ), s.namedFiles
         )
+    }
+
+    /** D2 — `validate` is read inside the apply-class-tweaker wiring's
+     *  deferred providers, so `setValidate(provider)` must carry the
+     *  value through without resolving at declaration time. The
+     *  `validate =` form keeps resolving eagerly as before. */
+    @Test
+    fun `validate accepts a provider resolved on read`() {
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.toFile())
+            .build()
+        val s = AccessDslSpec(project.objects)
+        var evaluations = 0
+        s.setValidate(project.provider { evaluations++; true })
+        assertEquals(0, evaluations,
+            "validate provider must not resolve at set time")
+        assertTrue(s.validate)
+        assertEquals(1, evaluations)
+
+        // the direct-value form stays a plain eager assignment
+        s.validate = false
+        assertFalse(s.validate)
     }
 }

@@ -99,6 +99,16 @@ class NativeProvider(
             Side.CLIENT -> artifacts[ArtifactKey.CLIENT] = artifactProvider(ArtifactKey.CLIENT)
             Side.SERVER -> artifacts[ArtifactKey.SERVER] = artifactProvider(ArtifactKey.SERVER)
             Side.MERGED -> artifacts[ArtifactKey.MERGED] = artifactProvider(ArtifactKey.MERGED)
+            Side.COMMON -> {
+                artifacts[ArtifactKey.COMMON] = artifactProvider(ArtifactKey.COMMON)
+                // the common jar is the client/server intersection —
+                // expose the raw sides so mapping bytecode-fill (the
+                // split-official path scans each side's own obf
+                // namespace) and any consumer needing the merge
+                // inputs can reach them without re-deriving paths
+                artifacts[ArtifactKey.CLIENT] = artifactProvider(ArtifactKey.CLIENT)
+                artifacts[ArtifactKey.SERVER] = artifactProvider(ArtifactKey.SERVER)
+            }
         }
 
         val libraries: Provider<List<org.gradle.api.artifacts.Dependency>> =

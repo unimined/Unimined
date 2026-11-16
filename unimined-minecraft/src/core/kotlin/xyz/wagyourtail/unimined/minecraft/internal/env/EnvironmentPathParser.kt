@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft
+package xyz.wagyourtail.unimined.minecraft.internal.env
 
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 

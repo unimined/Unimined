@@ -1,20 +1,25 @@
 package xyz.wagyourtail.unimined.minecraft.internal
 
-import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFile
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.namedNamespaces
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.produceCached
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
 import xyz.wagyourtail.unimined.mapping.MappingExtension
+import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
+import xyz.wagyourtail.unimined.mapping.processors.BytecodeFillPostProcessor
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.mapping.internal.MaterializedSourceSpec
 import xyz.wagyourtail.unimined.mapping.UniminedRepos
@@ -83,8 +88,27 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
         try {
             val t0 = System.nanoTime()
             environment.validateCombinations()
+            val spec = environment.mappingsSpec
+            // bytecode hierarchy fill (ploceus MappingFiller parity) —
+            // the env's raw jar + libraries feed a method-name
+            // propagation pass over the composed tree. The spec flag is
+            // tri-state: unset auto-enables when Ornithe enricher
+            // sources are declared (ploceus's isProcessorsApplied gate)
+            if (spec.hierarchyNameFill.orNull ?: spec.declaresOrnitheEnrichers()) {
+                if (spec.postProcessors.none { it.name == "bytecode-fill" }) {
+                    spec.postProcessors += BytecodeFillPostProcessor(
+                        jars = bytecodeFillJars(environment),
+                        libraries = {
+                            project.configurations
+                                .findByName(environment.minecraftLibrariesConfigurationName)
+                                ?.files?.map { it.toPath() }
+                                ?: emptyList()
+                        }
+                    )
+                }
+            }
             val data = mappingExtension.resolve(
-                environment.mappingsSpec, environment.environmentId,
+                spec, environment.environmentId,
                 mavenResolver, channelResolver(environment),
                 environment.side.get()
             )
@@ -128,6 +152,72 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
         }
 
     /**
+     * Product jar(s) feeding the bytecode hierarchy fill, keyed by the
+     * tree namespace their raw class/member names live in: split-official
+     * merged environments scan each side's jar under its own
+     * `official:<side>` column (the per-side obf name sets are
+     * disjoint); every other environment scans the side-appropriate
+     * jar under `official`. Providers that cannot supply an artifact
+     * contribute an empty list — the processor skips empty jars.
+     * Provider auxiliary artifacts (e.g. the Realms jar) join the
+     * `official` scan — they ride the raw-artifact bucket for remap
+     * the same way. Jar paths resolve inside the lambda — execution
+     * time only, never during DSL evaluation.
+     */
+    private fun bytecodeFillJars(
+        environment: MinecraftEnvironment
+    ): Map<String, () -> List<Path>> {
+        fun RegularFile.toPathOrNull() = asFile.toPath()
+        // product resolution defers into the jar lambdas — fill time is
+        // execution time, and a spec without a resolvable product
+        // (detached/versionless envs) contributes no jars so the fill
+        // degrades to a no-op rather than failing the mapping resolve
+        fun artifactsOrNull(): ProductArtifacts? =
+            runCatching { resolved(environment) }
+                .onFailure {
+                    uniminedLogger(environment.environmentId, project.logger)
+                        .subLogger("mappings").info(
+                            "bytecode-fill: no resolvable product on " +
+                                    "'${environment.environmentId}', skipping " +
+                                    "the jar scan (${it.message})"
+                        )
+                }
+                .getOrNull()
+        fun artifact(vararg keys: ArtifactKey): () -> List<Path> = out@{
+            val artifacts = artifactsOrNull() ?: return@out emptyList()
+            val aux = artifacts.obfuscatedAuxArtifacts.orNull
+                ?.mapNotNull { it.orNull?.toPathOrNull() }
+                ?: emptyList()
+            listOfNotNull(
+                keys.firstNotNullOfOrNull { k -> artifacts.artifacts[k]?.orNull?.toPathOrNull() }
+            ) + aux
+        }
+        return if (environment.mappingsSpec.splitOfficial &&
+            environment.side.get() in setOf(Side.MERGED, Side.COMMON)) {
+            mapOf(
+                "official:client" to { listOfNotNull(
+                    artifactsOrNull()?.artifacts?.get(ArtifactKey.CLIENT)
+                        ?.orNull?.toPathOrNull()) },
+                "official:server" to { listOfNotNull(
+                    artifactsOrNull()?.artifacts?.get(ArtifactKey.SERVER)
+                        ?.orNull?.toPathOrNull()) }
+            )
+        } else {
+            mapOf("official" to when (environment.side.get()) {
+                Side.CLIENT -> artifact(ArtifactKey.CLIENT, ArtifactKey.MERGED)
+                Side.SERVER -> artifact(ArtifactKey.SERVER, ArtifactKey.MERGED)
+                // prefer the intersection jar — a COMMON env's
+                // `official` column only covers shared classes
+                Side.COMMON -> artifact(
+                    ArtifactKey.COMMON, ArtifactKey.MERGED,
+                    ArtifactKey.CLIENT, ArtifactKey.SERVER
+                )
+                else -> artifact(ArtifactKey.MERGED, ArtifactKey.CLIENT, ArtifactKey.SERVER)
+            })
+        }
+    }
+
+    /**
      * Fetch the Spigot BuildData archive for [environment]'s mc
      * version into the global cache — used by the `spigot` mapping
      * channel when the provider doesn't supply `spigot_builddata`
@@ -143,21 +233,27 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             if (dest.toFile().exists() && !refresh) return dest
             if (project.gradle.startParameter.isOffline) {
                 if (dest.toFile().exists()) return dest
-                throw GradleException(
-                    "spigot channel: --offline and no cached $name under $dir")
+                project.failProblem(
+                    "mappings/spigot-cache",
+                    "unimined: mappings { spigot() } — --offline and no " +
+                        "cached $name under $dir")
             }
             dest.toFile().parentFile.mkdirs()
-            java.net.URI.create(url).toURL().openStream().use {
-                java.nio.file.Files.copy(it, dest,
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            // lock + temp+move — concurrent daemons must not serve a
+            // partially-downloaded spigot artifact
+            return dest.produceCached(force = true) { tmp ->
+                java.net.URI.create(url).toURL().openStream().use {
+                    java.nio.file.Files.copy(it, tmp)
+                }
             }
-            return dest
         }
         val info = cached("build-info.json",
             "https://hub.spigotmc.org/versions/$mc.json")
         val ref = Regex(""""BuildData"\s*:\s*"([0-9a-f]+)"""")
             .find(info.toFile().readText())?.groupValues?.get(1)
-            ?: throw GradleException("spigot: no BuildData ref in $info")
+            ?: project.failProblem("mappings/spigot-builddata",
+                "unimined: mappings { spigot() } — no BuildData ref in " +
+                    "$info")
         return cached("build-data.zip",
             "https://hub.spigotmc.org/stash/rest/api/latest/" +
                 "projects/SPIGOT/repos/builddata/archive" +
@@ -173,31 +269,45 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
         java.util.function.BiFunction<String, Map<String, String>, List<Path>> { channel, params ->
             when (channel) {
                 "mojmap" -> {
-                    val key = if (environment.side.get() == Side.SERVER) {
+                    // COMMON rides server_mappings — the intersection
+                    // jar ships the server jar's bytes for shared
+                    // classes (loom MinecraftJarSplitter parity), so
+                    // server-side member obf names are what its
+                    // bytecode actually carries
+                    val key = if (environment.side.get() == Side.SERVER ||
+                        environment.side.get() == Side.COMMON) {
                         "server_mappings"
                     } else {
                         "client_mappings"
                     }
                     val file = resolved(environment).auxiliaryArtifacts[key]
                         ?.orNull
-                        ?: throw GradleException(
-                            "mappings { mojmap() }: provider " +
-                                    "'${environment.provider.orNull ?: "auto"}' supplies no " +
-                                    "$key channel for ${environment.version.orNull}"
+                        ?: project.failProblem(
+                            "mappings/mojmap",
+                            "unimined: environment '${environment.name}' — " +
+                                "mappings { mojmap() }: provider " +
+                                "'${environment.provider.orNull ?: "auto"}' " +
+                                "supplies no $key channel for " +
+                                "${environment.version.orNull}"
                         )
                     listOf(file.asFile.toPath())
                 }
 
                 "searge" -> {
                     val version = params["version"]
-                        ?: throw GradleException("searge() requires a version")
+                        ?: project.failProblem("mappings/searge-version",
+                            "unimined: mappings { searge() } requires a " +
+                                "version parameter")
                     if (MinecraftVersions
                             .compare(version.substringBefore('-'), "1.12.2") < 0
                     ) {
-                        throw GradleException(
-                            "mappings { searge($version) }: FG1-era mcp/srg " +
-                                    "channels are not yet supported; declare the " +
-                                    "mapping archive via maven() or file() instead"
+                        project.failProblem(
+                            "mappings/searge-era",
+                            "unimined: mappings { searge($version) } — " +
+                                "FG1-era mcp/srg channels are not yet " +
+                                "supported",
+                            "declare the mapping archive via maven() or " +
+                                "file() instead"
                         )
                     }
                     UniminedRepos(project).minecraftForge.ensure()
@@ -208,7 +318,10 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
 
                 "forgeBuiltinMCP" -> {
                     val version = params["version"]
-                        ?: throw GradleException("forgeBuiltinMCP() requires a forge version")
+                        ?: project.failProblem(
+                            "mappings/forge-builtin-mcp",
+                            "unimined: mappings { forgeBuiltinMCP() } " +
+                                "requires a forge version parameter")
                     val mcVersion = environment.version.get().let {
                         // 1.x forgeMCVersion: short mc versions map to
                         // their three-part form in forge coordinates
@@ -242,9 +355,13 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
 
                 "parchment" -> {
                     val mcVersion = params["mcVersion"]
-                        ?: throw GradleException("parchment() requires mcVersion")
+                        ?: project.failProblem("mappings/parchment-mcversion",
+                            "unimined: mappings { parchment() } requires " +
+                                "an mcVersion parameter")
                     val version = params["version"]
-                        ?: throw GradleException("parchment() requires a version")
+                        ?: project.failProblem("mappings/parchment-version",
+                            "unimined: mappings { parchment() } requires " +
+                                "a version parameter")
                     val classifier =
                         if (params["checked"].toBoolean()) ":checked" else ""
                     UniminedRepos(project).parchment.ensure()
@@ -260,9 +377,13 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                     // client jar (1.x yarnv1 semantics) — resolves the
                     // plain (non-v2) yarn artifact on the fabric maven
                     val mcVersion = params["version"]
-                        ?: throw GradleException("yarnv1() requires a version")
+                        ?: project.failProblem("mappings/yarnv1-version",
+                            "unimined: mappings { yarnv1() } requires a " +
+                                "version parameter")
                     val build = params["build"]
-                        ?: throw GradleException("yarnv1() requires a build")
+                        ?: project.failProblem("mappings/yarnv1-build",
+                            "unimined: mappings { yarnv1() } requires a " +
+                                "build parameter")
                     UniminedRepos(project).fabric.ensure()
                     val yarnJar = resolveMavenNotation(
                         "net.fabricmc:yarn:$mcVersion+build.$build"
@@ -273,32 +394,34 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                     java.nio.file.Files.createDirectories(cacheDir)
                     val extracted = cacheDir.resolve(
                         "yarnv1-$mcVersion+build.$build.tiny")
-                    if (!java.nio.file.Files.exists(extracted)) {
+                    extracted.produceCached { tmp ->
                         java.util.zip.ZipFile(yarnJar.toFile()).use { zip ->
                             val entry = zip.getEntry("mappings/mappings.tiny")
-                                ?: throw GradleException(
-                                    "yarn jar $yarnJar carries no " +
+                                ?: project.failProblem(
+                                    "mappings/yarnv1-tiny",
+                                    "unimined: yarn jar $yarnJar carries no " +
                                     "mappings/mappings.tiny")
                             zip.getInputStream(entry).use { input ->
-                                java.nio.file.Files.copy(input, extracted)
+                                java.nio.file.Files.copy(input, tmp)
                             }
                         }
                     }
                     val filled = cacheDir.resolve(
                         "yarnv1-$mcVersion+build.$build-filled.tiny")
-                    if (!java.nio.file.Files.exists(filled)) {
+                    filled.produceCached { tmp ->
                         val stitch = resolveMavenNotation(
-                            "net.fabricmc:stitch:0.6.2")
+                            project.uniminedTools().stitch.get())
                         val arts = resolved(environment).artifacts
                         val mcJar = arts[xyz.wagyourtail.unimined
                             .minecraft.spi.ArtifactKey.CLIENT]?.orNull?.asFile
                             ?: arts[xyz.wagyourtail.unimined
                                 .minecraft.spi.ArtifactKey.MERGED]
                                 ?.orNull?.asFile
-                            ?: throw GradleException(
-                                "mappings { yarnv1() }: environment " +
-                                "'${environment.name}' has no client or " +
-                                "merged jar for stitch proposeFieldNames")
+                            ?: project.failProblem(
+                                "mappings/yarnv1-jar",
+                                "unimined: environment '${environment.name}' — " +
+                                "mappings { yarnv1() }: no client or merged " +
+                                "jar for stitch proposeFieldNames")
                         val javaBin = java.nio.file.Paths.get(
                             System.getProperty("java.home"),
                             "bin", "java").toString()
@@ -308,22 +431,25 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                             "proposeFieldNames",
                             mcJar.absolutePath,
                             extracted.toAbsolutePath().toString(),
-                            filled.toAbsolutePath().toString()
+                            tmp.toAbsolutePath().toString()
                         ).redirectErrorStream(true).start()
                         val output = proc.inputStream.bufferedReader().readText()
                         val exit = proc.waitFor()
-                        if (exit != 0 || !java.nio.file.Files.exists(filled)) {
-                            throw GradleException(
-                                "mappings { yarnv1() }: stitch " +
-                                "proposeFieldNames failed (exit $exit):\n" +
+                        if (exit != 0 || !java.nio.file.Files.exists(tmp)) {
+                            project.failProblem(
+                                "mappings/yarnv1-stitch",
+                                "unimined: mappings { yarnv1() }: stitch " +
+                                "proposeFieldNames failed (exit $exit)",
                                 output.takeLast(4000))
                         }
                     }
                     listOf(filled)
                 }
 
-                else -> throw GradleException(
-                    "builtin mapping channel '$channel' is not supported by this host"
+                else -> project.failProblem(
+                    "mappings/channel-unsupported",
+                    "unimined: builtin mapping channel '$channel' is not " +
+                        "supported by this host"
                 )
             }
         }
@@ -338,10 +464,12 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             val environment = ext.sourceSet(environmentId)
             if (environment.mappingsSpec.effectiveSources().isEmpty()) {
                 ext.artifacts(environmentId).get().mappings.orNull?.namespaces?.lastOrNull()?.name
-                    ?: throw GradleException(
+                    ?: project.failProblem(
+                        "env/mapping-tree",
                         "unimined: environment '$environmentId' produced no " +
-                        "mapping tree — declare mappings { } or check the " +
-                        "provider supports this version"
+                        "mapping tree",
+                        "declare mappings { } or check the provider " +
+                        "supports this version"
                     )
             } else {
                 val data = mappingDataProvider(environment).orNull
@@ -350,10 +478,12 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                     // declared-but-empty sources compose no tree —
                     // defer to the provider's mapping tree
                     ext.artifacts(environmentId).get().mappings.orNull?.namespaces?.lastOrNull()?.name
-                        ?: throw GradleException(
-                            "unimined: environment '$environmentId' produced no " +
-                            "mapping tree — declare mappings { } or check the " +
-                            "provider supports this version"
+                        ?: project.failProblem(
+                            "env/mapping-tree",
+                            "unimined: environment '$environmentId' produced " +
+                            "no mapping tree",
+                            "declare mappings { } or check the provider " +
+                            "supports this version"
                         )
                 } else {
                     val present = tree.namespaces.map { it.name }.toSet()
@@ -381,8 +511,23 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             data.namedNamespaces().filterTo(LinkedHashSet()) { it in present }
         }
 
+    /** The env tree's obf/production column — the raw jar's namespace.
+     *  `namespaces.first()` is unreliable: retroMCP-era source files
+     *  order their *named* column first, which would return the dev
+     *  namespace and collapse the raw->dev remap to identity. Prefer
+     *  the canonical `official` column (envView folds a sided env's
+     *  `official:<side>` to it), else the first column not flagged
+     *  named, else column 0. */
+    private fun jarSourceNamespace(
+        tree: MappingTree, named: Set<String>
+    ): String =
+        (tree.namespaces.firstOrNull { it.name == "official" }
+            ?: tree.namespaces.firstOrNull { it.name !in named }
+            ?: tree.namespaces.first()).name
+
     /** The raw artifact's namespace for [environmentId] — the resolved
-     *  mapping tree's first namespace. Evaluated lazily. */
+     *  mapping tree's jar-side (obf/production) namespace. Evaluated
+     *  lazily. */
     internal fun sourceNamespace(environmentId: String): Provider<String> =
         providers.provider {
             // split-side merged env: the produced artifact lives in the
@@ -390,15 +535,18 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             // pre-merge), not the union official namespace
             if (ext.sourceSet(environmentId).mappingsSpec.splitOfficial) {
                 modSourceNamespaces(environmentId).orNull?.singleOrNull()
-                    ?: throw GradleException(
+                    ?: project.failProblem(
+                        "env/mod-source-namespaces",
                         "unimined: environment '$environmentId' declares " +
-                        "multiple or zero mod source namespaces — auto " +
-                        "remapping supports exactly one; declare " +
+                        "multiple or zero mod source namespaces",
+                        "auto remapping supports exactly one; declare " +
                         "remap.remappedViews for mixed inputs"
                     )
             } else {
-                ext.artifacts(environmentId).get().mappings.get()
-                    .namespaces.first().name
+                jarSourceNamespace(
+                    ext.artifacts(environmentId).get().mappings.get(),
+                    namedNamespaces(environmentId).orNull ?: emptySet()
+                )
             }
         }
 
@@ -422,8 +570,12 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                         environment.mappingsSpec.splitMergeNamespace
                             ?.let { listOf(it) }
                             ?: listOf(
-                                ext.artifacts(environmentId).get().mappings
-                                    .get().namespaces.first().name
+                                jarSourceNamespace(
+                                    ext.artifacts(environmentId).get()
+                                        .mappings.get(),
+                                    namedNamespaces(environmentId).orNull
+                                        ?: emptySet()
+                                )
                             )
                     }
             }
@@ -449,10 +601,12 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             project.dependencies.create(notation)
         ).apply { isTransitive = false }
             .files.also { files ->
-                if (files.size != 1) throw GradleException(
-                    "mappings { maven($notation) }: resolved ${files.size} " +
-                    "files, expected exactly 1 — check the coordinate, " +
-                    "the serving repository, and whether you are offline"
+                if (files.size != 1) project.failProblem(
+                    "mappings/maven-notation",
+                    "unimined: mappings { maven($notation) }: resolved " +
+                    "${files.size} files, expected exactly 1",
+                    "check the coordinate, the serving repository, and " +
+                    "whether you are offline"
                 )
             }.single().toPath()
     }
@@ -654,3 +808,21 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
         })
     }
 }
+
+/** Ornithe enricher artifact names that auto-enable the bytecode
+ *  hierarchy fill — ploceus's `isProcessorsApplied` gate checks for
+ *  nests/sparrow/raven providers on the classpath. */
+private val ORNITHE_ENRICHER_ARTIFACTS = setOf("nests", "sparrow", "raven")
+
+/** Whether this spec declares an Ornithe enricher (`nests`/`sparrow`/
+ *  `raven`) mapping source — the auto-enable signal for `hierarchyNameFill`
+ *  when the flag is unset. Reads only the declared coordinate
+ *  notation, so no maven resolution is triggered. */
+internal fun MappingsSpecImpl.declaresOrnitheEnrichers(): Boolean =
+    effectiveSources().any { src ->
+        src is MappingsSpecImpl.Source.Maven &&
+            runCatching { src.notation }.getOrNull()
+                ?.substringAfter(':', "")
+                ?.substringBefore(':')
+                ?.let { it in ORNITHE_ENRICHER_ARTIFACTS } == true
+    }

@@ -15,7 +15,10 @@ class FakeArtifacts(private val ctx: ProviderContext) : ProductArtifacts {
         ctx.providers.provider { emptyList() }
 
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = mapOf(
-        ArtifactKey.MERGED to ctx.layout.buildDirectory.file("fake/merged.jar")
+        ArtifactKey.CLIENT to ctx.layout.buildDirectory.file("fake/client.jar"),
+        ArtifactKey.SERVER to ctx.layout.buildDirectory.file("fake/server.jar"),
+        ArtifactKey.MERGED to ctx.layout.buildDirectory.file("fake/merged.jar"),
+        ArtifactKey.COMMON to ctx.layout.buildDirectory.file("fake/common.jar"),
     )
     override val mappings: Provider<MappingTree> = ctx.providers.provider {
         mappingTree("official")
@@ -27,7 +30,9 @@ class FakeArtifacts(private val ctx: ProviderContext) : ProductArtifacts {
     override val capabilities = ctx.providers.provider {
         EnvironmentCapabilities(minecraftVersion = "1.0")
     }
-    override val libraries: Provider<List<Dependency>> = ctx.providers.provider { emptyList() }
+    override val libraries: Provider<List<Dependency>> = ctx.providers.provider {
+        FakeProvider.libraries
+    }
     override val extraDependencies = ctx.objects.fileCollection()
     override val extraCompileSources = ctx.objects.fileCollection()
     override val assets: Provider<AssetIndex> = ctx.providers.provider { null }
@@ -48,15 +53,25 @@ class FakeProvider : ProductProvider {
     override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
         calls.add(spec.version.version)
         environments.add(spec.environmentId)
+        sides.add(spec.side)
         return FakeArtifacts(ctx)
     }
 
     companion object {
         val calls = mutableListOf<String>()
         val environments = mutableListOf<String>()
+        val sides = mutableListOf<xyz.wagyourtail.unimined.api.spec.Side>()
+
+        /** Library deps [FakeArtifacts] serves — set per-test before
+         *  artifacts resolve (e.g. `project.dependencies.create(...)`);
+         *  [reset] clears. */
+        var libraries: List<Dependency> = emptyList()
+
         fun reset() {
             calls.clear()
             environments.clear()
+            sides.clear()
+            libraries = emptyList()
         }
     }
 

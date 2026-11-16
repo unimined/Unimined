@@ -85,6 +85,31 @@ class LegacyDistProviderTest {
     }
 
     @Test
+    fun `declared source outranks the loader-gated catch-all`() {
+        // a `custom { file() }` env without a loader claims both
+        // `legacydist` (declaredSource != null, auto-registered from
+        // META-INF/services) and a native-shaped `loader == null`
+        // provider — at equal priority that was an ambiguity error;
+        // the priority bump is the fix. Register a stand-in for
+        // `native` (priority 0, loader-gated) since the real provider
+        // is not on this module's classpath.
+        val registry = xyz.wagyourtail.unimined.minecraft
+            .ProductProviderRegistry()
+        registry.register(object :
+            xyz.wagyourtail.unimined.minecraft.spi.ProductProvider {
+            override val name = "native-standin"
+            override fun supports(spec: ProductSpec) = spec.loader == null
+            override fun resolve(
+                spec: ProductSpec, ctx: ProviderContext
+            ) = throw UnsupportedOperationException()
+        })
+        assertTrue(
+            registry.probe(spec(DeclaredSource.LocalFile("x.jar")))
+                    is LegacyDistProvider
+        )
+    }
+
+    @Test
     fun `local file source materializes into content cache`() {
         val src = File(projectDir, "src.jar")
             .apply { writeBytes(byteArrayOf(1, 2, 3)) }
@@ -107,6 +132,27 @@ class LegacyDistProviderTest {
         assertEquals(
             NamespaceMode.REMAPPABLE, artifacts.namespaceMode.get()
         )
+    }
+
+    @Test
+    fun `producer source materializes via the declared command`() {
+        // `java -cp <test classpath> WriteFileMain out.jar` — the
+        // provider's runProducer seam execs real processes
+        val java = File(
+            System.getProperty("java.home"), "bin/java"
+        ).absolutePath
+        val artifacts = LegacyDistProvider().resolve(
+            spec(DeclaredSource.Producer(
+                executable = java,
+                jvmArgs = listOf(
+                    "-cp", System.getProperty("java.class.path")
+                ),
+                args = listOf(WriteFileMain::class.java.name, "out.jar"),
+                output = "out.jar"
+            )), ctx()
+        )
+        val jar = artifacts.artifacts[ArtifactKey.MERGED]!!.get().asFile
+        assertEquals(byteArrayOf(42).toList(), jar.readBytes().toList())
     }
 
     @Test

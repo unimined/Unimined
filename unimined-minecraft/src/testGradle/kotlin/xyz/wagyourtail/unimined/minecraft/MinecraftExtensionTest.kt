@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft
 
 import groovy.lang.Closure
+import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -98,6 +99,17 @@ class MinecraftExtensionTest {
         assertEquals(Side.MERGED, spec.side)
         assertEquals("forge", spec.loader!!.name)
         assertEquals("47.2.0", spec.loader!!.version)
+    }
+
+    @Test
+    fun `missing version failure names the environment`() {
+        val ext = project().extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("weirdenv")
+        val e = assertThrows<GradleException> { env.spec() }
+        assertTrue(
+            e.message!!.contains("weirdenv"),
+            "missing-version error should name the env: ${e.message}"
+        )
     }
 
     @Test
@@ -447,6 +459,19 @@ class MinecraftExtensionTest {
             ext.spec("forge")
         }
         assertTrue(error.message!!.contains("loaders differ"))
+    }
+
+    @Test
+    fun `forceRemap notation validates and registers a filter`() {
+        val ext = project().extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.main
+        val e = assertThrows<org.gradle.api.GradleException> {
+            env.forceRemap("malformed")
+        }
+        // names the rejecting environment, not just the notation
+        assertTrue(e.message!!.contains("environment 'main'"), e.message)
+        env.forceRemap("com.example:obf-lib")
+        assertEquals(1, env.forceRemapFilters.size)
     }
 
     @Test

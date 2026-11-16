@@ -1,6 +1,6 @@
-package xyz.wagyourtail.unimined.minecraft.internal
+package xyz.wagyourtail.unimined.minecraft.internal.env
 
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 
@@ -40,7 +40,8 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 val targetVersion = environment.version.orNull
                 if (sourceVersion != null && targetVersion != null &&
                     sourceVersion != targetVersion) {
-                    throw GradleException(
+                    project.failProblem(
+                        "env/combination-version",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
                                 "Minecraft versions differ ($targetVersion != $sourceVersion)"
@@ -48,12 +49,18 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 }
 
                 val targetLoader = environment.loaderSpec.orNull?.name
-                val sourceLoader = source.loaderSpec.orNull?.name
-                if (targetLoader != null && sourceLoader != null && targetLoader != sourceLoader) {
-                    throw GradleException(
+                // merged multi-loader sources declare several loaders —
+                // a per-loader env may combine from them when its own
+                // loader is among the source's
+                val sourceLoaders = source.loaderSpecs.map { it.name }
+                if (targetLoader != null && sourceLoaders.isNotEmpty() &&
+                    targetLoader !in sourceLoaders) {
+                    project.failProblem(
+                        "env/combination-loader",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
-                                "loaders differ ($targetLoader != $sourceLoader)"
+                                "loaders differ ('$targetLoader' is not among the " +
+                                "source's loaders $sourceLoaders)"
                     )
                 }
 
@@ -65,12 +72,14 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 if (targetNamespace != null && sourceNamespace != null &&
                     targetNamespace != sourceNamespace
                 ) {
-                    throw GradleException(
+                    project.failProblem(
+                        "env/combination-namespace",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
-                                "dev namespaces differ ($targetNamespace != $sourceNamespace) — " +
-                                "set the same devNamespace on both environments, or leave it " +
-                                "unset to inherit the loader default"
+                                "dev namespaces differ ($targetNamespace != $sourceNamespace)",
+                        "set the same devNamespace on both environments, " +
+                                "or leave it unset to inherit the loader " +
+                                "default"
                     )
                 }
             }
@@ -86,7 +95,8 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
         for (sourceReference in environment.combinedWith) {
             val key = "${sourceReference.projectPath}:${sourceReference.environmentId}"
             if (!path.add(key)) {
-                throw GradleException(
+                project.failProblem(
+                    "env/combination-cycle",
                     "Cyclic Unimined source-set combination involving " +
                             path.joinToString(" -> ") + " -> " + key
                 )

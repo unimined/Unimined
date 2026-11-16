@@ -4,7 +4,7 @@ import org.gradle.api.GradleException
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import xyz.wagyourtail.unimined.minecraft.internal.ProviderCacheSettings
+import xyz.wagyourtail.unimined.minecraft.internal.provider.ProviderCacheSettings
 import java.time.Duration
 
 class ProviderCacheSettingsTest {

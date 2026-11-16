@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft
 
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyHandler
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
@@ -47,6 +47,13 @@ internal class MinecraftEnvironmentCopyHandler(
             target.loaderSpec.convention(extension.project.provider {
                 source(request).loaderSpec.orNull
             })
+            // merged-env secondaries propagate with the primary: an
+            // env combining/copying a multi-loader source sees its
+            // non-primary loaders as compile-classpath secondaries
+            // too. The ref is stored and resolved lazily in
+            // `loaderSpecs` — the source's own loader(...) calls may
+            // not have run at copy-registration time.
+            target.inheritedLoaderSources += request.source
         }
         if (EnvironmentSection.MAPPINGS in requested) {
             target.mappingsSpec.inheritSources { visiting ->
@@ -63,11 +70,13 @@ internal class MinecraftEnvironmentCopyHandler(
         target: MinecraftEnvironment
     ) {
         if (request.source.projectPath != request.target.projectPath) {
-            throw GradleException(
+            extension.project.failProblem(
+                "env/cross-project-copy",
                 "Cannot copy dependency buckets across projects for " +
                         "'${request.target.projectPath}:${request.target.environmentId}' " +
-                        "from '${request.source.projectPath}:${request.source.environmentId}'; " +
-                        "combine source output or declare a project dependency instead"
+                        "from '${request.source.projectPath}:${request.source.environmentId}'",
+                "combine source output or declare a project dependency " +
+                    "instead"
             )
         }
         val source = extension.environment(request.source)

@@ -10,7 +10,8 @@ import xyz.wagyourtail.unimined.api.util.delegatingTo
 /**
  * Configuration surface for the dist preset verbs
  * ([MinecraftEnvironment.bta]/[MinecraftEnvironment.reindev]/
- * [MinecraftEnvironment.nsss]/[MinecraftEnvironment.custom]).
+ * [MinecraftEnvironment.nsss]/[MinecraftEnvironment.custom]/
+ * [MinecraftEnvironment.devbundle]).
  *
  * Exposes the environment's product/version/side/loader config plus
  * the declared-source verbs ([file]/[maven]/[url]/[producer]) for
@@ -36,9 +37,9 @@ class DistSpec internal constructor(
     /** Client/server/merged side. */
     val side: Property<Side> get() = env.side
 
-    /** Provider override — presets set `conversion`; leave untouched
-     *  for [MinecraftEnvironment.custom] so the declared-source seam
-     *  negotiates. */
+    /** Provider override — presets set `conversion`/`devbundle`;
+     *  leave untouched for [MinecraftEnvironment.custom] so the
+     *  declared-source seam negotiates. */
     val provider: Property<String> get() = env.provider
 
     /** Declare a local dist jar/zip as this environment's artifact. */

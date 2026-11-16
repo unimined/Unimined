@@ -1,8 +1,11 @@
 package xyz.wagyourtail.unimined.minecraft.localrepo
 
 import xyz.wagyourtail.commonskt.jvm.copyAtomicTo
+import xyz.wagyourtail.unimined.api.util.writeAtomically
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /**
@@ -47,8 +50,14 @@ object LocalMavenPublisher {
         val moduleDir = moduleDir(repoDir, group, artifactId, version)
             .createDirectories()
 
-        moduleDir.resolve("$artifactId-$version.pom").writeText(
-            """
+        // Content-gated writes: this repo dir is a real maven repo to
+        // Gradle, so the configuration cache fingerprints its entries
+        // as inputs. Rewriting byte-identical files would still route
+        // through the atomic-write's transient `.*.tmp` sibling — a
+        // file that appears in the fingerprinted listing during one
+        // store pass and is gone the next, making the entry
+        // permanently unreusable.
+        val pom = """
             <project xmlns="http://maven.apache.org/POM/4.0.0">
                 <modelVersion>4.0.0</modelVersion>
                 <groupId>$group</groupId>
@@ -57,7 +66,10 @@ object LocalMavenPublisher {
                 <packaging>jar</packaging>
             </project>
             """.trimIndent()
-        )
+        val pomFile = moduleDir.resolve("$artifactId-$version.pom")
+        if (Files.notExists(pomFile) || pomFile.readText() != pom) {
+            pomFile.writeAtomically { tmp -> tmp.writeText(pom) }
+        }
 
         for ((classifier, file) in files) {
             val name = buildString {
@@ -65,7 +77,10 @@ object LocalMavenPublisher {
                 if (classifier.isNotEmpty()) append("-$classifier")
                 append(".jar")
             }
-            file.copyAtomicTo(moduleDir.resolve(name))
+            val dest = moduleDir.resolve(name)
+            if (Files.notExists(dest) || Files.mismatch(dest, file) != -1L) {
+                file.copyAtomicTo(dest)
+            }
         }
         return moduleDir
     }

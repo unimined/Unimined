@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft
+package xyz.wagyourtail.unimined.minecraft.spi
 
 /** Lookup facade on `unimined-transform`'s extension — implemented
  *  by `TransformExtension`; envs resolve it via

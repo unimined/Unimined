@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.internal
+package xyz.wagyourtail.unimined.minecraft.internal.provider
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project

@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.merge
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
@@ -149,6 +151,7 @@ object JarMerger {
              * means no marker, merges stamp nothing). Exactly one
              * candidate may be present.
              */
+            @NoGroovyTwin("jar-merge internals — programmatic API")
             fun detectSideMarker(jar: Path, warn: (String) -> Unit = {}): SideMarker? {
                 val found = DETECTABLE.filter { marker ->
                     ZipFile(jar.toFile()).use { zip ->
@@ -302,63 +305,109 @@ object JarMerger {
             }
         }.toList().forEach { (name, bytes) -> mergedClasses[name] = bytes }
 
+        // explicit dir entries — legacy resource enumeration
+        // (`Class.getResource("dir/")`) resolves directories only
+        // when the zip carries them; the input skips dir entries
+        // so they're re-synthesized here from entry paths
+        val dirs = java.util.TreeSet<String>()
+        mergedClasses.keys.forEach { collectDirs(dirs, it) }
+        clientResources.keys.forEach { collectDirs(dirs, it) }
+        serverResources.keys.forEach { collectDirs(dirs, it) }
+        val outEntries = linkedMapOf<String, ByteArray>()
+        for (d in dirs) outEntries[d] = ByteArray(0)
+        outEntries.putAll(mergedClasses)
+        val resourceNames = LinkedHashSet<String>()
+            .apply { addAll(clientResources.keys); addAll(serverResources.keys) }
+        for (name in resourceNames) {
+            // an entry that parsed as a class on one side but
+            // fell back to a resource on the other is already
+            // written from mergedClasses — the class wins
+            if (name in mergedClasses) continue
+            val c = clientResources[name]
+            val s = serverResources[name]
+            // extension chain, then client-wins as the default
+            // non-class conflict policy
+            val merged = pipeline.mergeResource(name, c, s) ?: c ?: s!!
+            outEntries[name] = merged
+        }
+        writeDeterministicJar(out, outEntries)
+    }
+
+    /**
+     * Produce the "common" jar — the entries present on BOTH
+     * distributions (`splitEnvironmentSourceSets`' `main` source set
+     * compiles against this view so common code cannot reference
+     * client-only classes). Intersection is by entry name and bytes
+     * come from the SERVER input — loom `MinecraftJarSplitter`
+     * semantics (`copyEntriesToJar(commonEntries, serverInputJar, …)`)
+     * and [merge]'s own convention that server code supersedes client
+     * stubs; per-member intersection (dropping methods only one side
+     * carries) is deliberately not attempted. `META-INF/` filtering
+     * matches [merge] — signatures and manifests are side-specific,
+     * service registrations survive.
+     */
+    fun common(client: Path, server: Path, out: Path) {
+        val clientNames = ZipFile(client.toFile()).use { zip ->
+            zip.entries().asSequence().map { it.name }.toHashSet()
+        }
+        val entries = linkedMapOf<String, ByteArray>()
+        ZipFile(server.toFile()).use { zip ->
+            zip.entries().toList().parallelStream().map { e ->
+                if (e.isDirectory ||
+                    (e.name.startsWith("META-INF/") &&
+                            !e.name.startsWith("META-INF/services/")) ||
+                    e.name !in clientNames) {
+                    return@map null
+                }
+                e.name to zip.getInputStream(e).readBytes()
+            }.toList().forEach { t ->
+                t?.let { (name, bytes) -> entries[name] = bytes }
+            }
+        }
+        val dirs = java.util.TreeSet<String>()
+        entries.keys.forEach { collectDirs(dirs, it) }
+        val outEntries = linkedMapOf<String, ByteArray>()
+        for (d in dirs) outEntries[d] = ByteArray(0)
+        outEntries.putAll(entries)
+        writeDeterministicJar(out, outEntries)
+    }
+
+    private fun collectDirs(dirs: java.util.TreeSet<String>, name: String) {
+        var i = name.indexOf('/')
+        while (i > 0) {
+            dirs.add(name.substring(0, i + 1))
+            i = name.indexOf('/', i + 1)
+        }
+    }
+
+    /**
+     * Emit [entries] (in map order) as a deflated zip with fixed
+     * DOS-epoch timestamps — synthesized jars are consumed as
+     * transform INPUTS, so their bytes must be reproducible:
+     * wall-clock stamps would give every produce run a different
+     * hash and invalidate the entire downstream transform cache.
+     * deflate output is deterministic per entry and the scatter
+     * creator writes entries in submission order, so parallel
+     * compression keeps the whole-jar bytes reproducible.
+     */
+    private fun writeDeterministicJar(
+        out: Path,
+        entries: LinkedHashMap<String, ByteArray>
+    ) {
         val tmp = out.tempSibling()
         try {
-            // explicit dir entries — legacy resource enumeration
-            // (`Class.getResource("dir/")`) resolves directories only
-            // when the zip carries them; the input skips dir entries
-            // so they're re-synthesized here from entry paths
-            val dirs = java.util.TreeSet<String>()
-            fun collectDirs(name: String) {
-                var i = name.indexOf('/')
-                while (i > 0) {
-                    dirs.add(name.substring(0, i + 1))
-                    i = name.indexOf('/', i + 1)
-                }
-            }
-            mergedClasses.keys.forEach(::collectDirs)
-            clientResources.keys.forEach(::collectDirs)
-            serverResources.keys.forEach(::collectDirs)
-            // fixed DOS-epoch timestamps — the merged jar is a
-            // synthesized artifact consumed as a transform INPUT, so
-            // its bytes must be reproducible: wall-clock stamps would
-            // give every produce run a different hash and invalidate
-            // the entire downstream transform cache. deflate output is
-            // deterministic per entry and the scatter creator writes
-            // entries in submission order, so parallel compression
-            // keeps the whole-jar bytes reproducible
             val pool = Executors.newFixedThreadPool(
                 Runtime.getRuntime().availableProcessors()
             )
             try {
                 val creator = ParallelScatterZipCreator(pool)
-                fun addEntry(name: String, data: ByteArray) {
+                for ((name, data) in entries) {
                     creator.addArchiveEntry(
                         ZipArchiveEntry(name).apply {
                             method = ZipArchiveEntry.DEFLATED
                             time = 0
                         }
                     ) { ByteArrayInputStream(data) }
-                }
-                for (d in dirs) {
-                    addEntry(d, ByteArray(0))
-                }
-                for ((name, data) in mergedClasses) {
-                    addEntry(name, data)
-                }
-                val resourceNames = LinkedHashSet<String>()
-                    .apply { addAll(clientResources.keys); addAll(serverResources.keys) }
-                for (name in resourceNames) {
-                    // an entry that parsed as a class on one side but
-                    // fell back to a resource on the other is already
-                    // written from mergedClasses — the class wins
-                    if (name in mergedClasses) continue
-                    val c = clientResources[name]
-                    val s = serverResources[name]
-                    // extension chain, then client-wins as the default
-                    // non-class conflict policy
-                    val merged = pipeline.mergeResource(name, c, s) ?: c ?: s!!
-                    addEntry(name, merged)
                 }
                 ZipArchiveOutputStream(tmp.outputStream()).use { zout ->
                     creator.writeTo(zout)

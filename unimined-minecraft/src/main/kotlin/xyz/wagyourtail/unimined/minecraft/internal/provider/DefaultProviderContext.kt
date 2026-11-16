@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.internal
+package xyz.wagyourtail.unimined.minecraft.internal.provider
 
 import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.file.ProjectLayout

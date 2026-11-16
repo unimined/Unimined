@@ -177,6 +177,22 @@ class ConversionArtifactProducer : ProductArtifactProducer {
                 )
                 out
             }
+            ArtifactKey.COMMON -> {
+                if (!product.mergeable) throw IllegalStateException(
+                    "conversion '${loader}' can't produce a common " +
+                            "artifact — its dists are independently-built " +
+                            "forks; declare side = CLIENT or SERVER"
+                )
+                val out = downloader.cacheDir.resolve(
+                    "${loader}/$version/common.jar"
+                )
+                xyz.wagyourtail.unimined.minecraft.merge.JarMerger.common(
+                    stripMergeInput(fetchSide(Side.CLIENT), "client"),
+                    stripMergeInput(fetchSide(Side.SERVER), "server"),
+                    out
+                )
+                out
+            }
             else -> throw IllegalStateException(
                 "conversion producer cannot produce ${request.artifactKey}"
             )
