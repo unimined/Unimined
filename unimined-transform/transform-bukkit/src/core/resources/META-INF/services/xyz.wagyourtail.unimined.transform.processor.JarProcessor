@@ -1,2 +1,2 @@
-xyz.wagyourtail.unimined.transform.bukkit.internal.PaperPatchProcessor
-xyz.wagyourtail.unimined.transform.bukkit.internal.SpigotNmsRelocationProcessor
+xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperPatchProcessor
+xyz.wagyourtail.unimined.transform.bukkit.internal.spigot.SpigotNmsRelocationProcessor

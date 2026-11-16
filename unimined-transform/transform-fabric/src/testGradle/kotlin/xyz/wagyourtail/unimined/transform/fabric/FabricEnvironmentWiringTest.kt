@@ -156,6 +156,7 @@ class FabricEnvironmentWiringTest {
         fun runConfig(): xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
             val spec = object : xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
                 override val name = "fabricClient"
+                override var type = name
                 override val prod = false
                 override var mainClass: String? = null
                 override val javaagents = mutableListOf<java.nio.file.Path>()
@@ -424,6 +425,253 @@ class FabricEnvironmentWiringTest {
 
         val modImpl = project.configurations.getByName("modImplementation")
         assertTrue(modImpl.dependencies.isEmpty())
+    }
+
+    /** `classpathGroups` capability → declared `mods {}` groups
+     *  serialize into `fabric.classPathGroups` (loom `mods {}` /
+     *  fabric-loader #585 parity — `::`-separated groups of
+     *  `:`-separated paths); `run.loadedMods` picks a subset. */
+    @Test
+    fun `mods groups serialize into fabric classPathGroups`() {
+        val project = project().also {
+            it.plugins.apply("xyz.wagyourtail.unimined.runs")
+        }
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val env = fabricEnv(project, ext)
+        env.mods { mods ->
+            mods.register("grp") { it.sourceSet("main") }
+            mods.register("other") { it.sourceSet("fabric") }
+        }
+        project.extensions.getByType(
+            xyz.wagyourtail.unimined.runs.RunsExtension::class.java)
+            .runs.named("fabricServer") {
+                it.loadedMods.set(setOf("grp"))
+            }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val sep = java.io.File.pathSeparator
+        val client = project.tasks.getByName("runFabricClient")
+            as xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+        val all = client.systemProperties.get()["fabric.classPathGroups"]
+        assertNotNull(all, "runFabricClient must carry the groups prop")
+        // unset loadedMods loads every declared group
+        assertEquals(2, all!!.split(sep + sep).size)
+
+        val server = project.tasks.getByName("runFabricServer")
+            as xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+        val sel = server.systemProperties.get()["fabric.classPathGroups"]
+        assertNotNull(sel)
+        assertNotNull(sel)
+        // subset selection — only `grp` (main output) serializes
+        assertEquals(1, sel!!.split(sep + sep).size)
+        assertTrue("java${java.io.File.separator}main" in sel)
+        assertFalse("fabric${java.io.File.separator}fabric" in sel ||
+            "java${java.io.File.separator}fabric" in sel,
+            "loadedMods must exclude the unselected group's outputs")
+    }
+
+    // ---- real mod-jar fixture ----
+
+    private fun writeClass(
+        name: String,
+        superName: String = "java/lang/Object",
+    ): ByteArray {
+        val cw = org.objectweb.asm.ClassWriter(0)
+        cw.visit(org.objectweb.asm.Opcodes.V1_8,
+            org.objectweb.asm.Opcodes.ACC_PUBLIC, name, null, superName, null)
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    /** A real (if tiny) mod jar — `fabric.mod.json` declaring [modId]
+     *  plus one stub class. */
+    private fun writeModJar(jar: java.io.File, modId: String) {
+        jar.parentFile.mkdirs()
+        java.util.jar.JarOutputStream(jar.outputStream()).use { jos ->
+            jos.putNextEntry(java.util.jar.JarEntry("fabric.mod.json"))
+            jos.write(
+                """{"schemaVersion":1,"id":"$modId","version":"1.0.0"}"""
+                    .encodeToByteArray())
+            jos.closeEntry()
+            jos.putNextEntry(
+                java.util.jar.JarEntry("com/example/TestMod.class"))
+            jos.write(writeClass("com/example/TestMod"))
+            jos.closeEntry()
+        }
+    }
+
+    private fun serveModule(repo: java.io.File, gav: String, jar: java.io.File) {
+        val p = gav.split(":")
+        val moduleDir = repo.resolve(
+            "${p[0].replace('.', '/')}/${p[1]}/${p[2]}")
+        moduleDir.mkdirs()
+        jar.copyTo(moduleDir.resolve("${p[1]}-${p[2]}.jar"))
+    }
+
+    /** `mods { } modFiles` jars are launch-classpath content, not just
+     *  serialized metadata — the jar joins `run<Name>`'s runtime
+     *  classpath and its path serializes into `fabric.classPathGroups`.
+     *  Classpath inclusion is asserted on the main env's `runClient`:
+     *  group contribution is loader-independent and the fabric env's
+     *  runtimeClasspath would need a real remap chain to resolve. */
+    @Test
+    fun `mods modFiles jar reaches the dev launch classpath and group property`() {
+        val project = project().also {
+            it.plugins.apply("xyz.wagyourtail.unimined.runs")
+        }
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val modJar = dir.resolve("modfiles/testmod.jar").toFile()
+        writeModJar(modJar, "testmod")
+        ext.main.mods { mods ->
+            mods.register("ss") { it.sourceSet("main") }
+            mods.register("jarMod") { it.modFiles(modJar) }
+        }
+        // declare all envs before evaluation — post-eval sourceSet()
+        // hits a raw afterEvaluate in EnvironmentClasspathWiring
+        fabricEnv(project, ext).mods { mods ->
+            mods.register("jarMod") { it.modFiles(modJar) }
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val client = project.tasks.getByName("runClient")
+            as xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+        // the jar is dev-launch content — the selected-groups provider
+        // wired onto runtimeClasspath yields it (full `.files`
+        // resolution would pull the product artifact transform, which
+        // can't isolate params under ProjectBuilder)
+        val wired = client.runtimeClasspath.from.any { src ->
+            (src as? org.gradle.api.provider.Provider<*>)
+                ?.let { p ->
+                    (p.orNull as? Collection<*>)?.contains(modJar) == true
+                } == true
+        }
+        assertTrue(wired,
+            "modFiles jar must be wired onto the run runtime classpath")
+
+        // fabric env: the same group serializes into the groups prop —
+        // jar-only group → the prop is the jar's path exactly
+        val fabricClient = project.tasks.getByName("runFabricClient")
+            as xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+        val value = fabricClient.systemProperties
+            .get()["fabric.classPathGroups"]
+        assertEquals(modJar.absolutePath, value,
+            "jar-only group must serialize as the jar's lone path")
+    }
+
+    /** `modImplementation` deps resolve through `fabricModAnalysis*`
+     *  unchanged — the view reads the real jar's `fabric.mod.json`
+     *  (`modId`), which is what feeds dep-AW/classTweaker extraction. */
+    @Test
+    fun `modImplementation jar is discoverable through the analysis view`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        fabricEnv(project, ext)
+        val repo = dir.resolve("repo").toFile()
+        val modJar = dir.resolve("testmod-1.0.jar").toFile()
+        writeModJar(modJar, "testmod")
+        serveModule(repo, "com.example:testmod:1.0", modJar)
+        // the analysis view also carries the loader jar — serve a stub
+        val loaderDir = repo.resolve("net/fabricmc/fabric-loader/0.16.0")
+        loaderDir.mkdirs()
+        loaderDir.resolve("fabric-loader-0.16.0.jar").writeBytes(
+            byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18)))
+        // exclusiveContent is consulted before — and instead of — the
+        // remote mavens the loader wiring contributes at evaluate-time
+        project.repositories.exclusiveContent { exclusive ->
+            exclusive.forRepository {
+                project.repositories.maven { m ->
+                    m.url = repo.toURI()
+                    m.metadataSources { s -> s.artifact() }
+                }
+            }
+            exclusive.filter { it.includeGroupByRegex(".*") }
+        }
+        project.dependencies.add(
+            "fabricModImplementation", "com.example:testmod:1.0")
+
+        val resolved = project.configurations
+            .getByName("fabricModAnalysisFabric").resolve()
+        val mod = resolved.single { it.name == "testmod-1.0.jar" }
+        // real metadata scan — the analysis reads the fmj id
+        assertEquals("testmod",
+            xyz.wagyourtail.unimined.transform.fabric.internal
+                .FabricModAnalysis.modId(mod.toPath()))
+    }
+
+    /** The `gametest()` aux env is the fabric-family JUnit surface —
+     *  the loader's `gametestJunit` artifact lands on
+     *  `testImplementation`, the `test` task scans the gametest env's
+     *  classes, and loom's CompileConfiguration parity carries
+     *  `fabric.classPathGroups` (the inherited mods{} selection)
+     *  onto it. */
+    @Test
+    fun `gametest env wires the test task with the junit artifact and classpath groups`() {
+        val project = project().also {
+            it.plugins.apply("xyz.wagyourtail.unimined.runs")
+        }
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val modJar = dir.resolve("modfiles/testmod.jar").toFile()
+        writeModJar(modJar, "testmod")
+        ext.sourceSet("fabric") { env ->
+            env.version.set("1.20.1")
+            env.loader("fabric", "0.16.0")
+            // declared before gametest() — aux envs snapshot the
+            // parent's groups at creation
+            env.mods { mods ->
+                mods.register("ss") { it.sourceSet("main") }
+                mods.register("jarMod") { it.modFiles(modJar) }
+            }
+            env.gametest()
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        // the gametestJunit artifact lands on testImplementation —
+        // `net.fabricmc:fabric-loader-junit:{loader}` substituted
+        val junitDep = project.configurations
+            .getByName("testImplementation").dependencies
+            .firstOrNull { it.name == "fabric-loader-junit" }
+        assertNotNull(junitDep,
+            "gametestJunit capability must add the junit artifact")
+        assertEquals("net.fabricmc", junitDep!!.group)
+        assertEquals("0.16.0", junitDep.version)
+
+        val testTask = project.tasks.getByName("test")
+            as org.gradle.api.tasks.testing.Test
+        // the gametest env's classes are scanned as tests
+        val classesDirs = testTask.testClassesDirs.files
+        assertTrue(
+            classesDirs.any {
+                "fabricGametest" in it.absolutePath.replace('\\', '/') },
+            "gametest env output must be a test classes dir: $classesDirs")
+
+        // the launch setup is the task's first action — firing it
+        // installs the classpath-groups serialization
+        runCatching {
+            testTask.actions.first().execute(testTask)
+        }
+        val groups =
+            testTask.systemProperties["fabric.classPathGroups"] as? String
+        assertNotNull(groups,
+            "test must carry fabric.classPathGroups")
+        val groupValue = groups!!
+        // the parent env's declared groups serialize through the
+        // inherited selection (no loadedMods filter on `test`)
+        assertTrue(
+            "java${java.io.File.separator}main" in groupValue,
+            "main-output group's outputs serialize: $groupValue")
+        assertTrue(modJar.absolutePath in groupValue,
+            "modFiles jar serializes: $groupValue")
     }
 
 }

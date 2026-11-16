@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.binpatch
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import com.nothome.delta.GDiffPatcher
 import org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
@@ -30,6 +32,7 @@ import kotlin.io.path.outputStream
  * Gradle-free: takes a `log` sink so it can run inside step tasks,
  * artifact transforms, or tests.
  */
+@NoGroovyTwin("binpatch pack patcher — programmatic engine API")
 object BinpatchesPackPatcher {
 
     data class ClassPatch(

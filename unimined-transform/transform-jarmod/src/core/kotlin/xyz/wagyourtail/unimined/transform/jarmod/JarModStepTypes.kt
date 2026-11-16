@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform.jarmod
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import xyz.wagyourtail.unimined.transform.jarmod.internal.JarModMergeProcessor
 import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FG1FixForgeProcessor
 import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FMLChecksumPatchProcessor
@@ -30,6 +32,7 @@ abstract class JarModMergeStepSpec : PipelineStepSpec {
     var jarMod: List<Path> = emptyList()
 
     /** Strip the base jar's META-INF after merge. */
+    @set:NoGroovyTwin("wiring-supplied lazy hook — not a DSL verb")
     var deleteMetaInf: () -> Boolean = { false }
 
     override fun jarProcessors(): List<JarProcessor> =
@@ -59,6 +62,7 @@ object ChecksumPatchStepType : StepType {
 abstract class ChecksumPatchStepSpec : PipelineStepSpec {
 
     /** Named artifacts injected into the checksum patch file. */
+    @set:NoGroovyTwin("wiring-supplied lazy hook — not a DSL verb")
     var artifacts: () -> Map<String, File> = { emptyMap() }
 
     override fun jarProcessors(): List<JarProcessor> =

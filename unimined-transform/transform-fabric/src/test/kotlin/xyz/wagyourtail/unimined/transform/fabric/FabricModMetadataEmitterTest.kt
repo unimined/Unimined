@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.mod.LoaderSection
 import xyz.wagyourtail.unimined.mod.ModMetadata
 import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
-import xyz.wagyourtail.unimined.transform.fabric.internal.FabricModMetadataEmitter
+import xyz.wagyourtail.unimined.transform.fabric.internal.metadata.FabricModMetadataEmitter
 
 class FabricModMetadataEmitterTest {
 

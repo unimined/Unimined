@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.transform.fabric.internal
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import xyz.wagyourtail.unimined.api.util.Json5Text
+import xyz.wagyourtail.unimined.api.util.produceCached
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -39,6 +41,11 @@ internal object FabricModAnalysis {
         @Serializable
         class Library(
             val name: String,
+            /** Optional repository URL the installer would fetch the
+             *  artifact from — loom adds these as project repos when
+             *  it applies dep-jar installer data; we surface it for
+             *  the caller to report (repos can't be added lazily). */
+            val url: String? = null,
             // e.g. babric's `asm-all:*` disallow — an exclusion
             // marker for artifacts the loader supersedes, never a
             // resolvable coordinate
@@ -131,8 +138,25 @@ internal object FabricModAnalysis {
      * names, in the jar's production namespace. Consumed by synthesizing
      * classTweaker directives for the dependent's compile artifact.
      */
-    fun injectedInterfaces(jar: Path): Map<String, List<String>> {
-        val modJson = modJson(jar) ?: return emptyMap()
+    fun injectedInterfaces(jar: Path): Map<String, List<String>> =
+        injectedInterfaces(modJson(jar))
+
+    /**
+     * [injectedInterfaces] over a plain mod-json file — the project's
+     * own resource-declared `fabric.mod.json`/`quilt.mod.json`. Unlike
+     * the jar variant the names are dev-namespaced (the project's own
+     * mappings, like user-authored access wideners).
+     */
+    fun injectedInterfacesFile(file: Path): Map<String, List<String>> =
+        injectedInterfaces(runCatching {
+            json.decodeFromString<FabricModJson>(
+                Json5Text.toJson(Files.readAllBytes(file).decodeToString()))
+        }.getOrNull())
+
+    private fun injectedInterfaces(
+        modJson: FabricModJson?
+    ): Map<String, List<String>> {
+        modJson ?: return emptyMap()
         val out = LinkedHashMap<String, MutableList<String>>()
         fun collect(obj: JsonObject?) {
             if (obj == null) return
@@ -215,10 +239,9 @@ internal object FabricModAnalysis {
                 val target = cacheDir.resolve(
                     "${jar.fileName.toString().removeSuffix(".jar")}-${entry.substringAfterLast('/')}"
                 )
-                if (Files.notExists(target)) {
-                    Files.createDirectories(target.parent)
+                target.produceCached { tmp ->
                     jarFile.getInputStream(zipEntry).use { input ->
-                        Files.copy(input, target)
+                        Files.copy(input, tmp)
                     }
                 }
                 out.add(target)
@@ -241,12 +264,16 @@ internal object FabricModAnalysis {
     fun loaderLibraries(jar: Path, side: String? = null): List<String> =
         installerJson(jar)?.let { installer ->
             // 1.x parity: common + development always; the sided
-            // sections only on their side (merged gets both)
+            // sections only on their side (merged gets both). `common`
+            // (splitEnvironmentSourceSets' main env) is the server's
+            // launch view — it ships server libs but never client ones,
+            // keeping client-only runtime libs off the common classpath
             val sections = mutableListOf("common", "development")
             if (side == null || side == "client" || side == "merged") {
                 sections += "client"
             }
-            if (side == null || side == "server" || side == "merged") {
+            if (side == null || side == "server" || side == "merged" ||
+                side == "common") {
                 sections += "server"
             }
             val platform = HostPlatform.current()
@@ -256,6 +283,25 @@ internal object FabricModAnalysis {
                     .map { it.name }
             }
         } ?: emptyList()
+
+    /**
+     * Dep-jar installer libraries — loom's `ArtifactMetadata`/
+     * `InstallerData` contract: **every** fabric/quilt mod jar on a
+     * mod view may embed `fabric-installer.json`/`quilt_installer.json`
+     * declaring extra runtime libs the launcher would add (loom reads
+     * `common` + `development` sections only). `null` when the jar
+     * isn't a fabric/quilt mod (no fmj/qmj) or embeds no installer
+     * json — callers skip it without opening a second jar pass.
+     */
+    fun depInstallerLibraries(jar: Path): List<FabricInstallerJson.Library>? {
+        if (modJson(jar) == null) return null
+        return installerJson(jar)?.let { installer ->
+            val platform = HostPlatform.current()
+            listOf("common", "development").flatMap { section ->
+                installer.libraries[section].orEmpty()
+            }.filter { it.appliesTo(platform) }
+        }
+    }
 
     // daemon-wide parse cache — every public accessor above re-opens
     // the jar and re-parses the json without it, and call sites stack
@@ -316,7 +362,10 @@ internal object FabricModAnalysis {
         JarFile(jar.toFile()).use { jarFile ->
             val entry = jarFile.getJarEntry(name) ?: return null
             jarFile.getInputStream(entry).use { input ->
-                json.decodeFromString<T>(input.readBytes().decodeToString())
+                // qmj5: dep mod/installer json may be JSON5 —
+                // normalize first (idempotent on strict JSON)
+                json.decodeFromString<T>(
+                    Json5Text.toJson(input.readBytes().decodeToString()))
             }
         }
     }.getOrNull()

@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.transform
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.io.File
 import java.nio.file.Files
@@ -34,9 +34,11 @@ object BundledResourceChannel {
         if (!target.exists()) {
             target.parentFile.mkdirs()
             val stream = anchor.getResourceAsStream(resource.resourcePath)
-                ?: throw GradleException(
-                    "bundled resource '${resource.resourcePath}' not on " +
-                            "${anchor.name}'s classpath"
+                ?: project.failProblem(
+                    "transform/bundled-resource",
+                    "unimined: bundled resource " +
+                            "'${resource.resourcePath}' for env '$envId' " +
+                            "not on ${anchor.name}'s classpath"
                 )
             target.toPath().writeAtomically { tmp ->
                 stream.use {

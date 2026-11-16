@@ -2,10 +2,16 @@ package xyz.wagyourtail.unimined.transform.jarmod.internal
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.produceCached
+import xyz.wagyourtail.unimined.api.util.reportProblem
+import xyz.wagyourtail.unimined.api.util.withCacheLock
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.transform.TransformExtension
-import xyz.wagyourtail.unimined.transform.jarmod.FG1DynLibWiring
+import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FG1DynLibWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 
@@ -146,7 +152,10 @@ internal object JarModEnvironmentWiring {
                 val other = when (environment.side.get()) {
                     xyz.wagyourtail.unimined.api.spec.Side.CLIENT -> "-server."
                     xyz.wagyourtail.unimined.api.spec.Side.SERVER -> "-client."
-                    xyz.wagyourtail.unimined.api.spec.Side.MERGED -> null
+                    // common envs ride the joined jar — both sides'
+                    // forge zips belong on it
+                    xyz.wagyourtail.unimined.api.spec.Side.MERGED,
+                    xyz.wagyourtail.unimined.api.spec.Side.COMMON -> null
                 }
                 f.files.filter { file ->
                     val drop = other != null &&
@@ -212,6 +221,9 @@ internal object JarModEnvironmentWiring {
                         minor == null || minor >= 3 -> listOf("universal")
                         environment.side.get() == xyz.wagyourtail.unimined.api.spec.Side.SERVER -> listOf("server")
                         environment.side.get() == xyz.wagyourtail.unimined.api.spec.Side.MERGED -> listOf("client", "server")
+                        // common envs carry the joined jar — both
+                        // sided forge zips merge onto it
+                        environment.side.get() == xyz.wagyourtail.unimined.api.spec.Side.COMMON -> listOf("client", "server")
                         else -> listOf("client")
                     }
                     classifiers.map { clf ->
@@ -489,25 +501,40 @@ internal object JarModEnvironmentWiring {
         if (project.gradle.startParameter.isOffline) {
             if (java.nio.file.Files.exists(dest))
                 return patchFg1ForgeZip(project, dest)
-            throw org.gradle.api.GradleException(
-                "offline and no cached loader artifact $notation under $dest")
+            project.failProblem(
+                "jarmod/offline-cache",
+                "unimined: offline and no cached loader artifact " +
+                    "$notation under $dest")
         }
         java.nio.file.Files.createDirectories(dest.parent)
-        var err: Exception? = null
-        for (base in repos.filterIsInstance<LoaderRepo.Maven>().map { it.url }) {
-            try {
-                java.net.URI.create("$base/$rel").toURL().openStream().use {
-                    java.nio.file.Files.copy(it, dest,
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        val mavenBases = repos.filterIsInstance<LoaderRepo.Maven>().map { it.url }
+        // lock + temp+move — a concurrent daemon must not observe a
+        // partially-downloaded loader artifact
+        dest.produceCached(force = refresh) { tmp ->
+            var err: Exception? = null
+            for (base in mavenBases) {
+                try {
+                    java.net.URI.create("$base/$rel").toURL().openStream().use {
+                        java.nio.file.Files.copy(it, tmp,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    return@produceCached
+                } catch (e: Exception) {
+                    err = e
                 }
-                return patchFg1ForgeZip(project, dest)
-            } catch (e: Exception) {
-                err = e
             }
+            project.reportProblem(
+                "jarmod/loader-resolve",
+                "unimined: could not resolve loader artifact " +
+                    "$notation from $mavenBases",
+                err?.message,
+                UniminedProblems.Severity.ERROR
+            )
+            throw org.gradle.api.GradleException(
+                "could not resolve loader artifact $notation from " +
+                        mavenBases, err)
         }
-        throw org.gradle.api.GradleException(
-            "could not resolve loader artifact $notation from " +
-                    repos.filterIsInstance<LoaderRepo.Maven>().map { it.url }, err)
+        return patchFg1ForgeZip(project, dest)
     }
 
     /** fg1-era forge zips carry `CoreFMLLibraries` on the run
@@ -518,25 +545,38 @@ internal object JarModEnvironmentWiring {
      *  benign no-op for consumers that never set the property. */
     private fun patchFg1ForgeZip(project: Project, zip: java.nio.file.Path): java.nio.file.Path {
         val marker = zip.resolveSibling(zip.fileName.toString() + ".unimined-patched")
-        if (java.nio.file.Files.exists(marker)) return zip
-        try {
-            val hasFml = java.util.zip.ZipFile(zip.toFile()).use {
-                it.getEntry("cpw/mods/fml/relauncher/CoreFMLLibraries.class") != null
+        // marker check + in-place zipfs patch + marker write as one
+        // locked unit; the patch itself runs on a temp copy moved over
+        // the zip — a kill mid-patch must not leave a corrupt jar
+        zip.withCacheLock {
+            if (java.nio.file.Files.exists(marker)) return@withCacheLock
+            try {
+                val hasFml = java.util.zip.ZipFile(zip.toFile()).use {
+                    it.getEntry("cpw/mods/fml/relauncher/CoreFMLLibraries.class") != null
+                }
+                if (!hasFml) return@withCacheLock
+                zip.writeAtomically { tmp ->
+                    java.nio.file.Files.copy(zip, tmp,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    java.nio.file.FileSystems.newFileSystem(tmp).use { fs ->
+                        xyz.wagyourtail.unimined.transform.internal.classtransform
+                            .ClassTransformJarFix.fix(fs, mapOf(
+                                "xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.CoreFMLLibrariesChecksumTx" to
+                                    listOf("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
+                            ), helpers = listOf(
+                                "xyz/wagyourtail/unimined/transform/jarmod/internal/fg1/rt/UniminedFg1ChecksumFix.class"
+                            ))
+                    }
+                }
+                marker.writeAtomically {
+                    java.nio.file.Files.writeString(it, "1")
+                }
+            } catch (e: Exception) {
+                project.reportProblem(
+                    "jarmod/fg1-checksum-patch",
+                    "unimined: fg1 checksum tx patch on $zip failed",
+                    e.message)
             }
-            if (!hasFml) return zip
-            java.nio.file.FileSystems.newFileSystem(zip).use { fs ->
-                xyz.wagyourtail.unimined.transform.internal.classtransform
-                    .ClassTransformJarFix.fix(fs, mapOf(
-                        "xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.CoreFMLLibrariesChecksumTx" to
-                            listOf("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
-                    ), helpers = listOf(
-                        "xyz/wagyourtail/unimined/transform/jarmod/internal/fg1/rt/UniminedFg1ChecksumFix.class"
-                    ))
-            }
-            java.nio.file.Files.writeString(marker, "1")
-        } catch (e: Exception) {
-            project.logger.warn(
-                "fg1 checksum tx patch on {} failed: {}", zip, e.message)
         }
         return zip
     }

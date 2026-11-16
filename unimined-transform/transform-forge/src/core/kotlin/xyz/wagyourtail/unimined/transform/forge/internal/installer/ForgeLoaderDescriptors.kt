@@ -20,6 +20,9 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "forge",
             family = "forge",
+            // merged-env secondaries resolve through the era probe —
+            // bare `loaderCoords` jars don't exist for FG2-era forge
+            mergedClasspathSelfManaged = true,
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(
                 // FG1-era forge artifacts are pom-less dir listings —
@@ -38,7 +41,19 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 else "net.minecraftforge:forge:$mc-$v"
             },
             prodNamespace = "searge",
-            capabilities = mapOf("atTool" to "8.2.2"),
+            capabilities = mapOf(
+                "atTool" to "8.2.2",
+                // userdev `config.json` run keys beyond client/server —
+                // materialized as runs; profiles lacking a key no-op
+                "runTypes" to "data,clientData,serverData," +
+                        "gameTestServer,junit",
+                // FML junit bootstrap reads program args from the
+                // args-file in this sysprop (NG isJUnit parity)
+                "gametestJunit" to "fml.junit.argsfile",
+                // named mods{} groups append `id%%dir` entries
+                // to this env var (Loom mods{}/NFRT parity)
+                "modGroupsEnv" to "MOD_CLASSES"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/mods.toml",
                 accessDiscovery = setOf(
@@ -50,6 +65,7 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "lexforge",
             family = "forge",
+            mergedClasspathSelfManaged = true,
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(
                 // same pom-less FG1-era feed as `forge`
@@ -65,7 +81,15 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 else "net.minecraftforge:forge:$mc-$v"
             },
             prodNamespace = "searge",
-            capabilities = mapOf("atTool" to "8.2.2"),
+            capabilities = mapOf(
+                "atTool" to "8.2.2",
+                "runTypes" to "data,clientData,serverData," +
+                        "gameTestServer,junit",
+                "gametestJunit" to "fml.junit.argsfile",
+                // named mods{} groups append `id%%dir` entries
+                // to this env var (Loom mods{}/NFRT parity)
+                "modGroupsEnv" to "MOD_CLASSES"
+            ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/mods.toml",
                 accessDiscovery = setOf(
@@ -77,14 +101,20 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "neoforge",
             family = "forge",
+            mergedClasspathSelfManaged = true,
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(LoaderRepo.Maven("https://maven.neoforged.net/releases")),
-            // 1.x: `forge:$mc-$v` on 1.20.1; later `neoforge:<mc-minus-1.>.$v`
-            // appends .0 if mc version isn't 3-length (e.g. 1.20 -> 1.20.0, or 26.3 -> 26.3.0)
+            // 1.x: `forge:$mc-$v` on 1.20.1; later `neoforge:<mc-minus-1.>.$v`.
+            // Pad mc to 3 segments BEFORE stripping `1.` — `1.21`→`21.0`
+            // (published `21.0.*`), `26.3`→`26.3.0` (published `26.3.0.*`).
+            // 1.x stripped first (`26.3`→`26.3`), but every two-part mc
+            // then started with `1.`; the pad-first order is required by
+            // the 26.x scheme's real `26.x.0` neoforge series — verified
+            // against maven.neoforged.net (`26.1.0.*`, `26.3.0.*`).
             loaderCoords = { mc, v ->
                 if (mc == "1.20.1") "net.neoforged:forge:$mc-$v"
                 else {
-                    var base = if (mc.count { it == '.' } < 2) {
+                    val base = if (mc.count { it == '.' } < 2) {
                         "$mc.0"
                     } else {
                         mc
@@ -111,7 +141,13 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "atTool" to "8.2.2",
                 // neoforge datagen is the dev launch with a data
                 // launchTarget — mod hooks GatherDataEvent itself
-                "datagenArgs" to "--launchTarget data"
+                "datagenArgs" to "--launchTarget data",
+                "runTypes" to "data,clientData,serverData," +
+                        "gameTestServer,junit",
+                "gametestJunit" to "fml.junit.argsfile",
+                // named mods{} groups append `id%%dir` entries
+                // to this env var (Loom mods{}/NFRT parity)
+                "modGroupsEnv" to "MOD_CLASSES"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/neoforge.mods.toml",
@@ -124,6 +160,7 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
         LoaderDescriptor(
             id = "cleanroom",
             family = "forge",
+            mergedClasspathSelfManaged = true,
             transformPlugin = "xyz.wagyourtail.unimined.transform.forge",
             repos = listOf(
                 LoaderRepo.Maven("https://repo.cleanroommc.com/releases"),
@@ -140,7 +177,16 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "atTool" to "8.1.6",
                 // Cleanroom's FMLDeobfuscatingRemapper reads TSRG, not
                 // forge's SRG — 1.x exported `srg2mcp.tsrg`
-                "mcpToSrgFormat" to "tsrg"
+                "mcpToSrgFormat" to "tsrg",
+                // dev.json only declares client/server today, but a
+                // profile may add data/test runs — materialization is
+                // key-absence tolerant
+                "runTypes" to "data,clientData,serverData," +
+                        "gameTestServer,junit",
+                "gametestJunit" to "fml.junit.argsfile",
+                // named mods{} groups append `id%%dir` entries
+                // to this env var (Loom mods{}/NFRT parity)
+                "modGroupsEnv" to "MOD_CLASSES"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "mcmod.info",

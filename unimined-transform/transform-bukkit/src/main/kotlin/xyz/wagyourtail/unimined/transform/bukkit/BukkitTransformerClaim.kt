@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.transform.bukkit
 
-import xyz.wagyourtail.unimined.transform.CustomTransformer
+import xyz.wagyourtail.unimined.transform.internal.CustomTransformer
 import xyz.wagyourtail.unimined.transform.bukkit.internal.BukkitEnvironmentWiring
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformerClaim

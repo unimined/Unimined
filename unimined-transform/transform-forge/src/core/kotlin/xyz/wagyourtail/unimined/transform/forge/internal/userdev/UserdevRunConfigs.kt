@@ -122,8 +122,12 @@ internal object UserdevRunConfigs {
         defaultTweakClass: String,
         ctx: Ctx,
         prod: Boolean = false,
+        type: String? = null,
     ): RunSpec? {
-        val run = config.runs[side] ?: return null
+        // type is the run's loader-config key (defaults to the run
+        // name); fall back to the name for 1.x name-keyed parity
+        val run = config.runs[type ?: side] ?: config.runs[side]
+            ?: return null
         val rawMain = run["main"]?.jsonPrimitive?.content ?: return null
         val tweakClass = (run["env"] as? JsonObject)?.get("tweakClass")
             ?.jsonPrimitive?.content

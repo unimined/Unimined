@@ -129,7 +129,7 @@ class FoxLoaderPatchProcessor : JarProcessor {
                     FileSystems.newFileSystem(
                         tmp, mapOf("create" to true)
                     ).use { outFs ->
-                        inFs.rootDirectories.single().forEach { root ->
+                        inFs.rootDirectories.single().let { root ->
                             Files.walk(root).use { stream ->
                                 stream.filter { !Files.isDirectory(it) }
                                     .forEach { src ->

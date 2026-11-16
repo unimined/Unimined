@@ -21,7 +21,7 @@ import xyz.wagyourtail.unimined.remap.spi.StepContext
 import xyz.wagyourtail.unimined.remapper.uml.UmlRemapStepType
 import xyz.wagyourtail.commons.core.logger.JavaLogWrapper
 import xyz.wagyourtail.unimined.api.spec.Side
-import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
+import xyz.wagyourtail.unimined.remap.internal.pipeline.PipelineRunner
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.testing.RemapTestHarness
 import xyz.wagyourtail.unimined.transform.jarmod.internal.JarModMergeProcessor

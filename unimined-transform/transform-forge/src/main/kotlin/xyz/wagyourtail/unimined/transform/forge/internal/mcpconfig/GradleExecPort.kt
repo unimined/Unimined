@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.logging.Logging
@@ -22,6 +24,7 @@ import javax.inject.Inject
  * toolchains disabled the build JVM must satisfy the requirement or
  * the exec errors.
  */
+@NoGroovyTwin("internal mcpconfig tool-exec port — wiring API")
 internal open class GradleExecPort @Inject constructor(
     private val execOps: ExecOperations,
     private val toolchains: JavaToolchainService

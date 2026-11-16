@@ -87,6 +87,7 @@ class BukkitEnvironmentWiringTest {
 
         val runConfig = object : RunConfigSpec {
             override val name = "server"
+            override var type = name
             override val prod = false
             override var mainClass: String? = null
             override val javaagents = mutableListOf<java.nio.file.Path>()
@@ -129,6 +130,7 @@ class BukkitEnvironmentWiringTest {
 
         val runConfig = object : RunConfigSpec {
             override val name = "server"
+            override var type = name
             override val prod = false
             override var mainClass: String? = null
             override val javaagents = mutableListOf<java.nio.file.Path>()

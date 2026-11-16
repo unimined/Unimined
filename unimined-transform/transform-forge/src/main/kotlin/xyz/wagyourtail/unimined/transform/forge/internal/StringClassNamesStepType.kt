@@ -123,7 +123,7 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
                 val mapped = mapClassName(tree, it.groupValues[1], fromNs, toNs)
                 if (mapped != it.groupValues[1]) {
                     logger.info(
-                        "[forge/string-classnames] {} -> {} in a string",
+                        "[forge/string-classnames] {0} -> {1} in a string",
                         it.groupValues[1], mapped
                     )
                     "L$mapped;"
@@ -138,7 +138,7 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
         val mapped = mapClassName(tree, internal, fromNs, toNs)
         if (mapped != internal) {
             logger.info(
-                "[forge/string-classnames] {} -> {} in a string", value, mapped
+                "[forge/string-classnames] {0} -> {1} in a string", value, mapped
             )
             return if (dotty) mapped.replace('/', '.') else mapped
         }

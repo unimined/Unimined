@@ -16,6 +16,8 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
@@ -42,12 +44,14 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.exists
-import xyz.wagyourtail.unimined.transform.forge.internal.ForgeSourcesTask
+import xyz.wagyourtail.unimined.transform.forge.task.ForgeSourcesTask
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.bootstrapDevVersion
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.GradleExecPort
+import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.installerRenameToolOverride
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.userdevAts
 
@@ -69,8 +73,13 @@ internal fun contributeDevSources(
     val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
     val userdevProfile = resolved.map { it.profile as? ForgeProfile.Userdev }
 
-    val taskName = if (environmentId == "main") "forgeSources"
-    else "forgeSources${environmentId.capitalized()}"
+    // verb<Env>Noun naming + `gen` abbreviation: `genForgeSources`
+    // for `main` (elided), `gen<Fabric>ForgeSources` otherwise; the
+    // pre-convention `forgeSources<Env>` names stay as deprecated
+    // aliases
+    val envCap = environmentId.capitalized()
+    val taskName = if (environmentId == "main") "genForgeSources"
+    else "gen${envCap}ForgeSources"
     val task = project.tasks.register(taskName, ForgeSourcesTask::class.java) { t ->
         t.group = "unimined"
         t.description =
@@ -142,7 +151,8 @@ internal fun contributeDevSources(
                     version
                 }?.associateWith { coord ->
                     project.configurations.detachedConfiguration(
-                        project.dependencies.create(coord)
+                        project.dependencies.create(
+                            project.uniminedTools().remapToolCoord(coord))
                     )
                         .apply { isTransitive = true }
                         .files.map { it.absolutePath }
@@ -170,7 +180,8 @@ internal fun contributeDevSources(
                 "net.minecraftforge:DiffPatch:2.0.12"
             )).toSet().associateWith { coord ->
                 project.configurations.detachedConfiguration(
-                    project.dependencies.create(coord)
+                    project.dependencies.create(
+                        project.uniminedTools().remapToolCoord(coord))
                 ).apply { isTransitive = true }
                     .files.map { it.absolutePath }
             }
@@ -179,7 +190,9 @@ internal fun contributeDevSources(
             when (it) {
                 Side.CLIENT -> "client"
                 Side.SERVER -> "server"
-                Side.MERGED -> "joined"
+                // common envs patch/decompile through the joined
+                // userdev flow — no common-side clean jar exists
+                Side.MERGED, Side.COMMON -> "joined"
             }
         })
         t.userdevConfigJson.set(userdevProfile.map {
@@ -191,6 +204,11 @@ internal fun contributeDevSources(
             )
         )
     }
+    // pre-convention `forgeSources`/`forgeSources<Env>` names —
+    // both differ from the canonical `gen<Env>ForgeSources`
+    project.registerDeprecatedTaskAlias(
+        if (environmentId == "main") "forgeSources"
+        else "forgeSources$envCap", task)
 
     // the genSources override — absent until a Userdev profile or
     // an FG2 dev package is probed, so other environments keep
@@ -269,7 +287,7 @@ internal fun mcpconfigCleanJar(
     val side = when (environment.side.get()) {
         Side.CLIENT -> "client"
         Side.SERVER -> "server"
-        Side.MERGED -> "joined"
+        Side.MERGED, Side.COMMON -> "joined"
     }
     // execution-time cleanJar: the mcpconfig graph runs inside a
     // cached transform (tool execs are execution-phase), so a cold
@@ -306,13 +324,13 @@ internal fun mcpconfigCleanJar(
                         )
                     }
                 )
-                parsed.functions.values.flatMap { tool ->
-                    tool.coords.flatMap { coord ->
+                (parsed.functions.values.flatMap { tool -> tool.coords } +
+                        listOfNotNull(p.renameToolOverride.orNull))
+                    .toSet().flatMap { coord ->
                         project.configurations.detachedConfiguration(
                             project.dependencies.create(coord)
                         ).apply { isTransitive = true }.files
                     }
-                }
             })
             p.toolJarPaths.putAll(project.provider {
                 val zip = mcpConf.files.singleOrNull()
@@ -327,8 +345,9 @@ internal fun mcpconfigCleanJar(
                         )
                     }
                 )
-                parsed.functions.values.flatMap { tool ->
-                    tool.coords.map { coord ->
+                (parsed.functions.values.flatMap { tool -> tool.coords } +
+                        listOfNotNull(p.renameToolOverride.orNull))
+                    .toSet().associate { coord ->
                         coord to
                             project.configurations.detachedConfiguration(
                                 project.dependencies.create(coord)
@@ -337,9 +356,22 @@ internal fun mcpconfigCleanJar(
                                     it.absolutePath
                                 }
                     }
-                }.toMap()
             })
             p.side.set(side)
+            // split-side userdev binpatch packs (`data/<side>.lzma`)
+            // were generated against the *installer* pipeline's renamed
+            // jar — bundler-extract → jarsplitter slim →
+            // `ForgeAutoRenamingTool` — whose tool version is declared
+            // in `install_profile.json`, not in mcpconfig's
+            // `functions.rename` (47.3.0: FART 0.1.22 vs 1.0.2 emit
+            // byte-divergent output on identical input, so every patch
+            // checksum fails). Joined envs track the descriptor chain —
+            // `joined.lzma` checks against it. jarsplitter's slim jar
+            // is byte-identical to the `strip` output, so the `rename`
+            // tool swap is the only divergence the clean jar needs.
+            p.renameToolOverride.set(
+                installerRenameToolOverride(project, environment, resolved)
+            )
             p.notchObf.set(project.provider {
                 (resolved.orNull?.profile as? ForgeProfile.Userdev)
                     ?.config?.notchObf ?: false
@@ -373,9 +405,12 @@ internal fun mcpconfigCleanJar(
                                 org.gradle.api.JavaVersion.toVersion(v)
                             )
                     }
-                    ?: error(
-                        "no java toolchain for version $v " +
-                                "and the build JVM does not satisfy it"
+                    ?: project.failProblem(
+                        "forge/toolchain",
+                        "unimined: environment " +
+                            "'${environment.environmentId}' — no java " +
+                            "toolchain for version $v and the build JVM " +
+                            "does not satisfy it"
                     )
             }
             // may be unresolvable at wiring (e.g. version unset in

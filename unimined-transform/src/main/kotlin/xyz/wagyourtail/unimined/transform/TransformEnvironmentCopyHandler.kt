@@ -1,8 +1,8 @@
 package xyz.wagyourtail.unimined.transform
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyHandler
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
 
@@ -30,9 +30,12 @@ internal class TransformEnvironmentCopyHandler(
             project.project(projectPath)
         }
         return owner.extensions.findByType(TransformExtension::class.java)
-            ?: throw GradleException(
-                "Project '${owner.path}' does not have a Unimined transform extension; " +
-                        "apply the transform or frontend plugin before sharing transforms"
+            ?: project.failProblem(
+                "env/transform-extension-missing",
+                "unimined: project '${owner.path}' does not have a " +
+                        "Unimined transform extension",
+                "apply the transform or frontend plugin before " +
+                    "sharing transforms"
             )
     }
 

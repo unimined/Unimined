@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge.internal
 
+import xyz.wagyourtail.unimined.api.util.produceCached
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -49,10 +50,9 @@ internal object ForgeModAnalysis {
                 val target = cacheDir.resolve(
                     "${jar.fileName.toString().removeSuffix(".jar")}-${entry.substringAfterLast('/')}"
                 )
-                if (Files.notExists(target)) {
-                    Files.createDirectories(target.parent)
+                target.produceCached { tmp ->
                     jarFile.getInputStream(zipEntry).use { input ->
-                        Files.copy(input, target)
+                        Files.copy(input, tmp)
                     }
                 }
                 out.add(target)

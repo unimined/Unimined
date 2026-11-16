@@ -1,8 +1,12 @@
 package xyz.wagyourtail.unimined.transform.step.subpipeline
 
+import xyz.wagyourtail.unimined.api.util.withCacheLock
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.jar.JarFile
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
@@ -123,11 +127,48 @@ class SubpipelineExecutor(
                         "No pipeline function or tool for " +
                                 "'${step.function}' (step '${step.name}')"
                     )
-                ctx.execTool(
-                    tool,
-                    tool.args.map { interpolate(it, output, stepVars, true) },
-                    tool.jvmArgs.map { interpolate(it, output, stepVars, true) }
-                )
+                // locked + temp output — a killed tool must not leave a
+                // partial jar at the canonical `{output}` path (the
+                // exists-gate above would then reuse it), and two
+                // daemons must not run the same step concurrently
+                output.withCacheLock {
+                    if (!output.exists()) {
+                        val tmp = Files.createTempFile(
+                            stepDir, ".${step.name}Output-", ".tmp")
+                        // the tool creates its output itself — hand it a
+                        // non-existent path (some tools misread an
+                        // existing empty file / refuse to overwrite)
+                        Files.delete(tmp)
+                        try {
+                            // re-interpolate against the temp — `{output}`
+                            // in step args must point at the temp too
+                            val tmpVars = step.args.mapValues { (_, v) ->
+                                interpolate(v, tmp)
+                            }
+                            ctx.execTool(
+                                tool,
+                                tool.args.map {
+                                    interpolate(it, tmp, tmpVars, true)
+                                },
+                                tool.jvmArgs.map {
+                                    interpolate(it, tmp, tmpVars, true)
+                                }
+                            )
+                            if (tmp.exists()) {
+                                try {
+                                    Files.move(tmp, output,
+                                        StandardCopyOption.ATOMIC_MOVE,
+                                        StandardCopyOption.REPLACE_EXISTING)
+                                } catch (_: AtomicMoveNotSupportedException) {
+                                    Files.move(tmp, output,
+                                        StandardCopyOption.REPLACE_EXISTING)
+                                }
+                            }
+                        } finally {
+                            Files.deleteIfExists(tmp)
+                        }
+                    }
+                }
                 if (output.exists()) output else null
             }
             if (last != null) outputs[step.name] = last!!

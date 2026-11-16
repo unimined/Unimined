@@ -41,6 +41,7 @@ import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevEnricher
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevRunConfigs
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 
 /**
  * Access-transform wiring — the largest contribution. Reads the
@@ -161,7 +162,9 @@ internal fun contributeAccessSteps(
         val side = when (environment.side.get()) {
             Side.CLIENT -> "client"
             Side.SERVER -> "server"
-            Side.MERGED -> "joined"
+            // common envs ride the joined userdev descriptors — the
+            // upstream packs ship no per-side "common" data
+            Side.MERGED, Side.COMMON -> "joined"
         }
         val paths = listOf("access", "interfaces", "enum")
             .mapNotNull { key ->
@@ -212,6 +215,12 @@ internal fun contributeAccessSteps(
         environment.generatedAccessFiles
     )
     userSpec.headerlessNamespace.set(effectiveDevNs)
+    // `access { validate = true }` — user-declared docs only; the
+    // extracted userdev/loader docs (extractedSpec) never validate
+    userSpec.validate.set(project.provider {
+        (environment.inheritedAccessSpecs + environment.accessDsl)
+            .any { it.validate }
+    })
 
     // the remap-analysis overlay: declared ATs plus every extracted
     // dep AT, as AccessModel sections — same namespace binding
@@ -282,7 +291,7 @@ internal fun contributeAccessSteps(
             // transitive — picocli/problems-api/IntelliJ-platform are
             // real runtime deps of jst-cli; the `-jb` artifacts resolve
             // from the content-filtered JetBrains repos in GradlePlugin
-            project.dependencies.create("net.neoforged.jst:jst-cli:2.0.11")
+            project.dependencies.create(project.uniminedTools().jst.get())
         )
         conf.files.toList()
     })
@@ -304,7 +313,7 @@ internal fun contributeAccessSteps(
         val side = when (environment.side.get()) {
             Side.CLIENT -> "client"
             Side.SERVER -> "server"
-            Side.MERGED -> "joined"
+            Side.MERGED, Side.COMMON -> "joined"
         }
         buildList {
             UserdevEnrichers.dataPath(profile.config, "access", side)?.let {

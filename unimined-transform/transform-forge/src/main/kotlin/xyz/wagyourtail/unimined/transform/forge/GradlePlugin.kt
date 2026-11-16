@@ -54,7 +54,7 @@ class GradlePlugin : Plugin<Project> {
                     }, { environment })
                         // per-env `forge` DSL object — `env.forge {
                         // srgRuntime = true }` and friends
-                        val forgeExt = ForgeEnvExtension(spec)
+                        val forgeExt = ForgeEnvExtension(spec, target.objects)
                         (environment as org.gradle.api.plugins.ExtensionAware)
                             .extensions.add("forge", forgeExt)
                         // replay `env.forge {}` calls that ran while

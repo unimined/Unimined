@@ -13,6 +13,7 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
@@ -83,9 +84,27 @@ internal class ResolvedForge(
     val markerJar: Path = jar
 )
 
+/** Resolve + classify the primary loader artifact lazily — see
+ *  [resolveForgeLoader] for the probe cascade. */
+internal fun contributeLoaderResolution(
+    project: Project,
+    environment: MinecraftEnvironment
+): Provider<ResolvedForge> = project.provider {
+    val spec = environment.loaderSpec.orNull
+        ?: return@provider null
+    val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+        ?.takeIf { it.family == "forge" }
+        ?: return@provider null
+    resolveForgeLoader(project, environment, spec, descriptor)
+}
+
 /**
- * Resolve + classify the loader artifact lazily. Probe order
- * (plan §5 era axis):
+ * Probe one declared loader spec's artifact — the era cascade +
+ * [ForgeInstallerProbe] shared by the primary
+ * ([contributeLoaderResolution]) and merged-env secondary
+ * contributions (`forgeMergedLoader<Env>`).
+ *
+ * Probe order (plan §5 era axis):
  * 1. `$base:userdev` — FG3+ `config.json`, or the FG2 `dev.json`
  *    dev-package (becomes `Binpatches.devPackage`)
  * 2. `$base:universal` / `$base:universal@zip` — FG2 binpatches /
@@ -99,15 +118,12 @@ internal class ResolvedForge(
  * the `userdev`/`universal` classifiers don't exist for all
  * versions.
  */
-internal fun contributeLoaderResolution(
+internal fun resolveForgeLoader(
     project: Project,
-    environment: MinecraftEnvironment
-): Provider<ResolvedForge> = project.provider {
-    val spec = environment.loaderSpec.orNull
-        ?: return@provider null
-    val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
-        ?.takeIf { it.family == "forge" }
-        ?: return@provider null
+    environment: MinecraftEnvironment,
+    spec: LoaderSpec,
+    descriptor: LoaderDescriptor
+): ResolvedForge {
     val mc = environment.version.get()
     val base = descriptor.loaderCoords(mc, spec.version)
 
@@ -139,7 +155,10 @@ internal fun contributeLoaderResolution(
                     val classifiers = when (environment.side.get()) {
                         xyz.wagyourtail.unimined.api.spec.Side.SERVER ->
                             listOf("server")
-                        xyz.wagyourtail.unimined.api.spec.Side.MERGED ->
+                        // common envs carry the joined jar — both
+                        // sided zips merge onto it
+                        xyz.wagyourtail.unimined.api.spec.Side.MERGED,
+                        xyz.wagyourtail.unimined.api.spec.Side.COMMON ->
                             listOf("client", "server")
                         else -> listOf("client")
                     }
@@ -167,12 +186,16 @@ internal fun contributeLoaderResolution(
                     } ?: universal
             } else universal
         }
-        ?: error(
-            "Unable to resolve forge loader artifact at $base " +
-                    "(:userdev/:universal classifiers, bare artifact, " +
-                    "and sided @zip forms all failed)"
+        ?: project.failProblem(
+            "forge/loader-resolve",
+            "unimined: environment " +
+                "'${environment.environmentId}' — unable to resolve " +
+                "forge loader artifact at $base",
+            ":userdev/:universal classifiers, bare artifact, and sided " +
+                "@zip forms all failed — check the coordinate, the " +
+                "serving repository, and whether you are offline"
         )
-    ResolvedForge(
+    return ResolvedForge(
         descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar,
         mergeJars ?: listOf(jar), markerJar ?: jar
     )

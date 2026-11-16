@@ -1,9 +1,12 @@
 package xyz.wagyourtail.unimined.transform
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
-import org.gradle.api.GradleException
+import org.gradle.api.logging.Logging
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.util.delegatingTo
 import org.gradle.api.model.ObjectFactory
 import xyz.wagyourtail.unimined.transform.step.StepTypeRegistry
@@ -28,8 +31,17 @@ class TransformEnvironmentSpec internal constructor(
     /** Stable source-set/environment id. */
     val environmentId: String,
     private val projectPath: String,
-    objects: ObjectFactory
+    private val objects: ObjectFactory
 ) {
+
+    private companion object {
+        val LOGGER = Logging.getLogger(TransformEnvironmentSpec::class.java)
+    }
+
+    private fun failCycle(key: String): Nothing =
+        UniminedProblems.fail(LOGGER, objects,
+            "transform/inheritance-cycle",
+            "cyclic Unimined transform inheritance involving $key")
 
     /** Declared step pipeline — `pipeline { binpatches { } … }`.
      *  Empty for environments driven by [transformers] (the monolith
@@ -113,6 +125,50 @@ class TransformEnvironmentSpec internal constructor(
     val prepareTaskMutators: MutableList<Action<org.gradle.api.Task>> = mutableListOf()
 
     /**
+     * Run identity + the materialized run/`test*` task provider,
+     * handed to [runTaskContributions] once the task registers — the
+     * config-time surface for contributions that need run state
+     * (name/prod/type) *and* the task (register aux tasks,
+     * `dependsOn`), which neither [runMutators] (spec-only,
+     * execution-time) nor [runTaskMutators] (task-only, inside the
+     * creation context where task registration is forbidden) can
+     * express. Mutate the task via `task.configure { }`.
+     */
+    class RunTaskContext(
+        val name: String,
+        val prod: Boolean,
+        val type: String,
+        val task: org.gradle.api.tasks.TaskProvider<out org.gradle.api.Task>,
+        private val lazyJvmArgSink:
+                (org.gradle.api.provider.Provider<String>) -> Unit
+    ) {
+
+        /**
+         * Append a JVM arg whose value resolves at the task's
+         * *execution* — unlike `runMutators` spec values, which the
+         * `mutated` provider snapshots into the configuration cache at
+         * STORE time (so they can't read task-produced files), this
+         * provider is stored verbatim and queried when the launch
+         * command assembles. It may therefore read outputs of tasks
+         * [task] depends on (e.g. forge's `write*RunClasspath` file).
+         * Keep the provider serializable — `providers.fileContents` /
+         * task-`flatMap` chains; `project.provider { }` lambdas
+         * evaluate at store and defeat the point.
+         */
+        fun lazyJvmArg(arg: org.gradle.api.provider.Provider<String>) =
+            lazyJvmArgSink(arg)
+    }
+
+    /**
+     * Contributions fired once per materialized run task
+     * (`run<Name>` and the junit `test<Name>` variant) at task
+     * registration — e.g. forge's `WriteRunClasspath` writer task.
+     * Compose like [runMutators]: inherited before local.
+     */
+    val runTaskContributions: MutableList<Action<RunTaskContext>> =
+        mutableListOf()
+
+    /**
      * [JarProcessor][xyz.wagyourtail.unimined.transform.processor.JarProcessor]
      * declarations in execution order — their specs run over the
      * dev-Minecraft artifact via the `jar-processors` pipeline step, and
@@ -126,6 +182,7 @@ class TransformEnvironmentSpec internal constructor(
      * fmj-aware [JarProcessor.ModJarInfo] so processors can read
      * `custom` metadata keys. `null` = file-only mod infos.
      */
+    @set:NoGroovyTwin("loader-supplied wiring hook — not a DSL verb")
     var jarProcessorSpecContext: ((String, List<Path>) -> JarProcessor.SpecContext)? = null
 
     /**
@@ -186,6 +243,10 @@ class TransformEnvironmentSpec internal constructor(
      * knows the env's loader descriptor (resolved lazily at selection
      * time, so `loader(...)` may be declared after this installs).
      */
+    @xyz.wagyourtail.unimined.api.util.NoGroovyTwin(
+        "wiring seam — env binding installs the claim context; never " +
+                "called from build scripts"
+    )
     fun installClaimContext(
         project: org.gradle.api.Project,
         descriptor: () -> xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor?,
@@ -207,7 +268,7 @@ class TransformEnvironmentSpec internal constructor(
         if (transformers.isNotEmpty()) return transformers
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             for (resolver in inheritedEnvironments.values.reversed()) {
@@ -231,7 +292,7 @@ class TransformEnvironmentSpec internal constructor(
     ): List<TransformDecorator> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
@@ -248,7 +309,7 @@ class TransformEnvironmentSpec internal constructor(
     ): List<Action<RunConfigSpec>> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
@@ -265,12 +326,29 @@ class TransformEnvironmentSpec internal constructor(
     ): List<Action<org.gradle.api.Task>> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
                 resolver().effectiveRunTaskMutators(visiting)
             } + runTaskMutators
+        } finally {
+            visiting.remove(key)
+        }
+    }
+
+    /** Run task contributions compose like [effectiveRunMutators]. */
+    fun effectiveRunTaskContributions(
+        visiting: MutableSet<String> = mutableSetOf()
+    ): List<Action<RunTaskContext>> {
+        val key = "$projectPath:$environmentId"
+        if (!visiting.add(key)) {
+            failCycle(key)
+        }
+        try {
+            return inheritedEnvironments.values.flatMap { resolver ->
+                resolver().effectiveRunTaskContributions(visiting)
+            } + runTaskContributions
         } finally {
             visiting.remove(key)
         }
@@ -282,7 +360,7 @@ class TransformEnvironmentSpec internal constructor(
     ): List<Action<org.gradle.api.Task>> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
@@ -300,7 +378,7 @@ class TransformEnvironmentSpec internal constructor(
     ): List<JarProcessor> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
@@ -320,6 +398,7 @@ class TransformEnvironmentSpec internal constructor(
      * selecting nothing, so a selector with no null-branch fails at
      * realization per [PipelineSpec.SelectorNode.branch].
      */
+    @set:NoGroovyTwin("loader-supplied wiring hook — not a DSL verb")
     var probeResolver: ((String) -> String?)? = null
 
     /**
@@ -423,7 +502,7 @@ class TransformEnvironmentSpec internal constructor(
         jarProcessorSpecContext?.let { return it }
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined transform inheritance involving $key")
+            failCycle(key)
         }
         try {
             for (resolver in inheritedEnvironments.values.reversed()) {

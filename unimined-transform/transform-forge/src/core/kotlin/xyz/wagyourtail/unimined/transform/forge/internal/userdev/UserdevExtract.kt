@@ -1,5 +1,10 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,8 +38,17 @@ internal object UserdevExtract {
                 .forEach { entry ->
                     val target = cacheDir.resolve(entry.name)
                     target.parent.createDirectories()
-                    jarFile.getInputStream(entry).use { input ->
-                        target.outputStream().use { input.copyTo(it) }
+                    // exists-gated: extracted bytes are a pure function
+                    // of the jar, and re-writing an identical file
+                    // would still churn the dir listing (transient
+                    // atomic-write tmp) — the config cache fingerprints
+                    // these entries as inputs and never stabilizes
+                    if (Files.notExists(target)) {
+                        target.writeAtomically { tmp ->
+                            jarFile.getInputStream(entry).use { input ->
+                                tmp.outputStream().use { input.copyTo(it) }
+                            }
+                        }
                     }
                 }
         }
@@ -56,8 +70,12 @@ internal object UserdevExtract {
                 val entry = jarFile.getJarEntry(name) ?: continue
                 val target = cacheDir.resolve(name)
                 target.parent.createDirectories()
-                jarFile.getInputStream(entry).use { input ->
-                    target.outputStream().use { input.copyTo(it) }
+                if (Files.notExists(target)) {
+                    target.writeAtomically { tmp ->
+                        jarFile.getInputStream(entry).use { input ->
+                            tmp.outputStream().use { input.copyTo(it) }
+                        }
+                    }
                 }
                 written.add(target)
             }
@@ -79,8 +97,12 @@ internal object UserdevExtract {
                 .forEach { entry ->
                     val target = cacheDir.resolve(entry.name)
                     target.parent.createDirectories()
-                    jarFile.getInputStream(entry).use { input ->
-                        target.outputStream().use { input.copyTo(it) }
+                    if (Files.notExists(target)) {
+                        target.writeAtomically { tmp ->
+                            jarFile.getInputStream(entry).use { input ->
+                                tmp.outputStream().use { input.copyTo(it) }
+                            }
+                        }
                     }
                     out.add(target)
                 }
@@ -104,6 +126,41 @@ internal object UserdevExtract {
                 }
         }
         return out
+    }
+
+    /**
+     * Every tool coordinate the installer profile declares
+     * (`install_profile.json` → `processors[].jar`). The per-side
+     * `data/<side>.lzma` binpatch packs were generated against the
+     * jar this *processor chain* produces (bundler-extract →
+     * jarsplitter slim → `ForgeAutoRenamingTool`), which is not the
+     * mcpconfig `rename` output — consumers that need the
+     * installer-chain tool table (the binpatch clean jar) read it
+     * here. Empty when the jar carries no installer profile.
+     */
+    fun installerProcessorCoords(installerJar: Path): List<String> {
+        JarFile(installerJar.toFile()).use { jar ->
+            val entry = jar.getJarEntry("install_profile.json")
+                ?: return emptyList()
+            val json = jar.getInputStream(entry).use {
+                Json.parseToJsonElement(it.readBytes().decodeToString())
+            }.jsonObject
+            return json["processors"]?.jsonArray?.mapNotNull {
+                it.jsonObject["jar"]?.jsonPrimitive?.contentOrNull
+            } ?: emptyList()
+        }
+    }
+
+    /**
+     * The declared coordinate of one installer processor — the first
+     * `processors[].jar` entry whose `group:name` matches. Returns
+     * the full coord including classifier (`:all`).
+     */
+    fun installerToolCoord(
+        installerJar: Path, group: String, name: String
+    ): String? = installerProcessorCoords(installerJar).firstOrNull { coord ->
+        val parts = coord.split(":")
+        parts.size >= 2 && parts[0] == group && parts[1] == name
     }
 
     /**
@@ -171,6 +228,8 @@ internal object UserdevExtract {
             }
             }
         }
-        if (inputSha != null) Files.writeString(stamp, inputSha)
+        if (inputSha != null) {
+            stamp.writeAtomically { tmp -> Files.writeString(tmp, inputSha) }
+        }
     }
 }

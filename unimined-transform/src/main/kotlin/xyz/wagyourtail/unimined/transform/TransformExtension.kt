@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.transform
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -9,7 +10,7 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
-import xyz.wagyourtail.unimined.minecraft.TransformExtensionFacade
+import xyz.wagyourtail.unimined.minecraft.spi.TransformExtensionFacade
 import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.transform.internal.DefaultTransformContext
 import xyz.wagyourtail.unimined.transform.internal.RuntimeTransformOutput
@@ -81,7 +82,7 @@ abstract class TransformExtension @Inject constructor(
     ): TransformEnvironmentSpec = sourceSet(environmentId).also { environment ->
         action.delegate = environment
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** Register a transform on `main` (compatibility convenience). */

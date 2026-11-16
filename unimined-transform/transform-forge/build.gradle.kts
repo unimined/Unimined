@@ -29,6 +29,9 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    // run-type materialization tests apply the runs plugin
+    "testGradleImplementation"(project(":unimined-runs"))
 }
 
 gradlePlugin {

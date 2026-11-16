@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.RunConfigSpec
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
+import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -21,7 +22,9 @@ import xyz.wagyourtail.unimined.transform.fabric.processor.fabricSpecContext
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.produceCached
 import java.io.File
+import org.gradle.api.tasks.SourceSetContainer
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -60,6 +63,7 @@ internal object FabricEnvironmentWiring {
         contributeAccessSteps(project, environment)
         contributeRunMutator(project, environment)
         contributeJarProcessors(project, environment)
+        OrnitheAutoWiring.contribute(project, environment)
     }
 
 
@@ -77,6 +81,12 @@ internal object FabricEnvironmentWiring {
         val loaderSpec: Property<LoaderSpec> = environment.loaderSpec
         val remap = project.extensions.getByType(RemapExtension::class.java)
         val environmentSpec = remap.sourceSet(environment.environmentId)
+        // resolved dev ns — the raw `environment.devNamespace`
+        // property is unset in the common case, and the absent value
+        // then fails transform-param isolation outright
+        val devNamespace = project.extensions
+            .getByType(MinecraftExtension::class.java)
+            .devNamespace(environment.environmentId)
 
         // compile-visible mod buckets only (Loom's MOD_COMPILE_ENTRIES
         // where compileClasspath()): runtime-only mods' AWs are applied by
@@ -121,7 +131,9 @@ internal object FabricEnvironmentWiring {
         // the analysis model needs the complete rule set. fmj
         // `custom.*injected_interfaces` declarations synthesize an
         // equivalent transitive CT per jar (loom parity: those keys are
-        // how published mods declare interface injection).
+        // how published mods declare interface injection). Access docs
+        // and II synthesis gate on independent flags — loom's
+        // `transitiveAccessWideners` vs `enableDependencyInterfaceInjection`.
         val extractedCts = project.provider {
             val descriptor = loaderSpec.orNull?.name
                 ?.let { LoaderRegistry.resolveBuiltin(it) }
@@ -131,14 +143,55 @@ internal object FabricEnvironmentWiring {
                 emptyList()
             } else {
                 modJarFiles.files.flatMap { jar ->
-                    val jarPath = jar.toPath()
-                    val dir = ctCacheDir.resolve(
-                        UniminedCache.artifactKey(jarPath)
+                    FabricModAnalysis.extractClassTweakers(
+                        jar.toPath(),
+                        ctCacheDir.resolve(UniminedCache.artifactKey(jar.toPath()))
                     )
-                    FabricModAnalysis.extractClassTweakers(jarPath, dir) +
-                            synthesizeInjectedInterfacesCt(
-                                jar, dir, descriptor.prodNamespace
-                            )
+                }
+            }
+        }
+        val extractedIis = project.provider {
+            val descriptor = loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+            if (descriptor?.family != "fabric" ||
+                !environment.dependencyInterfaceInjection.get()
+            ) {
+                emptyList()
+            } else {
+                modJarFiles.files.flatMap { jar ->
+                    synthesizeInjectedInterfacesCt(
+                        jar,
+                        ctCacheDir.resolve(UniminedCache.artifactKey(jar.toPath())),
+                        descriptor.prodNamespace
+                    )
+                }
+            }
+        }
+
+        // the project's own mod-json `*injected_interfaces` — a local
+        // declaration in dev namespace (the project's own mappings,
+        // like user-authored AWs). Applies via the own channel; dep
+        // jars' II stays on `dependencyClassTweakerFiles` (loom parity:
+        // `RemappedSpecContext` scans local mods too).
+        val localIis = project.provider {
+            val descriptor = loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+            val name = descriptor?.takeIf { it.family == "fabric" }
+                ?.metadata?.fileName
+            if (name == null ||
+                !environment.dependencyInterfaceInjection.get()
+            ) {
+                emptyList()
+            } else {
+                (project.extensions
+                    .getByType(SourceSetContainer::class.java)
+                    .findByName(environment.environmentId)
+                    ?.resources?.srcDirs.orEmpty())
+                    .mapNotNull { it.resolve(name).takeIf(File::isFile) }
+                    .flatMap {
+                    synthesizeLocalInjectedInterfacesCt(
+                        it, ctCacheDir, devNamespace.get()
+                    )
                 }
             }
         }
@@ -146,12 +199,18 @@ internal object FabricEnvironmentWiring {
         val applySpec = objects.newInstance(ApplyClassTweakerStepSpec::class.java)
         applySpec.classTweakerFiles.from(
             environment.accessWideners, environment.accessTransformers,
-            environment.generatedAccessFiles
+            environment.generatedAccessFiles, localIis
         )
         // user-authored headerless ATs (`accesstransformer.cfg`,
         // `*_at.cfg` in resources/`accessFile`) are dev-named —
         // 1.x `at2aw` convention
-        applySpec.headerlessNamespace.set(environment.devNamespace)
+        applySpec.headerlessNamespace.set(devNamespace)
+        // `access { validate = true }` — own declarations only; the
+        // dep channel (dependencyClassTweakerFiles) never validates
+        applySpec.validate.set(project.provider {
+            (environment.inheritedAccessSpecs + environment.accessDsl)
+                .any { it.validate }
+        })
         // dep-declared classTweakers use the loader family's generic
         // `intermediary` header; the tree's prod column may be named
         // otherwise (Ornithe's is `calamus`) — alias rather than fail.
@@ -162,10 +221,15 @@ internal object FabricEnvironmentWiring {
                 mapOf("intermediary" to descriptor.prodNamespace)
             } else emptyMap()
         })
+        // coordinate-consumed access docs
+        // (`unimined<Env>AccessTransformer("g:a:v")` deps) — dep-
+        // authored, no transitive filter (the coordinate declaration
+        // is explicit intent, like dep-jar transitive gating absent)
+        applySpec.dependencyClassTweakerFiles.from(environment.consumedAccessDocs)
         applySpec.dependencyClassTweakerFiles.from(project.provider {
             // a dependency tweaker without transitive-* rules
             // contributes nothing to dependents — skip it
-            extractedCts.get().filter {
+            (extractedCts.get() + extractedIis.get()).filter {
                 runCatching {
                     ClassTweaker.parse(it.fileName.toString(), it.toFile().readText())
                         .hasTransitiveRules
@@ -186,7 +250,8 @@ internal object FabricEnvironmentWiring {
                     .map {
                         ClassTweaker.parse(it.name, it.readText()).toAccessModelSection(it.name)
                     } +
-                        extractedCts.get().map {
+                        (extractedCts.get() + extractedIis.get() +
+                                localIis.get()).map {
                             ClassTweaker.parse(it.fileName.toString(), it.toFile().readText())
                                 .toAccessModelSection(it.fileName.toString())
                         }
@@ -241,21 +306,46 @@ internal object FabricEnvironmentWiring {
      * onto the dev artifact like any other dep CT. Returns the written
      * path, or empty when the jar declares no injections.
      */
+    /**
+     * Local-resource counterpart of [synthesizeInjectedInterfacesCt] —
+     * reads `*injected_interfaces` from the project's own mod json in
+     * [file] and synthesizes a dev-namespaced `classTweaker` doc of
+     * `inject-interface` rows (own channel applies all rules; the
+     * `transitive-` form is for jars crossing into dependents).
+     */
+    private fun synthesizeLocalInjectedInterfacesCt(
+        file: File, dir: Path, devNamespace: String
+    ): List<Path> {
+        val injections = FabricModAnalysis.injectedInterfacesFile(file.toPath())
+        if (injections.isEmpty()) return emptyList()
+        val target = dir.resolve(
+            "local-${file.nameWithoutExtension}-injected-interfaces.ct")
+        target.produceCached { tmp ->
+            val sb = StringBuilder("classTweaker\tv1\t$devNamespace\n")
+            for ((t, ifaces) in injections.toSortedMap()) {
+                for (iface in ifaces.sorted()) {
+                    sb.append("inject-interface\t$t\t$iface\n")
+                }
+            }
+            Files.write(tmp, sb.toString().toByteArray())
+        }
+        return listOf(target)
+    }
+
     private fun synthesizeInjectedInterfacesCt(
         jar: File, dir: Path, prodNamespace: String
     ): List<Path> {
         val injections = FabricModAnalysis.injectedInterfaces(jar.toPath())
         if (injections.isEmpty()) return emptyList()
         val target = dir.resolve("${jar.nameWithoutExtension}-injected-interfaces.ct")
-        if (Files.notExists(target)) {
-            Files.createDirectories(target.parent)
+        target.produceCached { tmp ->
             val sb = StringBuilder("classTweaker\tv1\t$prodNamespace\n")
             for ((t, ifaces) in injections.toSortedMap()) {
                 for (iface in ifaces.sorted()) {
                     sb.append("transitive-inject-interface\t$t\t$iface\n")
                 }
             }
-            Files.write(target, sb.toString().toByteArray())
+            Files.write(tmp, sb.toString().toByteArray())
         }
         return listOf(target)
     }
@@ -343,6 +433,9 @@ internal object FabricEnvironmentWiring {
                 // gates the same PackageAccessFixer install + dev
                 // discovery paths)
                 config.jvmArgs += "-Dloader.development=true"
+                // qmj5: hand-written `quilt.mod.json` may be JSON5 in
+                // dev (loom sets the same flag)
+                config.jvmArgs += "-Dloader.enable_quilt_mod_json5_in_dev_env=true"
                 config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=official"
             }
             // canonical runtime contract (see exportLoaderMappings):

@@ -1,5 +1,5 @@
-xyz.wagyourtail.unimined.transform.fabric.internal.BabricModMetadataEmitter
-xyz.wagyourtail.unimined.transform.fabric.internal.FabricModMetadataEmitter
-xyz.wagyourtail.unimined.transform.fabric.internal.LegacyFabricModMetadataEmitter
-xyz.wagyourtail.unimined.transform.fabric.internal.OrnitheModMetadataEmitter
-xyz.wagyourtail.unimined.transform.fabric.internal.QuiltModMetadataEmitter
+xyz.wagyourtail.unimined.transform.fabric.internal.metadata.BabricModMetadataEmitter
+xyz.wagyourtail.unimined.transform.fabric.internal.metadata.FabricModMetadataEmitter
+xyz.wagyourtail.unimined.transform.fabric.internal.metadata.LegacyFabricModMetadataEmitter
+xyz.wagyourtail.unimined.transform.fabric.internal.metadata.OrnitheModMetadataEmitter
+xyz.wagyourtail.unimined.transform.fabric.internal.metadata.QuiltModMetadataEmitter

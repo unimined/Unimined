@@ -5,7 +5,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
-import xyz.wagyourtail.unimined.transform.internal.EnvironmentClasspathWiring
+import xyz.wagyourtail.unimined.transform.internal.wiring.EnvironmentClasspathWiring
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.Perf
 
@@ -50,28 +50,33 @@ class GradlePlugin : Plugin<Project> {
                 // `onEnvironmentBound` replays bound environments.
                 target.afterDslEval {
                     for (environment in minecraft.environments) {
-                        val spec = environment.loaderSpec.orNull ?: continue
-                        val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
-                            ?: throw org.gradle.api.GradleException(
-                                "unimined: unknown loader '${spec.name}' in " +
-                                "environment '${environment.environmentId}' — " +
-                                "check the loader(...) name spelling"
-                            )
-                        val product = environment.product.get()
-                        if (!descriptor.supportsProduct(product)) {
-                            throw org.gradle.api.GradleException(
-                                "unimined: loader '${spec.name}' does not " +
-                                        "support product '$product' " +
-                                        "(env '${environment.environmentId}') — " +
-                                        "supported: " +
-                                        (descriptor.supportedProducts
-                                            ?.joinToString(", ")
-                                            ?: xyz.wagyourtail.unimined.api.spec
-                                                .ProductSpec.PRODUCT_NATIVE)
-                            )
+                        // loaderSpecs carries merged multi-loader envs'
+                        // secondaries too — every declared loader's
+                        // family transform applies (deduped by
+                        // pluginManager), not just the primary's
+                        for (spec in environment.loaderSpecs) {
+                            val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+                                ?: throw org.gradle.api.GradleException(
+                                    "unimined: unknown loader '${spec.name}' in " +
+                                    "environment '${environment.environmentId}' — " +
+                                    "check the loader(...) name spelling"
+                                )
+                            val product = environment.product.get()
+                            if (!descriptor.supportsProduct(product)) {
+                                throw org.gradle.api.GradleException(
+                                    "unimined: loader '${spec.name}' does not " +
+                                            "support product '$product' " +
+                                            "(env '${environment.environmentId}') — " +
+                                            "supported: " +
+                                            (descriptor.supportedProducts
+                                                ?.joinToString(", ")
+                                                ?: xyz.wagyourtail.unimined.api.spec
+                                                    .ProductSpec.PRODUCT_NATIVE)
+                                )
+                            }
+                            descriptor.transformPlugin
+                                ?.let { target.pluginManager.apply(it) }
                         }
-                        descriptor.transformPlugin
-                            ?.let { target.pluginManager.apply(it) }
                     }
                 }
             }

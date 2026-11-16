@@ -2,9 +2,16 @@ package xyz.wagyourtail.unimined.transform.bukkit.internal
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.reportProblem
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperBundlerLibraries
+import xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperDistResolver
+import xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperPatchProcessor
+import xyz.wagyourtail.unimined.transform.bukkit.internal.spigot.SpigotBuildData
+import xyz.wagyourtail.unimined.transform.bukkit.internal.spigot.SpigotNmsRelocationProcessor
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.time.Duration
 
@@ -113,7 +120,7 @@ internal object BukkitEnvironmentWiring {
         )
         cplConfig.defaultDependencies { deps ->
             deps.add(project.dependencies.create(
-                "xyz.wagyourtail.unimined:classpath-plugin-loader:0.1.0-SNAPSHOT:all"
+                project.uniminedTools().classpathPluginLoader.get()
             ).also { (it as org.gradle.api.artifacts.ExternalDependency).isTransitive = false })
         }
 
@@ -219,8 +226,10 @@ internal object BukkitEnvironmentWiring {
                 project.findProperty("unimined.refreshDownloads") == "true",
             metadataTtl = Duration.ofHours(24),
             onRefreshFallback = { file, error ->
-                project.logger.warn(
-                    "[Unimined/Cache] Using cached $file after refresh failed: ${error.message}"
+                project.reportProblem(
+                    "cache/refresh-fallback",
+                    "unimined: using cached $file after refresh failed",
+                    error.message
                 )
             }
         )

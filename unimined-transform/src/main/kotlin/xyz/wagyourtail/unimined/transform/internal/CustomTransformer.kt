@@ -1,0 +1,126 @@
+package xyz.wagyourtail.unimined.transform.internal
+
+import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
+import org.gradle.api.provider.Provider
+import org.gradle.api.file.RegularFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
+import org.gradle.api.tasks.TaskProvider
+import xyz.wagyourtail.unimined.transform.task.TransformMinecraftTask
+import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
+import xyz.wagyourtail.unimined.transform.spi.TransformContext
+import xyz.wagyourtail.unimined.transform.spi.TransformerClaim
+import xyz.wagyourtail.unimined.transform.feature.EnvironmentFeature
+import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
+import xyz.wagyourtail.commonskt.jvm.tempSibling
+import java.nio.file.Files
+
+/**
+ * `custom` — the declared-capabilities fallback transform. Claims an
+ * environment only when no bundled transform claims its loader
+ * `family` ([CustomTransformerClaim.fallbackClaim]); its own task is a
+ * passthrough — all real work is the env's declared `pipeline { }`
+ * steps (which ride the jar-processors channel) and `features { }`
+ * bindings resolved through the env's FeatureRegistry.
+ */
+class CustomTransformer(
+    private val ctx: TransformerClaim.TransformerEnvContext
+) : MinecraftTransformer {
+
+    // verb<Env>Noun naming: `transformCustom` for `main` (elided),
+    // `transform<Fabric>Custom` otherwise; the pre-convention
+    // `transformCustom_<env>` name stays as a deprecated alias
+    override val transformTaskProvider: TaskProvider<out TransformMinecraftTask> =
+        ctx.project.tasks.register(
+            if (ctx.env.environmentId == "main") "transformCustom"
+            else "transform${
+                ctx.env.environmentId.replaceFirstChar(Char::uppercase)}Custom",
+            PassthroughTransformTask::class.java
+        ).also { task ->
+            ctx.project.registerDeprecatedTaskAlias(
+                "transformCustom_${ctx.env.environmentId}", task)
+        }
+
+    override fun configure(ctx: TransformContext) {
+        val input: Provider<RegularFile> = ctx.inputs.lastOrNull()?.artifact
+            ?: this.ctx.env.let { env ->
+                ctx.minecraft.artifacts.entries.firstOrNull()?.value
+                    ?: this.ctx.project.failProblem(
+                        "custom/no-artifacts",
+                        "unimined: custom transform: env " +
+                            "'${ctx.environmentId}' resolved no artifacts " +
+                            "and no prior transform outputs"
+                    )
+            }
+        transformTaskProvider.configure {
+            it.inputArtifact.set(input)
+            it.outputArtifact.set(
+                this.ctx.project.layout.buildDirectory
+                    .file("unimined/custom/${ctx.environmentId}/dev.jar")
+            )
+        }
+        ctx.emit("jar", transformTaskProvider.flatMap { it.outputArtifact })
+
+        // declared pipeline steps: artifact-pipeline StepSpecs and
+        // functional TransformSteps ride the remap env's contributeStep
+        // channel; inline execute() glue runs here in declaration order
+        applyDeclaredPipeline(ctx)
+
+        // declared feature bindings — validate applies() at selection,
+        // run-config surface mutators flow into transformRun
+        runFeatures = this.ctx.env.features.resolve(featureContext(ctx))
+    }
+
+    private var runFeatures: List<EnvironmentFeature> = emptyList()
+
+    // claimed-env declared-pipeline application also happens via the
+    // env post-wiring path (EnvironmentClasspathWiring); the env's
+    // applyDeclaredPipeline is idempotent, so this call covers the
+    // rowless-claim case where no env binding exists
+    private fun applyDeclaredPipeline(ctx: TransformContext) {
+        this.ctx.env.applyDeclaredPipeline(this.ctx.project, this.ctx.minecraft)
+    }
+
+    private fun featureContext(ctx: TransformContext) =
+        object : EnvironmentFeature.FeatureContext {
+            override val bindingValue: String? = null
+            override val side: String? = null
+            override val family: String? = this@CustomTransformer.ctx.descriptor?.family
+        }
+
+    override fun transformRun(config: xyz.wagyourtail.unimined.api.spec.RunConfigSpec) {
+        // feature-declared run mutators apply in binding order —
+        // EnvironmentFeature run-surface impls register their actions
+        // on the env's runMutators during environment wiring
+    }
+
+}
+
+/**
+ * Passthrough transform task — the declared steps' work lives in the
+ * jar-processors artifact step; this task only carries the input to
+ * the emitted dev output so the pipeline has a `jar` edge.
+ */
+@DisableCachingByDefault(because = "delegates to the transform pipeline")
+abstract class PassthroughTransformTask : TransformMinecraftTask() {
+
+    @TaskAction
+    fun run() {
+        // temp + atomic move — a killed task must not leave a partial
+        // jar at the artifact path (#78)
+        val out = outputArtifact.get().asFile.toPath()
+        val tmp = out.tempSibling()
+        try {
+            Files.copy(
+                inputArtifact.get().asFile.toPath(), tmp,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING
+            )
+            tmp.moveAtomicTo(out)
+        } finally {
+            Files.deleteIfExists(tmp)
+        }
+    }
+
+}

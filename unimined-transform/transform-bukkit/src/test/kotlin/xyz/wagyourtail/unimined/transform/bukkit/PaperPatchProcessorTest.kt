@@ -9,7 +9,8 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
-import xyz.wagyourtail.unimined.transform.bukkit.internal.PaperPatchProcessor
+import xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperBundlerLibraries
+import xyz.wagyourtail.unimined.transform.bukkit.internal.paper.PaperPatchProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -112,7 +113,7 @@ class PaperBundlerLibrariesTest {
         )
         assertEquals(
             listOf("io.papermc:paper-api:1.20.4", "org.slf4j:slf4j-api:2.0.9"),
-            xyz.wagyourtail.unimined.transform.bukkit.internal
+            xyz.wagyourtail.unimined.transform.bukkit.internal.paper
                 .PaperBundlerLibraries.coords(jar)
         )
     }
@@ -123,7 +124,7 @@ class PaperBundlerLibrariesTest {
         ZipOutputStream(Files.newOutputStream(jar)).use {
             it.putNextEntry(ZipEntry("META-INF/MANIFEST.MF")); it.closeEntry()
         }
-        assertTrue(xyz.wagyourtail.unimined.transform.bukkit.internal
+        assertTrue(xyz.wagyourtail.unimined.transform.bukkit.internal.paper
             .PaperBundlerLibraries.coords(jar).isEmpty())
     }
 }

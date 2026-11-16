@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.forge
 
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -58,6 +59,27 @@ class UserdevExtractTest {
     }
 
     @Test
+    fun `extractPrefix does not rewrite existing entries`() {
+        val jar = jar(
+            "ud.jar", mapOf(
+                "ats/fml_at.cfg" to "public a b",
+                "ats/forge_at.cfg" to "public-f c d"
+            )
+        )
+        val cache = dir.resolve("cache")
+        UserdevExtract.extractPrefix(jar, "ats/", cache)
+        val target = cache.resolve("ats/forge_at.cfg")
+        val old = java.nio.file.attribute.FileTime.fromMillis(1_000)
+        java.nio.file.Files.setLastModifiedTime(target, old)
+
+        // re-extraction is exists-gated — a rewrite would churn the dir
+        // listing the configuration cache fingerprints as an input
+        UserdevExtract.extractPrefix(jar, "ats/", cache)
+        assertEquals(old, java.nio.file.Files.getLastModifiedTime(target))
+        assertEquals("public-f c d", target.readText())
+    }
+
+    @Test
     fun `extractPrefix single file`() {
         val jar = jar(
             "ud.jar", mapOf(
@@ -104,6 +126,52 @@ class UserdevExtractTest {
             ).mapValues { it.value.toByteArray().toList() },
             entries.mapValues { it.value.toList() }
         )
+    }
+
+    /**
+     * `install_profile.json` → `processors[].jar` — the installer
+     * chain's declared tool table the split-side `data/<side>.lzma`
+     * packs were built against (B6.9).
+     */
+    @Test
+    fun `installerToolCoord reads the installer profile processors`() {
+        val jar = jar(
+            "installer.jar", mapOf(
+                "install_profile.json" to """{"processors": [
+                    {"jar": "net.minecraftforge:installertools:1.4.1:fatjar"},
+                    {"jar": "net.minecraftforge:jarsplitter:1.1.4"},
+                    {"jar": "net.minecraftforge:ForgeAutoRenamingTool:0.1.22:all"},
+                    {"jar": "net.minecraftforge:binarypatcher:1.1.1"}
+                ]}""",
+                "data/server.lzma" to "x"
+            )
+        )
+        assertEquals(
+            listOf(
+                "net.minecraftforge:installertools:1.4.1:fatjar",
+                "net.minecraftforge:jarsplitter:1.1.4",
+                "net.minecraftforge:ForgeAutoRenamingTool:0.1.22:all",
+                "net.minecraftforge:binarypatcher:1.1.1"
+            ),
+            UserdevExtract.installerProcessorCoords(jar)
+        )
+        assertEquals(
+            "net.minecraftforge:ForgeAutoRenamingTool:0.1.22:all",
+            UserdevExtract.installerToolCoord(
+                jar, "net.minecraftforge", "ForgeAutoRenamingTool")
+        )
+        assertNull(
+            UserdevExtract.installerToolCoord(
+                jar, "net.minecraftforge", "NotATool"))
+    }
+
+    @Test
+    fun `installerToolCoord absent without a profile`() {
+        val jar = jar("bare.jar", mapOf("x" to "y"))
+        assertTrue(UserdevExtract.installerProcessorCoords(jar).isEmpty())
+        assertNull(
+            UserdevExtract.installerToolCoord(
+                jar, "net.minecraftforge", "ForgeAutoRenamingTool"))
     }
 
     @Test

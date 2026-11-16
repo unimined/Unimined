@@ -8,7 +8,7 @@ import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.element.mapping.ClassMapping
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
-import xyz.wagyourtail.unimined.transform.bukkit.internal.SpigotNmsRelocationProcessor
+import xyz.wagyourtail.unimined.transform.bukkit.internal.spigot.SpigotNmsRelocationProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import kotlin.reflect.KClass
 

@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform.step
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineTransformStep
 import java.io.File
@@ -35,6 +37,7 @@ abstract class SubpipelineStepSpec : PipelineStepSpec {
 
     /** Lazily-resolved descriptor artifact (resolved inside deferred
      *  providers / at execution, never during configuration). */
+    @set:NoGroovyTwin("wiring-supplied lazy hook — not a DSL verb")
     var descriptor: () -> File = { error("subpipeline descriptor unset") }
 
     /** Named env inputs the substeps bind (`client`, `mappings`…). */
@@ -45,6 +48,7 @@ abstract class SubpipelineStepSpec : PipelineStepSpec {
 
     /** Resolve a tool coordinate to its classpath jars for the
      *  descriptor's `functions` fallback entries. */
+    @set:NoGroovyTwin("wiring-supplied lazy hook — not a DSL verb")
     var toolResolver: (String) -> List<Path> = { emptyList() }
 
     /** `client`/`server` for side-split descriptors. */

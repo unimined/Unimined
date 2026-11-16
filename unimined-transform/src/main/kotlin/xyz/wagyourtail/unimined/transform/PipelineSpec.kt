@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.transform
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
@@ -109,6 +111,7 @@ abstract class PipelineSpec @Inject constructor(
      * expand matching [selectors] branches, then topo-sort over
      * `requires`/`runsAfter` hints with registration-order fallback.
      */
+    @NoGroovyTwin("pipeline realization — consumed by transform wiring")
     fun realize(probeResult: (String) -> String?): List<DeclaredStep> =
         realizeAll(probeResult).filterIsInstance<DeclaredStep>()
 
@@ -120,6 +123,7 @@ abstract class PipelineSpec @Inject constructor(
      * `orderIndex == k` (and before any step topo-moved past it).
      * Consumers dispatch on the component type.
      */
+    @NoGroovyTwin("pipeline realization — consumed by transform wiring")
     fun realizeAll(probeResult: (String) -> String?): List<OrderedComponent> {
         val steps = declaredSteps.toMutableList()
         for (sel in selectors.sortedBy { it.orderIndex }) {

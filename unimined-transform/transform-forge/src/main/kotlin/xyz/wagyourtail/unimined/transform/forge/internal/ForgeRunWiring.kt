@@ -13,7 +13,11 @@ import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
+import xyz.wagyourtail.unimined.api.util.uniminedTools
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
+import xyz.wagyourtail.unimined.transform.forge.task.WriteRunClasspath
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -25,6 +29,7 @@ import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
 import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.remapper.jst.JstStepSpec
 import xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec
+import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
 
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevInjectProcessor
@@ -60,17 +65,12 @@ internal fun contributeRunMutators(
     val cacheDir = project.layout.projectDirectory
         .dir(".gradle/unimined/forge").asFile.toPath()
 
-    // captured at config time — the mutator runs at execution,
-    // where Project is unavailable under configuration cache.
-    // Recomputed at projectsEvaluated so cross-project inherited
-    // envs (whose sourceSets/loaderSpecs don't exist until their own
-    // project configures) still fold into MOD_CLASSES groups —
-    // 1.x's lazy `groups` ran post-evaluation
-    val groupsRef = java.util.concurrent.atomic.AtomicReference(
-        forgeGroups(project, envSpec, minecraft))
-    project.gradle.projectsEvaluated {
-        groupsRef.set(forgeGroups(project, envSpec, minecraft))
-    }
+    // `groups` stays execution-lazy: each project's env binding
+    // contributes its own (path:envId → dirs, loaderName) entry into
+    // the shared RunGroupModel at configuration, so reads here see
+    // every cross-project contribution without a projectsEvaluated
+    // recompute
+    val groupsProvider = { forgeGroups(project, envSpec, minecraft) }
     val mcLibs = project.configurations.getByName(
         environment.minecraftLibrariesConfigurationName
     )
@@ -103,41 +103,76 @@ internal fun contributeRunMutators(
     // mc libraries + the run's MC artifact + client-extra (already
     // on the libs view), newline-joined. Per-run-name file: dev,
     // srg-runtime and prod launches carry different MC artifacts and
-    // a shared path would race.
-    fun classpathFileFor(run: xyz.wagyourtail.unimined.api.spec.RunConfigSpec): String {
-        val file = cacheDir.resolve(
-            "classpath-${environment.environmentId}-${run.name}.txt")
-        java.nio.file.Files.createDirectories(cacheDir)
-        val jarView = when {
-            run.prod -> project.configurations.findByName(
-                environment.prodRunViewName)
-            srgRuntime.get() -> prodView
-            else -> devView
+    // a shared path would race. The file is produced by a per-run
+    // `writeRunClasspath<Env><Run>` task (below) that the run task
+    // depends on — the providers here only carry its path.
+    fun classpathPathFor(runName: String): Path =
+        cacheDir.resolve("classpath-${environment.environmentId}-$runName.txt")
+
+    envSpec.runTaskContributions += org.gradle.api.Action<
+            TransformEnvironmentSpec.RunTaskContext> { ctx ->
+        // `run<Name>` and its junit `test<Name>` twin share one run
+        // name → one file → one writer; both depend on it
+        val envCap = environment.environmentId.replaceFirstChar(Char::uppercase)
+        val envInfix = if (environment.environmentId == "main") "" else envCap
+        val writerName = "write${envInfix}RunClasspath${
+            ctx.name.replaceFirstChar(Char::uppercase)}"
+        val legacyWriterName = "writeRunClasspath$envCap${
+            ctx.name.replaceFirstChar(Char::uppercase)}"
+        val writer = project.tasks.findByName(writerName)
+            ?.let { project.tasks.named(writerName, WriteRunClasspath::class.java) }
+            ?: project.tasks.register(writerName, WriteRunClasspath::class.java) { t ->
+                t.group = "unimined"
+                t.description = "Writes the legacy classpath file for " +
+                        "run '${ctx.name}' (env '${environment.environmentId}')"
+                t.classpath.from(project.provider {
+                    val jarView = when {
+                        ctx.prod -> project.configurations.findByName(
+                            environment.prodRunViewName)
+                        srgRuntime.get() -> prodView
+                        else -> devView
+                    }
+                    mcLibs.files + (jarView?.files ?: emptySet())
+                })
+                t.outputFile.fileValue(classpathPathFor(ctx.name).toFile())
+            }
+        // pre-convention `writeRunClasspath<Env><Run>` name stays as a
+        // deprecated alias (the run/test twin may register it already)
+        if (project.tasks.findByName(legacyWriterName) == null) {
+            project.registerDeprecatedTaskAlias(legacyWriterName, writer)
         }
-        val files = mcLibs.files + (jarView?.files ?: emptySet())
-        java.nio.file.Files.write(
-            file,
-            files.joinToString("\n") { it.absolutePath }.toByteArray()
+        ctx.task.configure { t -> t.dependsOn(writer) }
+        // `-DlegacyClassPath` — pathSeparator-joined view of the same
+        // file. `CommonDevLaunchHandler.findClassPath` reads this
+        // property to locate `client-extra` and `forge-<ver>` for
+        // `getMinecraftPaths`; unset it falls back to `java.class.path`,
+        // where `forge-<ver>-userdev.jar` sorts before the transformed
+        // artifact — the userdev jar (no MC classes) wins as the
+        // `minecraft` module and
+        // `Class.forName(module, "net.minecraft.client.main.Main")`
+        // fails. Inert on launchwrapper-era (binpatches) runs — the
+        // flag is simply unread there.
+        //
+        // The content can't go through `runMutators` spec args: those
+        // snapshot into the config cache at STORE, before the writer
+        // task executes — a `fileContents` provider stays lazy and
+        // serializable end-to-end (the flatMap carries the writer dep).
+        ctx.lazyJvmArg(
+            project.providers.fileContents(
+                writer.flatMap { it.outputFile }
+            ).asText.map { content ->
+                "-DlegacyClassPath=" + content.trim()
+                    .replace("\n", java.io.File.pathSeparator)
+            }
         )
-        return file.toString()
     }
-    // `-DlegacyClassPath` — pathSeparator-joined view of the same file.
-    // `CommonDevLaunchHandler.findClassPath` reads this property to
-    // locate `client-extra` and `forge-<ver>` for `getMinecraftPaths`;
-    // unset it falls back to `java.class.path`, where
-    // `forge-<ver>-userdev.jar` sorts before the transformed artifact —
-    // the userdev jar (no MC classes) wins as the `minecraft` module and
-    // `Class.forName(module, "net.minecraft.client.main.Main")` fails
-    fun legacyClassPathFor(run: xyz.wagyourtail.unimined.api.spec.RunConfigSpec): String =
-        java.nio.file.Files.readString(
-            java.nio.file.Path.of(classpathFileFor(run))
-        ).trim().replace("\n", java.io.File.pathSeparator)
     // unprotect — always-on for Userdev (1.x FG3 parity:
     // `unprotectRuntime = true`). The agent needs tiny mappings
     // with dst ns literally `named` to identify MC classes
     val unprotectJar = project.provider {
         project.configurations.detachedConfiguration(
-            project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
+            project.dependencies.create(
+                project.uniminedTools().unprotect.get())
         )
             .apply { isTransitive = false }.files.single()
     }
@@ -148,9 +183,9 @@ internal fun contributeRunMutators(
         val r = resolved.orNull ?: return@Action
         val ctx = UserdevRunConfigs.Ctx(
             assetIndex = { artifacts.get().assets.get().id },
-            groups = { groupsRef.get() },
+            groups = groupsProvider,
             modules = { moduleFiles.get() },
-            minecraftClasspathFile = { classpathFileFor(run) },
+            minecraftClasspathFile = { classpathPathFor(run.name).toString() },
             srgToMcpAsSrg = {
                 val tree = artifacts.get().mappings.get()
                 // the runtime deobf table describes the *patched*
@@ -201,16 +236,17 @@ internal fun contributeRunMutators(
             ctx.modules().joinToString(java.io.File.pathSeparator)
         }
         run.properties["minecraft_classpath_file"] =
-            { classpathFileFor(run) }
+            { classpathPathFor(run.name).toString() }
         run.properties["source_roots"] = { ctx.argValue("{source_roots}") }
         run.properties["mcp_mappings"] = { "unimined.stub" }
         when (r.profile) {
             is ForgeProfile.Userdev -> {
                 val defaultTweak = "net.minecraftforge.fml.common.launcher." +
-                        if (run.name == "server") "FMLServerTweaker" else "FMLTweaker"
+                        if (run.type == "server") "FMLServerTweaker" else "FMLTweaker"
                 val spec = UserdevRunConfigs.forSide(
                     r.profile.config,
-                    run.name, defaultTweak, ctx, prod = run.prod
+                    run.name, defaultTweak, ctx, prod = run.prod,
+                    type = run.type
                 ) ?: return@Action
                 run.mainClass = spec.mainClass
                 // strip template args duplicating options unimined
@@ -249,17 +285,18 @@ internal fun contributeRunMutators(
                 // lifts sealed-package/final restrictions on MC
                 // classes; mappings zip carries `named` dst ns
                 run.javaagents.add(unprotectJar.get().toPath())
-                run.jvmArgs.addAll(
-                    listOf(
-                        "-Dunprotect.mappings=${unprotectMappings.get()}",
-                        "-DlegacyClassPath=${legacyClassPathFor(run)}"
-                    )
+                run.jvmArgs.add(
+                    "-Dunprotect.mappings=${unprotectMappings.get()}"
                 )
             }
 
             is ForgeProfile.Binpatches -> {
                 val profile = r.profile
-                if (run.name != "client" && run.name != "server") return@Action
+                // FG2 dev.json ships only client/server launch
+                // shapes — keyed on the run's type so renamed runs
+                // still qualify and data/test types skip
+                if (run.type != "client" && run.type != "server")
+                    return@Action
                 // FG2 GradleStart/launchwrapper shape — the dev
                 // package's dev.json carries the authoritative
                 // mainClass/minecraftArguments; jar-content tweak
@@ -292,7 +329,7 @@ internal fun contributeRunMutators(
                     ) else emptyList()
                 )
                 run.environment["MOD_CLASSES"] =
-                    UserdevRunConfigs.groupsString(groupsRef.get())
+                    UserdevRunConfigs.groupsString(groupsProvider())
             }
 
             else -> {}
@@ -306,17 +343,19 @@ internal fun contributeRunMutators(
  * inherited environment merge into this group when that env is not
  * itself forge-transformed; each forge-family inherited env forms
  * its own group. Cross-project `EnvironmentReference`s resolve
- * through `rootProject.project(refPath)` — but only once every
- * project has been evaluated: callers evaluate this eagerly AND
- * again inside `gradle.projectsEvaluated`, so refs whose target
- * sourceSet/loaderSpec isn't declared yet contribute nothing in
- * the early pass and land correctly in the late one.
+ * through the shared [RunGroupModel] — each project's env binding
+ * contributes its own entry at configuration, so reads at execution
+ * see every contribution without a `projectsEvaluated` pass. Envs
+ * whose project never contributed (plain-java siblings) fall back to
+ * a direct source-set read, safe at execution.
  */
 internal fun forgeGroups(
     project: Project,
     spec: xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec,
     minecraft: MinecraftExtension
 ): Map<String, List<String>> {
+    val runGroups = xyz.wagyourtail.unimined.api.util.RunGroupModel
+        .of(project)
     // SecureJar unions each MOD_CLASSES group and names the union from
     // its manifest — `JarMetadata.from` reads the *last* member carrying
     // `META-INF/`, so a manifest in the trailing member always wins
@@ -333,19 +372,32 @@ internal fun forgeGroups(
                     key.replace(Regex("[^A-Za-z0-9._-]+"), "_"))
             .asFile.toPath()
         val manifest = dir.resolve("META-INF/MANIFEST.MF")
-        java.nio.file.Files.createDirectories(manifest.parent)
-        java.nio.file.Files.writeString(
-            manifest,
+        val content =
             "Manifest-Version: 1.0\nAutomatic-Module-Name: $moduleName\n"
-        )
+        // skip the rewrite when content already matches — this runs
+        // inside the `mutated` provider evaluated at config-cache STORE,
+        // and writeAtomically's volatile temp sibling would register a
+        // fresh tracked path every store → perpetual entry invalidation
+        // (RuntimeMappingExports.export applies the same gate)
+        if (!java.nio.file.Files.exists(manifest) ||
+            java.nio.file.Files.readString(manifest) != content
+        ) {
+            java.nio.file.Files.createDirectories(manifest.parent)
+            manifest.writeAtomically { tmp ->
+                java.nio.file.Files.writeString(tmp, content)
+            }
+        }
         return dir.toAbsolutePath().toString()
     }
 
     fun dirsFor(projectPath: String, envId: String): List<String> {
+        runGroups.contribution(projectPath, envId)
+            ?.dirs?.orNull?.let { return it }
+        // fallback — the referenced project never contributed (no
+        // unimined env binding): read its source set directly. Only
+        // reachable at execution, when every project has configured
         val proj = if (projectPath == project.path) project
         else project.rootProject.project(projectPath)
-        // findByName — a sibling project's sourceSets may not exist in
-        // the early (pre-projectsEvaluated) pass
         val sourceSet = proj.extensions
             .findByType(org.gradle.api.tasks.SourceSetContainer::class.java)
             ?.findByName(envId) ?: return emptyList()
@@ -359,20 +411,19 @@ internal fun forgeGroups(
                 manifestMemberFor(ownKey)).toMutableList()
     )
     for ((refPath, refEnvId) in spec.inheritedEnvironmentReferences()) {
-        // loader identity lives on the *referenced* project's
-        // MinecraftExtension for cross-project envs; unevaluated
-        // siblings classify as non-forge in the early pass and get
-        // reclassified at projectsEvaluated
+        // loader identity rides the contribution — absent it (a
+        // project without an env binding), fall back to reading the
+        // referenced project's MinecraftExtension
         val refMinecraft = (if (refPath == project.path) project
         else project.rootProject.findProject(refPath))
             ?.extensions
             ?.findByType(MinecraftExtension::class.java)
+        val inheritedLoader = runGroups
+            .contribution(refPath, refEnvId)?.loaderName?.orNull
+            ?: refMinecraft?.environments?.findByName(refEnvId)
+                ?.loaderSpec?.orNull?.name ?: ""
         val inheritedIsForge = LoaderRegistry
-            .resolveBuiltin(
-                refMinecraft?.environments?.findByName(refEnvId)
-                    ?.loaderSpec?.orNull?.name ?: ""
-            )
-            ?.family == "forge"
+            .resolveBuiltin(inheritedLoader)?.family == "forge"
         val dirs = dirsFor(refPath, refEnvId)
         if (inheritedIsForge) {
             groups.getOrPut(

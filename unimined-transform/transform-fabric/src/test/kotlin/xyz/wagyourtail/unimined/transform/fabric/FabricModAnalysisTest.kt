@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.transform.fabric
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.transform.fabric.internal.FabricModAnalysis
@@ -161,6 +163,55 @@ class FabricModAnalysisTest {
             mapOf("mod.accesswidener" to "*", "mod.classTweaker" to "*"),
             FabricModAnalysis.classTweakers(jar)
         )
+    }
+
+    @Test
+    fun `depInstallerLibraries reads common and development, honors rules and url`() {
+        val jar = modJar(
+            """{"id": "dep", "version": "1.0"}""",
+            mapOf(
+                "fabric-installer.json" to """
+                {
+                  "libraries": {
+                    "common": [
+                      {"name": "com.dep:runtime-lib:1.0",
+                       "url": "https://dep.example/maven"},
+                      {"name": "com.dep:windows-only:1.0",
+                       "rules": [{"action": "allow", "os": {"name": "windows"}}]}
+                    ],
+                    "development": [
+                      {"name": "com.dep:dev-only:2.0"}
+                    ],
+                    "client": [
+                      {"name": "com.dep:not-read:1.0"}
+                    ]
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        val libs = FabricModAnalysis.depInstallerLibraries(jar)!!
+        val names = libs.map { it.name }
+        assertTrue(names.contains("com.dep:runtime-lib:1.0"))
+        assertTrue(names.contains("com.dep:dev-only:2.0"))
+        // `client` section isn't part of the dep-jar contract (loom reads
+        // common + development only)
+        assertFalse(names.contains("com.dep:not-read:1.0"))
+        // platform rule — windows-only excluded on non-windows hosts
+        if (!System.getProperty("os.name").lowercase().contains("win")) {
+            assertFalse(names.contains("com.dep:windows-only:1.0"))
+        }
+        // repo url hint surfaced for callers to report
+        assertEquals("https://dep.example/maven",
+            libs.single { it.name == "com.dep:runtime-lib:1.0" }.url)
+    }
+
+    @Test
+    fun `depInstallerLibraries is null for non-mod jars`() {
+        // no fmj/qmj → caller skips without a second jar pass
+        val jar = dir.resolve("plain-${System.nanoTime()}.jar")
+        JarOutputStream(jar.outputStream()).use { }
+        assertEquals(null, FabricModAnalysis.depInstallerLibraries(jar))
     }
 
 }

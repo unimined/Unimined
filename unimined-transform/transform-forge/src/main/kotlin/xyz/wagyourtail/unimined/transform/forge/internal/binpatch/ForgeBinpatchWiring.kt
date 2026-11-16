@@ -27,6 +27,7 @@ import xyz.wagyourtail.unimined.remapper.jst.JstStepSpec
 import xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec
 
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigRunner
+import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevInjectProcessor
 import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeProcessor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
@@ -41,6 +42,67 @@ import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevBinpatchStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.contributeAccessSteps
+
+/**
+ * The jar holding the binpatch pack for this environment — the
+ * userdev jar itself for joined envs (`config.binpatches` →
+ * `joined.lzma` ships inside userdev; COMMON rides the joined chain
+ * too), the `:installer` artifact for split-side envs
+ * (`data/<side>.lzma` — 1.x read the same). Null for non-Userdev
+ * profiles.
+ */
+internal fun userdevInstallerJar(
+    project: Project,
+    environment: MinecraftEnvironment,
+    resolved: Provider<ResolvedForge>
+): Provider<File> = resolved.map { r ->
+    (r.profile as? ForgeProfile.Userdev) ?: return@map null
+    when (environment.side.get()) {
+        Side.MERGED, Side.COMMON -> r.jar.toFile()
+        else -> {
+            val base = r.descriptor.loaderCoords(
+                environment.version.get(),
+                environment.loaderSpec.get().version
+            )
+            project.configurations.detachedConfiguration(
+                project.dependencies.create("$base:installer")
+            ).apply { isTransitive = false }.files.single()
+        }
+    }
+}
+
+/**
+ * The installer-chain `rename` tool coordinate for split-side envs —
+ * consumed by `mcpconfigCleanJar`'s
+ * [McpConfigTransform.Params.renameToolOverride]. Split-side
+ * `data/<side>.lzma` packs were generated against the *installer*
+ * pipeline's renamed jar (bundler-extract → jarsplitter slim →
+ * `ForgeAutoRenamingTool`), whose tool version is declared in
+ * `install_profile.json`, not in mcpconfig's `functions.rename`
+ * (47.3.0: FART 0.1.22 vs 1.0.2 emit byte-divergent output on
+ * identical input → every patch checksum fails). Absent on joined
+ * envs (the `joined.lzma` pack tracks the descriptor chain), on
+ * non-Userdev/`notchObf` profiles, and when the installer profile
+ * declares no FART processor (mcpconfig-declared tool is used then).
+ */
+internal fun installerRenameToolOverride(
+    project: Project,
+    environment: MinecraftEnvironment,
+    resolved: Provider<ResolvedForge>
+): Provider<String> = project.provider {
+    when (environment.side.get()) {
+        Side.MERGED, Side.COMMON -> return@provider null
+        else -> {}
+    }
+    if ((resolved.orNull?.profile as? ForgeProfile.Userdev)
+            ?.config?.notchObf != false) return@provider null
+    userdevInstallerJar(project, environment, resolved).orNull
+        ?.let { jar ->
+            UserdevExtract.installerToolCoord(
+                jar.toPath(), "net.minecraftforge", "ForgeAutoRenamingTool"
+            )
+        }
+}
 
 /**
  * Patch-step specs. `contributeBinpatchStep` wires `userdev-binpatch`
@@ -58,28 +120,13 @@ internal fun contributeBinpatchStep(
     val environmentSpec = remap.sourceSet(environment.environmentId)
 
     val spec = objects.newInstance(UserdevBinpatchStepSpec::class.java)
-    spec.installerJar.set(project.layout.file(resolved.map { r ->
-        ((r.profile as? ForgeProfile.Userdev) ?: return@map null)
-            .let {
-                if (environment.side.get() == Side.MERGED) r.jar.toFile()
-                else {
-                    // split-side envs: userdev ships only the joined
-                    // pack — per-side packs live in the installer jar
-                    // (1.x read `data/<side>.lzma` from `:$base:installer`)
-                    val base = r.descriptor.loaderCoords(
-                        environment.version.get(),
-                        environment.loaderSpec.get().version
-                    )
-                    project.configurations.detachedConfiguration(
-                        project.dependencies.create("$base:installer")
-                    ).apply { isTransitive = false }.files.single()
-                }
-            }
-    }))
+    spec.installerJar.set(project.layout.file(
+        userdevInstallerJar(project, environment, resolved)
+    ))
     spec.binpatchesKey.set(resolved.map {
         val p = it.profile as? ForgeProfile.Userdev ?: return@map null
         when (environment.side.get()) {
-            Side.MERGED -> p.config.binpatches
+            Side.MERGED, Side.COMMON -> p.config.binpatches
             Side.CLIENT -> "data/client.lzma"
             Side.SERVER -> "data/server.lzma"
         }
@@ -127,7 +174,9 @@ internal fun contributeBinpatchStep(
         when (environment.side.get()) {
             Side.CLIENT -> "client"
             Side.SERVER -> "server"
-            Side.MERGED -> "joined"
+            // the common (intersection) env rides the joined patch
+            // chain — userdev has no per-side common descriptor
+            Side.MERGED, Side.COMMON -> "joined"
         }
     })
     val absent = project.providers.provider<RegularFile> { null }

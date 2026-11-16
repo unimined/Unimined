@@ -12,6 +12,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
@@ -24,7 +25,7 @@ import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.transform.FunctionalStepSpec
 import xyz.wagyourtail.unimined.transform.forge.ForgeEnvExtension
-import xyz.wagyourtail.unimined.transform.jarmod.FG1DynLibWiring
+import xyz.wagyourtail.unimined.transform.jarmod.internal.fg1.FG1DynLibWiring
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
@@ -46,6 +47,7 @@ import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.contributeMine
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.contributeLoaderResolution
+import xyz.wagyourtail.unimined.transform.forge.internal.installer.resolveForgeLoader
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevSourcesChain
 
 /**
@@ -114,7 +116,8 @@ internal object ForgeEnvironmentWiring {
                     else -> xyz.wagyourtail.unimined.minecraft.merge
                         .JarMerger.SideMarker
                         .detectSideMarker(it.markerJar) { msg ->
-                            project.logger.warn(msg)
+                            project.reportProblem(
+                                "forge/side-marker", "unimined: $msg")
                         }?.let(::listOf) ?: emptyList()
                 }
             } ?: emptyList()
@@ -152,8 +155,8 @@ internal object ForgeEnvironmentWiring {
         // coremods; the csv naming service has no class channel,
         // so resources are rewritten src->dst directly. FG1/FG2
         // coremods are Java classes handled by the class remapper.
-        // Deferred so `env.forge { jsCoremodRemap = false }` opts
-        // out before realization.
+        // Deferred so `env.forge { jsCoremodRemap.set(false) }`
+        // opts out before realization.
         project.extensions.getByType(RemapExtension::class.java)
             .sourceSet(environment.environmentId)
             .contributeDeferredSteps(
@@ -162,7 +165,7 @@ internal object ForgeEnvironmentWiring {
                         .extensions
                         .findByType(ForgeEnvExtension::class.java)
                     if (resolved.orNull?.profile !is ForgeProfile.Userdev ||
-                        ext?.jsCoremodRemap == false) emptyList()
+                        ext?.jsCoremodRemap?.get() == false) emptyList()
                     else listOf(
                         DeferredStepContribution(
                             RemapSurface.JAR,
@@ -277,6 +280,7 @@ internal object ForgeEnvironmentWiring {
             }
         }
         contributeLoaderDependency(project, environment, resolved)
+        contributeMergedLoaderDependency(project, environment)
         contributeUserdevLibraries(project, environment, resolved)
         contributeClientExtra(project, environment, resolved)
         contributeSrgToMcp(project, environment, resolved)
@@ -375,5 +379,55 @@ internal object ForgeEnvironmentWiring {
             project.configurations.named(name) { conf ->
                 conf.extendsFrom(loader)
             }
+        }
+    }
+
+    /** `forgeMergedLoader<Env>` — the merged multi-loader counterpart of
+     *  [contributeLoaderDependency]: every *secondary* (non-primary)
+     *  forge-family spec probes its era artifact and rides the env's
+     *  compile classpath, so one source set can compile against forge
+     *  alongside another loader (1.x `merged { forge; … }` parity).
+     *  Compile-only — prod/remap/metadata/run semantics stay with the
+     *  primary loader; the descriptor's `mergedClasspathSelfManaged`
+     *  keeps these specs out of the generic `mergedLoader` bucket. */
+    private fun contributeMergedLoaderDependency(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        val loader = project.configurations.create(
+            "forgeMergedLoader${environment.environmentId.replaceFirstChar { it.uppercaseChar() }}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = true
+            // same placeholder-pom carve-out as `forgeLoader` — the
+            // env supplies its own `net.minecraft:*` artifacts
+            for (artifact in listOf("client", "server", "merged",
+                "mappings_stable", "mappings_snapshot")) {
+                conf.exclude(mapOf("group" to "net.minecraft", "module" to artifact))
+            }
+            conf.withDependencies { deps ->
+                environment.loaderSpecs.drop(1).forEach { spec ->
+                    val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+                        ?.takeIf { it.family == "forge" }
+                        ?: return@forEach
+                    // era-probed classifier artifact, same cascade as the
+                    // primary's — ZipPatches raw zips still merge into
+                    // the MC jar rather than riding the classpath
+                    val r = resolveForgeLoader(
+                        project, environment, spec, descriptor
+                    )
+                    if (r.profile !is ForgeProfile.ZipPatches)
+                        deps.add(project.dependencies.create(r.notation))
+                }
+            }
+        }
+        val sourceSet = project.extensions
+            .getByType(org.gradle.api.plugins.JavaPluginExtension::class.java)
+            .sourceSets.findByName(environment.environmentId) ?: return
+        project.configurations.named(
+            sourceSet.compileClasspathConfigurationName
+        ) { conf ->
+            conf.extendsFrom(loader)
         }
     }

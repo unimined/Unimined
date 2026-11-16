@@ -11,6 +11,7 @@ import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -68,7 +69,14 @@ internal object FabricDependencyContributions {
                 .SideMarker.FABRIC
         )
         descriptor.capabilities["libraryOverlayMeta"]?.let { meta ->
-            contributeLibraryOverlay(project, environment, meta)
+            // `unimined.ornitheMeta` overrides the descriptor's meta
+            // base — mirrors, airgapped caches, and tests (`file:`
+            // URLs work); shared by OrnitheAutoWiring's index lookup
+            contributeLibraryOverlay(
+                project, environment,
+                (project.findProperty("unimined.ornitheMeta") as? String)
+                    ?: meta
+            )
         }
     }
 
@@ -92,9 +100,11 @@ internal object FabricDependencyContributions {
             index["intermediaryGenerations"]?.jsonObject
                 ?.get("stableIntermediaryGeneration")?.jsonPrimitive?.int ?: 2
         } catch (t: Throwable) {
-            project.logger.warn(
-                "[Unimined/Fabric] ornithe meta unreachable, " +
-                    "defaulting library overlay to gen2: ${t.message}"
+            project.reportProblem(
+                "fabric/ornithe-meta",
+                "unimined: ornithe meta unreachable — defaulting " +
+                    "library overlay to gen2",
+                t.message
             )
             2
         }
@@ -126,7 +136,7 @@ internal object FabricDependencyContributions {
             // unobfuscated mc (26.x) has no obfuscation hop to map —
             // dev namespace is official, skip the whole intermediary hop
             if (!environment.obfuscated.get() ||
-                environment.mappingsSpec.customIntermediaries
+                environment.mappingsSpec.customIntermediaries.get()
             ) emptyList()
             else {
                 val spec = environment.loaderSpec.orNull
@@ -149,7 +159,7 @@ internal object FabricDependencyContributions {
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
                 if (!environment.obfuscated.get() ||
-                    environment.mappingsSpec.customIntermediaries
+                    environment.mappingsSpec.customIntermediaries.get()
                 ) return@withDependencies
                 val descriptor = loaderSpec.orNull?.name
                     ?.let { LoaderRegistry.resolveBuiltin(it) }
@@ -169,7 +179,7 @@ internal object FabricDependencyContributions {
             val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
             // unobfuscated mc needs no intermediary jar at all
             if (!environment.obfuscated.get() ||
-                environment.mappingsSpec.customIntermediaries ||
+                environment.mappingsSpec.customIntermediaries.get() ||
                 descriptor?.family != "fabric" ||
                 descriptor.upstreamMappingChannel != null) {
                 // upstreamMappingChannel rows contribute Maven sources via
@@ -239,16 +249,26 @@ internal object FabricDependencyContributions {
         ).forEach { bucket ->
             project.configurations.matching { it.name == bucket }.all { conf ->
                 conf.withDependencies {
-                    val spec = loaderSpec.orNull
-                    val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
-                        ?.takeIf { it.family == "fabric" } ?: return@withDependencies
+                    // every declared fabric-family loader — merged
+                    // multi-loader envs keep secondary loaders' coords
+                    // out of the mod buckets too, so dep transitives
+                    // can't shadow the merged secondary's version
                     val platforms = mutableSetOf(
                         "net.fabricmc:fabric-loader",
                         "org.quiltmc:quilt-loader"
                     )
-                    descriptor.loaderCoords(environment.version.get(), spec.version)
-                        .split(":").takeIf { it.size >= 2 }
-                        ?.let { platforms += "${it[0]}:${it[1]}" }
+                    var fabric = false
+                    environment.loaderSpecs.forEach { spec ->
+                        val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+                            ?.takeIf { it.family == "fabric" }
+                            ?: return@forEach
+                        fabric = true
+                        descriptor.loaderCoords(
+                            environment.version.get(), spec.version
+                        ).split(":").takeIf { it.size >= 2 }
+                            ?.let { platforms += "${it[0]}:${it[1]}" }
+                    }
+                    if (!fabric) return@withDependencies
                     platforms.forEach { ga ->
                         val (g, m) = ga.split(":", limit = 2)
                         conf.exclude(mapOf("group" to g, "module" to m))
@@ -278,6 +298,87 @@ internal object FabricDependencyContributions {
                 }
             }
         }
+        // merged multi-loader envs: a *secondary* fabric-family loader's
+        // embedded installer libraries (sponge-mixin for @Mixin, asm, …)
+        // belong on the compile classpath too — the generic mergedLoader
+        // bucket carries the secondary's jar; this carries the libs its
+        // fabric/quilt installer.json declares, mirroring the primary's
+        // fabricLoaderLibraries. Compile-only: run semantics stay with
+        // the primary loader.
+        val mergedLoaderLibraries = project.configurations.create(
+            "fabricMergedLoaderLibraries${environment.environmentId.capitalized()}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = false
+            conf.withDependencies { deps ->
+                environment.loaderSpecs.drop(1).forEach { spec ->
+                    val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
+                        ?.takeIf { it.family == "fabric" } ?: return@forEach
+                    // resolve the secondary's loader jar standalone —
+                    // mergedLoader's graph also carries non-fabric
+                    // secondaries we must not re-read here
+                    val jarConf = project.configurations.detachedConfiguration(
+                        dependencies.create(
+                            descriptor.loaderCoords(
+                                environment.version.get(), spec.version
+                            )
+                        )
+                    )
+                    jarConf.isTransitive = false
+                    jarConf.resolve().forEach { jar ->
+                        FabricModAnalysis.loaderLibraries(
+                            jar.toPath(),
+                            environment.side.orNull?.name?.lowercase()
+                        ).forEach { deps.add(dependencies.create(it)) }
+                    }
+                }
+            }
+        }
+        // dep-jar installer libraries — loom's `ArtifactMetadata`/
+        // `InstallerData` parity: ANY fabric/quilt mod jar on the mod
+        // views may embed `fabric-installer.json`/`quilt_installer.json`
+        // declaring extra runtime libs (loom reads `common` +
+        // `development`, non-transitive). Scanned off the raw
+        // (source-ns) direct views at resolution time.
+        val depInstallerLibraries = project.configurations.create(
+            "fabricDepInstallerLibraries${environment.environmentId.capitalized()}"
+        ) { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+            conf.isTransitive = false
+            conf.withDependencies { deps ->
+                val spec = loaderSpec.orNull
+                if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric")
+                    return@withDependencies
+                listOf(
+                    "${environment.modImplementationConfigurationName}Direct",
+                    "${environment.modRuntimeOnlyConfigurationName}Direct"
+                ).flatMap { name ->
+                    project.configurations.findByName(name)?.files ?: emptySet()
+                }.forEach { jar ->
+                    FabricModAnalysis.depInstallerLibraries(jar.toPath())
+                        ?.forEach { lib ->
+                            val dep = dependencies.create(lib.name)
+                            // loom: "Match the launcher in not being
+                            // transitive"
+                            (dep as? org.gradle.api.artifacts
+                                .ExternalModuleDependency)
+                                ?.isTransitive = false
+                            deps.add(dep)
+                            lib.url?.let { url ->
+                                project.reportProblem(
+                                    "fabric/installer-lib-repo",
+                                    "unimined: ${jar.name}: installer lib " +
+                                            "'${lib.name}' declares repo '$url'",
+                                    "declare it in repositories { } if " +
+                                            "resolution fails"
+                                )
+                            }
+                        }
+                }
+            }
+        }
         // loom parity: loader + its embedded libraries are
         // namespace-agnostic — they ride the source-set classpaths
         // raw so the remapped mod view never transforms them
@@ -289,8 +390,13 @@ internal object FabricDependencyContributions {
             sourceSet.runtimeClasspathConfigurationName,
         ).forEach { name ->
             project.configurations.named(name) { conf ->
-                conf.extendsFrom(loader, loaderLibraries)
+                conf.extendsFrom(loader, loaderLibraries, depInstallerLibraries)
             }
+        }
+        // merged secondaries' libs are compile-only — the env runs
+        // under the primary loader
+        project.configurations.named(sourceSet.compileClasspathConfigurationName) {
+            it.extendsFrom(mergedLoaderLibraries)
         }
         // canonical-name `mappings/mappings.tiny` — the loader's
         // MappingConfiguration only accepts `official`,

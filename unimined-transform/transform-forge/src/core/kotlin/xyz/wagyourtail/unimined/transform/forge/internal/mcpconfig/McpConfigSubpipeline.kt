@@ -137,8 +137,10 @@ private fun extractPrefix(descriptor: File, prefix: String?, workDir: Path): Pat
             .forEach { entry ->
                 val target = root.resolve(entry.name)
                 target.parent.createDirectories()
-                jar.getInputStream(entry).use { input ->
-                    target.outputStream().use { input.copyTo(it) }
+                target.writeAtomically { tmp ->
+                    jar.getInputStream(entry).use { input ->
+                        tmp.outputStream().use { input.copyTo(it) }
+                    }
                 }
             }
     }

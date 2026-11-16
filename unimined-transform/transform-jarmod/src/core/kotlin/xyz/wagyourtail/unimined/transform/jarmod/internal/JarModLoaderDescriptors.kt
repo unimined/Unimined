@@ -25,8 +25,14 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
                 // resolves). de.oceanlabs must stay OUT of the filter
                 // so the real forge maven wins — it's ensured by the
                 // searge/mcp paths and fg1's own repos anyway.
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?"),
-                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/", includeGroupRegex = "xyz\\.wagyourtail(\\..*)?")
+                // `risugami`/`modloadermp` are the canonical ModLoader
+                // jarMod coords the wiring dev-fixes on — they live on
+                // the same mirror, so a `jarMod("risugami:modloader:x")`
+                // dep resolves without the user declaring our maven.
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/releases/",
+                    includeGroupRegex = "xyz\\.wagyourtail(\\..*)?|risugami|modloadermp"),
+                LoaderRepo.Maven("https://maven.wagyourtail.xyz/snapshots/",
+                    includeGroupRegex = "xyz\\.wagyourtail(\\..*)?|risugami|modloadermp")
             ),
             loaderCoords = { _, v -> "xyz.wagyourtail.unimined:jarmod-agent:$v:all" },
             // baseline loader — jars into any product

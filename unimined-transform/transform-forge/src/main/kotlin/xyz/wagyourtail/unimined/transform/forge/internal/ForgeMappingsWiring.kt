@@ -65,6 +65,38 @@ internal fun contributeMappingHop(
         if (spec == null ||
             LoaderRegistry.resolveBuiltin(spec.name)?.family != "forge" ||
             !environment.obfuscated.get()) emptyList()
+        else if (resolved.orNull?.profile is ForgeProfile.ZipPatches) {
+            // FG1-era shape reached via `loader("forge")` — the loader
+            // resolution cascade accepts era `universal@zip`/sided
+            // artifacts (ForgeLoaderResolution), so this path needs the
+            // same era default the jarmod-family `loader("fg1")` wiring
+            // contributes (JarModEnvironmentWiring): the forge-bundled
+            // MCP set for mc>=1.3 (pre-1.3 sided zips ship no combinable
+            // conf/ — jarmod's `canCombine` gate), `official` identity
+            // otherwise. A user-declared searge-family builtin
+            // suppresses the bundled hop — declaring your own chain is
+            // the forge path's `customSearge` opt-out (the jarmod flag
+            // itself lives in transform-jarmod internals this module
+            // can't read).
+            listOf(
+                MappingsSpecImpl.Source.Builtin(
+                    project.provider {
+                        val canCombine = environment.version.map {
+                            xyz.wagyourtail.unimined.mapping.internal
+                                .MinecraftVersions.compare(it, "1.3") >= 0
+                        }.orElse(false).get()
+                        val declaredSearge = sources.any { s ->
+                            (s as? MappingsSpecImpl.Source.Builtin)
+                                ?.nameProvider?.orNull in listOf(
+                                "searge", "forgeBuiltinMCP")
+                        }
+                        if (canCombine && !declaredSearge)
+                            "forgeBuiltinMCP" else "official"
+                    },
+                    mapOf("version" to project.provider { spec.version })
+                )
+            )
+        }
         else listOf(
             MappingsSpecImpl.Source.Builtin(obfNs, mapOf("version" to mcpVersion))
         )

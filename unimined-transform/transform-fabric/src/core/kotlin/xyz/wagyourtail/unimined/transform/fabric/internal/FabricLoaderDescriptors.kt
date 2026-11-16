@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
 import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
+import xyz.wagyourtail.unimined.transform.loader.SplitMergeSpec
 
 /**
  * Fabric-family loader products — the 1.x subclass overrides
@@ -15,6 +16,25 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
  */
 internal class FabricLoaderDescriptors : LoaderDescriptorSource {
 
+    /**
+     * Split-era obf merge — every fabric-family upstream tiny v2
+     * (`intermediary`/`intermediary-upstream`) labels its per-side
+     * columns `clientOfficial`/`serverOfficial` and its shared column
+     * `intermediary` when it ships for a pre-1.3 version (disjoint
+     * obf name sets). Declared on every `intermediaryCoords` row, not
+     * just babric's: nothing version-gates `loader("fabric")` on a
+     * split-era MC (and `customIntermediaries` can supply split
+     * columns directly), so a MERGED env must take the 1.x
+     * `FabricMinecraftTransformer.merge` remap-then-merge hop — or
+     * fail clearly at intermediary resolution when no split-era
+     * artifact is published — instead of silently member-merging
+     * unmatched obf names.
+     */
+    private val splitEraIntermediaryMerge = SplitMergeSpec(
+        listOf("clientOfficial", "serverOfficial"),
+        "intermediary"
+    )
+
     override fun descriptors(): List<LoaderDescriptor> = listOf(
         LoaderDescriptor(
             id = "fabric",
@@ -24,7 +44,12 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "intermediary",
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
+            splitMerge = splitEraIntermediaryMerge,
             capabilities = mapOf(
+                // dev-launch mod classpath groups serialize into
+                // this sysprop — fabric-loader #585 (loom.mods
+                // parity): groups `::`-separated, files `:`
+                "classpathGroups" to "fabric.classPathGroups",
                 // loom convention — `fabricApi.configureDataGeneration`:
                 // fabric-api's executor boots the datagen entrypoints
                 "datagenJvmArgs" to
@@ -70,7 +95,12 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // quilt rides fabric intermediary — quilt-mappings is
             // the named layer on top
             intermediaryCoords = { mc -> "net.fabricmc:intermediary:$mc:v2" },
+            splitMerge = splitEraIntermediaryMerge,
             capabilities = mapOf(
+                // dev-launch mod classpath groups serialize into
+                // this sysprop — fabric-loader #585 (loom.mods
+                // parity): groups `::`-separated, files `:`
+                "classpathGroups" to "fabric.classPathGroups",
                 "skipMcProvider" to "-Dloader.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
@@ -79,7 +109,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                     AccessDiscovery.METADATA_KEY,
                     AccessDiscovery.METADATA_CLASS_TWEAKERS
                 ),
-                injectedInterfacesKey = "custom.quilt_loom.injected_interfaces",
+                injectedInterfacesKey = "quilt_loom.injected_interfaces",
                 nestedJarsKey = "quilt_loader.jars"
             )
         ),
@@ -93,7 +123,12 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "legacyIntermediary",
             // 1.x legacyFabricRevisionTransform: generation-keyed group
             intermediaryCoords = { mc -> "net.legacyfabric:intermediary:$mc:v2" },
+            splitMerge = splitEraIntermediaryMerge,
             capabilities = mapOf(
+                // dev-launch mod classpath groups serialize into
+                // this sysprop — fabric-loader #585 (loom.mods
+                // parity): groups `::`-separated, files `:`
+                "classpathGroups" to "fabric.classPathGroups",
                 "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 // 1.x Legacy-Fabric-Intermediary-Version manifest attr
                 "manifestAttr.Legacy-Fabric-Intermediary-Version" to "1",
@@ -118,17 +153,22 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // legacyfabric.8`) is published on legacyfabric's maven
                 LoaderRepo.Maven("https://maven.legacyfabric.net")
             ),
-            loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
+            // 1.x BabricMinecraftTransformer: babric publishes its
+            // loader fork under the `babric` group, not `net.fabricmc`
+            loaderCoords = { _, v ->
+                if ("babric" in v) "babric:fabric-loader:$v"
+                else "net.fabricmc:fabric-loader:$v"
+            },
             prodNamespace = "babricIntermediary",
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
             // babric targets beta only — client/server obf spaces are
             // disjoint; upstream's tiny carries both side columns
-            splitMerge = xyz.wagyourtail.unimined.transform.loader
-                .SplitMergeSpec(
-                    listOf("clientOfficial", "serverOfficial"),
-                    "intermediary"
-                ),
+            splitMerge = splitEraIntermediaryMerge,
             capabilities = mapOf(
+                // dev-launch mod classpath groups serialize into
+                // this sysprop — fabric-loader #585 (loom.mods
+                // parity): groups `::`-separated, files `:`
+                "classpathGroups" to "fabric.classPathGroups",
                 "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 // b1.7.3 ships argo/** inside the server jar — keep it
                 // through the merge library-strip (1.x includeGlobs)
@@ -164,6 +204,10 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             // -client/-server suffix and namespace relabels
             upstreamMappingChannel = "calamus",
             capabilities = mapOf(
+                // dev-launch mod classpath groups serialize into
+                // this sysprop — fabric-loader #585 (loom.mods
+                // parity): groups `::`-separated, files `:`
+                "classpathGroups" to "fabric.classPathGroups",
                 // OSL takes care of datagen
                 "datagenJvmArgs" to
                         "-Dfabric-api.datagen -Dfabric-api.datagen.output-dir={output} -Dfabric-api.datagen.modid={modid}",

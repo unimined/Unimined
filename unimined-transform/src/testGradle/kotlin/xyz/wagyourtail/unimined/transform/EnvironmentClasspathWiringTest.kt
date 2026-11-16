@@ -88,6 +88,89 @@ class EnvironmentClasspathWiringTest {
     }
 
     @Test
+    fun `mod sources views request docs variants and populate the dev-sources map`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+
+        for (bucket in listOf("modImplementation", "modRuntimeOnly")) {
+            val remapped = project.configurations.getByName("${bucket}SourcesRemapped")
+            assertTrue(remapped.isCanBeResolved)
+            assertFalse(remapped.isCanBeConsumed)
+            assertEquals(
+                "unimined-remapped-sources-main-$bucket",
+                remapped.attributes.getAttribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)
+            )
+            assertEquals(
+                "documentation",
+                remapped.attributes.getAttribute(
+                    org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE)?.name
+            )
+            assertEquals(
+                "sources",
+                remapped.attributes.getAttribute(
+                    org.gradle.api.attributes.DocsType.DOCS_TYPE_ATTRIBUTE)?.name
+            )
+            assertEquals(
+                listOf(project.configurations.getByName(bucket)),
+                remapped.extendsFrom.toList()
+            )
+
+            val direct = project.configurations.getByName("${bucket}SourcesDirect")
+            assertEquals(
+                ArtifactTypeDefinition.JAR_TYPE,
+                direct.attributes.getAttribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)
+            )
+            assertEquals(
+                "sources",
+                direct.attributes.getAttribute(
+                    org.gradle.api.attributes.DocsType.DOCS_TYPE_ATTRIBUTE)?.name
+            )
+        }
+
+        assertEquals(
+            project.configurations.getByName("modImplementationSourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modImplementation"]
+        )
+        assertEquals(
+            project.configurations.getByName("modRuntimeOnlySourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modRuntimeOnly"]
+        )
+    }
+
+    @Test
+    fun `direct sources view resolves a dep's published -sources jar`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val module = dir.resolve("repo/com/example/mod/1.0").toFile()
+        module.mkdirs()
+        val stub = byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+        module.resolve("mod-1.0.jar").writeBytes(stub)
+        module.resolve("mod-1.0-sources.jar").writeBytes(stub)
+        module.resolve("mod-1.0.pom").writeText(
+            "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">" +
+                    "<modelVersion>4.0.0</modelVersion>" +
+                    "<groupId>com.example</groupId>" +
+                    "<artifactId>mod</artifactId>" +
+                    "<version>1.0</version>" +
+                    "<packaging>jar</packaging></project>"
+        )
+        project.repositories.maven { it.url = dir.resolve("repo").toFile().toURI() }
+        project.dependencies.add("modImplementation", "com.example:mod:1.0")
+
+        // the consumer contract: lenient + module-component filter —
+        // deps without a sources variant and file deps contribute
+        // nothing instead of failing or self-attaching
+        val resolved = project.configurations
+            .getByName("modImplementationSourcesDirect")
+            .incoming.artifactView { v ->
+                v.lenient(true)
+                v.componentFilter {
+                    it is org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                }
+            }.files.map { it.name }
+        assertEquals(listOf("mod-1.0-sources.jar"), resolved)
+    }
+
+    @Test
     fun `dev view is registered even when transform applies after main binds`() {
         // java + minecraft first: `main` binds before transform's handler
         // registers — onEnvironmentBound must replay bound envs
@@ -235,13 +318,13 @@ class EnvironmentClasspathWiringTest {
                 jar, dir.resolve("cache"), "intermediary", warnings::add)
 
         // AW extension + fmj-referenced doc → dep channel
-        assertEquals(3, result.declared.size)
+        assertEquals(2, result.declared.size)
         assertTrue(result.declared.any {
             it.fileName.toString().contains("modid.accesswidener") })
         assertTrue(result.declared.any {
             it.fileName.toString().contains("name.txt") })
         // synthesized II doc carries transitive inject-interface rows
-        val ii = result.declared.single {
+        val ii = result.interfaceInjections.single {
             it.fileName.toString().contains("injected-interfaces") }
         assertTrue(ii.toFile().readText().contains(
             "transitive-inject-interface\tnet/mc/A\tcom/x/II"))
@@ -254,6 +337,85 @@ class EnvironmentClasspathWiringTest {
                 jar, dir.resolve("cache2"), null, warnings::add)
         assertEquals(0, noNs.ats.size)
         assertTrue(warnings.any { it.contains("accesstransformer.cfg") })
+    }
+
+    @Test
+    fun `dep access scan reads qmj vocabulary`() {
+        // quilt dep jar: `access_widener` snake_case doc ref +
+        // top-level `quilt_loom.injected_interfaces` (quilt-loom's
+        // dep-read contract — NOT inside `custom`)
+        val jar = dir.resolve("quilt-dep-1.0.jar")
+        java.util.jar.JarOutputStream(
+            java.io.FileOutputStream(jar.toFile()),
+            java.util.jar.Manifest().apply {
+                mainAttributes.putValue("Manifest-Version", "1.0")
+            }).use { out ->
+            fun put(name: String, content: String) {
+                out.putNextEntry(java.util.jar.JarEntry(name))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+            put("quilt.mod.json", """{"schema_version":1,
+                "quilt_loader":{"id":"qdep","version":"1.0.0"},
+                "access_widener":"qdep.aw",
+                "quilt_loom":{"injected_interfaces":
+                    {"net/mc/A":["com/x/II"]}}}""")
+            put("qdep.aw",
+                "accessWidener\tv2\tintermediary\n" +
+                        "transitive-accessible\tclass\ta/B\n")
+        }
+        val result = xyz.wagyourtail.unimined.transform.internal
+            .DepAccessScan.scan(
+                jar, dir.resolve("cache"), "intermediary") {}
+
+        // `access_widener`-referenced doc + synthesized II doc → dep channel
+        assertTrue(result.declared.any {
+            it.fileName.toString().endsWith("qdep.aw") })
+        val ii = result.interfaceInjections.single {
+            it.fileName.toString().contains("injected-interfaces") }
+        assertTrue(ii.toFile().readText().contains(
+            "transitive-inject-interface\tnet/mc/A\tcom/x/II"))
+        assertEquals(0, result.ats.size)
+    }
+
+    @Test
+    fun `dep access scan reads qmj5 vocabulary`() {
+        // qmj5 dep jar: JSON5 quilt.mod.json — comments, trailing
+        // commas, single quotes, bare keys
+        val jar = dir.resolve("quilt5-dep-1.0.jar")
+        java.util.jar.JarOutputStream(
+            java.io.FileOutputStream(jar.toFile()),
+            java.util.jar.Manifest().apply {
+                mainAttributes.putValue("Manifest-Version", "1.0")
+            }).use { out ->
+            fun put(name: String, content: String) {
+                out.putNextEntry(java.util.jar.JarEntry(name))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+            put("quilt.mod.json", """{
+                schema_version: 1,
+                quilt_loader: {id: 'q5dep', version: "1.0.0",},
+                // widener reference
+                access_widener: "q5dep.aw",
+                quilt_loom: {
+                    injected_interfaces: {"net/mc/B": ["com/x/II"],},
+                },
+            }""")
+            put("q5dep.aw",
+                "accessWidener\tv2\tintermediary\n" +
+                        "transitive-accessible\tclass\ta/C\n")
+        }
+        val result = xyz.wagyourtail.unimined.transform.internal
+            .DepAccessScan.scan(
+                jar, dir.resolve("cache5"), "intermediary") {}
+
+        assertTrue(result.declared.any {
+            it.fileName.toString().endsWith("q5dep.aw") })
+        val ii = result.interfaceInjections.single {
+            it.fileName.toString().contains("injected-interfaces") }
+        assertTrue(ii.toFile().readText().contains(
+            "transitive-inject-interface\tnet/mc/B\tcom/x/II"))
     }
 
     @Test

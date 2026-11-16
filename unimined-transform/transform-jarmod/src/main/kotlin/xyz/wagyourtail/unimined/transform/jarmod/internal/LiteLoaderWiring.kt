@@ -8,6 +8,10 @@ import org.gradle.api.Project
 import org.gradle.api.GradleException
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.produceCached
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import java.net.URI
 import java.nio.file.Files
@@ -35,9 +39,10 @@ internal object LiteLoaderWiring {
         // guard reads it; an explicit `side =` still trips the check
         environment.side.convention(Side.CLIENT)
         if (environment.side.get() != Side.CLIENT) {
-            throw GradleException(
-                "liteloader only supports CLIENT environments " +
-                        "(side=${environment.side.get()})"
+            project.failProblem(
+                "liteloader/side",
+                "unimined: liteloader only supports CLIENT " +
+                        "environments (side=${environment.side.get()})"
             )
         }
         val mcVersion = environment.version.get()
@@ -67,8 +72,9 @@ internal object LiteLoaderWiring {
             versionEntry["snapshots"]?.jsonObject
         } else {
             versionEntry["artefacts"]?.jsonObject
-        } ?: throw GradleException(
-            "liteloader versions.json has no " +
+        } ?: project.failProblem(
+            "liteloader/versions-missing",
+            "unimined: liteloader versions.json has no " +
                     "${if (declaredVersion.endsWith("SNAPSHOT")) "snapshots" else "artefacts"} " +
                     "for MC $mcVersion"
         )
@@ -84,9 +90,11 @@ internal object LiteLoaderWiring {
             ?.entries?.firstOrNull { (_, v) ->
                 v.jsonObject["version"]?.jsonPrimitive?.content == declaredVersion
             }?.value?.jsonObject
-            ?: throw GradleException(
-                "failed to find liteloader version $declaredVersion in " +
-                        "versions.json for MC $mcVersion"
+            ?: project.failProblem(
+                "liteloader/version-missing",
+                "unimined: failed to find liteloader version " +
+                        "$declaredVersion in versions.json for MC " +
+                        "$mcVersion"
             )
 
         artifactEntry["libraries"]?.jsonArray?.forEach { lib ->
@@ -127,20 +135,33 @@ internal object LiteLoaderWiring {
         val have = Files.exists(dest)
         if (!have || refresh) {
             if (project.gradle.startParameter.isOffline) {
-                if (!have) throw GradleException(
-                    "offline and no cached liteloader versions.json " +
-                            "under $dest")
+                if (!have) project.failProblem(
+                    "liteloader/offline-cache",
+                    "unimined: offline and no cached liteloader " +
+                            "versions.json under $dest")
             } else {
                 try {
-                    Files.createDirectories(dest.parent)
-                    URI.create(VERSIONS_URL).toURL().openStream().use {
-                        Files.copy(it, dest,
-                            StandardCopyOption.REPLACE_EXISTING)
+                    // lock + temp+move — a concurrent daemon must not
+                    // read a half-downloaded versions.json
+                    dest.produceCached(force = refresh) { tmp ->
+                        URI.create(VERSIONS_URL).toURL().openStream().use {
+                            Files.copy(it, tmp,
+                                StandardCopyOption.REPLACE_EXISTING)
+                        }
                     }
                 } catch (e: Exception) {
-                    if (!have) throw GradleException(
-                        "could not fetch liteloader versions.json " +
-                                "from $VERSIONS_URL", e)
+                    if (!have) {
+                        project.reportProblem(
+                            "liteloader/fetch",
+                            "unimined: could not fetch liteloader " +
+                                    "versions.json from $VERSIONS_URL",
+                            e.message,
+                            UniminedProblems.Severity.ERROR
+                        )
+                        throw GradleException(
+                            "could not fetch liteloader versions.json " +
+                                    "from $VERSIONS_URL", e)
+                    }
                     // stale cache beats failing on a flaky network
                 }
             }

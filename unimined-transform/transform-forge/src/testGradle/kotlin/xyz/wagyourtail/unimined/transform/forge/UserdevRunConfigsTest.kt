@@ -103,6 +103,33 @@ class UserdevRunConfigsTest {
     }
 
     @Test
+    fun `type resolves a config key different from the run name`() {
+        // `runs.named("myDatagen") { type.set("data") }` binds to
+        // userdev `runs.data` — the name has no matching key
+        val spec = UserdevRunConfigs.forSide(
+            cfg(
+                """"data": {
+                "main": "net.minecraftforge.data.Main",
+                "args": ["--output", "{game_dir}/gen"]
+            }"""
+            ),
+            "myDatagen", "FMLTweaker", ctx, type = "data"
+        )!!
+        assertEquals("net.minecraftforge.data.Main", spec.mainClass)
+    }
+
+    @Test
+    fun `type misses fall back to the run name for 1_x parity`() {
+        // a run named `client` keeps resolving `runs.client` even
+        // when its type names a key the profile lacks
+        val spec = UserdevRunConfigs.forSide(
+            cfg(""""client": {"main": "net.minecraft.client.Main"}"""),
+            "client", "FMLTweaker", ctx, type = "data"
+        )!!
+        assertEquals("net.minecraft.client.Main", spec.mainClass)
+    }
+
+    @Test
     fun `bootstrap-dev lt2_1_4 uses semicolon separator`() {
         val spec = UserdevRunConfigs.forSide(
             cfg(""""client": {"main": "net.minecraft.Main"}"""),

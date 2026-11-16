@@ -4,6 +4,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.unimined.api.util.writeAtomically
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
@@ -45,8 +47,14 @@ internal object UserdevEnrichers {
             for ((key, path) in paths) {
                 val entry = j.getJarEntry(path) ?: continue
                 val target = outDir.resolve(key + "-" + path.substringAfterLast('/'))
-                j.getInputStream(entry).use { input ->
-                    target.writeBytes(input.readBytes())
+                // exists-gated like UserdevExtract — identical rewrites
+                // churn the dir listing the config cache fingerprints
+                if (Files.notExists(target)) {
+                    target.writeAtomically { tmp ->
+                        j.getInputStream(entry).use { input ->
+                            tmp.writeBytes(input.readBytes())
+                        }
+                    }
                 }
                 out[key] = target
             }
@@ -113,11 +121,20 @@ internal object UserdevEnrichers {
             }.toList()
 
     private fun writeCt(path: Path, header: String, directives: List<String>): Path {
-        if (directives.isEmpty()) return path.also { it.writeText("$header\n") }
-        path.writeText(buildString {
-            append(header).append('\n')
-            directives.forEach { append(it).append('\n') }
-        })
+        // content-gated (not just exists): two envs sharing this jar's
+        // cache dir can legitimately emit different namespace headers —
+        // skip the write only when bytes already match
+        val text = if (directives.isEmpty()) {
+            "$header\n"
+        } else {
+            buildString {
+                append(header).append('\n')
+                directives.forEach { append(it).append('\n') }
+            }
+        }
+        if (Files.notExists(path) || path.readText() != text) {
+            path.writeAtomically { tmp -> tmp.writeText(text) }
+        }
         return path
     }
 }

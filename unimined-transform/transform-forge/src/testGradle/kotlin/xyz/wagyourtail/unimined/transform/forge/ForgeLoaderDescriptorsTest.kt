@@ -39,16 +39,42 @@ class ForgeLoaderDescriptorsTest {
             "net.neoforged:neoforge:21.0.0-beta",
             LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21", "0-beta")
         )
-        // 26.x era: mc is directly the neoforge series — `.0` pad
-        // produces the published `26.3.0.*` shape; a 3-segment mc
-        // needs no pad; bare build tails prepend the derived base
+        // 26.x era: mc is directly the neoforge series — the pad lands
+        // BEFORE the `1.` strip, so two-part 26.x ids produce the
+        // published `26.x.0.*` shape on maven.neoforged.net (1.x
+        // stripped first and never saw a non-`1.` two-part mc — its
+        // `26.3`→`26.3` output matches no published artifact); a
+        // 3-segment mc needs no pad; bare build tails prepend the
+        // derived base
         assertEquals(
             "net.neoforged:neoforge:26.3.0.93",
             LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.3", "93")
         )
         assertEquals(
+            "net.neoforged:neoforge:26.2.0.1-beta",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.2", "1-beta")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:26.1.0.0-alpha.1",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.1", "0-alpha.1")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:26.1.1.3-beta",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.1.1", "3-beta")
+        )
+        assertEquals(
             "net.neoforged:neoforge:26.1.2.126",
             LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.1.2", "126")
+        )
+        // `1.`-scheme versions strip after the pad — `1.20.4`→`20.4`,
+        // `1.21`→`1.21.0`→`21.0`
+        assertEquals(
+            "net.neoforged:neoforge:20.4.237",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.20.4", "237")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:21.0.167",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21", "167")
         )
         assertEquals(
             "net.neoforged:neoforge:21.1.265",
@@ -58,6 +84,10 @@ class ForgeLoaderDescriptorsTest {
         assertEquals(
             "net.neoforged:neoforge:21.1.265",
             LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("1.21.1", "21.1.265")
+        )
+        assertEquals(
+            "net.neoforged:neoforge:26.3.0.103",
+            LoaderRegistry.resolveBuiltin("neoforge")!!.loaderCoords("26.3", "26.3.0.103")
         )
     }
 

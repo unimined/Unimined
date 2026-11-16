@@ -92,6 +92,14 @@ data class LoaderDescriptor(
      *  (`atTool`/`modFormat`/`unionRelauncher`/…). */
     val capabilities: Map<String, String> = emptyMap(),
 
+    /** The family transform contributes this product's own merged-env
+     *  secondary classpath itself (forge's era-probed classifier
+     *  artifacts — bare `loaderCoords` jars don't exist for FG2-era
+     *  Forge) — the generic `mergedLoader<Env>` bucket skips specs
+     *  whose descriptor sets this. `false` = merged envs contribute
+     *  `loaderCoords` for the secondary spec. */
+    val mergedClasspathSelfManaged: Boolean = false,
+
     /** Gradle plugin id of the family transform this product needs —
      *  `xyz.wagyourtail.unimined.transform.forge`. The frontend applies
      *  it lazily once an environment declares this loader, instead of

@@ -1,9 +1,9 @@
 package xyz.wagyourtail.unimined.transform.conversion.internal
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.download.Downloader
 import xyz.wagyourtail.unimined.provider.conversion.ConversionProvider
@@ -143,7 +143,10 @@ object ConversionEnvironmentWiring {
         // reads hoisted out of withDependencies — provider gets inside
         // a resolution hook re-enter resolution ("Recursive update")
         val mc = environment.version.get()
-        val joined = environment.side.orNull == Side.MERGED
+        // COMMON envs ride the joined loader artifact set — the
+        // intersection jar is a subset of the merged dist
+        val joined = environment.side.orNull == Side.MERGED ||
+                environment.side.orNull == Side.COMMON
         // deps FoxLoader self-manages at runtime — DependencyHelper
         // fetches each into <gameDir>/libraries/ when its classCheck
         // isn't already loadable. They must stay OFF the -cp: a
@@ -189,8 +192,9 @@ object ConversionEnvironmentWiring {
             // pair, not the artifact shape
             val joinedCapable = canCombine(mc)
             if (joined && !joinedCapable)
-                throw GradleException(
-                    "foxloader $version predates 2.9 and " +
+                project.failProblem(
+                    "foxloader/merged-env",
+                    "unimined: foxloader $version predates 2.9 and " +
                     "cannot run in a merged (joined) env"
                 )
             fun dep(notation: String) = project.dependencies.create(notation)
@@ -238,10 +242,12 @@ object ConversionEnvironmentWiring {
                 }
                 if (addPrimary) {
                     if (spec.version.isBlank())
-                        throw GradleException(
-                            "loader '${spec.name}' requires an explicit " +
-                            "version — only foxloader resolves one from " +
-                            "its version map"
+                        project.failProblem(
+                            "env/loader-version-required",
+                            "unimined: loader '${spec.name}' requires an " +
+                            "explicit version",
+                            "only foxloader resolves one from its " +
+                            "version map"
                         )
                     deps.add(
                         project.dependencies.create(
@@ -418,7 +424,8 @@ object ConversionEnvironmentWiring {
      * membership set is the env's declared libraries — stripping a mod
      * jar against it would delete the mod's classes).
      *
-     * MERGED envs get no step: the producer strips both sides
+     * MERGED (and COMMON — its producer strips the same way before
+     * intersecting) envs get no step: the producer strips both sides
      * *pre-merge* inside `ConversionArtifactProducer` — the pipeline
      * only ever sees the merged output, and stripping there would
      * leave a redundant fat merged.jar in the artifact cache.
@@ -427,7 +434,8 @@ object ConversionEnvironmentWiring {
         project: Project,
         environment: MinecraftEnvironment
     ) {
-        if (environment.side.orNull == Side.MERGED) return
+        if (environment.side.orNull == Side.MERGED ||
+            environment.side.orNull == Side.COMMON) return
         if (!ConversionProvider.declaresExtraLibraries(environment.product.get())) return
         val strip = project.objects
             .newInstance(BundledLibraryStripStepSpec::class.java)

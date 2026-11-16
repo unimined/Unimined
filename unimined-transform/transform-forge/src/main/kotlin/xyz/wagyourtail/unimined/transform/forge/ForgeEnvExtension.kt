@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.transform.forge
 
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
 
@@ -11,7 +14,10 @@ import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
  * reaches the same object via the `forge(Action)` sugar in
  * `ForgeDsl.kt`.
  */
-class ForgeEnvExtension(private val spec: TransformEnvironmentSpec) {
+class ForgeEnvExtension(
+    private val spec: TransformEnvironmentSpec,
+    objects: ObjectFactory
+) {
 
     /**
      * Opt-in FG2 srg-namespace dev launch — `env.forge { srgRuntime = true }`.
@@ -39,8 +45,25 @@ class ForgeEnvExtension(private val spec: TransformEnvironmentSpec) {
      * jar ships its own; mod jars carry them too) get srg-era names
      * rewritten to the dev namespace, since FML's csv naming
      * service has no class-name channel. Set `false` to opt out —
-     * `env.forge { jsCoremodRemap = false }`.
+     * `env.forge { jsCoremodRemap.set(false) }`.
+     *
+     * Property-backed: the value is read when the deferred
+     * `forge:jsCoremodRemap` step contribution materializes, so a
+     * [Provider] set here resolves at pipeline materialization —
+     * never during configuration. Groovy keeps assignment:
+     * `jsCoremodRemap = false`.
      */
-    var jsCoremodRemap: Boolean = true
+    val jsCoremodRemap: Property<Boolean> =
+        objects.property(Boolean::class.java).apply { convention(true) }
+
+    /** Direct-value setter for [jsCoremodRemap] — Groovy
+     *  `jsCoremodRemap = false` resolves this bean setter. */
+    fun setJsCoremodRemap(value: Boolean) =
+        jsCoremodRemap.set(value)
+
+    /** Provider setter for [jsCoremodRemap] — the provider resolves
+     *  at pipeline materialization, not during configuration. */
+    fun setJsCoremodRemap(value: Provider<out Boolean>) =
+        jsCoremodRemap.set(value)
 
 }

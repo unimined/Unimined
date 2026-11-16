@@ -13,11 +13,15 @@ dependencies {
     api(project(":unimined-remap"))
     api(project(":unimined-mod"))
     implementation(project(":unimined-remap:remapper-access"))
+    implementation(project(":unimined-remap:remapper-uml"))
     implementation(libs.asm)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    // mods{}/classpathGroups run wiring tests apply the runs plugin
+    "testGradleImplementation"(project(":unimined-runs"))
 }
 
 gradlePlugin {

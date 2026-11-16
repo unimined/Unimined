@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.transform.jarmod
 
-import xyz.wagyourtail.unimined.transform.CustomTransformer
+import xyz.wagyourtail.unimined.transform.internal.CustomTransformer
 import xyz.wagyourtail.unimined.transform.jarmod.internal.JarModEnvironmentWiring
 import xyz.wagyourtail.unimined.transform.spi.MinecraftTransformer
 import xyz.wagyourtail.unimined.transform.spi.TransformerClaim
