@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.decompiler.vineflower
+package xyz.wagyourtail.unimined.decompiler.vineflower.task
 
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty

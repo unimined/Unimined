@@ -1,7 +1,9 @@
 package xyz.wagyourtail.unimined.remap.task
 
-import org.gradle.api.GradleException
+import org.gradle.api.Project
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.remap.FootgunCheckLevel
 import xyz.wagyourtail.unimined.remap.internal.JarLint
 import java.nio.file.Path
@@ -14,7 +16,7 @@ import java.nio.file.Path
  */
 internal fun stampAndLintProductionJar(
     jar: Path, namespace: String, level: FootgunCheckLevel,
-    logger: Logger, host: String
+    project: Project, logger: Logger, host: String
 ) {
     JarLint.stampNamespace(jar, namespace)
     if (level == FootgunCheckLevel.OFF) return
@@ -22,12 +24,14 @@ internal fun stampAndLintProductionJar(
     if (problems.isEmpty()) return
     when (level) {
         FootgunCheckLevel.WARN -> problems.forEach {
-            logger.warn("$host: $it")
+            project.reportProblem("remap/footgun", "$host: $it")
         }
-        FootgunCheckLevel.ERROR -> throw GradleException(
+        FootgunCheckLevel.ERROR -> UniminedProblems.fail(
+            logger, project,
+            "remap/footgun",
             "$host: production jar failed footgun checks " +
-                    "(${problems.size} problem${if (problems.size == 1) "" else "s"}):\n" +
-                    problems.joinToString("\n") { "  - $it" } +
+                    "(${problems.size} problem${if (problems.size == 1) "" else "s"})",
+            problems.joinToString("\n") { "  - $it" } +
                     "\n(set remap.footgunChecks = WARN to downgrade, " +
                     "OFF to disable)"
         )

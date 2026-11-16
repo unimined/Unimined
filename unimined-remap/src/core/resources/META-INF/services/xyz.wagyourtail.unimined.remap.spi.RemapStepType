@@ -1,2 +1,2 @@
-xyz.wagyourtail.unimined.remap.internal.EmitArtifactStepType
-xyz.wagyourtail.unimined.remap.internal.StripNestedJarsStepType
+xyz.wagyourtail.unimined.remap.internal.steps.EmitArtifactStepType
+xyz.wagyourtail.unimined.remap.internal.steps.StripNestedJarsStepType

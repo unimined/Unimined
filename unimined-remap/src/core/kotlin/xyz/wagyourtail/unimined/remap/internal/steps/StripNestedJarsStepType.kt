@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.steps
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

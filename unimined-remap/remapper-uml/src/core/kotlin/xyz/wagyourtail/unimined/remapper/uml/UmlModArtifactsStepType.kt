@@ -89,7 +89,7 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
         if (Namespace(spec.sourceNamespace) == Namespace(spec.targetNamespace)) {
             return input
         }
-        val extensions = modArtifactExtensions(input, ctx, stepSpec)
+        val extensions = modArtifactExtensions(input, stepSpec)
         if (extensions.isEmpty()) return input
 
         val view = ctx.mappings?.view<MappingTree>()
@@ -203,8 +203,11 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
      * safe here because this step only runs on (small) mod jars, never
      * on the MC artifact's streaming decompile pipeline.
      */
-    private fun modArtifactExtensions(
-        input: Path, ctx: StepContext, spec: ModArtifactsStepSpec
+    /** The spec→extension negotiation — internal for spec-level tests
+     *  ([UmlModArtifactsStepTypeTest] asserts which extension each spec
+     *  flag produces and the ctor args they carry). */
+    internal fun modArtifactExtensions(
+        input: Path, spec: ModArtifactsStepSpec
     ): List<AsmExtensionFactory> {
         val exts = mutableListOf<AsmExtensionFactory>()
         exts += AsmExtensionFactory { c -> KotlinMetadataExtension(c) }

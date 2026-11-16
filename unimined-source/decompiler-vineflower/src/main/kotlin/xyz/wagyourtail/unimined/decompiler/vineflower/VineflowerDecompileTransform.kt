@@ -9,6 +9,7 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.process.ExecOperations
+import xyz.wagyourtail.unimined.decompiler.vineflower.task.VineflowerDecompileTask
 import javax.inject.Inject
 
 /**

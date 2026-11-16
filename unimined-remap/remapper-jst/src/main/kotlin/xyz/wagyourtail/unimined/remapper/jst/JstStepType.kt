@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
  * `source-remap` no unpack/repack is needed. The step declares
  * [needsClasspath] — JST resolves symbols against the compile classpath.
  */
-class JstStep : RemapStepType<JstStepSpec> {
+class JstStepType : RemapStepType<JstStepSpec> {
 
     override val name = "jst"
     override val stepName = "jst"

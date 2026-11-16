@@ -5,6 +5,8 @@ plugins {
 dependencies {
     "coreApi"(project(":unimined-api"))
     api(project(":unimined-transform"))
+    // Linemap.applyJar — linemap-extra writer shared with UML
+    "coreImplementation"(libs.unimined.mapping.remapper)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

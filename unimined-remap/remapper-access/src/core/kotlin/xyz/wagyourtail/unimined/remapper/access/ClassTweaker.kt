@@ -100,6 +100,16 @@ class ClassTweaker private constructor(
         // `transitiveAccess` is the dependency-application subset
         (if (transitiveOnly) transitiveAccess[target] else access[target]).orEmpty()
 
+    /** Declared access-rule targets — full application scope
+     *  (plain + `transitive-*`), for match validation. */
+    val accessTargets: Set<Target>
+        get() = access.keys
+
+    /** Declared access-rule targets — dependency application scope
+     *  (`transitive-*` only), for match validation. */
+    val transitiveAccessTargets: Set<Target>
+        get() = transitiveAccess.keys
+
     /** All owner classes named by the file (for fast member lookups). */
     val owners: Set<String>
         get() = (access.keys + transitiveAccess.keys +

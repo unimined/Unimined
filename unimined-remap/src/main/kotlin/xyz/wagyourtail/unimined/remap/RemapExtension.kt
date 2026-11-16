@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -13,6 +14,9 @@ import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskProvider
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.remap.spi.EmitArtifactStepSpec
 import xyz.wagyourtail.unimined.remap.task.RemapArtifactTask
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
@@ -75,7 +79,17 @@ abstract class RemapExtension @Inject constructor(
     private val dslVerbs = mutableMapOf<String, (RemapSurfaceSpec) -> Any>()
 
     /** Register a Groovy-dispatchable DSL verb object for remap surfaces. */
-    fun registerDslVerb(name: String, factory: (RemapSurfaceSpec) -> Any) {
+    fun registerDslVerb(name: String, factory: (RemapSurfaceSpec) -> Any) =
+        registerDslVerbInternal(name, factory)
+
+    /**
+     * Groovy DSL form of [registerDslVerb] — the closure receives the
+     * target spec as its sole argument (use `spec.stepVerb(Type)`).
+     */
+    fun registerDslVerb(name: String, factory: Closure<Any>) =
+        registerDslVerbInternal(name) { spec -> factory.call(spec) }
+
+    private fun registerDslVerbInternal(name: String, factory: (RemapSurfaceSpec) -> Any) {
         dslVerbs[name] = factory
         // verbs registered after spec creation land on existing specs too
         environments.values.forEach { env ->
@@ -123,7 +137,7 @@ abstract class RemapExtension @Inject constructor(
     ): RemapEnvironmentSpec = sourceSet(environmentId).also { environment ->
         action.delegate = environment
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** Configure the binary/runtime artifact pipeline. */
@@ -269,6 +283,12 @@ abstract class RemapExtension @Inject constructor(
             val environment = sourceSet(environmentId)
             fun <T> named(what: String, block: () -> T): T = try { block() }
                 catch (e: Exception) {
+                    project.reportProblem(
+                        "remap/pipeline-steps",
+                        "unimined: pipelineSteps($environmentId, $surface) " +
+                        "failed resolving $what: ${e.message}",
+                        severity = UniminedProblems.Severity.ERROR
+                    )
                     throw GradleException(
                         "unimined: pipelineSteps($environmentId, $surface) " +
                         "failed resolving $what: ${e.message}", e)
@@ -395,6 +415,14 @@ abstract class RemapExtension @Inject constructor(
         action: Action<RemappedViewSpec>
     ): Configuration = remappedViewFor("main", source, name, action)
 
+    /** Groovy DSL overload for an explicitly-named view on `main`. */
+    fun remappedView(
+        source: String,
+        name: String,
+        @DelegatesTo(value = RemappedViewSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): Configuration = remappedViewFor("main", source, name, action)
+
     /** Create a remapped dependency view for a named environment. */
     fun remappedViewFor(
         environmentId: String,
@@ -422,6 +450,7 @@ abstract class RemapExtension @Inject constructor(
         action: Action<RemappedViewSpec>
     ): Configuration {
         val spec = objects.newInstance(RemappedViewSpec::class.java)
+        spec.errorContext = "remapped view '$name'"
         spec.discriminator.convention("")
         spec.stepSpecs.convention(viewSteps(environmentId, RemapSurface.JAR))
         // defaults + transform-plugin contributions — evaluated lazily
@@ -468,12 +497,17 @@ abstract class RemapExtension @Inject constructor(
         spec.onlyRemapMarkedJars.convention(true)
         action.execute(spec)
 
-        require(spec.targetNamespace.isPresent) {
-            "remappedViews('$baseName') must set targetNamespace"
-        }
-        require(spec.namespaces.isNotEmpty()) {
-            "remappedViews('$baseName') must declare at least one source namespace"
-        }
+        if (!spec.targetNamespace.isPresent) project.failProblem(
+            "remap/views-target-ns",
+            "unimined: remappedViews('$baseName') on env " +
+                "'$environmentId' must set targetNamespace"
+        )
+        if (spec.namespaces.isEmpty()) project.failProblem(
+            "remap/views-namespaces",
+            "unimined: remappedViews('$baseName') on env " +
+                "'$environmentId' must declare at least one source " +
+                "namespace"
+        )
 
         return viewWiring.buildViewSet(environmentId, baseName, spec)
     }
@@ -487,7 +521,7 @@ abstract class RemapExtension @Inject constructor(
     ): RemappedViewSet = remappedViewsFor(environmentId, baseName, Action { spec ->
         action.delegate = spec
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     })
 
     /** Groovy DSL overload for a named remapped dependency view. */
@@ -500,7 +534,7 @@ abstract class RemapExtension @Inject constructor(
     ): Configuration = remappedViewFor(environmentId, source, name, Action { spec ->
         action.delegate = spec
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     })
 
     /**
@@ -573,7 +607,7 @@ abstract class RemapExtension @Inject constructor(
     ): TaskProvider<RemapArtifactTask> = artifact(name, Action { spec ->
         action.delegate = spec
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     })
 
     /** Groovy DSL overload for the default-named artifact remap. */

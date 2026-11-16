@@ -3,8 +3,10 @@ package xyz.wagyourtail.unimined.remap
 import groovy.lang.DelegatesTo
 import groovy.lang.GroovyShell
 import groovy.lang.Closure
+import groovy.lang.MissingMethodException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -74,6 +76,70 @@ class GroovyDslDispatchTest {
         // the member path both languages share
         val step = spec.step(MarkerStepSpec::class.java) { it.seen.add("kts") }
         assertEquals(listOf("kts"), step.seen)
+    }
+
+    private fun messages(e: Throwable): String =
+        generateSequence(e) { it.cause }
+            .mapNotNull { it.message }.joinToString(" | ")
+
+    /** 1.x `mixinRemap { }` surface calls must surface the
+     *  `modArtifacts { }` migration note through Groovy dispatch —
+     *  not a bare missing-method error. */
+    @Test
+    fun `removed mixinRemap verb warns with migration note`() {
+        val project = ProjectBuilder.builder().build()
+        val spec = extension(project).surface(RemapSurface.JAR)
+        val shell = GroovyShell()
+        shell.setVariable("spec", spec)
+        val e = assertThrows(Exception::class.java) {
+            shell.evaluate("spec.mixinRemap { }")
+        }
+        val msg = messages(e)
+        assertTrue(msg.contains("modArtifacts"), msg)
+    }
+
+    /** 1.x `devNamespace`/`prodNamespace` surface setters — removed
+     *  in 2.0; namespaces come from the environment declaration. */
+    @Test
+    fun `removed namespace verbs warn with migration note`() {
+        val project = ProjectBuilder.builder().build()
+        val spec = extension(project).surface(RemapSurface.JAR)
+        val shell = GroovyShell()
+        shell.setVariable("spec", spec)
+        val e = assertThrows(Exception::class.java) {
+            shell.evaluate("spec.devNamespace('official')")
+        }
+        assertTrue(messages(e).contains("namespace"), messages(e))
+    }
+
+    /** Engine verbs whose contributing plugin is absent name the
+     *  plugin — `jst { }` without `remapper.jst` applied. */
+    @Test
+    fun `plugin-contributed verb names its plugin`() {
+        val project = ProjectBuilder.builder().build()
+        val spec = extension(project).surface(RemapSurface.JAR)
+        val shell = GroovyShell()
+        shell.setVariable("spec", spec)
+        val e = assertThrows(Exception::class.java) {
+            shell.evaluate("spec.jst { }")
+        }
+        assertTrue(messages(e).contains("remapper.jst"), messages(e))
+    }
+
+    /** Truly unknown surface calls still raise missing-method —
+     *  the tombstone maps never swallow typos. */
+    @Test
+    fun `unknown surface verbs raise missing-method`() {
+        val project = ProjectBuilder.builder().build()
+        val spec = extension(project).surface(RemapSurface.JAR)
+        val shell = GroovyShell()
+        shell.setVariable("spec", spec)
+        assertThrows(Exception::class.java) {
+            shell.evaluate("spec.definitelyNotAVerb(1)")
+        }
+        assertThrows(MissingMethodException::class.java) {
+            spec.methodMissing("definitelyNotAVerb", arrayOf<Any>(1))
+        }
     }
 
 }

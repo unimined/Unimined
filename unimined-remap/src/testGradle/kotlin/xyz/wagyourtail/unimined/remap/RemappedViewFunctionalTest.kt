@@ -224,4 +224,124 @@ class RemappedViewFunctionalTest {
         }
     }
 
+    /**
+     * Marker-gated remap decisions: a marked jar honoring
+     * `Fabric-Loom-Remap:false` and a plain jar pass through; a plain
+     * jar covered by `forceRemap` and an unmarked `…:true` jar remap.
+     */
+    @Test
+    fun `loom remap attribute and forceRemap steer the marker gate`() {
+        val cls = "xyz/wagyourtail/unimined/remap/fakes/FakeStep"
+        fun writeJar(dir: Path, name: String, fmj: Boolean,
+                     loomRemap: Boolean?, realClass: Boolean) {
+            Files.createDirectories(dir)
+            val manifest = java.util.jar.Manifest().apply {
+                mainAttributes.putValue("Manifest-Version", "1.0")
+                if (loomRemap != null) {
+                    mainAttributes.putValue("Fabric-Loom-Remap", loomRemap.toString())
+                }
+            }
+            JarOutputStream(Files.newOutputStream(dir.resolve("$name-1.0.jar")), manifest).use { jar ->
+                jar.putNextEntry(JarEntry("data.txt"))
+                jar.write("x".toByteArray())
+                jar.closeEntry()
+                if (fmj) {
+                    jar.putNextEntry(JarEntry("fabric.mod.json"))
+                    jar.write("""{"schemaVersion":1,"id":"m","version":"1"}""".toByteArray())
+                    jar.closeEntry()
+                }
+                if (realClass) {
+                    // a real class file — UML's mod-artifacts pass
+                    // validates the official→named layer renames >0
+                    jar.putNextEntry(JarEntry("$cls.class"))
+                    jar.write(javaClass.getResourceAsStream("/$cls.class")!!.readBytes())
+                    jar.closeEntry()
+                }
+            }
+            Files.writeString(dir.resolve("$name-1.0.pom"), """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>$name</artifactId>
+                    <version>1.0</version>
+                </project>
+            """.trimIndent())
+        }
+
+        val repo = dir.resolve("repo")
+        writeJar(repo.resolve("com/example/optout/1.0"), "optout", fmj = true, loomRemap = false, realClass = true)
+        writeJar(repo.resolve("com/example/optin/1.0"), "optin", fmj = false, loomRemap = true, realClass = true)
+        writeJar(repo.resolve("com/example/forced/1.0"), "forced", fmj = false, loomRemap = null, realClass = true)
+        writeJar(repo.resolve("com/example/plain/1.0"), "plain", fmj = false, loomRemap = null, realClass = true)
+
+        MappingBundle(
+            namespaces = listOf("official", "named"),
+            source = "official",
+            target = "named",
+            rows = listOf(
+                MappingBundle.Row(
+                    MappingBundle.Kind.CLASS,
+                    srcName = cls, dstName = "moved/FakeStep"
+                )
+            )
+        ).write(dir.resolve("mappings.json"))
+        Files.writeString(dir.resolve("settings.gradle"), "rootProject.name = 't'\n")
+        Files.writeString(dir.resolve("build.gradle"), """
+            plugins { id 'java' }
+            apply plugin: 'xyz.wagyourtail.unimined.remap'
+
+            repositories { maven { url = uri('${repo.toUri()}') } }
+
+            uniminedRemap { jar { remap("tiny") } }
+
+            configurations.create("deps")
+            dependencies {
+                deps "com.example:optout:1.0"
+                deps "com.example:optin:1.0"
+                deps "com.example:forced:1.0"
+                deps "com.example:plain:1.0"
+            }
+
+            def remapped = uniminedRemap.remappedView("deps", "depsRemapped") {
+                it.sourceNamespace.set("official")
+                it.targetNamespace.set("named")
+                it.mappingFile.fileValue(file('mappings.json'))
+                it.onlyRemapMarkedJars.set(true)
+                it.modMarkers.set(["file:fabric.mod.json"])
+                it.discriminator.set("modgate")
+                it.forceRemap("com.example:forced:1.0")
+            }
+
+            tasks.register("copyRemapped", Copy) {
+                from(remapped)
+                into layout.buildDirectory.dir("remapped")
+            }
+        """.trimIndent())
+
+        GradleRunner.create()
+            .withProjectDir(dir.toFile())
+            .withArguments("copyRemapped", "--configuration-cache", "-s",
+                "-I", writeInitScript().toString())
+            .build()
+
+        // transform output always carries the -<ns> suffix — the gate
+        // verdict shows in CONTENT: remapped jars have FakeStep under
+        // `moved/`, pass-through jars keep it at its original name
+        val remappedOut = Files.list(dir.resolve("build/remapped"))
+            .map { it.fileName.toString() }.sorted().toList()
+        assertEquals(
+            listOf("forced-1.0-named.jar", "optin-1.0-named.jar",
+                "optout-1.0-named.jar", "plain-1.0-named.jar"),
+            remappedOut
+        )
+        fun classEntry(name: String): String? =
+            JarFile(dir.resolve("build/remapped/$name").toFile()).use { jar ->
+                jar.entries().toList().firstOrNull { it.name.endsWith(".class") }?.name
+            }
+        assertEquals("moved/FakeStep.class", classEntry("forced-1.0-named.jar"))
+        assertEquals("moved/FakeStep.class", classEntry("optin-1.0-named.jar"))
+        assertEquals("$cls.class", classEntry("optout-1.0-named.jar"))
+        assertEquals("$cls.class", classEntry("plain-1.0-named.jar"))
+    }
+
 }

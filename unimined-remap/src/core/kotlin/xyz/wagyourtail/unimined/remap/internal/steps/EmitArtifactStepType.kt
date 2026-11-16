@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.steps
 
 import org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.remap.spi.FusibleJarStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
+import xyz.wagyourtail.unimined.remap.internal.JarSignatureStripper
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

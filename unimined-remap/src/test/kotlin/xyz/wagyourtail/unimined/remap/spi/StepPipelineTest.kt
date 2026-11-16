@@ -141,7 +141,7 @@ class StepPipelineTest {
         val bang = FusibleJarStep { e, _ ->
             FusedJarEntry(e.name, e.bytes + "!".toByteArray(), e.time)
         }
-        val emit = xyz.wagyourtail.unimined.remap.internal.EmitArtifactStepType()
+        val emit = xyz.wagyourtail.unimined.remap.internal.steps.EmitArtifactStepType()
             .create(EmitArtifactStepSpec(emitted.toString()), ctx())
 
         val out = StepPipeline.run(input, listOf(upper, emit, bang), ctx())

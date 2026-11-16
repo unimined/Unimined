@@ -1,8 +1,9 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.steps
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.util.MavenCoords
+import xyz.wagyourtail.unimined.remap.internal.JarLint
 import java.nio.file.Path
 import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
@@ -412,6 +413,48 @@ class NestedJarsAppenderTest {
             "jarjar", true, null, null
         )
         assertNull(innerManifest(out, "META-INF/jarjar/lib-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar declared FMLModType wins over content detection`() {
+        // the jar's own declaration outranks heuristics — a CUSTOM
+        // mod file keeps CUSTOM even though mods.toml detects MOD
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("custom.jar", mapOf(
+            "META-INF/mods.toml" to "modLoader=customfml"), manifest = {
+                mainAttributes.putValue("FMLModType", "CUSTOM")
+            })
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "custom", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("CUSTOM", innerManifest(
+            out, "META-INF/jarjar/custom-1.0.jar")
+            .mainAttributes.getValue("FMLModType"))
+    }
+
+    @Test
+    fun `jarjar declared FMLModType wins over parent propagation`() {
+        // plugin-layer parent propagates LIBRARY to undeclared libs —
+        // a jar that declares its own type keeps it
+        val out = jar("provider.jar", mapOf("x.class" to "x"),
+            manifest = {
+                mainAttributes.putValue("FMLModType", "LANGPROVIDER")
+            })
+        val dep = jar("glib.jar", mapOf("y.class" to "y"), manifest = {
+            mainAttributes.putValue("FMLModType", "GAMELIBRARY")
+        })
+        NestedJarsAppender.append(
+            out,
+            listOf(NestedJarsAppender.Input(
+                dep, MavenCoords("com.acme", "glib", "1.0"))),
+            "jarjar", true, null, null
+        )
+        assertEquals("GAMELIBRARY", innerManifest(
+            out, "META-INF/jarjar/glib-1.0.jar")
             .mainAttributes.getValue("FMLModType"))
     }
 

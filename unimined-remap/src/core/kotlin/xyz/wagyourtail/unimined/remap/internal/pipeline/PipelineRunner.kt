@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.pipeline
 
 import xyz.wagyourtail.commons.core.logger.Logger
 import xyz.wagyourtail.unimined.api.access.AccessModel

@@ -9,7 +9,7 @@ import java.nio.file.Path
 import kotlin.io.path.readLines
 
 /**
- * [SourceRemapStep.writeSrg] over UML's `SrgWriter`: rows emit for both
+ * [SourceRemapStepType.writeSrg] over UML's `SrgWriter`: rows emit for both
  * namespaces, method dst descriptors are filled from the remapped source
  * descriptor, and param/var rows are not expressible in SRG.
  */
@@ -39,7 +39,7 @@ class SrgWriterTest {
     @Test
     fun `writes srg with desc and package-prefix remapping`() {
         val out = dir.resolve("map.srg")
-        SourceRemapStep().writeSrg(tree, "official", "named", out)
+        SourceRemapStepType().writeSrg(tree, "official", "named", out)
 
         val lines = out.readLines()
         assertTrue("PK: a b" in lines)

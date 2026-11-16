@@ -6,8 +6,17 @@ import org.junit.jupiter.api.io.TempDir
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
+import org.gradle.testfixtures.ProjectBuilder
+import xyz.wagyourtail.commons.core.logger.Logger
+import org.gradle.api.logging.Logging
+import xyz.wagyourtail.unimined.api.mapping.MappingData
+import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
+import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.mappingTree
+import xyz.wagyourtail.unimined.remap.spi.PipelineState
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
+import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
@@ -429,6 +438,222 @@ class ClassTweakerTest {
     @Test
     fun `apply is a no-op without tweaker files`() = Unit
 
+    // --- `access { validate = true }` (spec `validate`) -----------------
+
+    private val validateSpec = object : RemapSpec {
+        override val sourceNamespace = "named"
+        override val targetNamespace = "named"
+        override val classpath: List<Path> = emptyList()
+    }
+
+    private fun validateCtx(tree: MappingTree): StepContext = object : StepContext {
+        override val surface = RemapSurface.JAR
+        override val state: PipelineState by lazy {
+            PipelineState(validateSpec.sourceNamespace, null)
+        }
+        override val spec = validateSpec
+        override val mappings: MappingData = UmlMappingData(tree)
+        override val classpath = emptyList<Path>()
+        override val workDir = dir
+        override val logger: Logger = xyz.wagyourtail.unimined.api.util
+            .uniminedLogger(Logging.getLogger(ClassTweakerTest::class.java))
+    }
+
+    private fun validateDocsCore(
+        classBytes: ByteArray,
+        vararg files: Pair<String, String>,
+        headerlessNamespace: String? = null,
+        tree: MappingTree = identityTree
+    ): List<Pair<String, ClassTweaker.Target>> {
+        val jar = dir.resolve("vd-${System.nanoTime()}.jar")
+        JarOutputStream(Files.newOutputStream(jar)).use { out ->
+            out.putNextEntry(JarEntry("a/b/C.class"))
+            out.write(classBytes)
+            out.closeEntry()
+        }
+        return ApplyClassTweakerStepType().validateDocs(
+            files.map { (name, text) ->
+                val f = dir.resolve("vd-${System.nanoTime()}-$name")
+                Files.writeString(f, text)
+                name to f.toFile()
+            },
+            headerlessNamespace?.let { mapOf("source" to it) }
+                ?: emptyMap(),
+            tree, "named", emptyMap(), jar
+        )
+    }
+
+    @Test
+    fun `validateDocs returns nothing when every declared target exists`() {
+        val bytes = writeClass(
+            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
+        )
+        val unmatched = validateDocsCore(
+            bytes,
+            "mod.accesswidener" to (
+                    "accessWidener\tv1\tnamed\n" +
+                            "accessible\tclass\ta/b/C\n" +
+                            "accessible\tmethod\ta/b/C\thidden\t()V\n" +
+                            "accessible\tfield\ta/b/C\tstate\tI\n")
+        )
+        assertTrue(unmatched.isEmpty())
+    }
+
+    @Test
+    fun `validateDocs reports unmatched targets with source names`() {
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val unmatched = validateDocsCore(
+            bytes,
+            "mod.accesswidener" to (
+                    "accessWidener\tv1\tnamed\n" +
+                            "accessible\tclass\ta/b/Missing\n" +
+                            "accessible\tfield\ta/b/C\tother\tI\n")
+        )
+        assertEquals(2, unmatched.size)
+        assertTrue(unmatched.all { it.first == "mod.accesswidener" })
+    }
+
+    @Test
+    fun `validateDocs binds headerless docs to the given namespace`() {
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val unmatched = validateDocsCore(
+            bytes,
+            "accesstransformer.cfg" to (
+                    "public a/b/C hidden()V\n"),
+            headerlessNamespace = "named"
+        )
+        assertTrue(unmatched.isEmpty())
+    }
+
+    private fun runStep(
+        classBytes: ByteArray,
+        vararg files: Pair<String, String>,
+        depFiles: List<Pair<String, String>> = emptyList(),
+        validate: Boolean = true,
+        headerlessNamespace: String? = null,
+        tree: MappingTree = identityTree
+    ) {
+        val project = ProjectBuilder.builder().build()
+        val spec = project.objects.newInstance(ApplyClassTweakerStepSpec::class.java)
+        if (headerlessNamespace != null)
+            spec.headerlessNamespace.set(headerlessNamespace)
+        for ((name, text) in files) {
+            val f = dir.resolve(name)
+            Files.writeString(f, text)
+            spec.classTweakerFiles.from(f)
+        }
+        for ((name, text) in depFiles) {
+            val f = dir.resolve(name)
+            Files.writeString(f, text)
+            spec.dependencyClassTweakerFiles.from(f)
+        }
+        spec.validate.set(validate)
+        val jar = dir.resolve("v-${System.nanoTime()}.jar")
+        JarOutputStream(Files.newOutputStream(jar)).use { out ->
+            out.putNextEntry(JarEntry("a/b/C.class"))
+            out.write(classBytes)
+            out.closeEntry()
+        }
+        val ctx = validateCtx(tree)
+        ApplyClassTweakerStepType().create(spec, ctx).apply(jar, ctx)
+    }
+
+    @Test
+    fun `validate passes when every declared target exists`() {
+        val bytes = writeClass(
+            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
+        )
+        runStep(
+            bytes,
+            "mod.accesswidener" to (
+                    "accessWidener\tv1\tnamed\n" +
+                            "accessible\tclass\ta/b/C\n" +
+                            "accessible\tmethod\ta/b/C\thidden\t()V\n" +
+                            "accessible\tfield\ta/b/C\tstate\tI\n")
+        )
+    }
+
+    @Test
+    fun `validate fails on an unmatched class target`() {
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val e = assertThrows(org.gradle.api.GradleException::class.java) {
+            runStep(
+                bytes,
+                "mod.accesswidener" to (
+                        "accessWidener\tv1\tnamed\n" +
+                                "accessible\tclass\ta/b/Missing\n")
+            )
+        }
+        assertTrue(e.message!!.contains("mod.accesswidener"), e.message)
+        assertTrue(e.message!!.contains("a/b/Missing"), e.message)
+    }
+
+    @Test
+    fun `validate fails on an unmatched member target`() {
+        val bytes = writeClass(
+            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
+        )
+        val e = assertThrows(org.gradle.api.GradleException::class.java) {
+            runStep(
+                bytes,
+                "mod.accesswidener" to (
+                        "accessWidener\tv1\tnamed\n" +
+                                "accessible\tfield\ta/b/C\tother\tI\n")
+            )
+        }
+        assertTrue(e.message!!.contains("a/b/C"), e.message)
+        assertTrue(e.message!!.contains("other"), e.message)
+    }
+
+    @Test
+    fun `validate matches desc-less targets by owner and name`() {
+        // AT syntax declares fields without descriptors — `state` must
+        // match the `state I` field on name alone
+        val bytes = writeClass(
+            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            className = "a/b/C",
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
+        )
+        runStep(
+            bytes,
+            "accesstransformer.cfg" to "public a/b/C state\n",
+            headerlessNamespace = "named"
+        )
+    }
+
+    @Test
+    fun `dependency declared targets are not validated`() {
+        // NFRT parity: only user-declared docs are validated — a dep's
+        // stale transitive rule must not break this build
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        runStep(
+            bytes,
+            "mod.accesswidener" to (
+                    "accessWidener\tv1\tnamed\n" +
+                            "accessible\tclass\ta/b/C\n"),
+            depFiles = listOf(
+                "dep.accesswidener" to (
+                        "accessWidener\tv1\tnamed\n" +
+                                "transitive-accessible\tclass\ta/b/Missing\n")
+            )
+        )
+    }
+
+    @Test
+    fun `unmatched targets are silent when validate is off`() {
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        runStep(
+            bytes,
+            "mod.accesswidener" to (
+                    "accessWidener\tv1\tnamed\n" +
+                            "accessible\tclass\ta/b/Missing\n"),
+            validate = false
+        )
+    }
+
     private fun apply(
         bytes: ByteArray,
         own: List<ClassTweaker> = emptyList(),
@@ -468,7 +693,8 @@ class ClassTweakerTest {
         className: String = "a/b/C",
         methodAccess: Int = if (privateMethod) Opcodes.ACC_PRIVATE else Opcodes.ACC_PROTECTED,
         signature: String? = null,
-        innerClasses: List<Triple<String, String?, Int>> = emptyList()
+        innerClasses: List<Triple<String, String?, Int>> = emptyList(),
+        fields: List<Triple<String, String, Int>> = emptyList()
     ): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
@@ -479,6 +705,9 @@ class ClassTweakerTest {
         method.visitInsn(Opcodes.RETURN)
         method.visitMaxs(0, 0)
         method.visitEnd()
+        for ((name, desc, acc) in fields) {
+            writer.visitField(acc, name, desc, null, null).visitEnd()
+        }
         for ((name, outer, acc) in innerClasses) {
             writer.visitInnerClass(name, outer, name.substringAfterLast('$'), acc)
         }

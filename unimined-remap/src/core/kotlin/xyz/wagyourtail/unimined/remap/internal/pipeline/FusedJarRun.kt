@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.pipeline
 
 import xyz.wagyourtail.unimined.remap.spi.FusedJarEntry
 import xyz.wagyourtail.unimined.remap.spi.FusibleJarStep

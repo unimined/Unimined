@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.access.detect
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
@@ -216,10 +217,11 @@ class AccessFormatConvertTest {
         assertTrue("extendable" to "example/Target run ()V" in rows)
         // method public -f → accessible + extendable
         assertTrue("accessible" to "example/Target run ()V" in rows)
-        // header carries the target namespace (v2 — UML's canonical
-        // emission; whitespace is tabs)
+        // header carries the target namespace — UML's at2aw emits v1
+        // (no v2-only transitive directives are ever produced, and v1
+        // reads on loaders older than access-widener 0.14)
         assertTrue(
-            out.decodeToString().startsWith("accessWidener\tv2\tnamed"))
+            out.decodeToString().startsWith("accessWidener\tv1\tnamed"))
     }
 
     @Test

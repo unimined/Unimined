@@ -71,6 +71,18 @@ abstract class ApplyClassTweakerStepSpec : DevArtifactOnlyStepSpec {
     @get:Input
     abstract val namespaceAliases: org.gradle.api.provider.MapProperty<String, String>
 
+    /**
+     * Fail the build when a rule declared in [classTweakerFiles]
+     * matches nothing in the artifact — MDG/NFRT
+     * `validateAccessTransformers` parity
+     * (`--validated-access-transformer`). Dependency files are never
+     * validated: their targets are the dep's responsibility. Default
+     * false (1.x behavior); env DSL surface is `access { validate }`.
+     */
+    @get:Input
+    @get:Optional
+    abstract val validate: Property<Boolean>
+
 }
 
 /**

@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.remap.RemappedViewSet
 import xyz.wagyourtail.unimined.remap.RemappedViewSpec
 import xyz.wagyourtail.unimined.remap.RemappedViewsSpec
+import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.transform.RemapDependencyTransform
 
 /**
@@ -53,6 +54,31 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, artifactType
             )
         }
+        // force-remap escape (`spec.forceRemap`): resolve the matching
+        // deps' own artifacts at fingerprint time — copyRecursive
+        // narrows the graph to filtered deps, componentFilter selects
+        // only those components' artifacts (transitives excluded).
+        // Inside a provider so filters registered after view creation
+        // still apply, and so nothing resolves at configuration time.
+        spec.forceRemapJars.from(project.provider {
+            val filters = spec.forceRemapFilters
+            if (filters.isEmpty()) {
+                emptyList<java.io.File>()
+            } else {
+                val sourceConf = project.configurations.getByName(source)
+                val forced = sourceConf.copyRecursive { dep ->
+                    filters.any { it(dep) }
+                }
+                forced.incoming.artifactView { av ->
+                    av.componentFilter { id ->
+                        id is org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+                                forced.allDependencies.any { d ->
+                                    d.group == id.group && d.name == id.module
+                                }
+                    }
+                }.files.toList()
+            }
+        })
         registerRemapTransform(spec, artifactType, "$environmentId/$source")
         return view
     }
@@ -75,7 +101,9 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
                 isCanBeConsumed = false
                 isCanBeResolved = false
             }
+            val viewName = defaultViewName(environmentId, sourceConfiguration.name)
             val viewSpec = ext.objects.newInstance(RemappedViewSpec::class.java)
+            viewSpec.errorContext = "remapped view '$viewName'"
             viewSpec.sourceNamespace.set(namespace.sourceNamespace)
             viewSpec.targetNamespace.set(spec.targetNamespace)
             viewSpec.discriminator.set(
@@ -93,7 +121,7 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
             views[namespace.sourceNamespace] = createRemappedView(
                 environmentId,
                 sourceConfiguration.name,
-                defaultViewName(environmentId, sourceConfiguration.name),
+                viewName,
                 viewSpec
             )
         }
@@ -147,6 +175,7 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
             )
             t.parameters { p ->
                 p.label.set(label)
+                p.surface.set(RemapSurface.JAR)
                 p.modMarkers.set(project.provider {
                     if (spec.onlyRemapMarkedJars.get()) spec.modMarkers.get()
                     else emptyList()
@@ -174,6 +203,7 @@ internal class RemappedViewWiring(private val ext: RemapExtension) {
                     p.scanAliasMappingFile.set(spec.scanAliasMappingFile)
                 }
                 p.classpath.from(spec.classpath)
+                p.forceRemapJars.from(spec.forceRemapJars)
                 p.stepSpecs.set(spec.stepSpecs)
             }
         }

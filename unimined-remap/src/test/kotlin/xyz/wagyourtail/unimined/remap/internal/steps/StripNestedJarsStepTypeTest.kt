@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.steps
 
 import org.gradle.api.logging.Logging
 import org.junit.jupiter.api.Assertions.*

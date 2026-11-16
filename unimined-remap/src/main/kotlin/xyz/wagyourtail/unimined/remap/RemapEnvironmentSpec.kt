@@ -1,12 +1,14 @@
 package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
-import org.gradle.api.GradleException
+import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -22,6 +24,13 @@ class RemapEnvironmentSpec internal constructor(
     private val projectPath: String,
     private val objects: ObjectFactory
 ) {
+
+    private companion object {
+        val LOGGER = Logging.getLogger(RemapEnvironmentSpec::class.java)
+    }
+
+    private fun fail(id: String, summary: String): Nothing =
+        UniminedProblems.fail(LOGGER, objects, id, summary)
 
     private val surfaces = mutableMapOf<RemapSurface, RemapSurfaceSpec>()
 
@@ -207,10 +216,10 @@ class RemapEnvironmentSpec internal constructor(
         for (surface in effectiveSurfaceKeys()) {
             val remaps = effectiveSteps(surface).count { it is RemapStepSpec }
             if (remaps > 1) {
-                throw GradleException(
-                    "remap { sourceSet(\"$environmentId\") { $surface { ... } } }: " +
-                            "$remaps `remap` steps declared; at most one is allowed"
-                )
+                fail("remap/step-cardinality",
+                    "unimined: remap { sourceSet(\"$environmentId\") { " +
+                            "$surface { ... } } }: $remaps `remap` steps " +
+                            "declared; at most one is allowed")
             }
         }
     }
@@ -231,7 +240,8 @@ class RemapEnvironmentSpec internal constructor(
 
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined remap inheritance involving $key")
+            fail("remap/inheritance-cycle",
+                "cyclic Unimined remap inheritance involving $key")
         }
         try {
             for (resolver in inheritedEnvironments.values.reversed()) {
@@ -249,7 +259,8 @@ class RemapEnvironmentSpec internal constructor(
     ): Set<RemapSurface> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
-            throw GradleException("cyclic Unimined remap inheritance involving $key")
+            fail("remap/inheritance-cycle",
+                "cyclic Unimined remap inheritance involving $key")
         }
         try {
             return surfaces.keys + inheritedEnvironments.values.flatMap { resolver ->
@@ -267,7 +278,7 @@ class RemapEnvironmentSpec internal constructor(
     private fun configure(surface: RemapSurface, action: Closure<*>) {
         action.delegate = surface(surface)
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
 }

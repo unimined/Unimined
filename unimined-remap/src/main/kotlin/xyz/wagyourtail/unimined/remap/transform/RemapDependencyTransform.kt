@@ -19,8 +19,8 @@ import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.remap.internal.ModMarkerScan
-import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
-import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
+import xyz.wagyourtail.unimined.remap.internal.pipeline.PipelineRunner
+import xyz.wagyourtail.unimined.remap.internal.pipeline.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.commonskt.jvm.moveAtomicTo
@@ -70,6 +70,17 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:Optional
         @get:Input
         val modMarkers: ListProperty<String>
+
+        /**
+         * Artifacts the view's `forceRemap` filters matched — the
+         * user-side equivalent of `Fabric-Loom-Remap:true`. Membership
+         * forces remap regardless of the marker scan (deps too plain
+         * to self-describe but still referencing mapped classes).
+         */
+        @get:Optional
+        @get:InputFiles
+        @get:Classpath
+        val forceRemapJars: ConfigurableFileCollection
 
         @get:Optional
         @get:InputFile
@@ -127,6 +138,15 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         @get:Input
         val envSide: Property<String>
 
+        /**
+         * The surface [stepSpecs] resolve against — `JAR` for
+         * classpath/dev views, `SOURCES` for source-jar views (the
+         * step pipeline selects impls per surface, e.g. UML's binary
+         * vs PSI source remapper for `remap`).
+         */
+        @get:Input
+        val surface: Property<RemapSurface>
+
         @get:Nested
         val stepSpecs: ListProperty<StepSpec>
 
@@ -139,10 +159,20 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
     override fun transform(outputs: TransformOutputs) {
         val t0 = System.nanoTime()
         val input = inputArtifact.get().asFile.toPath()
+        // per-jar scan — marker verdict + loom dep-jar manifest
+        // contract (`Fabric-Loom-Remap` opt-in/out,
+        // `Fabric-Loom-Known-Indy-BSMS`, `Fabric-Mapping-Namespace`).
+        // Env-artifact transforms leave markers empty and skip this:
+        // the Minecraft jar is always remapped and never scanned.
+        val markers = parameters.modMarkers.getOrElse(emptyList())
+        val jarInfo = if (markers.isNotEmpty()) {
+            ModMarkerScan.scan(input, markers)
+        } else null
         val spec = RuntimeRemapSpec(
             parameters.sourceNamespace.get(),
             parameters.targetNamespace.get(),
             parameters.classpath.files.map { it.toPath() },
+            knownIndyBsms = jarInfo?.knownIndyBsms.orEmpty(),
             scanAliases = if (parameters.scanAliasFromNs.isPresent) {
                 val fromNs = parameters.scanAliasFromNs.get()
                 val aliasMappings = parameters.scanAliasMappingFile.get().asFile.toPath()
@@ -170,13 +200,24 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
         ).toPath()
         // marked-jar filtering (mod views only): jars without a mod
         // indicator pass through unchanged — the pipeline would remap
-        // nothing while paying full analysis cost per artifact
-        val markers = parameters.modMarkers.getOrElse(emptyList())
-        if (markers.isNotEmpty() && !ModMarkerScan.isModJar(input, markers)) {
+        // nothing while paying full analysis cost per artifact.
+        // `Fabric-Loom-Remap` overrides the marker verdict either way:
+        // `true` forces remap of unmarked jars, `false` passes marked
+        // jars through (loom's RemapRequirements semantics). The
+        // view's `forceRemap` set is the user-side `true` equivalent —
+        // deps too plain to self-describe but still mapped.
+        val forced = input.toFile() in parameters.forceRemapJars.files
+        val shouldRemap = forced || (jarInfo?.let { it.loomRemap ?: it.isMod } ?: true)
+        if (markers.isNotEmpty() && !shouldRemap) {
             uniminedLogger(
                 parameters.label.orNull ?: "",
                 Logging.getLogger(RemapDependencyTransform::class.java)
-            ).info("remap — no mod markers in ${input.fileName}; passing through unmapped")
+            ).info(
+                if (jarInfo!!.loomRemap == false)
+                    "remap — ${input.fileName} declares Fabric-Loom-Remap:false; passing through unmapped"
+                else
+                    "remap — no mod markers in ${input.fileName}; passing through unmapped"
+            )
             // temp + atomic move — a killed copy must not leave a
             // partial jar at the transform output (#78)
             val tmp = output.tempSibling()
@@ -196,7 +237,7 @@ abstract class RemapDependencyTransform : TransformAction<RemapDependencyTransfo
             PipelineRunner.run(
                 input = input,
                 output = output,
-                surface = RemapSurface.JAR,
+                surface = parameters.surface.get(),
                 stepSpecs = parameters.stepSpecs.get(),
                 spec = spec,
                 mappings = mappings,

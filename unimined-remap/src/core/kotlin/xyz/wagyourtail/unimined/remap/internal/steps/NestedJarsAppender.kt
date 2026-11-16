@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.steps
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -20,6 +20,7 @@ import java.util.jar.Manifest
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import xyz.wagyourtail.unimined.remap.internal.JarLint
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
@@ -264,15 +265,20 @@ object NestedJarsAppender {
     /**
      * Entry-name scan for FML layer signals, applied only when the
      * jar is rewritten anyway (explicit config wins, so this only
-     * resolves the unset case): a language-provider service file
-     * means PLUGIN layer is required (`LANGPROVIDER`); `mods.toml`/
-     * `neoforge.mods.toml` marks a mod file (`MOD`); `Obfuscated-By`
-     * needs game-layer remap (`GAMELIBRARY`). `LIBRARY` is never
-     * detected — nothing inside a jar proves it doesn't touch game
-     * classes. `null` = no stamp, FML's `GAMELIBRARY` default.
+     * resolves the unset case). An already-declared `FMLModType`
+     * manifest attribute is the strongest signal — the jar's own
+     * author knows its layer. Failing that: a language-provider
+     * service file means PLUGIN layer is required (`LANGPROVIDER`);
+     * `mods.toml`/`neoforge.mods.toml` marks a mod file (`MOD`);
+     * `Obfuscated-By` needs game-layer remap (`GAMELIBRARY`).
+     * `LIBRARY` is never detected — nothing inside a jar proves it
+     * doesn't touch game classes. `null` = no stamp, FML's
+     * `GAMELIBRARY` default.
      */
     private fun detectFmlModType(path: Path): String? = runCatching {
         JarFile(path.toFile()).use { jar ->
+            jar.manifest?.mainAttributes?.getValue("FMLModType")
+                ?.let { return@use it }
             var modsToml = false
             for (e in jar.entries()) {
                 val n = e.name

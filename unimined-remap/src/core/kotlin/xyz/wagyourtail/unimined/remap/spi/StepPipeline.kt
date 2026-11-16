@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.remap.spi
 
-import xyz.wagyourtail.unimined.remap.internal.FusedJarRun
+import xyz.wagyourtail.unimined.remap.internal.pipeline.FusedJarRun
 import xyz.wagyourtail.unimined.remap.internal.JarSignatureStripper
 import java.nio.file.Path
 

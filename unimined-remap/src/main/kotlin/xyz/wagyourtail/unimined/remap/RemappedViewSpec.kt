@@ -1,10 +1,12 @@
 package xyz.wagyourtail.unimined.remap
 
+import groovy.lang.Closure
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import xyz.wagyourtail.unimined.api.util.dependencyNotationPredicate
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
 /**
@@ -138,5 +140,56 @@ abstract class RemappedViewSpec {
      */
     @get:Input
     abstract val onlyRemapMarkedJars: Property<Boolean>
+
+    /**
+     * Per-dependency force-remap filters — the user-side escape of
+     * `Fabric-Loom-Remap:true` for deps too plain to self-describe
+     * (e.g. obf-named libraries the `refs:` scan can't see). Each
+     * filter is a `(Dependency) -> Boolean` evaluated against the
+     * source configuration's declared dependencies at resolution
+     * time; matching deps' own artifacts (never their transitives)
+     * remap unconditionally. Resolved lazily — filters registered
+     * after the view is created still apply.
+     */
+    @get:Internal
+    val forceRemapFilters: MutableList<(org.gradle.api.artifacts.Dependency) -> Boolean> =
+        mutableListOf()
+
+    /**
+     * Resolved artifacts of [forceRemapFilters]-matching dependencies —
+     * host wiring fills this collection; the transform reads it as the
+     * forced file set. Not user-facing.
+     */
+    @get:Internal
+    abstract val forceRemapJars: ConfigurableFileCollection
+
+    /**
+     * Label identifying this spec in error messages — host wiring sets
+     * it to `remapped view '<configuration name>'` so a rejected
+     * [forceRemap] coordinate points back at the view that refused it.
+     * The generic default covers specs built outside view wiring.
+     */
+    @get:Internal
+    var errorContext: String = "a remapped view"
+
+    /** Force-remap deps matching [filter] — see [forceRemapFilters]. */
+    fun forceRemap(filter: (org.gradle.api.artifacts.Dependency) -> Boolean) {
+        forceRemapFilters += filter
+    }
+
+    /** Groovy DSL overload — `forceRemap { it.group == "com.example" }`. */
+    fun forceRemap(filter: Closure<Boolean>) =
+        forceRemap { dep -> filter.call(dep) }
+
+    /** Force-remap deps by `group:name[:version]` coordinate —
+     *  malformed notation fails with an actionable error naming this
+     *  view (see [dependencyNotationPredicate]). */
+    fun forceRemap(notation: String) =
+        forceRemap(
+            dependencyNotationPredicate(
+                notation,
+                "forceRemap on $errorContext"
+            )
+        )
 
 }

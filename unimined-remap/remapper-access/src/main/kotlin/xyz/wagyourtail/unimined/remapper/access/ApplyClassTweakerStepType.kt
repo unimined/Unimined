@@ -43,6 +43,9 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         object : FusibleJarStep {
             private var translated: List<ClassTweaker> = emptyList()
             private var depTranslated: List<ClassTweaker> = emptyList()
+            private val visited = Visited()
+            private var declared: List<Pair<String, ClassTweaker.Target>> = emptyList()
+            private var validate = false
 
             override fun prepareFused(input: Path, c: StepContext) {
                 val files = spec.classTweakerFiles.files.filter { it.isFile }
@@ -59,22 +62,148 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 // are actually in
                 val nsMapping = spec.headerlessNamespace.orNull
                     ?.let { mapOf("source" to it) } ?: emptyMap()
-                val tweakers = files.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
-                val depTweakers = depFiles.map { ClassTweaker.parse(it.name, it.readText(), nsMapping) }
-                translate(
-                    tweakers, depTweakers, tree, c.spec.targetNamespace,
+                val tweakers = files.map {
+                    it.name to ClassTweaker.parse(it.name, it.readText(), nsMapping)
+                }
+                val depTweakers = depFiles.map {
+                    it.name to ClassTweaker.parse(it.name, it.readText(), nsMapping)
+                }
+                val (t, d) = translate(
+                    tweakers.map { it.second },
+                    depTweakers.map { it.second },
+                    tree, c.spec.targetNamespace,
                     spec.namespaceAliases.getOrElse(emptyMap())
-                ).let { (t, d) -> translated = t; depTranslated = d }
+                )
+                translated = t; depTranslated = d
+
+                // `validate` — declared targets (already rebased)
+                // that must each match a visited class/member.
+                // Own declarations only: structural directives
+                // (inject-interface/extend-enum) owe a class target
+                // alongside the access rules.
+                validate = spec.validate.orNull == true
+                if (validate) {
+                    declared = (tweakers zip translated).flatMap {
+                        (named, tt) ->
+                        tt.accessTargets.map { named.first to it } +
+                                tt.interfaces.map {
+                                    named.first to
+                                            ClassTweaker.ClassTarget(it.first.owner)
+                                } +
+                                tt.enumExtensions.map {
+                                    named.first to
+                                            ClassTweaker.ClassTarget(it.first.owner)
+                                }
+                    }
+                }
             }
 
             override fun visitEntry(entry: FusedJarEntry, c: StepContext): FusedJarEntry {
                 if (translated.isEmpty() && depTranslated.isEmpty()) return entry
                 if (!entry.name.endsWith(".class")) return entry
                 return FusedJarEntry(
-                    entry.name, applyToClass(entry.bytes, translated, depTranslated)
+                    entry.name,
+                    applyToClass(
+                        entry.bytes, translated, depTranslated,
+                        if (validate) visited else null
+                    )
+                )
+            }
+
+            override fun endFused(c: StepContext) {
+                if (!validate || declared.isEmpty()) return
+                val unmatched = declared.filter { (_, target) ->
+                    !visited.matches(target)
+                }
+                if (unmatched.isEmpty()) return
+                val lines = unmatched.take(20).joinToString("\n") { (src, t) ->
+                    "  $src: $t"
+                }
+                throw GradleException(
+                    "apply-class-tweaker validation failed — " +
+                            "${unmatched.size} declared access rule(s) " +
+                            "matched nothing:\n$lines" +
+                            (if (unmatched.size > 20)
+                                "\n  ... and ${unmatched.size - 20} more"
+                            else "")
                 )
             }
         }
+
+    /**
+     * Standalone validation core — parse [files] (display-name to
+     * doc), rebase onto [targetNamespace], visit every class in [jar]
+     * and return the declared targets that matched nothing. Shares the
+     * fused step's translation + member-matching semantics exactly
+     * (`access { validate }` at remap time); the `validate<Env>Access`
+     * task wraps it without running a remap (loom
+     * `ValidateAccessWidenerTask` parity).
+     */
+    internal fun validateDocs(
+        files: List<Pair<String, java.io.File>>,
+        sourceNsMapping: Map<String, String>,
+        tree: MappingTree,
+        targetNamespace: String,
+        namespaceAliases: Map<String, String>,
+        jar: Path
+    ): List<Pair<String, ClassTweaker.Target>> {
+        val tweakers = files.filter { it.second.isFile }.map { (name, f) ->
+            name to ClassTweaker.parse(name, f.readText(), sourceNsMapping)
+        }
+        if (tweakers.isEmpty()) return emptyList()
+        val (translated, _) = translate(
+            tweakers.map { it.second }, emptyList(),
+            tree, targetNamespace, namespaceAliases
+        )
+        // own declarations only: structural directives
+        // (inject-interface/extend-enum) owe a class target alongside
+        // the access rules — same set the fused step's `validate` tracks
+        val declared = (tweakers zip translated).flatMap { (named, tt) ->
+            tt.accessTargets.map { named.first to it } +
+                    tt.interfaces.map {
+                        named.first to ClassTweaker.ClassTarget(it.first.owner)
+                    } +
+                    tt.enumExtensions.map {
+                        named.first to ClassTweaker.ClassTarget(it.first.owner)
+                    }
+        }
+        if (declared.isEmpty()) return emptyList()
+        val visited = Visited()
+        JarFile(jar.toFile()).use { j ->
+            for (entry in j.entries()) {
+                if (!entry.isDirectory && entry.name.endsWith(".class")) {
+                    applyToClass(
+                        j.getInputStream(entry).readBytes(),
+                        translated, emptyList(), visited
+                    )
+                }
+            }
+        }
+        return declared.filter { (_, t) -> !visited.matches(t) }
+    }
+
+    /** Visited member sets collected during the class pass for
+     *  `validateAccessTransformers` — `\0`-joined keys keep the sets
+     *  flat (desc-less targets match on owner+name alone). */
+    internal class Visited {
+        val classes = mutableSetOf<String>()
+        val methodsByName = mutableSetOf<String>()
+        val methodsByDesc = mutableSetOf<String>()
+        val fieldsByName = mutableSetOf<String>()
+        val fieldsByDesc = mutableSetOf<String>()
+
+        fun matches(t: ClassTweaker.Target): Boolean = when (t) {
+            is ClassTweaker.ClassTarget -> t.owner in classes
+            is ClassTweaker.MethodTarget ->
+                "${t.owner}\u0000${t.name}\u0000${t.desc}" in methodsByDesc ||
+                        (t.desc.isEmpty() &&
+                                "${t.owner}\u0000${t.name}" in methodsByName)
+            is ClassTweaker.FieldTarget ->
+                "${t.owner}\u0000${t.name}\u0000${t.desc}" in fieldsByDesc ||
+                        (t.desc.isEmpty() &&
+                                "${t.owner}\u0000${t.name}" in fieldsByName)
+        }
+    }
 
     /** Rebase each file's directives onto the target namespace so
      *  bytecode members can be looked up under their own names. */
@@ -158,10 +287,11 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         (if (signature.startsWith('L')) signature else "L$signature")
             .let { if (it.endsWith(';')) it else "$it;" }
 
-    private fun applyToClass(
+    internal fun applyToClass(
         bytes: ByteArray,
         tweakers: List<ClassTweaker>,
-        depTweakers: List<ClassTweaker>
+        depTweakers: List<ClassTweaker>,
+        visited: Visited? = null
     ): ByteArray {
         val reader = ClassReader(bytes)
         val writer = ClassWriter(reader, 0)
@@ -173,6 +303,7 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 signature: String?, superName: String?, interfaces: Array<out String>?
             ) {
                 className = name
+                visited?.classes?.add(name)
                 val injected = injectedSignatures(name)
                 val merged = (interfaces?.toList().orEmpty() +
                         injected.map(::interfaceInternal)
@@ -233,18 +364,30 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
             override fun visitMethod(
                 access: Int, name: String, descriptor: String,
                 signature: String?, exceptions: Array<out String>?
-            ): MethodVisitor = super.visitMethod(
-                adjust(access, ElementType.METHOD) { t, d -> t.methodChanges(className, name, descriptor, d) },
-                name, descriptor, signature, exceptions
-            )
+            ): MethodVisitor {
+                visited?.run {
+                    methodsByName.add("$className\u0000$name")
+                    methodsByDesc.add("$className\u0000$name\u0000$descriptor")
+                }
+                return super.visitMethod(
+                    adjust(access, ElementType.METHOD) { t, d -> t.methodChanges(className, name, descriptor, d) },
+                    name, descriptor, signature, exceptions
+                )
+            }
 
             override fun visitField(
                 access: Int, name: String, descriptor: String,
                 signature: String?, value: Any?
-            ): FieldVisitor = super.visitField(
-                adjust(access, ElementType.FIELD) { t, d -> t.fieldChanges(className, name, descriptor, d) },
-                name, descriptor, signature, value
-            )
+            ): FieldVisitor {
+                visited?.run {
+                    fieldsByName.add("$className\u0000$name")
+                    fieldsByDesc.add("$className\u0000$name\u0000$descriptor")
+                }
+                return super.visitField(
+                    adjust(access, ElementType.FIELD) { t, d -> t.fieldChanges(className, name, descriptor, d) },
+                    name, descriptor, signature, value
+                )
+            }
 
             private fun adjust(
                 access: Int,

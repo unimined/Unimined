@@ -1,8 +1,8 @@
 package xyz.wagyourtail.unimined.remap
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyHandler
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.environment.EnvironmentCopyRequest
 import xyz.wagyourtail.unimined.api.environment.EnvironmentReference
 import xyz.wagyourtail.unimined.api.environment.EnvironmentSection
@@ -34,9 +34,12 @@ internal class RemapEnvironmentCopyHandler(
             project.project(projectPath)
         }
         return owner.extensions.findByType(RemapExtension::class.java)
-            ?: throw GradleException(
-                "Project '${owner.path}' does not have a Unimined remap extension; " +
-                        "apply the remap or frontend plugin before sharing remap configuration"
+            ?: project.failProblem(
+                "env/remap-extension-missing",
+                "unimined: project '${owner.path}' does not have a " +
+                        "Unimined remap extension",
+                "apply the remap or frontend plugin before sharing " +
+                    "remap configuration"
             )
     }
 

@@ -2,12 +2,16 @@ package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
 import org.gradle.api.GradleException
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.provider.Property
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
@@ -188,6 +192,19 @@ class RemapExtensionTest {
     }
 
     @Test
+    fun `forceRemap malformed notation names the rejecting view`() {
+        val ext = extension()
+        val e = assertThrows(GradleException::class.java) {
+            ext.remappedView("mods") { spec ->
+                spec.forceRemap("malformed")
+            }
+        }
+        // names the rejecting view, not just the notation
+        assertTrue(e.message!!.contains("modsRemapped"), e.message)
+        assertTrue(e.message!!.contains("group:name[:version]"), e.message)
+    }
+
+    @Test
     fun `remapped views use environment-specific artifact types`() {
         val project = ProjectBuilder.builder().build()
         project.plugins.apply(GradlePlugin::class.java)
@@ -273,6 +290,99 @@ class RemapExtensionTest {
         assertEquals(
             emptyList<StepSpec>(),
             env.contributedPreSteps(RemapSurface.JAR, StepScope.ALL_ARTIFACTS)
+        )
+    }
+
+    @TempDir
+    lateinit var dir: Path
+
+    /** Local repo with [names] as `com.example:<name>:1.0` — stub jar
+     *  + pom, no live maven. */
+    private fun serveModules(vararg names: String) {
+        for (name in names) {
+            val module = dir.resolve("repo/com/example/$name/1.0")
+            Files.createDirectories(module)
+            Files.write(
+                module.resolve("$name-1.0.jar"),
+                byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+            )
+            Files.writeString(
+                module.resolve("$name-1.0.pom"),
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">" +
+                        "<modelVersion>4.0.0</modelVersion>" +
+                        "<groupId>com.example</groupId>" +
+                        "<artifactId>$name</artifactId>" +
+                        "<version>1.0</version></project>"
+            )
+        }
+    }
+
+    /** View over a `deps` bucket holding forced + plain module deps —
+     *  returns the spec whose `forceRemapJars` resolves the filter. */
+    private fun remappedViewSpec(
+        project: org.gradle.api.Project,
+        ext: RemapExtension,
+        configure: (RemappedViewSpec) -> Unit
+    ): RemappedViewSpec {
+        project.repositories.maven {
+            it.url = dir.resolve("repo").toFile().toURI()
+        }
+        project.configurations.create("deps")
+        project.dependencies.add("deps", "com.example:forced:1.0")
+        project.dependencies.add("deps", "com.example:plain:1.0")
+
+        lateinit var spec: RemappedViewSpec
+        ext.remappedViewFor("main", "deps", "depsRemapped") { s ->
+            s.artifactTypeToken.set("test-remapped-main")
+            s.sourceNamespace.set("official")
+            s.targetNamespace.set("named")
+            configure(s)
+            spec = s
+        }
+        return spec
+    }
+
+    @Test
+    fun `forceRemap filters resolve only matching deps' own artifacts`() {
+        serveModules("forced", "plain")
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.toFile()).build()
+        project.plugins.apply(GradlePlugin::class.java)
+        val ext = project.extensions.getByType(RemapExtension::class.java)
+
+        val spec = remappedViewSpec(project, ext) { s ->
+            s.forceRemap("com.example:forced")
+            s.forceRemap { dep -> dep.name == "never-matches" }
+        }
+
+        // copyRecursive narrows to filtered deps — the plain sibling
+        // never enters the forced jar set
+        assertEquals(
+            listOf("forced-1.0.jar"),
+            spec.forceRemapJars.files.map { it.name }.sorted()
+        )
+    }
+
+    @Test
+    fun `forceRemap closure twin on the view spec registers a filter`() {
+        serveModules("forced", "plain")
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.toFile()).build()
+        project.plugins.apply(GradlePlugin::class.java)
+        val ext = project.extensions.getByType(RemapExtension::class.java)
+
+        val closure = object : Closure<Boolean>(this) {
+            @Suppress("unused")
+            fun doCall(dep: Dependency): Boolean = dep.name == "forced"
+        }
+        val spec = remappedViewSpec(project, ext) { s ->
+            s.forceRemap(closure)
+        }
+
+        assertEquals(1, spec.forceRemapFilters.size)
+        assertEquals(
+            listOf("forced-1.0.jar"),
+            spec.forceRemapJars.files.map { it.name }.sorted()
         )
     }
 

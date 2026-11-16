@@ -26,6 +26,9 @@ dependencies {
     "testGradleImplementation"(libs.junit.jupiter)
     "testGradleRuntimeOnly"(libs.junit.platform.launcher)
     "testGradleImplementation"(project(":unimined-remap:remapper-tiny"))
+    // marker-positive dep artifacts run ModArtifacts — its step impl
+    // ships in the uml engine module
+    "testGradleImplementation"(project(":unimined-remap:remapper-uml"))
 }
 
 gradlePlugin {

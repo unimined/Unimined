@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.source.internal
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.work.DisableCachingByDefault
@@ -41,9 +41,10 @@ class ExternalDecompilerEngine : DecompilerEngine {
         name: String,
         spec: DecompileSpec
     ): TaskProvider<out DecompileTask> {
-        val notation = spec.dependency ?: throw GradleException(
-            "source { engine='external' }: set the decompiler coordinate " +
-            "via dependency.set(\"g:a:v\") or generator(dep)"
+        val notation = spec.dependency ?: project.failProblem(
+            "sources/engine-dependency",
+            "unimined: source { engine='external' }: set the decompiler " +
+            "coordinate via dependency.set(\"g:a:v\") or generator(dep)"
         )
         val conf = project.configurations.detachedConfiguration(
             project.dependencies.create(notation)
@@ -77,10 +78,11 @@ class ExternalDecompilerEngine : DecompilerEngine {
         project: Project,
         spec: ModSourcesTransformSpec
     ) {
-        throw GradleException(
-            "source { engine='external' }: mod-sources transforms are " +
-            "not supported by the external engine — select a packaged " +
-            "engine for genModSources"
+        project.failProblem(
+            "sources/engine-transforms",
+            "unimined: source { engine='external' }: mod-sources " +
+            "transforms are not supported by the external engine — " +
+            "select a packaged engine for genModSources"
         )
     }
 }

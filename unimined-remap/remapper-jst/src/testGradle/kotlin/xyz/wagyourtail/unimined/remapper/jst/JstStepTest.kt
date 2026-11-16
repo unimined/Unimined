@@ -30,7 +30,7 @@ class JstStepTest {
 
     @Test
     fun `argv uses the real jst-cli 2 x flags`() {
-        val args = JstStep.buildJstArgs(
+        val args = JstStepType.buildJstArgs(
             "java", listOf("jst.jar"), emptyList(),
             listOf("accesstransformers"), emptyList(), "in.jar", "out.jar",
         )

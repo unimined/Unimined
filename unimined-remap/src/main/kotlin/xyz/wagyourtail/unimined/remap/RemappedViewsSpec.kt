@@ -1,11 +1,13 @@
 package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
-import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
@@ -112,8 +114,11 @@ abstract class RemappedViewsSpec @Inject constructor(
         action: Action<RemappedNamespaceSpec>
     ): RemappedNamespaceSpec {
         if (namespaces.any { it.sourceNamespace == sourceNamespace }) {
-            throw GradleException(
-                "Duplicate source namespace '$sourceNamespace' in remapped view set '$baseName'"
+            UniminedProblems.fail(
+                Logging.getLogger(RemappedViewsSpec::class.java), objects,
+                "remap/views-duplicate-ns",
+                "unimined: duplicate source namespace " +
+                    "'$sourceNamespace' in remapped view set '$baseName'"
             )
         }
         val namespace = objects.newInstance(
@@ -138,7 +143,7 @@ abstract class RemappedViewsSpec @Inject constructor(
         Action { namespace ->
             action.delegate = namespace
             action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
+            action.callDelegate()
         }
     )
 

@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
  * `SourceRemapperImpl` path. The tool remaps source *trees*, so the step
  * unpacks the input jar, runs the tool in a JVM subprocess, and repacks.
  */
-class SourceRemapStep : RemapStepType<SourceRemapStepSpec> {
+class SourceRemapStepType : RemapStepType<SourceRemapStepSpec> {
 
     override val name = "source"
     override val stepName = "remap"

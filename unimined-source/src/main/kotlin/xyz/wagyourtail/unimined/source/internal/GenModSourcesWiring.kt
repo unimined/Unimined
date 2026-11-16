@@ -9,6 +9,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
@@ -102,8 +103,11 @@ internal object GenModSourcesWiring {
                 ?: continue
             val remappedType = modView.attributes.getAttribute(
                 ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE
-            ) ?: error(
-                "remapped mod view '${modView.name}' carries no artifact-type attribute"
+            ) ?: project.failProblem(
+                "sources/view-attribute",
+                "unimined: environment '$environmentId' — remapped mod " +
+                    "view '${modView.name}' carries no artifact-type " +
+                    "attribute"
             )
             val decompiledType = "unimined-modsrc-decompiled-$environmentId-$bucketName"
             val finalType = if (sourceSteps.isEmpty()) {
@@ -129,6 +133,9 @@ internal object GenModSourcesWiring {
                     )
                     t.parameters { p ->
                         p.label.set("$environmentId/$bucketName-sources")
+                        // SOURCES pipeline specs resolve against the
+                        // SOURCES surface — the default surface is JAR
+                        p.surface.set(RemapSurface.SOURCES)
                         p.modMarkers.set(project.provider {
                             ModMarkerScan.DEFAULT_MARKERS +
                                     remap.sourceSet(environmentId).modMarkerContributions

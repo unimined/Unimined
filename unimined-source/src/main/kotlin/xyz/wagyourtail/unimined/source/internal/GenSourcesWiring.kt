@@ -6,6 +6,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
@@ -17,6 +18,7 @@ import xyz.wagyourtail.unimined.remap.task.RemapArtifactTask
 import xyz.wagyourtail.unimined.source.DecompilerRegistry
 import xyz.wagyourtail.unimined.source.SourceExtension
 import xyz.wagyourtail.unimined.source.spi.DecompileSpec
+import xyz.wagyourtail.unimined.source.task.LinemappedJarTask
 
 /**
  * Wires one bound environment's `genSources`/`gen<Env>Sources` task.
@@ -33,10 +35,41 @@ internal object GenSourcesWiring {
     fun wire(
         project: Project,
         environment: MinecraftEnvironment,
-        @Suppress("unused") sourceSet: SourceSet
+        sourceSet: SourceSet
     ) {
         project.afterDslEval {
             wireGenSources(project, environment)
+            wireDecompCleanup(project, environment, sourceSet)
+        }
+    }
+
+    /** `cleanupSources`/`cleanup<Env>Sources` — opt-in user-source
+     *  decompiler cleanup (RFG `applyDecompilerCleanupToMain` parity;
+     *  invoked manually, mutates the source set's java dirs in
+     *  place). */
+    private fun wireDecompCleanup(
+        project: Project,
+        environment: MinecraftEnvironment,
+        sourceSet: SourceSet
+    ) {
+        val environmentId = environment.environmentId
+        val taskName = if (environmentId == "main") {
+            "cleanupSources"
+        } else {
+            "cleanup${environmentId.cap()}Sources"
+        }
+        project.tasks.register(
+            taskName,
+            xyz.wagyourtail.unimined.source.task.DecompCleanupTask::class.java
+        ) { t ->
+            t.group = "unimined"
+            t.description = "Rewrites decompiler artifacts in the " +
+                    "'${sourceSet.name}' java sources (GL constants " +
+                    "and friends) — modifies files in place"
+            t.sourceDirs.from(
+                project.provider { sourceSet.java.srcDirs }
+            )
+            t.buildDir.set(project.layout.buildDirectory)
         }
     }
 
@@ -71,6 +104,13 @@ internal object GenSourcesWiring {
             "gen${environmentId.cap()}Sources"
         }
 
+        // verb<Env>Noun naming for the surface-pipeline tasks —
+        // `remapSourcesSurface` (main, elided)/`remap<Fabric>SourcesSurface`;
+        // the pre-convention `<noun><Env>` names stay as deprecated
+        // aliases
+        val envInfix = if (environmentId == "main") "" else environmentId.cap()
+        val sourcesSurfaceName = "remap${envInfix}SourcesSurface"
+
         // the generated sources feed the SOURCES-surface pipeline (source
         // remap, unpick, javadoc) before landing in the repo slot
         fun wireSourcesSurface(
@@ -84,8 +124,8 @@ internal object GenSourcesWiring {
             val mappingFile = minecraft.mappingBundle(
                 environmentId, "sources-$environmentId", inputNamespace, devNamespace
             )
-            project.tasks.register(
-                "sourcesSurface${environmentId.cap()}",
+            val surfaceTask = project.tasks.register(
+                sourcesSurfaceName,
                 RemapArtifactTask::class.java
             ) { t ->
                 t.group = "unimined"
@@ -112,6 +152,8 @@ internal object GenSourcesWiring {
                 t.remapClasspath.from(devView)
                 t.outputArtifact.fileValue(repoSlot)
             }
+            project.registerDeprecatedTaskAlias(
+                "sourcesSurface${environmentId.cap()}", surfaceTask)
         }
 
         if (devSources.isPresent) {
@@ -171,7 +213,7 @@ internal object GenSourcesWiring {
             // the surface task produces repoSlot's sources jar when
             // steps exist — the linemap reads its enriched extras
             if (sourceSteps.isNotEmpty()) {
-                t.dependsOn("sourcesSurface${environmentId.cap()}")
+                t.dependsOn(sourcesSurfaceName)
             }
         }
         // demand the classifier alongside sources
@@ -182,8 +224,8 @@ internal object GenSourcesWiring {
             val mappingFile = minecraft.mappingBundle(
                 environmentId, "sources-$environmentId", devNamespace, devNamespace
             )
-            project.tasks.register(
-                "sourcesSurface${environmentId.cap()}",
+            val surfaceTask = project.tasks.register(
+                sourcesSurfaceName,
                 RemapArtifactTask::class.java
             ) { t ->
                 t.group = "unimined"
@@ -201,6 +243,8 @@ internal object GenSourcesWiring {
                 t.remapClasspath.from(input)
                 t.outputArtifact.fileValue(repoSlot)
             }
+            project.registerDeprecatedTaskAlias(
+                "sourcesSurface${environmentId.cap()}", surfaceTask)
         }
     }
 
@@ -227,8 +271,9 @@ internal object GenSourcesWiring {
         val mappingFile = minecraft.mappingBundle(
             environmentId, "decompile-$environmentId", devNamespace, devNamespace
         )
+        val envInfix = if (environmentId == "main") "" else environmentId.cap()
         val fork = project.tasks.register(
-            "decompileSurface${environmentId.cap()}",
+            "remap${envInfix}DecompileSurface",
             RemapArtifactTask::class.java
         ) { t ->
             t.group = "unimined"
@@ -246,6 +291,8 @@ internal object GenSourcesWiring {
                 )
             )
         }
+        project.registerDeprecatedTaskAlias(
+            "decompileSurface${environmentId.cap()}", fork)
         return fork.flatMap { it.outputArtifact }
     }
 

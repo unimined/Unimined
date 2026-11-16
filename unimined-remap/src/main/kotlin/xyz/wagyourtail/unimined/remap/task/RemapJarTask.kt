@@ -24,10 +24,11 @@ import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.task.ProducesArtifacts
 import xyz.wagyourtail.unimined.api.util.MavenCoords
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.remap.NestedJarEntrySpec
-import xyz.wagyourtail.unimined.remap.internal.NestedJarsAppender
-import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
-import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
+import xyz.wagyourtail.unimined.remap.internal.steps.NestedJarsAppender
+import xyz.wagyourtail.unimined.remap.internal.pipeline.PipelineRunner
+import xyz.wagyourtail.unimined.remap.internal.pipeline.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
@@ -202,14 +203,14 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
                         nestedJarsKey.orNull,
                         targetNamespace.get()
                     )
-                    .forEach { logger.warn("[Unimined] $it") }
+                    .forEach { project.reportProblem("nested-jars", it) }
             }
             stampAndLintProductionJar(
                 jarPath, targetNamespace.get(),
                 footgunChecks.getOrElse(
                     xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
                 ),
-                logger, path
+                project, logger, path
             )
         } else {
             // sources/other surfaces: still self-describing via the

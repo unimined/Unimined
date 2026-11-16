@@ -7,6 +7,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.minecraft.localrepo.LocalMavenPublisher
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -74,13 +75,17 @@ abstract class GenModSourcesTask : DefaultTask() {
             val gav = "${mod.group}:${mod.artifact}:${mod.version}"
             if (!published.add(gav)) continue
             val candidates = jarsByName[mod.fileName]
-                ?: error(
-                    "genModSources: no sources jar named '${mod.fileName}' for $gav " +
-                            "in the resolved mod-sources view"
+                ?: project.failProblem(
+                    "sources/jar-missing",
+                    "unimined: genModSources: no sources jar named " +
+                            "'${mod.fileName}' for $gav in the resolved " +
+                            "mod-sources view"
                 )
-            val jar = candidates.singleOrNull() ?: error(
-                "genModSources: ${candidates.size} artifacts named '${mod.fileName}' " +
-                        "in the mod-sources view — cannot pick the sources jar for $gav"
+            val jar = candidates.singleOrNull() ?: project.failProblem(
+                "sources/jar-ambiguous",
+                "unimined: genModSources: ${candidates.size} artifacts " +
+                        "named '${mod.fileName}' in the mod-sources view",
+                "cannot pick the sources jar for $gav"
             )
             val moduleDir = LocalMavenPublisher.moduleDir(
                 localRepoDir.get().asFile.toPath(), mod.group, mod.artifact, mod.version

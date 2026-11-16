@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.internal
+package xyz.wagyourtail.unimined.remap.internal.pipeline
 
 import xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
@@ -11,5 +11,6 @@ internal class RuntimeRemapSpec(
     override val sourceNamespace: String,
     override val targetNamespace: String,
     override val classpath: List<Path>,
-    override val scanAliases: List<ClasspathScanAlias> = emptyList()
+    override val scanAliases: List<ClasspathScanAlias> = emptyList(),
+    override val knownIndyBsms: List<String> = emptyList()
 ) : RemapSpec

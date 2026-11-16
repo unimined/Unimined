@@ -2,19 +2,20 @@ package xyz.wagyourtail.unimined.remap.task
 
 import org.gradle.work.DisableCachingByDefault
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
+
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.remap.internal.NamespaceDetect
-import xyz.wagyourtail.unimined.remap.internal.PipelineRunner
-import xyz.wagyourtail.unimined.remap.internal.RuntimeRemapSpec
+import xyz.wagyourtail.unimined.remap.internal.pipeline.PipelineRunner
+import xyz.wagyourtail.unimined.remap.internal.pipeline.RuntimeRemapSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 
@@ -121,10 +122,12 @@ abstract class AbstractRemapTask : DefaultTask() {
         if (srcNs == null || tgtNs == null) {
             // standalone remap: autodetect against the mapping tree
             val tree = mappings?.view(xyz.wagyourtail.unimined.mapping.MappingTree::class.java)
-                ?: throw GradleException(
-                    "$path: sourceNamespace/targetNamespace are required — the " +
-                    "supplied mapping data has no MappingTree to autodetect " +
-                    "namespaces from"
+                ?: project.failProblem(
+                    "remap/namespaces",
+                    "unimined: $path: sourceNamespace/targetNamespace " +
+                    "are required",
+                    "the supplied mapping data has no MappingTree to " +
+                    "autodetect namespaces from"
                 )
             val detected = NamespaceDetect.detect(
                 inputArtifact.get().asFile.toPath(), tree, srcNs, tgtNs
@@ -158,7 +161,7 @@ abstract class AbstractRemapTask : DefaultTask() {
                 footgunChecks.getOrElse(
                     xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
                 ),
-                logger, path
+                project, logger, path
             )
         } else {
             xyz.wagyourtail.unimined.remap.internal.JarLint
