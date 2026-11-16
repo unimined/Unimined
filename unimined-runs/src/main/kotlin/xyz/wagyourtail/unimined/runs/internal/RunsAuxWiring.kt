@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.runs.internal
 
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.runs.RunSide
@@ -41,12 +42,13 @@ internal object RunsAuxWiring {
             if (descriptor?.capabilities?.get("datagenMain") == null
                 && descriptor?.capabilities?.get("datagenArgs") == null
                 && descriptor?.capabilities?.get("datagenJvmArgs") == null) {
-                project.logger.warn(
-                    "[unimined] env '${dataEnv.environmentId}' declares " +
+                project.reportProblem(
+                    "runs/datagen-capability",
+                    "unimined: env '${dataEnv.environmentId}' declares " +
                     "datagen() but loader " +
                     "'${environment.loaderSpec.orNull?.name}' has no " +
-                    "datagenMain capability — run$runName will launch " +
-                    "the plain game"
+                    "datagenMain capability",
+                    "run$runName will launch the plain game"
                 )
             }
             extension.runs.register(runName) { run ->
@@ -89,11 +91,13 @@ internal object RunsAuxWiring {
         }
         for (testEnv in environment.gametestEnvs) {
             if (descriptor?.capabilities?.get("gametestJunit") == null) {
-                project.logger.warn(
-                    "[unimined] env '${testEnv.environmentId}' declares " +
+                project.reportProblem(
+                    "runs/gametest-capability",
+                    "unimined: env '${testEnv.environmentId}' declares " +
                     "gametest() but loader " +
                     "'${environment.loaderSpec.orNull?.name}' has no " +
-                    "gametestJunit capability — no junit dep is added"
+                    "gametestJunit capability",
+                    "no junit dep is added"
                 )
             }
             descriptor?.capabilities?.get("gametestJunit")?.let { tpl ->
@@ -120,6 +124,13 @@ internal object RunsAuxWiring {
                     ts.runtimeClasspath += project.files(
                         gametestSourceSet.map { it.runtimeClasspath })
                 }
+                // the gametest env's effective groups — own + parent's
+                // (aux envs inherit declared mods{} groups); providers
+                // keep the launch-file walk off the configuration
+                // phase and the doFirst serializable
+                val testEnvGroups = project.provider {
+                    testEnv.effectiveModGroups()
+                }
                 project.tasks.named("test",
                     org.gradle.api.tasks.testing.Test::class.java) { t ->
                     // gametest classes are scanned as tests too —
@@ -128,6 +139,25 @@ internal object RunsAuxWiring {
                         gametestSourceSet.map { it.output.classesDirs })
                     t.dependsOn(
                         gametestSourceSet.map { it.classesTaskName })
+                    // loom parity (CompileConfiguration): the plain
+                    // test task carries the mods{} classpath groups —
+                    // the gametest env inherits the parent's declared
+                    // groups, so its effective selection serializes.
+                    // Group outputs also join the test classpath —
+                    // member source sets aren't otherwise on it
+                    t.classpath = t.classpath + project.files(
+                        testEnvGroups.map { groups ->
+                            groups.flatMap { it.launchFiles() }
+                        })
+                    descriptor?.capabilities?.get("classpathGroups")
+                        ?.let { prop ->
+                            t.doFirst {
+                                t.systemProperty(prop,
+                                    xyz.wagyourtail.unimined.minecraft
+                                        .ModGroups.classpathGroupsValue(
+                                            testEnvGroups.get()))
+                            }
+                        }
                 }
             }
             // client gametests: arm the gametest env's auto `<env>Client`
@@ -174,6 +204,53 @@ internal object RunsAuxWiring {
             }
             project.tasks.withType(org.gradle.api.tasks.testing.Test::class.java)
                 .configureEach { it.useJUnitPlatform() }
+        }
+    }
+
+    /**
+     * Loader-declared run types beyond client/server — forge-family
+     * userdev profiles carry `data`/`clientData`/`gameTestServer`/
+     * `junit` launch shapes the descriptor advertises via the
+     * `runTypes` capability (FG's per-key `runData`/`runJunit`/
+     * `runGameTestServer` task parity). Registry lookup is metadata-
+     * only — no artifact resolution, so this stays inside
+     * `afterDslEval`. A profile that lacks a materialized key no-ops
+     * in the forge mutator and the run launches the env's plain MC
+     * launch.
+     */
+    fun wireRunTypes(
+        project: Project,
+        environment: MinecraftEnvironment,
+        extension: RunsExtension
+    ) {
+        val environmentId = environment.environmentId
+        val descriptor = environment.loaderSpec.orNull
+            ?.let { xyz.wagyourtail.unimined.transform.loader
+                .LoaderRegistry().resolve(it.name) }
+        val runTypes = descriptor?.capabilities?.get("runTypes")
+            ?.split(',')?.map(String::trim)?.filter(String::isNotEmpty)
+            ?: return
+        for (type in runTypes) {
+            val runName = if (environmentId == "main") type
+            else "$environmentId${type.replaceFirstChar(Char::uppercase)}"
+            if (extension.runs.findByName(runName) != null) continue
+            extension.runEnvironments[runName] = environmentId
+            extension.runDeclaredTypes[runName] = type
+            extension.runs.register(runName) { run ->
+                run.environment.convention(environmentId)
+                // `set` not `convention` — non-main env run names
+                // differ from the type key (`<env>Data` → `data`)
+                run.type.set(type)
+                // server-launch types (serverData, gameTestServer)
+                // need the server-side env under
+                // splitEnvironmentSourceSets — the name-derived side
+                // default keys on *Server endings, which `serverData`
+                // lacks (`forgeServerData` ≠ `*Server`)
+                run.side.convention(
+                    if (type.contains("server", ignoreCase = true))
+                        RunSide.SERVER else RunSide.CLIENT
+                )
+            }
         }
     }
 

@@ -5,10 +5,13 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.delegatingTo
@@ -24,7 +27,8 @@ enum class RunSide { CLIENT, SERVER }
  */
 abstract class RunConfig @Inject constructor(
     private val name: String,
-    objects: ObjectFactory
+    objects: ObjectFactory,
+    private val providers: ProviderFactory
 ) : Named {
 
     override fun getName(): String = name
@@ -36,6 +40,16 @@ abstract class RunConfig @Inject constructor(
 
     /** The environment (`SourceSet` name) this run launches. */
     abstract val environment: Property<String>
+
+    /**
+     * Loader run-config key this run resolves against — the
+     * `runs.<type>` entry in forge userdev-style profiles
+     * (`client`, `server`, `data`, `junit`, `gameTestServer`...).
+     * Defaults to the run's name; set it to bind a differently-named
+     * run to a declared loader run shape:
+     * `runs.named("myDatagen") { type.set("data") }`.
+     */
+    abstract val type: Property<String>
 
     /**
      * Depend on [task] before this run — `beforeRun(preBuildTask)`
@@ -75,6 +89,15 @@ abstract class RunConfig @Inject constructor(
      */
     abstract val prod: Property<Boolean>
 
+    /**
+     * Extra classpath entries appended to this run's launch
+     * classpath — per-run libs/tools (loom/MDG run-dependency
+     * parity). For maven coordinates declare them on the
+     * `run<Name>Dependencies` configuration instead.
+     */
+    val additionalRuntimeClasspath: ConfigurableFileCollection =
+        objects.fileCollection()
+
     /** Working directory — defaults to `run/<environment>-<name>`. */
     abstract val workingDirectory: Property<String>
 
@@ -96,6 +119,134 @@ abstract class RunConfig @Inject constructor(
 
     /** Extra environment variables for the launched process. */
     abstract val environmentVariables: MapProperty<String, String>
+
+    /**
+     * `-D` JVM system properties — the typed alternative to raw
+     * `jvmArgs.add("-Dk=v")` (loom/MDG `systemProperties` parity).
+     * Rendered ahead of `jvmArgs`, so an explicit `-D` there still
+     * wins. Distinct from [environmentVariables], which sets process
+     * env.
+     */
+    abstract val systemProperties: MapProperty<String, String>
+
+    /**
+     * `${key}` substitution values applied to `jvmArgs`/`programArgs`/
+     * `systemProperties`/`environmentVariables` at launch — 1.x
+     * `RunConfig.setProperty` parity. Entries merge over the
+     * environment-level defaults (`game_directory`,
+     * `natives_directory`, `assets_root`, `version_type`, ...) and
+     * over transform-mutator keys (forge's `modules`,
+     * `minecraft_classpath_file`, ...), so an explicit user entry
+     * wins. Unknown `${key}` placeholders warn and substitute `""`.
+     */
+    abstract val launchProperties: MapProperty<String, String>
+
+    /** Declare a `${key}` substitution — `programArgs.add("--user=\${name}")`. */
+    fun setProperty(key: String, value: String) =
+        launchProperties.put(key, value)
+
+    /** Lazy variant — the provider resolves at launch, not configure time. */
+    fun setProperty(key: String, value: Provider<out String>) =
+        launchProperties.put(key, value)
+
+    /**
+     * Lazy supplier variant — 1.x's `() -> String` storage shape;
+     * evaluated at launch (task-input time).
+     */
+    fun setProperty(key: String, value: () -> String) =
+        launchProperties.put(key, providers.provider { value() })
+
+    /**
+     * Groovy lazy variant — `setProperty("name") { expr }` delegates
+     * to this run config and evaluates at launch.
+     */
+    fun setProperty(
+        key: String,
+        @DelegatesTo(
+            value = RunConfig::class,
+            strategy = Closure.DELEGATE_FIRST) value: Closure<String>
+    ) {
+        value.delegate = this
+        value.resolveStrategy = Closure.DELEGATE_FIRST
+        // `?: ""` tolerates null/GString — substitution wants Strings
+        launchProperties.put(key,
+            providers.provider { value.call()?.toString() ?: "" })
+    }
+
+    /**
+     * Root log level for a generated log4j2 dev config —
+     * `logLevel.set("DEBUG")` materializes a `log4j2.xml` under the
+     * task's temp dir and passes `-Dlog4j.configurationFile`
+     * (loom dev-log parity). Ignored when [loggingConfigFile] is set.
+     */
+    abstract val logLevel: Property<String>
+
+    /** Explicit log4j2 config file — takes precedence over the
+     *  `logLevel`-generated default. */
+    abstract val loggingConfigFile: RegularFileProperty
+
+    /**
+     * IDE run-configuration display/file name — defaults to the run
+     * name (loom/MDG `ideName` parity).
+     */
+    abstract val ideName: Property<String>
+
+    /** IDE-side folder/group label for this run's configuration —
+     *  honored by emitters that support grouping. */
+    abstract val ideFolderName: Property<String>
+
+    /**
+     * `false` suppresses this run's IDE run-configuration emission
+     * entirely — `genIdeRuns`/`genIdeaRuns`/`genVsCodeRuns` skip it
+     * (loom `ideConfigGenerated` parity).
+     */
+    abstract val ideConfigGenerated: Property<Boolean>
+
+    /**
+     * Mark this run's IDE configuration single-instance — IntelliJ
+     * refuses a second concurrent launch of the same config
+     * (`singleton="true"`, NG `singleInstance` parity). Currently
+     * honored by the IDEA emitter only; no effect on `run<Name>`
+     * task execution.
+     */
+    abstract val singleInstance: Property<Boolean>
+
+    /**
+     * Mark this run as a JUnit test run — materializes a Gradle
+     * `Test` task (`test<Name>`) alongside `run<Name>`: JUnit-platform
+     * discovery replaces the normal main-class launch, and the
+     * loader's launch config rides an args-file exposed via the
+     * `fml.junit.argsfile` system property (NG `isJUnit`/`unitTest`
+     * parity). Conventions to `true` when [type] is `"junit"` on a
+     * loader whose descriptor declares the `gametestJunit`
+     * capability; set explicitly on any other run.
+     */
+    @Suppress("AcronymName")
+    abstract val unitTest: Property<Boolean>
+
+    /**
+     * SourceSets supplying test classes and classpath for an
+     * [unitTest] run — their `output` lands on the test classpath and
+     * their `output.classesDirs` become `testClassesDirs`
+     * (NG `unitTestSources` parity). Conventions to the `test`
+     * source set when present.
+     */
+    val unitTestSources: org.gradle.api.DomainObjectSet<SourceSet> =
+        objects.domainObjectSet(SourceSet::class.java)
+
+    /**
+     * Names of the environment's `mods { "<id>" { } }` groups this run
+     * loads — their source-set outputs and `modFiles` join the launch
+     * classpath, and the groups serialize for loaders that group
+     * classpath entries by mod (`fabric.classPathGroups` on
+     * fabric-family, `MOD_CLASSES` entries on forge-family — Loom
+     * `mods {}` / NFRT parity). Empty (the convention) loads every
+     * declared group.
+     */
+    abstract val loadedMods: SetProperty<String>
+
+    /** Select which declared `mods {}` groups this run loads. */
+    fun loadedMods(vararg names: String) = loadedMods.set(names.toSet())
 
     /**
      * Data piped to the launched process's stdin. For dedicated
@@ -152,17 +303,34 @@ abstract class RunConfig @Inject constructor(
      *     jvmArgs.add("-Xmx4G")
      * }
      * ```
+     *
+     * `beforeRun` contributions are not inherited — they are per-run
+     * wiring, not spec state; re-declare them on the derived run.
      */
     fun from(other: RunConfig) {
         environment.convention(other.environment)
         side.convention(other.side)
         prod.convention(other.prod)
+        type.convention(other.type)
         workingDirectory.convention(other.workingDirectory)
         mainClass.convention(other.mainClass)
         javaagents.from(other.javaagents)
         jvmArgs.convention(other.jvmArgs)
         programArgs.convention(other.programArgs)
         environmentVariables.convention(other.environmentVariables)
+        systemProperties.convention(other.systemProperties)
+        launchProperties.convention(other.launchProperties)
+        logLevel.convention(other.logLevel)
+        loggingConfigFile.convention(other.loggingConfigFile)
+        ideName.convention(other.ideName)
+        ideFolderName.convention(other.ideFolderName)
+        ideConfigGenerated.convention(other.ideConfigGenerated)
+        singleInstance.convention(other.singleInstance)
+        unitTest.convention(other.unitTest)
+        // live view of the source's set — `addAllLater` reads it at
+        // use time, keeping the "lazy, not a snapshot" contract
+        unitTestSources.addAllLater(providers.provider { other.unitTestSources })
+        loadedMods.convention(other.loadedMods)
         stdin.convention(other.stdin)
         username.convention(other.username)
         auth.kind.convention(other.auth.kind)
@@ -172,10 +340,14 @@ abstract class RunConfig @Inject constructor(
         width.convention(other.width)
         height.convention(other.height)
         downloadAssets.convention(other.downloadAssets)
+        additionalRuntimeClasspath.from(other.additionalRuntimeClasspath)
     }
 
     /** `from(runs.named("client"))` — each property flat-mapped
-     *  lazily, so the source run doesn't need to exist yet. */
+     *  lazily, so the source run doesn't need to exist yet. Copies the
+     *  same fields as the [RunConfig] overload of [from]; `beforeRun`
+     *  contributions are not inherited — re-declare them on the
+     *  derived run. */
     fun from(other: org.gradle.api.provider.Provider<RunConfig>) {
         environment.convention(other.flatMap { it.environment })
         side.convention(other.flatMap { it.side })
@@ -186,6 +358,18 @@ abstract class RunConfig @Inject constructor(
         jvmArgs.convention(other.flatMap { it.jvmArgs })
         programArgs.convention(other.flatMap { it.programArgs })
         environmentVariables.convention(other.flatMap { it.environmentVariables })
+        systemProperties.convention(other.flatMap { it.systemProperties })
+        launchProperties.convention(other.flatMap { it.launchProperties })
+        logLevel.convention(other.flatMap { it.logLevel })
+        loggingConfigFile.convention(other.flatMap { it.loggingConfigFile })
+        ideName.convention(other.flatMap { it.ideName })
+        ideFolderName.convention(other.flatMap { it.ideFolderName })
+        ideConfigGenerated.convention(other.flatMap { it.ideConfigGenerated })
+        singleInstance.convention(other.flatMap { it.singleInstance })
+        type.convention(other.flatMap { it.type })
+        unitTest.convention(other.flatMap { it.unitTest })
+        unitTestSources.addAllLater(other.map { it.unitTestSources })
+        loadedMods.convention(other.flatMap { it.loadedMods })
         stdin.convention(other.flatMap { it.stdin })
         username.convention(other.flatMap { it.username })
         auth.kind.convention(other.flatMap { it.auth.kind })
@@ -195,12 +379,18 @@ abstract class RunConfig @Inject constructor(
         width.convention(other.flatMap { it.width })
         height.convention(other.flatMap { it.height })
         downloadAssets.convention(other.flatMap { it.downloadAssets })
+        additionalRuntimeClasspath.from(
+            other.map { it.additionalRuntimeClasspath })
     }
 
     init {
         environment.convention(SourceSet.MAIN_SOURCE_SET_NAME)
+        // camelCase-boundary match: the wired `server`/`<env>Server`/
+        // `prodServer`/`gameTestServer` names all end in `Server`;
+        // `equals` alone would leave prefixed servers client-sided
         val defaultSide =
-            if (name.equals("server", ignoreCase = true)) RunSide.SERVER else RunSide.CLIENT
+            if (name.equals("server", ignoreCase = true) ||
+                name.endsWith("Server")) RunSide.SERVER else RunSide.CLIENT
         side.convention(defaultSide)
         // no mainClass convention — absent until metadata/mutators fill it
         jvmArgs.convention(emptyList())
@@ -209,6 +399,11 @@ abstract class RunConfig @Inject constructor(
             if (defaultSide == RunSide.SERVER) listOf("nogui") else emptyList()
         )
         environmentVariables.convention(emptyMap())
+        systemProperties.convention(emptyMap())
+        launchProperties.convention(emptyMap())
+        ideName.convention(name)
+        ideConfigGenerated.convention(true)
+        singleInstance.convention(false)
         prod.convention(false)
         // `username` is the offline-name bridge INTO auth.username —
         // it stays unset unless the user assigns it, so an env-level

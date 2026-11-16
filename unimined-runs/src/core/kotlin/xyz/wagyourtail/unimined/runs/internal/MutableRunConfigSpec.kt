@@ -13,6 +13,9 @@ class MutableRunConfigSpec(
     override val prod: Boolean
 ) : RunConfigSpec {
 
+    /** Run-config key — defaults to [name] (1.x name-keyed parity). */
+    override var type: String = name
+
     override var mainClass: String? = null
 
     override val javaagents: MutableList<java.nio.file.Path> = mutableListOf()

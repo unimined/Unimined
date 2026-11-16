@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.runs
+package xyz.wagyourtail.unimined.runs.task
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty

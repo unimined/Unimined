@@ -2,13 +2,15 @@ package xyz.wagyourtail.unimined.runs.internal
 
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.failProblem
+import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
-import xyz.wagyourtail.unimined.runs.RunSide
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import java.io.File
@@ -18,9 +20,10 @@ import xyz.wagyourtail.unimined.mclauncher.VersionChain
 import xyz.wagyourtail.unimined.mclauncher.VersionData
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.ModGroups
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
-import xyz.wagyourtail.unimined.runs.MinecraftRunTask
-import xyz.wagyourtail.unimined.runs.PrepareRunTask
+import xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+import xyz.wagyourtail.unimined.runs.task.PrepareRunTask
 import xyz.wagyourtail.unimined.runs.RunConfig
 import xyz.wagyourtail.unimined.runs.RunsExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
@@ -122,6 +125,7 @@ internal object RunsWiring {
         // (same ordering trap isAuxEnv's managed property documents).
         project.afterDslEval {
             RunsAuxWiring.wireAuxEnvs(project, environment, minecraft, extension)
+            RunsAuxWiring.wireRunTypes(project, environment, extension)
         }
 
         val natives = nativesConfiguration(project, environment, minecraft)
@@ -134,13 +138,46 @@ internal object RunsWiring {
                 ?: run.environment.orNull
             if (bound == null) {
                 run.environment.convention(environmentId)
-            } else if (bound != environmentId) {
-                return@all
             }
             val taskName = "run${run.name.replaceFirstChar(Char::uppercase)}"
-            if (project.tasks.findByName(taskName) != null) return@all
-            registerRunTask(project, environment, run, sourceSet, minecraft, transform, natives)
+            // claiming defers to post-DSL — `splitEnvironmentSourceSets`
+            // retargets client-side runs bound to `main` onto its split
+            // client env (the common env's intersection jar can't
+            // launch a client), and the DSL's final state is the only
+            // reliable basis for which env pass owns the task
+            project.afterDslEval {
+                if (extension.effectiveEnvironment(project, run)
+                        != environmentId) return@afterDslEval
+                if (project.tasks.findByName(taskName) != null)
+                    return@afterDslEval
+                registerRunTask(
+                    project, environment, run, sourceSet,
+                    minecraft, transform, natives)
+            }
         }
+    }
+
+    /**
+     * The mod-jar task a run stages — `jar`/`remapJar` for `main`
+     * and for a *split client* env: its own `<env>Jar` holds
+     * client-only output, while the packaged mod artifact is the
+     * parent's combined jar (client output is folded in by
+     * [MinecraftExtension.splitEnvironmentSourceSets]). Other envs
+     * keep their own `<env>Jar`/`remap<Env>Jar`.
+     */
+    private fun modJarTaskName(
+        minecraft: MinecraftExtension,
+        environment: MinecraftEnvironment,
+        remap: Boolean
+    ): String {
+        val environmentId = environment.environmentId
+        val splitClient = environmentId != SourceSet.MAIN_SOURCE_SET_NAME &&
+            minecraft.environments.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+                ?.splitClientEnvironment?.orNull == environmentId
+        val base = if (environmentId == SourceSet.MAIN_SOURCE_SET_NAME ||
+            splitClient) "jar" else "${environmentId}Jar"
+        return if (remap) "remap${base.replaceFirstChar(Char::uppercase)}"
+        else base
     }
 
     /** Register the `run<Name>` task for one run config on one environment. */
@@ -159,16 +196,93 @@ internal object RunsWiring {
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
         val launchMetadata = artifacts.map { resolved ->
             resolved.launch
-                ?: error("provider for environment '$environmentId' exposes no launch metadata")
+                ?: project.failProblem("runs/launch-metadata",
+                    "unimined: provider for environment '$environmentId' " +
+                        "exposes no launch metadata")
         }
 
         // transform mutators run at execution: the provider captures only
         // the spec reference so run-name/loader decisions stay lazy
         val transformSpec = transform.sourceSet(environmentId)
         val mutated = project.provider {
-            val spec = MutableRunConfigSpec(run.name, run.prod.get())
+            val spec = MutableRunConfigSpec(run.name, run.prod.get()).apply {
+                type = run.type.orElse(run.name).get()
+            }
             transformSpec.effectiveRunMutators().forEach { it.execute(spec) }
             spec
+        }
+
+        // mods{} declared groups — `run.loadedMods` picks a subset
+        // (empty = all declared). Group outputs join the launch
+        // classpath; loaders grouping classpath entries by mod get the
+        // selection serialized: `classpathGroups`-capable descriptors →
+        // that system property (fabric-loader #585 — groups separated
+        // by a doubled path separator, files by a single one);
+        // `modGroupsEnv`-capable descriptors → that env var's `id%%dir`
+        // entries appended (MOD_CLASSES — Loom `mods {}` / NFRT
+        // parity). Serialization lives in ModGroups so the run task,
+        // the JUnit twin, and IDE-emitted configs can't drift; groups
+        // are a dev-launch channel only (ModGroups.selected returns
+        // empty on prod).
+        val selectedModGroups = project.provider {
+            ModGroups.selected(
+                environment, run.loadedMods.orNull.orEmpty(), run.prod.get())
+        }
+        // the loader descriptor is a provider — `registerRunTask`
+        // fires inside runs.all when the auto-registered env runs
+        // realize, which precedes the env's own `loader()` configure;
+        // reading loaderSpec at execution is what resolves it then.
+        // Only strings (the capability channel names) and the
+        // serialized group value reach task state — the descriptor
+        // itself never does (it isn't CC-serializable).
+        val runDescriptor = project.provider {
+            environment.loaderSpec.orNull?.let {
+                xyz.wagyourtail.unimined.transform.loader
+                    .LoaderRegistry().resolve(it.name)
+            }
+        }
+
+        // environment-level `${key}` substitution defaults — one map
+        // shared by the launch task's `launchProperties` and the JUnit
+        // twin's env-value substitution so both resolve identically
+        val envLaunchDefaults = project.provider {
+            val runDir = project.layout.projectDirectory.dir(
+                run.workingDirectory
+                    .orElse("run/$environmentId-${run.name}").get()
+            ).asFile
+            val nativesDir = project.layout.buildDirectory
+                .dir("unimined/natives/$environmentId").get().asFile
+            // asset objects are sha1-addressed and identical across
+            // projects/versions — global cache (mojang launcher model)
+            val assetsRoot = UniminedCache.global(project)
+                .resolve("assets").toFile()
+            val resolved = artifacts.get()
+            val assetIndexId = resolved.assets.orNull?.id
+            mapOf(
+                "version_name" to
+                    (environment.version.orNull ?: "unspecified"),
+                "version_type" to (resolved.launch?.let { meta ->
+                    VersionData.parse(
+                        VersionChain.resolve(
+                            meta.versionJson(meta.rootId),
+                            meta::versionJson)
+                    ).type
+                } ?: "release"),
+                "assets_root" to assetsRoot.absolutePath,
+                "assets_index" to (assetIndexId ?: ""),
+                "assets_index_name" to (assetIndexId ?: ""),
+                "asset_index" to (assetIndexId ?: ""),
+                // `${game_assets}` in pre-1.6-era minecraftArguments —
+                // the resources dir the index gets materialized into
+                "game_assets" to
+                    runDir.resolve("resources").absolutePath,
+                "game_dir" to runDir.absolutePath,
+                "game_directory" to runDir.absolutePath,
+                "natives_root" to nativesDir.absolutePath,
+                "natives_directory" to nativesDir.absolutePath,
+                "library_directory" to
+                    runDir.resolve("libraries").absolutePath,
+            )
         }
 
         val runEnabled = run.enabled
@@ -193,8 +307,8 @@ internal object RunsWiring {
                 t.modFiles.from(
                     project.provider {
                         val jarTask = project.tasks.findByName(
-                            if (environmentId == "main") "remapJar"
-                            else "remap${environmentId.replaceFirstChar(Char::uppercase)}Jar")
+                            modJarTaskName(minecraft, environment,
+                                remap = true))
                         project.files(jarTask?.outputs?.files ?: project.files())
                     },
                     listOfNotNull(
@@ -207,8 +321,8 @@ internal object RunsWiring {
             } else {
                 t.modFiles.from(
                     project.tasks.named(
-                        if (environmentId == "main") "jar"
-                        else "${environmentId}Jar"),
+                        modJarTaskName(minecraft, environment,
+                            remap = false)),
                     // `*Direct` views — the buckets themselves are
                     // declarable-only; direct = mod-source-namespace
                     // pass-through (matches dev classpath for identity-
@@ -224,16 +338,36 @@ internal object RunsWiring {
             transformSpec.effectivePrepareTaskMutators().forEach { it.execute(t) }
         }
 
-        project.tasks.register(taskName, MinecraftRunTask::class.java) { task ->
+        // per-run dependency bucket — `dependencies {
+        // "run<Name>Dependencies"("g:a:v") }` appends coords to this
+        // run's launch classpath only
+        val runDepsConf = project.configurations.register(
+            "${taskName}Dependencies") {
+            it.description =
+                "Launch classpath additions for the '${run.name}' run"
+            it.isCanBeConsumed = false
+            it.isVisible = false
+        }
+
+        // `pre<Name><i>` companions for `beforeRun(Action)` —
+        // registered eagerly here: the task configure action runs on
+        // realization, when the mutation guard forbids task-container
+        // writes (see the contributions note below)
+        val beforeRunTasks = run.beforeRunActions.mapIndexed { i, action ->
+            project.tasks.register(
+                "pre${taskName.replaceFirstChar { it.uppercase() }}$i",
+                org.gradle.api.DefaultTask::class.java
+            ) { t -> action.execute(t) }
+        }
+
+        // shared between `run<Name>` and `genLaunchScript<Name>` — the
+        // script task resolves the identical launch but writes
+        // `.sh`/`.cmd` instead of exec'ing
+        val configureRunTask = Action<MinecraftRunTask> { task ->
             task.dependsOn(prepare)
             task.onlyIf { runEnabled.get() }
             run.beforeRunDeps.forEach { task.dependsOn(it) }
-            run.beforeRunActions.forEachIndexed { i, action ->
-                task.dependsOn(project.tasks.register(
-                    "pre${taskName.replaceFirstChar { it.uppercase() }}$i",
-                    org.gradle.api.DefaultTask::class.java
-                ) { t -> action.execute(t) })
-            }
+            beforeRunTasks.forEach { task.dependsOn(it) }
             task.group = "unimined"
             task.description = "Launch Minecraft " +
                     (environment.version.orNull ?: "<unset>") +
@@ -266,8 +400,8 @@ internal object RunsWiring {
                     },
                     project.provider {
                         val jarTask = project.tasks.findByName(
-                            if (environmentId == "main") "remapJar"
-                            else "remap${environmentId.replaceFirstChar(Char::uppercase)}Jar")
+                            modJarTaskName(minecraft, environment,
+                                remap = true))
                         project.files(jarTask?.outputs?.files ?: project.files())
                     }
                 )
@@ -278,6 +412,10 @@ internal object RunsWiring {
                 // `runtimeClasspath` configuration
                 task.runtimeClasspath.from(sourceSet.runtimeClasspath)
             }
+            // per-run additions — files + the `run<Name>Dependencies`
+            // bucket append after the env classpath either way
+            task.runtimeClasspath.from(
+                run.additionalRuntimeClasspath, runDepsConf)
             task.nativesClasspath.from(natives)
             task.assetIndexFile.set(artifacts.flatMap { it.assets }.flatMap { it.file })
             task.assetIndexId.set(artifacts.flatMap { it.assets }.map { it.id })
@@ -298,7 +436,13 @@ internal object RunsWiring {
                 })
             )
             task.side.set(run.side)
-            task.mainClass.set(mutated.map { it.mainClass }.orElse(run.mainClass))
+            // no `.orElse` here — OrElseValueProducer evaluates the
+            // left side during task-dependency visiting to check
+            // mayHaveValue, which would force `mutated` (transform run
+            // mutators — file reads + detached resolutions) at task-
+            // graph time. The fallback stays inside the map so the
+            // whole chain lazily waits for execution.
+            task.mainClass.set(mutated.map { it.mainClass ?: run.mainClass.orNull })
             task.javaagents.from(run.javaagents)
             task.jvmArgs.set(run.jvmArgs)
             task.programArgs.set(run.programArgs)
@@ -308,65 +452,49 @@ internal object RunsWiring {
             task.mutatedProgramArgs.set(mutated.map { it.programArgs })
             task.mutatedEnvironment.set(mutated.map { it.environment })
             task.environmentVariables.set(run.environmentVariables)
+            task.systemProperties.set(run.systemProperties)
+            // selected mods{} groups join the launch classpath and
+            // serialize onto the loader's mod-grouping channel
+            // (`classpathGroups` sysprop / `modGroupsEnv` env var —
+            // see ModGroups for the formats + selection rule)
+            task.runtimeClasspath.from(selectedModGroups.map { groups ->
+                groups.flatMap { it.launchFiles() }
+            })
+            task.systemProperties.putAll(project.provider {
+                val prop = runDescriptor.orNull?.capabilities
+                    ?.get("classpathGroups") ?: return@provider emptyMap()
+                mapOf(prop to ModGroups.classpathGroupsValue(
+                    selectedModGroups.get()))
+            })
+            task.mutatedEnvironment.putAll(project.provider {
+                val envKey = runDescriptor.orNull?.capabilities
+                    ?.get("modGroupsEnv") ?: return@provider emptyMap()
+                mapOf(envKey to ModGroups.mergeModClasses(
+                    mutated.get().environment[envKey],
+                    ModGroups.modClassesEntries(
+                        selectedModGroups.get())
+                        .joinToString(File.pathSeparator)))
+            })
+            task.logLevel.set(run.logLevel)
+            task.loggingConfigFile.set(run.loggingConfigFile)
             transformSpec.effectiveRunTaskMutators().forEach { it.execute(task) }
             task.stdin.set(run.stdin)
             task.launcherVersion.set(
                 project.provider {
                     project.version.toString().ifBlank { "2.0.0" }
                 })
-            // `${key}` substitution values — environment-level defaults;
+            // `${key}` substitution values — environment-level defaults
+            // (shared with the JUnit twin's env substitution);
             // transform mutators add loader-specific keys through the
             // spec's `properties` (e.g. forge's `modules`,
             // `minecraft_classpath_file`, `source_roots`)
-            task.launchProperties.put(
-                "version_name",
-                environment.version.orElse("unspecified")
-            )
-            task.launchProperties.put(
-                "version_type",
-                artifacts.map { a ->
-                    a.launch?.let { meta ->
-                        VersionData.parse(
-                            VersionChain.resolve(
-                                meta.versionJson(meta.rootId),
-                                meta::versionJson
-                            )
-                        ).type
-                    }
-                }.orElse("release"))
-            task.launchProperties.put(
-                "assets_root",
-                task.assetsDirectory.map { it.asFile.absolutePath })
-            task.launchProperties.put("assets_index", task.assetIndexId)
-            task.launchProperties.put("assets_index_name", task.assetIndexId)
-            task.launchProperties.put("asset_index", task.assetIndexId)
-            // `${game_assets}` in pre-1.6-era minecraftArguments —
-            // the resources dir the index gets materialized into
-            task.launchProperties.put(
-                "game_assets",
-                task.runDirectory.map {
-                    it.dir("resources").asFile.absolutePath
-                })
-            task.launchProperties.put(
-                "game_dir",
-                task.runDirectory.map { it.asFile.absolutePath })
-            task.launchProperties.put(
-                "game_directory",
-                task.runDirectory.map { it.asFile.absolutePath })
-            task.launchProperties.put(
-                "natives_root",
-                task.nativesDirectory.map { it.asFile.absolutePath })
-            task.launchProperties.put(
-                "natives_directory",
-                task.nativesDirectory.map { it.asFile.absolutePath })
-            task.launchProperties.put(
-                "library_directory",
-                task.runDirectory.map {
-                    it.dir("libraries").asFile.absolutePath
-                })
+            task.launchProperties.putAll(envLaunchDefaults)
             task.mutatedLaunchProperties.set(mutated.map {
                 it.properties.mapValues { (_, v) -> v() }
             })
+            // user-declared `setProperty` keys — applied last so they
+            // win over env defaults and mutator keys (1.x parity)
+            task.userLaunchProperties.set(run.launchProperties)
             task.features.set(run.features)
             // auth{} is the typed form; `username` bridges in through
             // auth.username's convention (explicit auth.username wins)
@@ -407,6 +535,191 @@ internal object RunsWiring {
                 }
             })
         }
+
+        val runTask = project.tasks.register(
+            taskName, MinecraftRunTask::class.java, configureRunTask)
+
+        // `genLaunchScript<Name>` — same resolved launch, rendered to
+        // runnable run<Name>.sh/.cmd in the run dir (MDG
+        // `createLaunchScripts` parity); `genLaunchScripts` aggregates
+        val scriptTaskName =
+            "genLaunchScript${run.name.replaceFirstChar(Char::uppercase)}"
+        val scriptTask = project.tasks.register(
+            scriptTaskName, MinecraftRunTask::class.java) { t ->
+            configureRunTask.execute(t)
+            t.description = "Emit launch scripts " +
+                    "($taskName.sh/.cmd) for run " +
+                    "'${run.name}' (env '$environmentId')"
+            t.emitScripts.set(true)
+            t.scriptBaseName.set(taskName)
+        }
+        project.tasks.named("genLaunchScripts") {
+            it.dependsOn(scriptTaskName)
+        }
+
+        listOf(runTask, scriptTask).forEach { taskProvider ->
+            // contributions fire outside the task-creation context —
+            // they may register their own tasks (mutation guard
+            // forbids task-container writes during task creation)
+            transformSpec.effectiveRunTaskContributions().forEach {
+                it.execute(
+                    xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
+                        .RunTaskContext(
+                            run.name, run.prod.orElse(false).get(),
+                            run.type.orElse(run.name).get(), taskProvider
+                        ) { arg ->
+                            // execution-lazy args ride the mutated-args
+                            // channel as a provider element — stays
+                            // serializable, resolves when the launch
+                            // command assembles (may read task outputs)
+                            taskProvider.configure { t ->
+                                (t as? MinecraftRunTask)
+                                    ?.mutatedJvmArgs?.add(arg)
+                            }
+                        })
+            }
+        }
+
+        // NG `isJUnit`/`unitTest` parity: a junit-typed run on a loader
+        // advertising the `gametestJunit` capability also materializes
+        // a Gradle `Test` task — JUnit-platform discovery replaces the
+        // normal launch; the loader's program args ride an args-file
+        // exposed through `fml.junit.argsfile` and jvm args an
+        // @argfile. `unitTestSources` conventions to `test`.
+        val junitArgsProperty =
+            runDescriptor.orNull?.capabilities?.get("gametestJunit")
+        run.unitTest.convention(run.type.orElse(run.name)
+            .map { junitArgsProperty != null && it == "junit" })
+        // `runs.all` fires before `register`ed runs apply their
+        // configure action — `type` still reads as the name then, so
+        // materialized junit runs resolve through the eager channel
+        val declaredType = project.extensions
+            .getByType(RunsExtension::class.java)
+            .runDeclaredTypes[run.name]
+        if (run.unitTest.get() ||
+            (junitArgsProperty != null && declaredType == "junit")) {
+            val testSourceSet = project.extensions
+                .getByType(JavaPluginExtension::class.java)
+                .sourceSets.findByName(SourceSet.TEST_SOURCE_SET_NAME)
+            if (testSourceSet != null && run.unitTestSources.isEmpty())
+                run.unitTestSources.add(testSourceSet)
+            val argDir = project.layout.buildDirectory.dir(
+                "unimined/runArgs/$environmentId-${run.name}")
+            val runProgramArgs = run.programArgs
+            val runJvmArgs = run.jvmArgs
+            val runSystemProperties = run.systemProperties
+            val runEnvironmentVariables = run.environmentVariables
+            val runLaunchProperties = run.launchProperties
+            val runUnitTestSources = run.unitTestSources
+            project.tasks.register(
+                "test${run.name.replaceFirstChar(Char::uppercase)}",
+                org.gradle.api.tasks.testing.Test::class.java) { t ->
+                t.dependsOn(prepare)
+                t.onlyIf { runEnabled.get() }
+                t.group = "verification"
+                t.description = "JUnit-platform test launch for run " +
+                        "'${run.name}' (env '$environmentId')"
+                t.useJUnitPlatform()
+                t.workingDir(project.layout.projectDirectory.dir(
+                    run.workingDirectory
+                        .orElse("run/$environmentId-${run.name}").get()))
+                val programArgsFile = argDir.map {
+                    it.file("junit-program-args.txt") }
+                val jvmArgsFile = argDir.map { it.file("junit-jvm-args.txt") }
+                t.systemProperty(
+                    junitArgsProperty ?: "fml.junit.argsfile",
+                    programArgsFile.get().asFile.absolutePath)
+                t.doFirst {
+                    // late-bound so post-registration runs{} edits land
+                    t.systemProperties(runSystemProperties.get())
+                    // mods{} groups serialize on the JUnit launch the
+                    // same as run<Name> — loom adds
+                    // `fabric.classPathGroups` to gametest tasks too
+                    // (CompileConfiguration parity)
+                    runDescriptor.orNull?.capabilities
+                        ?.get("classpathGroups")
+                        ?.let { prop ->
+                            t.systemProperty(prop,
+                                ModGroups.classpathGroupsValue(
+                                    selectedModGroups.get()))
+                        }
+                    // env parity with run<Name>: the mutator env
+                    // (forge's own FORGE_SPEC/MOD_CLASSES base) merged
+                    // with the groups' `id%%dir` entries under
+                    // `modGroupsEnv`, user env last — values through
+                    // the same `${key}` substitution
+                    val mut = mutated.get()
+                    val mutEnv = mut.environment.toMutableMap()
+                    runDescriptor.orNull?.capabilities
+                        ?.get("modGroupsEnv")
+                        ?.let { envKey ->
+                            mutEnv[envKey] = ModGroups.mergeModClasses(
+                                mut.environment[envKey],
+                                ModGroups.modClassesEntries(
+                                    selectedModGroups.get())
+                                    .joinToString(File.pathSeparator))
+                        }
+                    val subst = envLaunchDefaults.get() +
+                        mut.properties.mapValues { (_, v) -> v() } +
+                        runLaunchProperties.get()
+                    t.environment(subst.resolveLaunchArgs(
+                        mutEnv + runEnvironmentVariables.get()))
+                    programArgsFile.get().asFile.also { f ->
+                        f.parentFile.mkdirs()
+                        f.writeText(
+                            subst.resolveLaunchArgs(
+                                mutated.get().programArgs +
+                                        runProgramArgs.get())
+                                .joinToString("\n"))
+                    }
+                    jvmArgsFile.get().asFile.writeText(
+                        subst.resolveLaunchArgs(
+                            mutated.get().jvmArgs +
+                                    runJvmArgs.get())
+                            .joinToString("\n"))
+                }
+                t.jvmArgs(run.javaagents.files.map {
+                    "-javaagent:${it.absolutePath}" })
+                // JVM-native @argfile expansion carries the rest
+                t.jvmArgs("@${jvmArgsFile.get().asFile.absolutePath}")
+                t.classpath = project.files(
+                    sourceSet.runtimeClasspath,
+                    // mods{} group outputs — the same launch-classpath
+                    // contribution run<Name> gets
+                    selectedModGroups.map { groups ->
+                        groups.flatMap { it.launchFiles() }
+                    },
+                    run.additionalRuntimeClasspath,
+                    project.configurations.named("${taskName}Dependencies"),
+                    project.provider {
+                        runUnitTestSources.map { it.output }
+                    })
+                t.testClassesDirs = project.files(project.provider {
+                    runUnitTestSources.map { it.output.classesDirs }
+                })
+            }.also { testTask ->
+                transformSpec.effectiveRunTaskContributions().forEach {
+                    it.execute(
+                        xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
+                            .RunTaskContext(
+                                run.name, run.prod.orElse(false).get(),
+                                run.type.orElse(run.name).get(), testTask
+                            ) { arg ->
+                                // Test.jvmArgs stringifies elements —
+                                // resolve the provider in a doFirst
+                                // (execution, after writer deps ran)
+                                // instead of registering it
+                                testTask.configure { t ->
+                                    t.doFirst { task ->
+                                        (task as? org.gradle.api.tasks
+                                            .testing.Test)
+                                            ?.jvmArgs(arg.get())
+                                    }
+                                }
+                            })
+                }
+            }
+        }
     }
 
     /**
@@ -415,6 +728,27 @@ internal object RunsWiring {
      * document at resolution time (execution), so no metadata is fetched
      * during configuration.
      */
+    private val LAUNCH_TOKEN = Regex("\\$\\{([^}]+)}")
+
+    /**
+     * `MinecraftRunTask`'s `${key}` substitution for the JUnit twin's
+     * args/env — unknown keys collapse to `""` (they may belong to an
+     * era/config the loader doesn't model).
+     */
+    private fun Map<String, String>.resolveLaunchArgs(
+        args: List<String>
+    ): List<String> = args.map { arg ->
+        val subbed = entries.fold(arg) { a, (k, v) ->
+            a.replace("\${$k}", v) }
+        subbed.replace(LAUNCH_TOKEN, "")
+    }
+
+    private fun Map<String, String>.resolveLaunchArgs(
+        values: Map<String, String>
+    ): Map<String, String> =
+        values.mapValues { (_, v) ->
+            resolveLaunchArgs(listOf(v)).single() }
+
     /** Route a `g:n:v[:classifier]` natives coord through the same
      *  [applyLibraryRules] pipeline providers use — the default
      *  `natives-osx` drop and user `replaceLibraryVersion` rules apply
@@ -463,6 +797,14 @@ internal object RunsWiring {
                     substituteCoord(it, spec)?.let { c ->
                         deps.add(dependencies.create(c))
                     }
+                }
+                // `lwjgl3 {}` swap — host natives under the lwjgl3
+                // classifier scheme (the lwjgl2 entries already
+                // dropped by the shared coord-filter pipeline)
+                if (environment.lwjgl3.enabled.get()) {
+                    environment.lwjgl3.nativesCoords(
+                        environment.lwjgl3.nativesClassifier()
+                    ).forEach { deps.add(dependencies.create(it)) }
                 }
             }
         }

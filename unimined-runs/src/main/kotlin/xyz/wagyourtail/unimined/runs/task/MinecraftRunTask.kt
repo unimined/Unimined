@@ -1,7 +1,6 @@
-package xyz.wagyourtail.unimined.runs
+package xyz.wagyourtail.unimined.runs.task
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -12,8 +11,14 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
 import org.gradle.process.ExecOperations
 import xyz.wagyourtail.commonskt.utils.resolveArgs
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.produceCached
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.mclauncher.*
 import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
+import xyz.wagyourtail.unimined.runs.AuthSpec
+import xyz.wagyourtail.unimined.runs.RunConfig
+import xyz.wagyourtail.unimined.runs.RunSide
 import javax.inject.Inject
 
 /**
@@ -109,6 +114,23 @@ abstract class MinecraftRunTask @Inject constructor(
     @get:Input
     abstract val environmentVariables: MapProperty<String, String>
 
+    /** `-D` JVM system properties — [RunConfig.systemProperties];
+     *  rendered ahead of `jvmArgs` so an explicit `-D` there wins. */
+    @get:Input
+    abstract val systemProperties: MapProperty<String, String>
+
+    /** Root level for the generated log4j2 dev config —
+     *  [RunConfig.logLevel]; ignored when [loggingConfigFile] set. */
+    @get:Input
+    @get:Optional
+    abstract val logLevel: Property<String>
+
+    /** Explicit log4j2 config — [RunConfig.loggingConfigFile]. */
+    @get:InputFile
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val loggingConfigFile: RegularFileProperty
+
     /** Data piped to the launched process's stdin — [RunConfig.stdin]. */
     @get:Input
     @get:Optional
@@ -183,6 +205,14 @@ abstract class MinecraftRunTask @Inject constructor(
     @get:Input
     abstract val mutatedLaunchProperties: MapProperty<String, String>
 
+    /** `${key}` substitutions declared on the run itself
+     *  ([RunConfig.setProperty]/[RunConfig.launchProperties]) —
+     *  applied last so an explicit user entry wins over env defaults
+     *  and mutator keys (1.x parity: user `config` blocks ran after
+     *  provider `configFirst` setup). */
+    @get:Input
+    abstract val userLaunchProperties: MapProperty<String, String>
+
     /**
      * Print the fully-resolved launch (main class, jvm/program args,
      * env, classpath) instead of exec'ing it — verification/debug
@@ -191,6 +221,21 @@ abstract class MinecraftRunTask @Inject constructor(
      */
     @get:Input
     abstract val dryRun: Property<Boolean>
+
+    /**
+     * Emit runnable `<base>.sh`/`.cmd` launch scripts into the run
+     * directory instead of exec'ing — the `genLaunchScript<Name>`
+     * tasks (MDG `createLaunchScripts` parity). The same resolved
+     * classpath/args/env as a real launch is baked into the scripts.
+     */
+    @get:Input
+    abstract val emitScripts: Property<Boolean>
+
+    /** Script file base name — wiring sets `run<Name>`; defaults to
+     *  the task name. */
+    @get:Input
+    @get:Optional
+    abstract val scriptBaseName: Property<String>
 
     /** Java executable for the fork — the env's toolchain-resolved
      *  launcher path, or the build JVM's `java` when toolchains are
@@ -218,8 +263,10 @@ abstract class MinecraftRunTask @Inject constructor(
         mutatedProgramArgs.convention(emptyList())
         mutatedEnvironment.convention(emptyMap())
         environmentVariables.convention(emptyMap())
+        systemProperties.convention(emptyMap())
         launchProperties.convention(emptyMap())
         mutatedLaunchProperties.convention(emptyMap())
+        userLaunchProperties.convention(emptyMap())
         features.convention(emptySet())
         username.convention("Dev")
         authKind.convention(AuthSpec.Kind.OFFLINE)
@@ -228,6 +275,7 @@ abstract class MinecraftRunTask @Inject constructor(
         downloadAssets.convention(true)
         offline.convention(false)
         dryRun.convention(false)
+        emitScripts.convention(false)
         useToolchains.convention(true)
     }
 
@@ -237,7 +285,8 @@ abstract class MinecraftRunTask @Inject constructor(
         if (!useToolchains.get() && requiredJava != null &&
             org.gradle.api.JavaVersion.current() <
                 org.gradle.api.JavaVersion.toVersion(requiredJava)) {
-            error("unimined: '$path' requires Java $requiredJava but " +
+            project.failProblem("runs/java-floor",
+                "unimined: '$path' requires Java $requiredJava but " +
                 "toolchains are disabled and the build JVM is " +
                 org.gradle.api.JavaVersion.current())
         }
@@ -260,9 +309,8 @@ abstract class MinecraftRunTask @Inject constructor(
             // client silently loads no assets
             val indexId = assetIndexId.get()
             val indexTarget = assetsRoot.resolve("indexes/$indexId.json")
-            if (!indexTarget.toFile().exists()) {
-                indexTarget.parent.toFile().mkdirs()
-                indexTarget.toFile().writeText(indexJson)
+            indexTarget.produceCached { tmp ->
+                tmp.toFile().writeText(indexJson)
             }
             val downloaded = xyz.wagyourtail.unimined.api.util.Perf.span(
                 "assets", "index" to indexId
@@ -320,24 +368,68 @@ abstract class MinecraftRunTask @Inject constructor(
 
         val resolvedMainClass = mainClass.orNull ?: defaultMainClass(document, plan.mainClass)
 
-        val subst = launchProperties.get() + mutatedLaunchProperties.get()
+        // env defaults < mutator keys < user `setProperty` entries —
+        // last write wins, matching 1.x's single shared map where
+        // user `config` ran after provider `configFirst` setup
+        val subst = launchProperties.get() + mutatedLaunchProperties.get() +
+                userLaunchProperties.get()
 
         val agentArgs = (javaagents.files.map { it.absolutePath } +
                 mutatedJavaagents.get()).map { "-javaagent:$it" }
 
+        // `-D` system properties — declared entries verbatim, plus
+        // `-Dlog4j.configurationFile`: the explicit file wins, else a
+        // `logLevel`-generated default dev config
+        val logConfig = loggingConfigFile.orNull?.asFile?.toPath()
+            ?: logLevel.orNull?.let { level ->
+                temporaryDir.toPath().resolve("log4j2.xml").also {
+                    java.nio.file.Files.createDirectories(it.parent)
+                    java.nio.file.Files.write(
+                        it, defaultLog4j2(level).toByteArray())
+                }
+            }
+        val systemPropertyArgs = systemProperties.get()
+            .map { (k, v) -> "-D$k=$v" } +
+            listOfNotNull(logConfig?.let {
+                "-Dlog4j.configurationFile=${it.toFile().absolutePath}"
+            })
+
+        val allJvmArgs = subst.resolveLaunchArgs(
+            plan.jvmArgs + "-Djava.library.path=$nativesDir" +
+                    systemPropertyArgs +
+                    agentArgs + jvmArgs.get() + mutatedJvmArgs.get()
+        )
+        // the version document's `game` args are client-only
+        // (--username/--accessToken/...); servers take user args only
+        val allArgs = subst.resolveLaunchArgs(
+            (if (side.get() == RunSide.SERVER) emptyList() else plan.programArgs) +
+                    programArgs.get() + mutatedProgramArgs.get()
+        )
+        val allEnv = plan.environment +
+                subst.resolveLaunchArgs(
+                    mutatedEnvironment.get() + environmentVariables.get()
+                )
+
+        if (emitScripts.get()) {
+            val dir = runDirectory.get().asFile
+            val base = scriptBaseName.orNull ?: name
+            xyz.wagyourtail.unimined.runs.internal.LaunchScriptFiles.write(
+                dir, base,
+                xyz.wagyourtail.unimined.runs.internal.LaunchScriptFiles.Launch(
+                    javaExecutable = javaExecutable.orNull ?: "java",
+                    mainClass = resolvedMainClass,
+                    classpath = dedupedClasspath.map { it.absolutePath },
+                    jvmArgs = allJvmArgs,
+                    programArgs = allArgs,
+                    environment = allEnv,
+                )
+            ).forEach {
+                logger.lifecycle("[unimined] wrote ${it.absolutePath}")
+            }
+            return
+        }
+
         if (dryRun.get()) {
-            val allJvmArgs = subst.resolveLaunchArgs(
-                plan.jvmArgs + "-Djava.library.path=$nativesDir" +
-                        agentArgs + jvmArgs.get() + mutatedJvmArgs.get()
-            )
-            val allArgs = subst.resolveLaunchArgs(
-                (if (side.get() == RunSide.SERVER) emptyList() else plan.programArgs) +
-                        programArgs.get() + mutatedProgramArgs.get()
-            )
-            val allEnv = plan.environment +
-                    subst.resolveLaunchArgs(
-                        mutatedEnvironment.get() + environmentVariables.get()
-                    )
             println("[unimined:dry-run] $path")
             println("[unimined:dry-run] mainClass=$resolvedMainClass")
             println("[unimined:dry-run] jvmArgs=${allJvmArgs.joinToString(" ")}")
@@ -358,28 +450,9 @@ abstract class MinecraftRunTask @Inject constructor(
             javaExecutable.orNull?.let { exec.executable = it }
             exec.mainClass.set(resolvedMainClass)
             exec.classpath = objects.fileCollection().from(dedupedClasspath)
-            exec.jvmArgs(
-                subst.resolveLaunchArgs(
-                    plan.jvmArgs +
-                            "-Djava.library.path=$nativesDir" +
-                            agentArgs +
-                            jvmArgs.get() +
-                            mutatedJvmArgs.get()
-                )
-            )
-            // the version document's `game` args are client-only
-            // (--username/--accessToken/...); servers take user args only
-            exec.args(
-                subst.resolveLaunchArgs(
-                    (if (side.get() == RunSide.SERVER) emptyList() else plan.programArgs) +
-                            programArgs.get() + mutatedProgramArgs.get()
-                )
-            )
-            exec.environment(
-                plan.environment + subst.resolveLaunchArgs(
-                    mutatedEnvironment.get() + environmentVariables.get()
-                )
-            )
+            exec.jvmArgs(allJvmArgs)
+            exec.args(allArgs)
+            exec.environment(allEnv)
             stdin.orNull?.let {
                 // ensure the final command is newline-terminated or the
                 // console reader never dispatches it
@@ -401,7 +474,9 @@ abstract class MinecraftRunTask @Inject constructor(
             LAUNCH_TOKEN.findAll(arg).map { it.groupValues[1] }
         }.distinct().filter { it !in this }
         missing.forEach {
-            logger.warn("[unimined] launch property '\${$it}' unset — substituting \"\"")
+            project.reportProblem("runs/launch-property",
+                "unimined: launch property '\${$it}' unset — " +
+                    "substituting \"\"")
         }
         return (this + missing.associateWith { "" }).resolveArgs(args)
     }
@@ -432,7 +507,7 @@ abstract class MinecraftRunTask @Inject constructor(
                 storeOnRefresh = authStoreCredentials.get()
             ).session()
         } catch (e: IllegalStateException) {
-            throw GradleException(e.message!!)
+            project.failProblem("runs/auth", "unimined: ${e.message!!}")
         }
     }
 
@@ -472,5 +547,22 @@ abstract class MinecraftRunTask @Inject constructor(
             "net.minecraft.server.MinecraftServer"
         }
     }
+
+    /** Minimal dev log4j2 config — console appender with the run's
+     *  declared root [level] (loom's generated dev config shape). */
+    private fun defaultLog4j2(level: String): String = """<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="SysOut" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] (%logger{1}) %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="$level">
+            <AppenderRef ref="SysOut"/>
+        </Root>
+    </Loggers>
+</Configuration>
+"""
 
 }

@@ -16,6 +16,7 @@ class RunConfigFromTest {
         val src = rc(project, "client").apply {
             username.set("SrcUser")
             jvmArgs.set(listOf("-Xmx2G"))
+            launchProperties.put("k", "v")
             prod.set(true)
         }
         val dst = rc(project, "dst").apply {
@@ -24,6 +25,7 @@ class RunConfigFromTest {
         }
         assertEquals("SrcUser", dst.username.get())
         assertEquals(listOf("-Xmx4G"), dst.jvmArgs.get())
+        assertEquals(mapOf("k" to "v"), dst.launchProperties.get())
         assertEquals(true, dst.prod.get())
     }
 
@@ -35,6 +37,36 @@ class RunConfigFromTest {
         dst.from(project.provider { src })
         src.username.set("Late")
         assertEquals("Late", dst.username.get())
+    }
+
+    @Test
+    fun `from carries unitTestSources lazily`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply("java")
+        val sourceSets = project.extensions
+            .getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+        val test = sourceSets.getByName("test")
+        val it2 = sourceSets.create("integrationTest")
+        val src = rc(project, "src").apply { unitTestSources.add(test) }
+        val dst = rc(project, "dst").apply { from(src) }
+        // added after `from` — the copy is a live view, not a snapshot
+        src.unitTestSources.add(it2)
+        assertEquals(setOf(test, it2), dst.unitTestSources)
+    }
+
+    @Test
+    fun `from(provider) carries unitTestSources lazily`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply("java")
+        val sourceSets = project.extensions
+            .getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+        val test = sourceSets.getByName("test")
+        val it2 = sourceSets.create("integrationTest")
+        val src = rc(project, "src").apply { unitTestSources.add(test) }
+        val dst = rc(project, "dst")
+        dst.from(project.provider { src })
+        src.unitTestSources.add(it2)
+        assertEquals(setOf(test, it2), dst.unitTestSources)
     }
 
 }
