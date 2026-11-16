@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.adapter.expectplatform
+package xyz.wagyourtail.unimined.adapter.expectplatform.internal
 
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -11,6 +11,9 @@ import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepSpec
 import xyz.wagyourtail.unimined.runs.RunsExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.adapter.expectplatform.ExpectPlatformEnvExtension
+import xyz.wagyourtail.unimined.adapter.expectplatform.ExpectPlatformStepSpec
+import xyz.wagyourtail.unimined.adapter.expectplatform.EnvironmentRemapTables
 import java.io.File
 
 /**

@@ -1,10 +1,11 @@
-package xyz.wagyourtail.unimined.publish.modpublisher
+package xyz.wagyourtail.unimined.publish.modpublisher.internal
 
 import com.hypherionmc.modpublisher.plugin.ModPublisherGradleExtension
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
+import xyz.wagyourtail.unimined.publish.modpublisher.ArtifactSelection
 import java.io.File
 
 /**

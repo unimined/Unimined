@@ -1,37 +1,42 @@
-package xyz.wagyourtail.unimined.jvmdg
+package xyz.wagyourtail.unimined.jvmdg.task
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.jvmdg.ClassDowngrader
-import xyz.wagyourtail.jvmdg.cli.Flags
 import xyz.wagyourtail.jvmdg.compile.PathDowngrader
 import xyz.wagyourtail.jvmdg.compile.ZipDowngrader
+import xyz.wagyourtail.jvmdg.gradle.flags.ShadeFlags
+import xyz.wagyourtail.jvmdg.gradle.flags.toFlags
+import xyz.wagyourtail.unimined.jvmdg.JvmDgEnvSpec
+import xyz.wagyourtail.unimined.jvmdg.internal.JvmdgEnvWiring
 
 /**
- * Downgrades every directory in [inputDirs] to [classVersion] via
- * JvmDowngrader, mirroring each input dir to `outputDir/<index>` so
+ * Downgrades every directory in [inputDirs] to [ShadeFlags.downgradeTo]
+ * via JvmDowngrader, mirroring each input dir to `outputDir/<index>` so
  * classpath order is preserved. Registered per-environment by the
  * `unimined-jvmdg` compat plugin when the env's `jvmdowngrader`
  * extension is enabled — old-loader runtimes (FG-era LaunchWrapper/FML
  * ship ASM 4/5.2 and cannot read >v52 classes) launch against the
  * downgraded dirs instead of the raw compile outputs.
+ *
+ * The task implements jvmdg's Gradle-frontend [ShadeFlags] — its
+ * property inputs carry the interface's `@Input` annotations and are
+ * conventioned wholesale from the env's [JvmDgEnvSpec] (see
+ * `convention(spec)` in [JvmdgEnvWiring]), so every engine knob the
+ * user sets on `jvmdowngrader { }` reaches [toFlags] at execution.
  */
 @DisableCachingByDefault(because = "jvmdg engine output isn't relocation-verified; up-to-date checks cover the rerun cost")
-abstract class DowngradeClassesTask : DefaultTask() {
+abstract class DowngradeClassesTask : DefaultTask(), ShadeFlags {
 
     /** Compiled class dirs to downgrade (`sourceSet.output.classesDirs`). */
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputDirs: ConfigurableFileCollection
-
-    /** Class-file major version to emit (`52` = Java 8). */
-    @get:Input
-    abstract val classVersion: Property<Int>
 
     /** Whether downgrading is active for this env — [JvmDgEnvSpec.enabled].
      *  An input rather than an onlyIf spec so the configuration cache
@@ -41,18 +46,20 @@ abstract class DowngradeClassesTask : DefaultTask() {
     @get:Input
     abstract val downgradeEnabled: Property<Boolean>
 
-    /** The env's compile java floor — the gate that makes this a
-     *  passthrough when the compile emits at/below the era target.
+    /** The env's run JVM floor — the bound downgraded classes must
+     *  stay readable by.
      *  [MinecraftEnvironment.requiredJavaVersion], as a task input so
      *  the resolved int is what serializes. */
     @get:Input
     abstract val requiredJava: Property<Int>
 
-    /** `jvmdowngrader-java-api` jar(s) — the stub surface calls are
-     *  backported onto. */
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val apiJars: ConfigurableFileCollection
+    /** The level the env's classes were actually compiled at —
+     *  [MinecraftEnvironment.compileJavaVersion], which a
+     *  `jvmdowngrader.source` may raise above [requiredJava]. The
+     *  gate that makes this a passthrough when the compile already
+     *  emits at/below the era target. */
+    @get:Input
+    abstract val compileJava: Property<Int>
 
     /** Resolution classpath for supertype/stub lookup (the env's
      *  runtime classpath plus the input dirs themselves). */
@@ -70,27 +77,27 @@ abstract class DowngradeClassesTask : DefaultTask() {
         // env/spec-shaped is captured by a spec or action lambda
         // under the configuration cache
         if (!downgradeEnabled.get()) return
-        val target = classVersion.get() - 44
+        val flags = toFlags()
+        val target = flags.classVersion - 44
         // fail fast: downgraded classes are still bounded by the
         // launcher JVM — a target above the env's java floor produces
         // classes the runtime can't read
-        if (target > requiredJava.get()) throw GradleException(
-            "${path.removePrefix(":").removeSuffix("Classes")}: " +
+        if (target > requiredJava.get()) project.failProblem(
+            "jvmdg/java-floor",
+            "unimined: ${path.removePrefix(":").removeSuffix("Classes")}: " +
                     "jvmdowngrader.target=$target emits class files for " +
                     "Java $target but the run JVM floor is " +
-                    "${requiredJava.get()} — raise `javaVersion` to at " +
-                    "least $target or lower jvmdowngrader.target"
+                    "${requiredJava.get()}",
+            "raise `javaVersion` to at least $target or lower " +
+                    "jvmdowngrader.target"
         )
-        // compiling at/below target makes this a passthrough
-        if (requiredJava.get() <= target) return
+        // compiling at/below target makes this a passthrough —
+        // compileJava (not requiredJava) is what javac emitted: a
+        // `jvmdowngrader.source` may raise it above the run floor
+        if (compileJava.get() <= target) return
         val inputs = inputDirs.files.filter { it.isDirectory }.map { it.toPath() }
         if (inputs.isEmpty()) return
         val base = outputDir.get().asFile.toPath()
-        val flags = Flags().apply {
-            classVersion = this@DowngradeClassesTask.classVersion.get()
-            val api = apiJars.files.toList()
-            if (api.isNotEmpty()) this.api = api
-        }
         ClassDowngrader.downgradeTo(flags).use { downgrader ->
             PathDowngrader.downgradePaths(
                 downgrader,
@@ -103,7 +110,7 @@ abstract class DowngradeClassesTask : DefaultTask() {
             // JDK's class version (up to v64+), which era JVMs can't load
             // and era ASM can't scan (FML's JarDiscoverer throws). Writing
             // api-<i>.jar keeps every stub at the task's target.
-            apiJars.files.forEachIndexed { i, apiJar ->
+            apiJar.get().forEachIndexed { i, apiJar ->
                 ZipDowngrader.downgradeZip(
                     downgrader, apiJar.toPath(), emptySet(),
                     base.resolve("api-$i.jar")

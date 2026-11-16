@@ -6,6 +6,8 @@ import xyz.wagyourtail.jvmdg.ClassDowngrader
 import xyz.wagyourtail.jvmdg.cli.Flags
 import xyz.wagyourtail.jvmdg.compile.ApiShader
 import xyz.wagyourtail.jvmdg.compile.ZipDowngrader
+import xyz.wagyourtail.jvmdg.gradle.flags.ShadeFlags
+import xyz.wagyourtail.jvmdg.gradle.flags.toFlags
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
@@ -33,21 +35,28 @@ class JvmDowngradeStepType : RemapStepType<JvmDowngradeStepSpec> {
     override fun supports(spec: RemapSpec) = true
 
     override fun create(spec: JvmDowngradeStepSpec, ctx: StepContext) = ArtifactStep { input, c ->
-        val version = spec.classVersion.orNull ?: spec.target.orNull?.let {
-            it.majorVersion.toInt() + 44
-        } ?: throw GradleException(
-            "downgrade: no target set — `downgrade { target.set(JavaVersion.VERSION_1_8) }` " +
-                    "or `downgrade(JavaVersion.VERSION_1_8)` / `downgrade(52)`"
-        )
         val workDir = Files.createTempDirectory(c.workDir, "jvmdg")
-        val api = spec.api.files
-        val flags = Flags().apply {
-            classVersion = version
-            // an empty api list leaves jvmdg auto-resolving the stub
-            // jar over the network — the spec carries the resolved
-            // file set so runs stay offline-reproducible
-            if (api.isNotEmpty()) this.api = api.toList()
+        // env-contributed specs carry the full ShadeFlags surface —
+        // toFlags() converts it wholesale (target, api, and every
+        // engine knob); DSL-declared specs keep the minimal flags
+        val flags = (spec as? ShadeFlags)?.toFlags() ?: run {
+            val version = spec.classVersion.orNull ?: spec.target.orNull?.let {
+                it.majorVersion.toInt() + 44
+            } ?: throw GradleException(
+                "downgrade: no target set — `downgrade { target.set(JavaVersion.VERSION_1_8) }` " +
+                        "or `downgrade(JavaVersion.VERSION_1_8)` / `downgrade(52)`"
+            )
+            Flags().apply {
+                classVersion = version
+                // an empty api list leaves jvmdg auto-resolving the stub
+                // jar over the network — the spec carries the resolved
+                // file set so runs stay offline-reproducible
+                val api = spec.api.files
+                if (api.isNotEmpty()) this.api = api.toList()
+            }
         }
+        val api = (spec as? ShadeFlags)?.apiJar?.get()?.toSet()
+            ?: spec.api.files
         val downgraded = workDir.resolve("downgraded-${input.fileName}")
         ClassDowngrader.downgradeTo(flags).use { downgrader ->
             ZipDowngrader.downgradeZip(downgrader, input,

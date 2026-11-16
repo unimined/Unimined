@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.runs.RunSide
 import xyz.wagyourtail.unimined.runs.RunsExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.adapter.expectplatform.internal.ExpectPlatformEnvWiring
 import java.io.File
 
 /** `platform()` wires agent jar + sysprops onto runs bound to the

@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    "testGradleImplementation"(testFixtures(project(":unimined-api")))
     "coreApi"(project(":unimined-api"))
     "coreApi"(project(":unimined-remap"))
     api(project(":unimined-remap"))
@@ -12,6 +13,10 @@ dependencies {
     implementation(project(":unimined-transform"))
     implementation(project(":unimined-runs"))
     implementation(libs.jvmdowngrader)
+    // their Gradle frontend — used only for the DowngradeFlags/
+    // ShadeFlags property interfaces + toFlags()/convention()
+    // converters; the plugin itself is never applied
+    implementation(libs.jvmdowngrader.gradle.plugin)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

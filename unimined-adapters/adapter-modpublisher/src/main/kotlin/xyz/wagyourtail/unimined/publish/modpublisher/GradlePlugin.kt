@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.publish.modpublisher
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import java.io.File
+import xyz.wagyourtail.unimined.publish.modpublisher.internal.ModpublisherWiring
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.publish-modpublisher` — feeds

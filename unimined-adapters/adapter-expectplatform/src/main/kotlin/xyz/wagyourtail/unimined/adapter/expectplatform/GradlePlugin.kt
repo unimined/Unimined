@@ -1,8 +1,9 @@
 package xyz.wagyourtail.unimined.adapter.expectplatform
 
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.adapter.expectplatform.internal.ExpectPlatformEnvWiring
 import xyz.wagyourtail.unimined.expect.ExpectPlatformExtension
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.RemapExtension
@@ -50,9 +51,11 @@ class GradlePlugin : Plugin<Project> {
                         is String -> step.platformName.set(arg)
                         is Map<*, *> -> @Suppress("UNCHECKED_CAST")
                             step.remap.set(arg as Map<String, String>)
-                        else -> throw GradleException(
-                            "expectPlatform: unsupported argument '$arg' " +
-                                    "(expected a platform name string or a remap map)"
+                        else -> project.failProblem(
+                            "expectplatform/arg",
+                            "unimined: expectPlatform: unsupported " +
+                                    "argument '$arg' (expected a " +
+                                    "platform name string or a remap map)"
                         )
                     }
                 }

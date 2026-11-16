@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.adapter.patchbase
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.ExtensionAware
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
 
@@ -34,6 +35,14 @@ class GradlePlugin : Plugin<Project> {
             env.extensions.create(
                 "patchBase", PatchBaseEnvExtension::class.java,
                 project, env, patchBase)
+            // `minecraft { patchBase(...) }`/`patchBaseCreator()` —
+            // the extension-level verbs alias the `main` env (same
+            // shorthand as `version`/`side`)
+            if (envId == "main") {
+                (minecraft as ExtensionAware).extensions.create(
+                    "patchBase", PatchBaseEnvExtension::class.java,
+                    project, env, patchBase)
+            }
 
             val envSpec = transform.sourceSet(envId)
             envSpec.envArtifactBindings["patchbase"] = {

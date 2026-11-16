@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    "testGradleImplementation"(testFixtures(project(":unimined-api")))
     api(project(":unimined-publish"))
     // typed calls against ModPublisherGradleExtension — optional
     // integration: classes exist at runtime only when the consuming

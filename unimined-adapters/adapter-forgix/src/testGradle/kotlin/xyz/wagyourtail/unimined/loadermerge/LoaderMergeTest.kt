@@ -95,6 +95,12 @@ class LoaderMergeTest {
         ext.input("forge", dir.resolve("forge.jar"))
         ext.input("fabric", dir.resolve("fabric.jar"))
 
+        // engine jar from the test classpath as a file dep — suppresses
+        // the conf's uniminedTools default coordinate (no maven in tests)
+        project.dependencies.add("loaderMergeForgix", project.files(
+            File(io.github.pacifistmc.forgix.Forgix::class.java
+                .protectionDomain.codeSource.location.toURI())))
+
         val task = project.tasks.getByName("mergeLoaderJars") as MergeLoaderJarsTask
         task.merge()
 

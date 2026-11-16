@@ -1,12 +1,13 @@
 package xyz.wagyourtail.unimined.loadermerge.task
 
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.work.DisableCachingByDefault
-import io.github.pacifistmc.forgix.Forgix
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
+import java.net.URLClassLoader
 import java.nio.file.Files
 
 /**
@@ -39,6 +40,15 @@ abstract class MergeLoaderJarsTask : DefaultTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    /**
+     * Forgix engine jars (`loaderMergeForgix` configuration) — resolved
+     * at execution and loaded in an isolated classloader so
+     * `loaderMerge.forgixVersion` picks the merge implementation.
+     */
+    @get:InputFiles
+    @get:Classpath
+    abstract val forgixClasspath: ConfigurableFileCollection
+
     @TaskAction
     fun merge() {
         val jars = loaderJars.files.toList()
@@ -49,11 +59,36 @@ abstract class MergeLoaderJarsTask : DefaultTask() {
         }
         val out = outputJar.get().asFile
         Files.createDirectories(out.toPath().parent)
-        Forgix.mergeLoaders(
-            names.zip(jars).associate { (n, f) -> f to n }
-                .toMap(java.util.HashMap()),
-            out
-        )
+        // mergeLoaders' signature is pure JDK types, so an isolated
+        // loader keeps every Forgix version compatible — only its own
+        // internals resolve inside the loader
+        URLClassLoader(
+            forgixClasspath.files.map { it.toURI().toURL() }.toTypedArray(),
+            null
+        ).use { loader ->
+            val forgix = loader.loadClass("io.github.pacifistmc.forgix.Forgix")
+            val mergeLoaders = try {
+                forgix.getMethod(
+                    "mergeLoaders", Map::class.java, java.io.File::class.java,
+                    java.lang.Boolean::class.javaPrimitiveType
+                )
+            } catch (e: NoSuchMethodException) {
+                project.failProblem(
+                    "forgix/engine",
+                    "unimined: adapter-forgix: resolved Forgix " +
+                            "${forgixClasspath.files.joinToString { it.name }} " +
+                            "does not expose " +
+                            "mergeLoaders(Map, File, boolean)",
+                    "set uniminedTools.forgix to a compatible coordinate"
+                )
+            }
+            mergeLoaders.invoke(
+                null,
+                names.zip(jars).associate { (n, f) -> f to n }
+                    .toMap(java.util.HashMap()),
+                out, false
+            )
+        }
         check(out.exists()) { "forgix produced no output at $out" }
     }
 

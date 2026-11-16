@@ -3,13 +3,16 @@ plugins {
 }
 
 dependencies {
+    "testGradleImplementation"(testFixtures(project(":unimined-api")))
     "coreApi"(project(":unimined-api"))
     "coreApi"(project(":unimined-minecraft"))
     api(project(":unimined-minecraft"))
-    // Forgix's engine is invoked directly by mergeLoaderJars — the
-    // upstream plugin layer (forgix ext/mergeJars) can't merge on
-    // flat projects, so this is a real dep, not compileOnly
-    implementation(libs.forgix)
+    // Forgix is compileOnly: mergeLoaderJars invokes the engine from
+    // the `loaderMergeForgix` configuration in an isolated classloader
+    // (loaderMerge.forgixVersion picks the version), and the
+    // withPlugin detection types only link when the upstream plugin is
+    // actually applied
+    compileOnly(libs.forgix)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

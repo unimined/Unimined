@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    "testGradleImplementation"(testFixtures(project(":unimined-api")))
     "coreApi"(project(":unimined-api"))
     "coreApi"(project(":unimined-minecraft"))
     api(project(":unimined-minecraft"))

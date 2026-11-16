@@ -1,13 +1,18 @@
 package xyz.wagyourtail.unimined.jvmdg
 
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.ExtensionAware
+import xyz.wagyourtail.jvmdg.gradle.flags.ShadeFlags
+import xyz.wagyourtail.jvmdg.gradle.flags.convention
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.stepVerb
 import xyz.wagyourtail.unimined.runs.RunsExtension
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.jvmdg.internal.JvmdgEnvWiring
 
 /**
  * Plugin id `xyz.wagyourtail.unimined.jvmdg` — the optional
@@ -17,11 +22,12 @@ import xyz.wagyourtail.unimined.transform.TransformExtension
  *  - supplies the `downgrade` step on the JAR surface, rewriting
  *    class files to an older class-file major so modern-compiled
  *    artifacts run on old-JVM/old-ASM runtimes
- *  - adds a `jvmdowngrader` extension to every Minecraft environment:
- *    downgrading is **on by default** once the plugin is applied —
- *    `jvmdowngrader(8)` retargets, `jvmdowngrader { enabled.set(false) }`
- *    opts a single env out. Dev `run*` tasks launch against downgraded
- *    class dirs; envs compiling at/below their target pass through.
+ *  - adds a `jvmdowngrader` extension to every Minecraft environment —
+ *    off until configured: `jvmdowngrader { source.set(21) }` compiles
+ *    at 21 while `target` (the era floor by default) bounds emitted
+ *    bytecode. Dev `run*` tasks launch against downgraded class dirs
+ *    and the env's prod jar gets the same treatment; envs compiling
+ *    at/below their target pass through.
  */
 class GradlePlugin : Plugin<Project> {
 
@@ -36,7 +42,8 @@ class GradlePlugin : Plugin<Project> {
         // patched ASM (era EventTransformer depends on lenient ASM-4
         // Type.getType behaviour)
         val javaApi = target.configurations.detachedConfiguration(
-            target.dependencies.create("xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.0.1")
+            target.dependencies.create(
+                target.uniminedTools().jvmdowngraderJavaApi.get())
         )
         javaApi.isTransitive = false
         target.extensions.getByType(
@@ -52,14 +59,19 @@ class GradlePlugin : Plugin<Project> {
                         is Number -> step.classVersion.set(arg.toInt())
                         is String -> step.classVersion.set(
                             arg.toIntOrNull()
-                                ?: throw GradleException(
-                                    "downgrade: '$arg' is not a class-file major version " +
-                                            "(expected a JavaVersion or an int like 52)"
+                                ?: target.failProblem(
+                                    "jvmdg/arg",
+                                    "unimined: downgrade: '$arg' is not " +
+                                            "a class-file major version " +
+                                            "(expected a JavaVersion or " +
+                                            "an int like 52)"
                                 )
                         )
-                        else -> throw GradleException(
-                            "downgrade: unsupported argument '$arg' " +
-                                    "(expected a JavaVersion or an int like 52)"
+                        else -> target.failProblem(
+                            "jvmdg/arg",
+                            "unimined: downgrade: unsupported argument " +
+                                    "'$arg' (expected a JavaVersion or " +
+                                    "an int like 52)"
                         )
                     }
                 }
@@ -77,8 +89,31 @@ class GradlePlugin : Plugin<Project> {
                     val transform = target.extensions
                         .getByType(TransformExtension::class.java)
                     val runs = target.extensions.getByType(RunsExtension::class.java)
+                    val remap = target.extensions
+                        .getByType(
+                            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+                    // the global spec — `minecraft { jvmdowngrader {} }`
+                    // configures defaults for every env in the
+                    // extension; per-env specs convention onto it
+                    // (own env > inherited envs > global > defaults)
+                    val globalSpec = (minecraft as ExtensionAware).extensions
+                        .create("jvmdowngrader", JvmDgEnvSpec::class.java)
+                    // upstream opt-in: when the build applies
+                    // `xyz.wagyourtail.jvmdowngrader` itself, its
+                    // `jvmdg { }` extension (a ShadeFlags) becomes the
+                    // deepest global layer — env set > inherited >
+                    // our global > upstream ext > built-in default.
+                    // Interface-cast only, so any upstream version
+                    // exposing `jvmdg` as ShadeFlags composes
+                    target.pluginManager.withPlugin(
+                        "xyz.wagyourtail.jvmdowngrader") {
+                        (target.extensions.findByName("jvmdg")
+                                as? ShadeFlags)?.let { globalSpec.convention(it) }
+                    }
                     minecraft.environments.all { environment ->
-                        JvmdgEnvWiring.wire(target, environment, transform, runs)
+                        JvmdgEnvWiring.wire(
+                            target, environment, transform, runs, remap,
+                            globalSpec)
                     }
                 }
             }

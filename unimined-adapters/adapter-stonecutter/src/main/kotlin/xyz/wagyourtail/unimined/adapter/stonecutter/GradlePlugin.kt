@@ -4,6 +4,7 @@ import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.api.util.reportProblem
 
 /**
  * Optional Stonecutter bridge — when `dev.kikugie.stonecutter`'s
@@ -27,10 +28,10 @@ class GradlePlugin : Plugin<Project> {
             val sc = project.extensions.findByType(
                 StonecutterBuildExtension::class.java)
             if (sc == null) {
-                project.logger.warn(
-                    "[Unimined/Stonecutter] 'dev.kikugie.stonecutter' " +
-                    "applied but no 'stonecutter' extension found — " +
-                    "skipping")
+                project.reportProblem(
+                    "stonecutter/extension-missing",
+                    "unimined: 'dev.kikugie.stonecutter' applied but no " +
+                    "'stonecutter' extension found — skipping")
                 return@withPlugin
             }
             // key on the minecraft plugin (not the umbrella id) so

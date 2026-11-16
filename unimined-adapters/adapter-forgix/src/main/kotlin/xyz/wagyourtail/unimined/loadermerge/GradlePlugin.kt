@@ -2,13 +2,14 @@ package xyz.wagyourtail.unimined.loadermerge
 
 import io.github.pacifistmc.forgix.plugin.configurations.ForgixConfiguration
 import io.github.pacifistmc.forgix.utils.GradleProjectUtils
-import org.gradle.api.GradleException
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.attributes.Usage
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
+import xyz.wagyourtail.unimined.api.util.uniminedTools
 import xyz.wagyourtail.unimined.loadermerge.task.MergeLoaderJarsTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import java.io.File
@@ -38,6 +39,21 @@ class GradlePlugin : Plugin<Project> {
         val ext = project.extensions.create(
             "uniminedLoaderMerge", LoaderMergeExtension::class.java
         )
+        // engine resolved at execution from the `uniminedTools.forgix`
+        // coordinate — overriding that prop swaps the merge
+        // implementation without a unimined release; the adapter's own
+        // classpath carries forgix compileOnly and mergeLoaders is
+        // invoked through an isolated classloader
+        val forgixEngine = project.configurations.register("loaderMergeForgix") {
+            it.isCanBeConsumed = false
+            it.isCanBeResolved = true
+            it.isVisible = false
+            it.description = "Forgix engine resolved for mergeLoaderJars"
+            it.defaultDependencies { deps ->
+                deps.add(project.dependencies.create(
+                    project.uniminedTools().forgix.get()))
+            }
+        }
         project.uniminedAdopt("loaderMerge", LoaderMergeExtension::class.java)
         project.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
             project.uniminedAdopt("loaderMerge", LoaderMergeExtension::class.java)
@@ -58,8 +74,9 @@ class GradlePlugin : Plugin<Project> {
                         .replaceFirstChar(Char::uppercase)
                     project.tasks.findByName(remapName)
                         ?: project.tasks.findByName(sourceSet.jarTaskName)
-                        ?: throw GradleException(
-                            "adapter-forgix: no prod jar task " +
+                        ?: project.failProblem(
+                            "forgix/prod-jar",
+                            "unimined: adapter-forgix: no prod jar task " +
                                     "for env '${env.environmentId}'")
                 }
                 val name = env.loaderSpec.orNull?.name ?: env.environmentId
@@ -121,6 +138,7 @@ class GradlePlugin : Plugin<Project> {
             t.outputJar.set(
                 project.layout.buildDirectory.file("libs/${project.name}-merged.jar")
             )
+            t.forgixClasspath.from(forgixEngine)
             // union in precedence order; both providers resolve the
             // same key set so names/jars stay parallel. later sources
             // override on the same key
