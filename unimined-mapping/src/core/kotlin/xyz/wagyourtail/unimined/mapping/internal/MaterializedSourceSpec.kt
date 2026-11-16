@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import java.nio.file.Paths
 
@@ -65,9 +66,14 @@ data class MaterializedSourceSpec(
     }.let(::JsonObject)
 
     /** Rebuild the materialized source — the declaration is a stub
-     *  since every field that delegates to it is supplied explicitly. */
+     *  since every field that delegates to it is supplied explicitly
+     *  (same shape as `MappingResolver.RawFileSource`, which stays
+     *  main-side with the resolver). */
     fun materialize(): MaterializedMappingSource = RuntimeMaterializedMappingSource(
-        declaration = MappingResolver.RawFileSource(Paths.get(files.first())),
+        declaration = object : MappingSource {
+            private val file = Paths.get(files.first())
+            override fun toString() = "file:$file"
+        },
         files = files.map(Paths::get),
         formatHint = formatHint,
         nsMap = nsMap,

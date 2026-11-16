@@ -6,6 +6,7 @@ import org.gradle.api.initialization.Settings
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.PluginAware
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 
 /**
@@ -42,6 +43,11 @@ class GradlePlugin : Plugin<PluginAware> {
             target.uniminedAdopt("mapping", MappingExtension::class.java)
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
                 target.uniminedAdopt("mapping", MappingExtension::class.java)
+            }
+            // FG7 `checkRepos` parity — post-DSL diagnostic that
+            // ensured repos survived user script ordering
+            target.afterDslEval {
+                UniminedRepos.validate(target.logger, target)
             }
         }
     }

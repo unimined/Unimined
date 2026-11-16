@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.mapping
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.GradleException
+import org.gradle.api.logging.Logging
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.mapping.internal.RetroMCPManifest
 import org.gradle.api.file.ConfigurableFileCollection
@@ -44,6 +46,10 @@ class MappingsSpecImpl(
 
     private val fileCollectionFactory = objects
 
+    private companion object {
+        val LOGGER = Logging.getLogger(MappingsSpecImpl::class.java)
+    }
+
     /** Mapping sources declared directly on this environment, in chain order. */
     val sources = mutableListOf<Source>()
 
@@ -76,6 +82,13 @@ class MappingsSpecImpl(
         return sources.drop(start).also { sources.subList(start, sources.size).clear() }
     }
 
+    /** Groovy DSL form of [collectDeclared] — the closure delegates to
+     *  this spec (`collectDeclared { calamus() }`). */
+    fun collectDeclared(
+        @DelegatesTo(value = MappingsSpecImpl::class, strategy = Closure.DELEGATE_FIRST)
+        block: Closure<*>
+    ): List<Source> = collectDeclared { block.delegatingTo(this) }
+
     /**
      * Lazily-evaluated default source contributions — transform wiring
      * registers these at bound time, but the descriptor state they read
@@ -103,8 +116,58 @@ class MappingsSpecImpl(
      * `customIntermediaries`). Fabric-family wiring checks this before
      * contributing the descriptor's intermediary jar or
      * `upstreamMappingChannel` sources.
+     *
+     * Property-backed: a [Provider] value resolves lazily when the
+     * loader's contribution providers evaluate, never during
+     * configuration. Convention `false`. Kotlin DSL:
+     * `customIntermediaries.set(true)`; Groovy keeps assignment:
+     * `customIntermediaries = true`.
      */
-    var customIntermediaries: Boolean = false
+    val customIntermediaries: Property<Boolean> =
+        objects.property(Boolean::class.java).apply { convention(false) }
+
+    /** Direct-value setter for [customIntermediaries] — Groovy
+     *  `customIntermediaries = true` resolves this bean setter. */
+    fun setCustomIntermediaries(value: Boolean) =
+        customIntermediaries.set(value)
+
+    /** Provider setter for [customIntermediaries] — the provider
+     *  resolves when fabric-family contribution providers evaluate. */
+    fun setCustomIntermediaries(value: Provider<out Boolean>) =
+        customIntermediaries.set(value)
+
+    /**
+     * Hierarchy name fill on the composed tree (ploceus `MappingFiller`
+     * parity — extends the composer's `fillMissingNames`, which only
+     * copies cells on rows already present). The environment's raw
+     * Minecraft jar plus its runtime libraries are scanned for the
+     * class hierarchy, and mapped method/parameter names propagate to
+     * overriding declarations the sources leave unmapped, synthesizing
+     * verbatim class/method cells for tree-absent rows so remap does
+     * not break references. Named-role namespaces additionally unify
+     * bridge methods with the specialized methods they forward to.
+     *
+     * Tri-state: *unset* (the default — no convention) auto-enables
+     * when Ornithe enricher sources (`nests`/`sparrow`/`raven` —
+     * ploceus's processors gate) are declared; `true`/`false` forces
+     * the fill on or off. Property-backed: a [Provider] value resolves
+     * inside mapping-data materialization, never during configuration.
+     * Kotlin DSL: `hierarchyNameFill.set(true)`; Groovy keeps
+     * assignment: `hierarchyNameFill = true`. Call [Property.unset]
+     * to return to auto.
+     */
+    val hierarchyNameFill: Property<Boolean> =
+        objects.property(Boolean::class.java)
+
+    /** Direct-value setter for [hierarchyNameFill] — Groovy
+     *  `hierarchyNameFill = true` resolves this bean setter. */
+    fun setHierarchyNameFill(value: Boolean) =
+        hierarchyNameFill.set(value)
+
+    /** Provider setter for [hierarchyNameFill] — the provider resolves
+     *  inside mapping-data materialization, not during configuration. */
+    fun setHierarchyNameFill(value: Provider<out Boolean>) =
+        hierarchyNameFill.set(value)
 
     /**
      * Legacy Fabric mapping generation — `>=2` selects the
@@ -229,7 +292,10 @@ class MappingsSpecImpl(
     fun markSplitOfficial(
         fromNamespaces: List<String>, mergeNamespace: String
     ) {
-        if (side.get() != Side.MERGED || !isSplitEra()) return
+        // COMMON envs share the merged channel semantics — their
+        // class space is a subset of the same per-side columns
+        if (side.get() != Side.MERGED && side.get() != Side.COMMON) return
+        if (!isSplitEra()) return
         splitOfficial = true
         splitOfficialNamespaces = fromNamespaces
         splitMergeNamespace = mergeNamespace
@@ -243,7 +309,10 @@ class MappingsSpecImpl(
      *  consumers safely ignore, while omitting the server column
      *  breaks split-era bridging. */
     private fun isSplitEra(): Boolean {
-        val mc = mcVersion?.orNull?.substringBefore('-')
+        // `empty-<ver>` pseudo versions model the real version's era —
+        // `empty-1.8.8` is post-merge, `empty-b1.7.3` is split
+        val mc = mcVersion?.orNull?.substringAfter("empty-")
+            ?.substringBefore('-')
             ?: return true
         if (mc.isBlank()) return true
         return try {
@@ -262,7 +331,10 @@ class MappingsSpecImpl(
         if (gen >= 2) return listOf(const("") to "official")
         val s = side.get()
         val splitEra = isSplitEra()
-        if (s == Side.MERGED && splitEra) {
+        // COMMON rides the same merged-env channel semantics as
+        // MERGED — the common jar is a subset of the merged class
+        // space, filled from the same per-side official columns
+        if ((s == Side.MERGED || s == Side.COMMON) && splitEra) {
             splitOfficial = true
             splitOfficialNamespaces = listOf("official:client", "official:server")
         }
@@ -270,7 +342,7 @@ class MappingsSpecImpl(
             s == Side.CLIENT -> listOf(const("-client") to "official")
             s == Side.SERVER -> listOf(const("-server") to "official")
             // non-split merged versions ship one merged artifact
-            s == Side.MERGED && !splitEra ->
+            (s == Side.MERGED || s == Side.COMMON) && !splitEra ->
                 listOf(const("") to "official")
             else -> listOf(
                 const("-client") to "official:client",
@@ -424,6 +496,43 @@ class MappingsSpecImpl(
     fun raven(build: Int) =
         ornitheEnricher("exceptions", "raven", build)
 
+    /**
+     * Auto-[nests] variant for transform wiring — emits one enricher
+     * source per side slot, resolving each slot's artifact version
+     * through [buildFor] (`(gameVersion, environment) -> artifact
+     * version?`, e.g. `("b1.7.3", "client") ->
+     * "b1.7.3-client+build.7"`). `environment` is the meta index's
+     * environment tag matching the slot: `"client"`/`"server"` for
+     * sided slots, `"*"` for merged artifacts; slots with no
+     * matching entry are skipped. Unlike [nests], the caller resolves
+     * builds — a sided slot may legitimately select the `"*"`
+     * artifact on versions that only publish merged extras.
+     */
+    fun autoNests(
+        buildFor: (gameVersion: String, environment: String) -> String?
+    ) = autoNestsInternal(buildFor)
+
+    /** Groovy DSL form of [autoNests] — the closure takes
+     *  `(gameVersion, environment)` and returns the artifact version. */
+    fun autoNests(buildFor: Closure<String?>) =
+        autoNestsInternal { gameVersion, environment ->
+            buildFor.call(gameVersion, environment)
+        }
+
+    private fun autoNestsInternal(
+        buildFor: (gameVersion: String, environment: String) -> String?
+    ) {
+        // `empty-*` pseudo versions resolve the real version's extras
+        val mc = mcVersion?.orNull?.substringAfter("empty-") ?: return
+        for ((sfxP, officialNs) in ornitheSideSuffixes("nests", 1)) {
+            val environment = sfxP.get().removePrefix("-").ifEmpty { "*" }
+            val version = buildFor(mc, environment) ?: continue
+            maven(const("net.ornithemc:nests:$version")) {
+                mapNamespace("source" to officialNs)
+            }
+        }
+    }
+
     private fun ornitheEnricher(
         channel: String, artifact: String, build: Int
     ) {
@@ -570,8 +679,11 @@ class MappingsSpecImpl(
                         // columns — relabel both, and flag the
                         // split-official merge the same as gen-1:
                         // each side remaps through calamusGen2, then
-                        // the jar merge pairs by it
-                        s == Side.MERGED && isSplitEra() -> {
+                        // the jar merge pairs by it. COMMON (the
+                        // intersection artifact) shares the merged
+                        // env's mapping semantics — its class space
+                        // is a subset of the same merged columns
+                        (s == Side.MERGED || s == Side.COMMON) && isSplitEra() -> {
                             mapNamespace("clientOfficial" to "official:client")
                             mapNamespace("serverOfficial" to "official:server")
                             splitOfficial = true
@@ -581,7 +693,7 @@ class MappingsSpecImpl(
                         }
                         // non-split merged env: one obf space —
                         // official is just the client column
-                        s == Side.MERGED ->
+                        s == Side.MERGED || s == Side.COMMON ->
                             mapNamespace("clientOfficial" to "official")
                         // no env (migration target, ad-hoc specs) —
                         // relabel both so `official:client`/`official:server`
@@ -668,15 +780,20 @@ class MappingsSpecImpl(
     /**
      * retroMCP files carry split `client`/`server` dst columns —
      * per-side official names (same concept as gen-2
-     * `clientOfficial`/`serverOfficial`). Sided envs keep their own
-     * side's column relabeled into `official:<side>`; side-less specs
-     * (migration targets) and MERGED get both — the merged env's
-     * compose path unions the side columns client-wins.
+     * `clientOfficial`/`serverOfficial`). Both columns are tagged
+     * `official:<side>` even on sided envs so `envView(side)` folds
+     * the env's own column to `official` and drops the other side
+     * (an untagged `client`/`server` column would survive the view
+     * as a dead column). Side-less specs (migration targets) and
+     * MERGED get both — the merged env's compose path unions the
+     * side columns client-wins.
      */
     private fun Source.retroMCPOfficialRelabel() {
         when (side.get()) {
-            Side.CLIENT -> mapNamespace("client" to "official:client")
-            Side.SERVER -> mapNamespace("server" to "official:server")
+            Side.CLIENT, Side.SERVER -> {
+                mapNamespace("client" to "official:client")
+                mapNamespace("server" to "official:server")
+            }
             else -> {
                 if (isSplitEra()) {
                     mapNamespace("client" to "official:client")
@@ -789,6 +906,12 @@ class MappingsSpecImpl(
         inheritedSources = provider
     }
 
+    /** Groovy DSL form of [inheritSources] — the closure receives the
+     *  visited-spec set and returns the inherited [Source] list. */
+    fun inheritSources(provider: Closure<List<Source>>) {
+        inheritSources { visiting -> provider.call(visiting) }
+    }
+
     /** Mapping declarations after applying defaults and environment inheritance. */
     @JvmOverloads
     fun effectiveSources(
@@ -797,7 +920,9 @@ class MappingsSpecImpl(
         val own = sources.ifEmpty {
             val inherited = inheritedSources ?: return defaultSources.toList()
             if (!visiting.add(this)) {
-                throw GradleException("cyclic Unimined mapping inheritance detected")
+                UniminedProblems.fail(LOGGER, fileCollectionFactory,
+                    "mappings/inheritance-cycle",
+                    "cyclic Unimined mapping inheritance detected")
             }
             try {
                 inherited(visiting)

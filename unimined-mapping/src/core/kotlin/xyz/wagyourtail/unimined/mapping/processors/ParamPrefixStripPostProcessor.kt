@@ -7,17 +7,16 @@ import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
-import xyz.wagyourtail.unimined.mapping.element.mapping.MutableParameterMapping
-import xyz.wagyourtail.unimined.mapping.jvms.four.two.two.UnqualifiedName
-import java.util.*
+import xyz.wagyourtail.unimined.mapping.tree.impl.stripParamPrefix
 
 /**
  * Builtin [MappingPostProcessor] stripping collision-marker prefixes
  * from layered parameter names — loom's
- * `ParchmentPrefixStripingMappingVisitor` semantics: a name like `pFoo`
- * (Parchment marks its parameters with a `p` prefix) becomes `foo`.
- * The prefix character must be followed by an uppercase letter to
- * qualify, and the following letter is lowercased after the strip.
+ * `ParchmentPrefixStripingMappingVisitor` semantics, delegated to
+ * UML's [stripParamPrefix]: a name like `pFoo` (Parchment marks its
+ * parameters with a `p` prefix) becomes `foo`. The prefix character
+ * must be followed by an uppercase letter to qualify, and the
+ * following letter is lowercased after the strip.
  *
  * @param prefix the collision-marker character to strip (`p` for
  *  Parchment); names shorter than two characters are never stripped
@@ -36,43 +35,11 @@ class ParamPrefixStripPostProcessor(
     override fun process(data: MappingData, ctx: MappingContext): MappingData {
         val tree = data.view<MappingTree>() as? MutableMappingTree
             ?: return data
-        val nsFilter = namespaces?.mapTo(mutableSetOf()) { Namespace(it) }
-        fun strip(names: Map<Namespace, UnqualifiedName>): Map<Namespace, UnqualifiedName> {
-            var changed = false
-            val out = names.toMutableMap()
-            for ((ns, name) in names) {
-                if (nsFilter != null && ns !in nsFilter) continue
-                val stripped = stripName(name.value) ?: continue
-                out[ns] = UnqualifiedName.unchecked(stripped)
-                changed = true
-            }
-            return if (changed) out else names
-        }
-        for (cls in tree.classes) {
-            for (method in cls.methods) {
-                for (param in method.parameters) {
-                    (param as? MutableParameterMapping)?.setNames(strip(param.names))
-                }
-            }
-            for (wildcard in cls.wildcards) {
-                for (param in wildcard.parameters) {
-                    (param as? MutableParameterMapping)?.setNames(strip(param.names))
-                }
-            }
-        }
+        tree.stripParamPrefix(
+            prefix,
+            namespaces?.mapTo(mutableSetOf()) { Namespace(it) }
+        )
         return data
-    }
-
-    /**
-     * Loom `stripMethodArg`: `<prefix><Uppercase>rest` → `<lowercase>rest`;
-     * `null` when the name doesn't carry the marker.
-     */
-    private fun stripName(arg: String): String? {
-        if (arg.length > 1 && arg[0] == prefix && arg[1].isUpperCase()) {
-            val rest = arg.substring(1)
-            return rest.substring(0, 1).lowercase(Locale.ROOT) + rest.substring(1)
-        }
-        return null
     }
 
 }

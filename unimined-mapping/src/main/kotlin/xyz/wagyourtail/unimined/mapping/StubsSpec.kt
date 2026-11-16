@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.mapping
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.mapping.GroovyMappingTreeDsl
 import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.mapping.element.mapping.MutableClassMapping
 import xyz.wagyourtail.unimined.mapping.element.mapping.MutableMethodMapping
@@ -28,7 +29,10 @@ import xyz.wagyourtail.unimined.mapping.sink.emit
  * }
  * ```
  */
-open class StubsSpec(namespaces: List<String>) : MappingTreeDsl(namespaces) {
+open class StubsSpec(namespaces: List<String>) : GroovyMappingTreeDsl(namespaces) {
+
+    /** Groovy arity — [c]'s `block` default is invisible to Groovy. */
+    fun c(vararg names: String?) = c(*names) {}
 
     /** Add a class stub row — 1.x `c(...)` verb. */
     fun c(vararg names: String?, block: StubsClassDsl.() -> Unit = {}) =
@@ -55,7 +59,10 @@ open class StubsSpec(namespaces: List<String>) : MappingTreeDsl(namespaces) {
     open class StubsClassDsl(
         treeDsl: MappingTreeDsl,
         cls: MutableClassMapping
-    ) : ClassDsl(treeDsl, cls) {
+    ) : GroovyClassDsl(treeDsl, cls) {
+
+        /** Groovy arity — [f]'s `block` default is invisible to Groovy. */
+        fun f(vararg entries: String?) = f(*entries) {}
 
         /** Add a field stub row — 1.x `f(...)` verb; entries are
          *  `name[;desc]` per namespace. */
@@ -68,6 +75,9 @@ open class StubsSpec(namespaces: List<String>) : MappingTreeDsl(namespaces) {
             @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
         ) = f(*entries.toTypedArray()) { block.delegatingTo(this) }
+
+        /** Groovy arity — [m]'s `block` default is invisible to Groovy. */
+        fun m(vararg entries: String?): MutableMethodMapping = m(*entries) {}
 
         /** Add a method stub row — 1.x `m(...)` verb; entries are
          *  `name[;desc]` per namespace. */

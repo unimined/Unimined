@@ -34,7 +34,8 @@ internal object MappingResolver {
      * the pair is actually present; `null`/`MERGED` keeps everything.
      */
     private fun filterSideDocs(files: List<Path>, side: Side?): List<Path> {
-        if (side == null || side == Side.MERGED) return files
+        if (side == null || side == Side.MERGED || side == Side.COMMON)
+            return files
         val other = if (side == Side.CLIENT) "server" else "client"
         val names = files.map { it.fileName.toString() }
         if (!names.any { it.equals("client.srg", true) } ||

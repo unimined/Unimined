@@ -10,6 +10,10 @@ package xyz.wagyourtail.unimined.mapping.internal
  * metadata suffixes (`-20230612.114412`) are ignored. Snapshot ids
  * (`24w14a`) order by year/week and always after every release before
  * the snapshot era began; ids matching neither shape fail loudly.
+ *
+ * `empty-<v>` pseudo-version ids (total-conversion/custom-provider
+ * envs — real metadata over empty game artifacts) carry the wrapped
+ * version's era, so the `empty-` prefix is stripped before parsing.
  */
 object MinecraftVersions {
 
@@ -52,15 +56,20 @@ object MinecraftVersions {
         )
     }
 
-    /** Compare [a] to [b]; negative when [a] is older. */
+    /** Compare [a] to [b]; negative when [a] is older. `empty-`
+     *  pseudo-version prefixes strip to the wrapped version before
+     *  parsing. */
     fun compare(a: String, b: String): Int {
         if (a == b) return 0
-        val aSnap = SNAPSHOT.matchEntire(a)
-        val bSnap = SNAPSHOT.matchEntire(b)
-        val aRel = if (aSnap == null) parse(a) else null
-        val bRel = if (bSnap == null) parse(b) else null
-        val aLeg = aRel == null && aSnap == null && LEGACY.matchEntire(a) != null
-        val bLeg = bRel == null && bSnap == null && LEGACY.matchEntire(b) != null
+        val aId = a.substringAfter("empty-")
+        val bId = b.substringAfter("empty-")
+        if (aId == bId) return 0
+        val aSnap = SNAPSHOT.matchEntire(aId)
+        val bSnap = SNAPSHOT.matchEntire(bId)
+        val aRel = if (aSnap == null) parse(aId) else null
+        val bRel = if (bSnap == null) parse(bId) else null
+        val aLeg = aRel == null && aSnap == null && LEGACY.matchEntire(aId) != null
+        val bLeg = bRel == null && bSnap == null && LEGACY.matchEntire(bId) != null
         if (aRel == null && aSnap == null && !aLeg) {
             throw IllegalStateException("cannot compare Minecraft version '$a' against '$b'")
         }
@@ -68,7 +77,7 @@ object MinecraftVersions {
             throw IllegalStateException("cannot compare Minecraft version '$b' against '$a'")
         }
         // pre-release-era ids predate everything else
-        if (aLeg && bLeg) return a.compareTo(b)
+        if (aLeg && bLeg) return aId.compareTo(bId)
         if (aLeg) return -1
         if (bLeg) return 1
         if (aSnap != null && bSnap != null) {
@@ -78,13 +87,14 @@ object MinecraftVersions {
         if (aSnap != null) {
             // snapshot vs release: newer iff past the release's first-snapshot week
             val week = aSnap.groupValues[1].toInt() * 100 + aSnap.groupValues[2].toInt()
-            val boundary = FIRST_SNAPSHOT_WEEK[b] ?: FIRST_SNAPSHOT_WEEK[b.substringBeforeLast('.')]
+            val boundary = FIRST_SNAPSHOT_WEEK[bId]
+                ?: FIRST_SNAPSHOT_WEEK[bId.substringBeforeLast('.')]
             return if (boundary != null) (if (week < boundary) -1 else 1)
             else if (week >= 20 * 100) 1 else throw IllegalStateException(
                 "cannot compare snapshot '$a' against '$b'"
             )
         }
-        if (bSnap != null) return -compare(b, a)
+        if (bSnap != null) return -compare(bId, aId)
         return compareValuesBy(aRel!!, bRel!!, { it.first }, { it.second }, { it.third })
     }
 

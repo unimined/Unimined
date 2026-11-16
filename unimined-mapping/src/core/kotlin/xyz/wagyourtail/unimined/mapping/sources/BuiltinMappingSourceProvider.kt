@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.mapping.sink.emit
 import xyz.wagyourtail.unimined.mapping.sink.nsFiltered
 import xyz.wagyourtail.unimined.mapping.tree.impl.fillMissingNames
 import java.nio.file.Files
+import xyz.wagyourtail.unimined.api.util.produceCached
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -505,9 +506,8 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         ZipFile(zip.toFile()).use { file ->
             val entry = file.getEntry(name) ?: return null
             val out = dir.resolve(outName)
-            if (!Files.exists(out)) {
-                Files.createDirectories(dir)
-                file.getInputStream(entry).use { Files.copy(it, out) }
+            out.produceCached { tmp ->
+                file.getInputStream(entry).use { Files.copy(it, tmp) }
             }
             return out
         }

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.mapping.internal
 
+import xyz.wagyourtail.unimined.api.util.produceCached
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -80,9 +81,10 @@ object MappingArchive {
         // to real path separators so they land as nested files.
         val out = cacheDir.resolve(archive.fileName.toString())
             .resolve(entry.name.replace('\\', '/'))
-        if (!Files.exists(out)) {
-            Files.createDirectories(out.parent)
-            jar.getInputStream(entry).use { Files.copy(it, out) }
+        // lock + temp+move — a concurrent daemon must not observe a
+        // half-extracted mapping document
+        out.produceCached { tmp ->
+            jar.getInputStream(entry).use { Files.copy(it, tmp) }
         }
         return out
     }

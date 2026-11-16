@@ -7,6 +7,7 @@ import org.gradle.api.initialization.Settings
 import org.gradle.api.initialization.resolve.RepositoriesMode
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.PluginAware
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import java.net.URI
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -54,7 +55,10 @@ class UniminedRepos private constructor(
          *  [RepositoryHandler]: project repositories, settings
          *  `dependencyResolutionManagement`/`pluginManagement`, etc. */
         fun ensure(repos: RepositoryHandler) {
-            if (repos.none { it.name == name }) registerOn(repos)
+            if (repos.none { it.name == name }) {
+                registerOn(repos)
+                recordEnsured(repos, this)
+            }
         }
 
         /** Register this repo on [project] when absent — honors the
@@ -464,6 +468,61 @@ class UniminedRepos private constructor(
                 else -> null
             }
 
+        /** Every repo an `ensure` call actually registered, keyed by
+         *  handler — the record [validate] checks post-DSL. Weak-keyed:
+         *  handlers outlive builds only via configuration cache. */
+        private val ensuredRepos =
+            java.util.WeakHashMap<RepositoryHandler, MutableSet<Repo>>()
+
+        @Synchronized
+        private fun recordEnsured(handler: RepositoryHandler, repo: Repo) {
+            ensuredRepos.getOrPut(handler) { mutableSetOf() } += repo
+        }
+
+        @Synchronized
+        internal fun ensuredOn(handler: RepositoryHandler): List<Repo> =
+            ensuredRepos[handler]?.toList() ?: emptyList()
+
+        /**
+         * FG7 `checkRepos` parity — post-DSL diagnostic: every repo a
+         * unimined `ensure` registered on [project]'s repositories is
+         * still present, and `MavenRepo` precedes `Mojang Libraries`
+         * (central-first keeps central-only classifiers reachable —
+         * Gradle pins a module's artifacts to the repo that served its
+         * metadata). Warns via [UniminedProblems]; never fails.
+         */
+        fun validate(
+            logger: org.gradle.api.logging.Logger,
+            project: Project
+        ) {
+            val ensured = ensuredOn(project.repositories)
+            if (ensured.isEmpty()) return
+            val names = project.repositories.map { it.name }
+            for (repo in ensured.filter { it.name !in names }) {
+                UniminedProblems.report(
+                    logger, project, "repo-missing",
+                    "unimined repository '${repo.name}' is no longer " +
+                            "registered",
+                    "it was ensured earlier in the build, then removed or " +
+                            "renamed — re-ensure it via the `uniminedRepos` " +
+                            "catalog or declare the repo yourself"
+                )
+            }
+            val centralIdx = names.indexOf("MavenRepo")
+            val mojangIdx = names.indexOf("Mojang Libraries")
+            if (centralIdx >= 0 && mojangIdx in 0..<centralIdx) {
+                UniminedProblems.report(
+                    logger, project, "repo-order",
+                    "'Mojang Libraries' precedes 'MavenRepo' in the " +
+                            "repositories",
+                    "module artifacts pin to the repo that served metadata — " +
+                            "mojang-first hides central-only classifiers " +
+                            "(e.g. netty natives); register Maven Central " +
+                            "before Mojang's host"
+                )
+            }
+        }
+
         /** Register [repo] on [project] when absent. Honors the build's
          *  `dependencyResolutionManagement.repositoriesMode`: a matching
          *  settings-level repo satisfies the requirement;
@@ -511,12 +570,17 @@ class UniminedRepos private constructor(
                 }
                 RepositoriesMode.PREFER_SETTINGS -> {
                     if (!declaredInSettings) {
-                        project.logger.warn(
-                            "[Unimined] repository '$repoName' is not " +
-                                "in settings repositories and " +
-                                "project-level repos are ignored " +
-                                "under PREFER_SETTINGS — artifacts " +
-                                "may fail to resolve"
+                        UniminedProblems.report(
+                            project.logger, project,
+                            "repo-prefer-settings",
+                            "repository '$repoName' is not declared in " +
+                                    "settings repositories",
+                            "project-level repositories are ignored " +
+                                    "under PREFER_SETTINGS — declare " +
+                                    "'$repoName' in " +
+                                    "dependencyResolutionManagement." +
+                                    "repositories or artifacts may " +
+                                    "fail to resolve"
                         )
                     }
                     return false

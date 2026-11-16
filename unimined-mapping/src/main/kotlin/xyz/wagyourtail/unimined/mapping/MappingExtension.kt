@@ -1,9 +1,11 @@
 package xyz.wagyourtail.unimined.mapping
 
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logging
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
@@ -19,7 +21,8 @@ import javax.inject.Inject
 
 /** Extension installed by the `unimined-mapping` host plugin. */
 abstract class MappingExtension @Inject constructor(
-    private val providers: ProviderFactory
+    private val providers: ProviderFactory,
+    private val objects: ObjectFactory
 ) {
 
     /** Source materializers — builtin channels plus ServiceLoader'd customs. */
@@ -119,8 +122,15 @@ abstract class MappingExtension @Inject constructor(
         to: Provider<String>
     ): Provider<String> = providers.provider {
         val data = readFiles(files.files.map { it.toPath() }, environmentId)
-        val tree = data.view<MappingTree>() ?: error(
-            "mapping provider did not expose a UML MappingTree view"
+        val tree = data.view<MappingTree>() ?: UniminedProblems.fail(
+            logger, objects,
+            "mappings/no-tree-view",
+            "unimined: environment '$environmentId' — the mapping " +
+                    "provider pipeline produced no UML MappingTree " +
+                    "view over the materialized files " +
+                    "(${files.files.joinToString { it.name }}; " +
+                    "data: ${data.javaClass.name})",
+            "a mapping bundle cannot be captured without one"
         )
         MappingBundle.capture(from.get(), to.get(), tree).toJson()
     }

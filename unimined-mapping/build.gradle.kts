@@ -10,8 +10,12 @@ dependencies {
     api(project(":unimined-api"))
     // the default composer merges typed views through UML's tree/sink model
     api(libs.unimined.mapping.library)
+    // hierarchy scan + member-group fill for the bytecode-fill
+    // post-processor (ASMInheritanceTree/LazyASMInheritanceTree)
+    "coreImplementation"(libs.unimined.mapping.remapper)
 
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.asm)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
