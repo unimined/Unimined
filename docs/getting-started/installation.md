@@ -1,5 +1,13 @@
 # Installation
 
+## Requirements
+
+| | |
+|---|---|
+| **Gradle** | 9.x — the daemon runs on **Java 17+**; toolchain-managed JDKs still compile for whatever `javaVersion` the env targets |
+| **IDE** | run configs are emitted for IntelliJ IDEA (`.idea` XML), Eclipse (`.launch`), and VS Code (`launch.json`) via `genIdeRuns` — no IDE plugin required |
+| **Heap** | give the daemon ≥4G (`org.gradle.jvmargs=-Xmx4g` in `gradle.properties`) — remapping Minecraft artifacts under less risks `OutOfMemoryError`, and unimined warns at startup |
+
 Unimined 2.0 is a Gradle plugin. Your `settings.gradle.kts` carries
 three pieces:
 

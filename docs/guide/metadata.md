@@ -88,6 +88,27 @@ in first-party sources need a declared rule (`access {
 injectInterface(...) }`), which applies to the dev artifact *and*
 ships for dependents. The scan only adds dependents-facing metadata.
 
+## Using mixins
+
+No MixinGradle-style plugin or annotation-processor wiring is
+needed — declare configs and unimined handles the rest:
+
+- **Declare** — `mixins { create("my.mixins") { } }` generates
+  `*.mixins.json` files; hand-written configs in resources are
+  picked up by `discoverMixinConfigs` (default on) and unioned in.
+- **Reference** — the emitted loader document points at every
+  config automatically (fmj `mixins` array, `MixinConfigs` manifest
+  attribute on forge-family, `mixin` key on quilt).
+- **Refmaps** — mod dependencies that carry `*.mixins.json` get
+  dev-namespace refmaps during dependency remap, and your own
+  production repack emits the production refmap — mixin works in
+  dev and prod on every loader family with no extra setup
+  ([remap pipeline](remap-pipeline.md)).
+- **Interface injection** — opt in with
+  `interfaceInjectionScan` to derive `inject-interface` metadata
+  from your `@Mixin` classes, or declare rules directly with
+  `access { injectInterface(...) }` ([above](#discovery)).
+
 ## Access files
 
 No DSL is required — an access file under the environment's

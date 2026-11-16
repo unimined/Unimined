@@ -148,7 +148,7 @@ is per-env overridable:
 |---|---|---|
 | `enabled` | `true` | master switch — off: no agent, no jar step |
 | `agent` | `true` | off: drop the javaagent + sysprops from runs, keep the static jar transform |
-| `platformName` | inherited | the ExpectPlatform platform name |
+| `platformName` | inherited | the ExpectPlatform platform name — also the `Impl` lookup package: setting `platformName = "forge"` on a neoforge env makes it share forge's `…forge.*Impl` classes (the `platformPackage` pattern) |
 | `remap` | table + inherited + explicit | annotation-descriptor remaps (see below) |
 | `stripAnnotations` | `false` | strip ExpectPlatform's own annotations from output |
 

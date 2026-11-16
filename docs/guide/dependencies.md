@@ -8,20 +8,27 @@ mod jars land remapped onto your mappings:
 === "Kotlin `build.gradle.kts`"
     ```kotlin
     dependencies {
-        modImplementation("maven:coord")
-        modCompileOnly("maven:coord")
-        modLocalRuntime("maven:coord")
+        modImplementation("maven:coord")   // compile + runtime
+        modRuntimeOnly("maven:coord")      // runtime only
     }
     ```
 
 === "Groovy `build.gradle`"
     ```groovy
     dependencies {
-        modImplementation("maven:coord")
-        modCompileOnly("maven:coord")
-        modLocalRuntime("maven:coord")
+        modImplementation("maven:coord")   // compile + runtime
+        modRuntimeOnly("maven:coord")      // runtime only
     }
     ```
+
+Named envs prefix the bucket (`serverModImplementation`,
+`serverModRuntimeOnly`). A mod needed only at compile time
+(annotation-processor stubs, javadoc-only references) goes on the
+plain `compileOnly` — plain-library jars are never remapped, and
+mod-remap only matters for jars that reach a runtime classpath. For
+a remapped compile-only view, declare a
+`remap.remappedViews(...)` view over your own bucket
+([below](#configuration-reference)).
 
 Mod jars are remapped from the environment's *mod source namespace*
 to its dev namespace — they must already be built against the mod
@@ -359,3 +366,49 @@ default tool coordinate appears (including inside mcpconfig
 `functions` tables and userdev tool lists) the overridden notation is
 substituted. Coordinates a loader profile itself declares stay
 profile-driven unless their `group:artifact` matches a key above.
+
+## Configuration reference
+
+Every bucket below is scoped per environment. `<env>` prefixes are
+the environment id (`serverModImplementation`), except the `main`
+env which elides its own prefix on `mod*`/`include`/`minecraft*`
+(`modImplementation`, `include`, `minecraftLibraries`) but keeps it
+on `unimined*` names (`uniminedMainAccessTransformer`).
+
+**Declarable — you put dependencies in:**
+
+| Configuration | Lands on | Remapped? | Purpose |
+|---|---|---|---|
+| `modImplementation` / `<env>ModImplementation` | compile + runtime | yes → dev ns | mod jars to compile and run against |
+| `modRuntimeOnly` / `<env>ModRuntimeOnly` | runtime | yes → dev ns | mods needed only at launch |
+| `include` / `<env>Include` | production jar (jarjar) | repacked | embed jars inside the mod artifact — *not* a classpath dep ([jar-in-jar](#jar-in-jar-include)) |
+| `unimined<Env>AccessTransformer` | access docs | — | coordinate-consumed access docs (NG `accessTransformer` parity) |
+| `run<Name>Dependencies` | one run's classpath | — | per-run classpath additions for `additionalRuntimeClasspath` maven coords |
+| `minecraft` / `<env>Minecraft` | MC artifact stub | — | the generated `unimined.generated` MC stub dep — declared for you |
+| `mergedLoader<Env>` (and `forgeMergedLoader<Env>`, `fabricMergedLoaderLibraries<Env>`) | compile only | — | secondary loaders on merged envs — wired by repeated `loader(...)` |
+
+Standard `java` buckets (`implementation`, `api`, `compileOnly`,
+`compileOnlyApi`, `runtimeOnly`, `annotationProcessor`) behave
+normally — non-mod jars pass through un-remapped, and the mod-bucket
+exclusions propagate through `extendsFrom` so mod transitives can't
+duplicate the env's loader. To remap an *arbitrary* bucket to the
+dev namespace, view it through `remap.remappedViews(...)`
+([Remap pipeline](remap-pipeline.md)).
+
+**Resolvable — unimined resolves these for you (read-only views):**
+
+| Configuration | Produces |
+|---|---|
+| `minecraftRaw` / `<env>MinecraftRaw` | the source-namespace MC artifact |
+| `minecraftDev` / `<env>MinecraftDev` | the dev-namespace MC artifact (compile classpath) |
+| `minecraftProd` / `<env>MinecraftProd` | the production-namespace artifact (prod launches, remap analysis) |
+| `minecraftLibraries` / `<env>MinecraftLibraries` | the env's resolved MC library set |
+| `minecraftDeclaredLibraries` / `<env>MinecraftDeclaredLibraries` | the version-json–declared library subset |
+
+**Consumable — other projects consume these from your project:**
+
+| Configuration | Carries |
+|---|---|
+| `unimined<Env>` component | the env's remappable product + variants (published via `unimined-publish`) |
+| `unimined<Env>AccessTransformerElements` | the env's own access docs, `accesstransformer` category |
+| `*SourcesElements` | sources jars mirroring the java variants (dev-variant publishing) |
