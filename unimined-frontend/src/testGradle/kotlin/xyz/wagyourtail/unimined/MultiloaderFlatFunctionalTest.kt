@@ -33,7 +33,7 @@ class MultiloaderFlatFunctionalTest {
                         loader('0.20.1')
                     }
                     sourceSet('neoforge') {
-                        loader('26.1.2.126')
+                        loader('47.1.106')
                     }
                 }
             }
