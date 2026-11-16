@@ -18,6 +18,7 @@ import kotlin.io.path.createDirectories
  *
  * Never fails a build — every public entry point swallows errors.
  */
+@NoGroovyTwin("internal instrumentation — programmatic timing API")
 object Perf {
 
     const val PROP = "unimined.perf"

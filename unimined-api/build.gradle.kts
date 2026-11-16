@@ -1,10 +1,13 @@
 plugins {
     `java-library`
+    `java-test-fixtures`
     alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
     compileOnly(gradleApi())
+    // the Groovy-parity fixture reflects on Action/Closure signatures
+    "testFixturesImplementation"(gradleApi())
 
     "coreApi"(libs.commons.kt)
     "coreApi"(libs.commons.core)

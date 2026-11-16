@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.mapping
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import xyz.wagyourtail.unimined.mapping.MappingTreeDsl
 import xyz.wagyourtail.unimined.mapping.MappingTreeDslMarker
@@ -18,27 +19,33 @@ import xyz.wagyourtail.unimined.mapping.element.mapping.MutableMethodMapping
  * builders as `Closure` overloads with `DELEGATE_FIRST` resolution:
  *
  * ```groovy
- * mappingTree("official", "named") {
+ * mappingTree(["official", "named"]) {
  *     pkg "a/", "b/"
- *     clazz("a/A", "b/B") {
- *         method("m;()V", "n") {
+ *     clazz(["a/A", "b/B"]) {
+ *         method(["m;()V", "n"]) {
  *             parameter 0, null, "arg"
  *         }
  *     }
  * }
  * ```
  *
+ * Block-taking verbs take a `List` first arg rather than `vararg` —
+ * Groovy only packs varargs at the last parameter position, so a
+ * `(vararg, Closure)` overload can never dispatch. Bare calls
+ * (`pkg "a/", "b/"`, `parameter 0, null, "arg"`) keep the vararg
+ * no-block overloads.
+ *
  * @return the built tree; embed in spec surfaces that accept
  *  `MutableMappingTree`/`MappingTree`
  */
 fun mappingTree(
-    vararg namespaces: String,
+    namespaces: List<String>,
     @DelegatesTo(value = GroovyMappingTreeDsl::class, strategy = Closure.DELEGATE_FIRST)
     block: Closure<*>
-): MutableMappingTree = GroovyMappingTreeDsl(namespaces.toList()).apply {
+): MutableMappingTree = GroovyMappingTreeDsl(namespaces).apply {
     block.delegate = this
     block.resolveStrategy = Closure.DELEGATE_FIRST
-    block.call()
+    block.callDelegate()
 }.tree
 
 /**
@@ -51,31 +58,33 @@ fun mappingTree(
  * would otherwise make `parameter(0, null, "arg")` uncallable.
  */
 @MappingTreeDslMarker
-class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces) {
+open class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces) {
 
     /** Groovy arity — the base's `block` param is invisible to Groovy. */
     fun pkg(vararg names: String?) = pkg(*names) {}
 
-    /** `pkg { }` Groovy overload — delegates the closure to a [MetaDsl]. */
+    /** `pkg(["a/", "b/"]) { }` Groovy overload — List+Closure (a
+     *  `(vararg, Closure)` signature never dispatches in Groovy). */
     fun pkg(
-        vararg names: String?,
+        names: List<String?>,
         @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
         block: Closure<*>
-    ) = pkg(*names) {
+    ) = pkg(*names.toTypedArray()) {
         block.delegate = this
         block.resolveStrategy = Closure.DELEGATE_FIRST
-        block.call()
+        block.callDelegate()
     }
 
-    /** `clazz { }` Groovy overload — delegates the closure to a [GroovyClassDsl]. */
+    /** `clazz(["a/A", "b/B"]) { }` Groovy overload — delegates the
+     *  closure to a [GroovyClassDsl]. */
     fun clazz(
-        vararg names: String?,
+        names: List<String?>,
         @DelegatesTo(value = GroovyClassDsl::class, strategy = Closure.DELEGATE_FIRST)
         block: Closure<*>
-    ): MutableClassMapping = clazz(*names) {
+    ): MutableClassMapping = clazz(*names.toTypedArray()) {
         block.delegate = this
         block.resolveStrategy = Closure.DELEGATE_FIRST
-        block.call()
+        block.callDelegate()
     }
 
     /** `constantGroup { }` Groovy overload. */
@@ -88,7 +97,7 @@ class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces
     ): MutableConstantGroupMapping = constantGroup(type, name, baseNs) {
         block.delegate = this
         block.resolveStrategy = Closure.DELEGATE_FIRST
-        block.call()
+        block.callDelegate()
     }
 
     override fun classScope(cls: MutableClassMapping): ClassDsl =
@@ -96,7 +105,7 @@ class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces
 
     /** Member scope inside [clazz] with `method {}` Groovy support. */
     @MappingTreeDslMarker
-    class GroovyClassDsl(
+    open class GroovyClassDsl(
         treeDsl: MappingTreeDsl,
         cls: MutableClassMapping
     ) : ClassDsl(treeDsl, cls) {
@@ -104,41 +113,43 @@ class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces
         /** Groovy arity — the base's `block` param is invisible to Groovy. */
         fun field(vararg entries: String?) = field(*entries) {}
 
-        /** `field { }` Groovy overload — delegates the closure to a [MetaDsl]. */
+        /** `field(["f;I", "g"]) { }` Groovy overload — delegates the
+         *  closure to a [MetaDsl]. */
         fun field(
-            vararg entries: String?,
+            entries: List<String?>,
             @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
-        ) = field(*entries) {
+        ) = field(*entries.toTypedArray()) {
             block.delegate = this
             block.resolveStrategy = Closure.DELEGATE_FIRST
-            block.call()
+            block.callDelegate()
         }
 
         /** Groovy arity. */
         fun wildcard(type: WildcardType, vararg descs: String?) = wildcard(type, *descs) {}
 
-        /** `wildcard { }` Groovy overload. */
+        /** `wildcard(type, ["d1", "d2"]) { }` Groovy overload. */
         fun wildcard(
             type: WildcardType,
-            vararg descs: String?,
+            descs: List<String?>,
             @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
-        ) = wildcard(type, *descs) {
+        ) = wildcard(type, *descs.toTypedArray()) {
             block.delegate = this
             block.resolveStrategy = Closure.DELEGATE_FIRST
-            block.call()
+            block.callDelegate()
         }
 
-        /** `method { }` Groovy overload — delegates to a [GroovyMethodDsl]. */
+        /** `method(["m;()V", "n"]) { }` Groovy overload — delegates
+         *  to a [GroovyMethodDsl]. */
         fun method(
-            vararg entries: String?,
+            entries: List<String?>,
             @DelegatesTo(value = GroovyMethodDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
-        ): MutableMethodMapping = method(*entries) {
+        ): MutableMethodMapping = method(*entries.toTypedArray()) {
             block.delegate = this
             block.resolveStrategy = Closure.DELEGATE_FIRST
-            block.call()
+            block.callDelegate()
         }
 
         override fun methodScope(method: MutableMethodMapping): MethodDsl =
@@ -149,7 +160,7 @@ class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces
      *  the `vararg`-trailing leaf methods (`block` param is invisible
      *  to Groovy). */
     @MappingTreeDslMarker
-    class GroovyMethodDsl(
+    open class GroovyMethodDsl(
         treeDsl: MappingTreeDsl,
         method: MutableMethodMapping
     ) : MethodDsl(treeDsl, method) {
@@ -158,34 +169,35 @@ class GroovyMappingTreeDsl(namespaces: List<String>) : MappingTreeDsl(namespaces
         fun parameter(index: Int?, lvOrd: Int?, vararg names: String?) =
             parameter(index, lvOrd, *names) {}
 
-        /** `parameter { }` Groovy overload — delegates to a [MetaDsl]. */
+        /** `parameter(index, lvOrd, ["a", "b"]) { }` Groovy overload —
+         *  delegates to a [MetaDsl]. */
         fun parameter(
             index: Int?,
             lvOrd: Int?,
-            vararg names: String?,
+            names: List<String?>,
             @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
-        ) = parameter(index, lvOrd, *names) {
+        ) = parameter(index, lvOrd, *names.toTypedArray()) {
             block.delegate = this
             block.resolveStrategy = Closure.DELEGATE_FIRST
-            block.call()
+            block.callDelegate()
         }
 
         /** Groovy arity. */
         fun localVariable(lvOrd: Int, startOp: Int?, vararg names: String?) =
             localVariable(lvOrd, startOp, *names) {}
 
-        /** `localVariable { }` Groovy overload. */
+        /** `localVariable(lvOrd, startOp, ["v"]) { }` Groovy overload. */
         fun localVariable(
             lvOrd: Int,
             startOp: Int?,
-            vararg names: String?,
+            names: List<String?>,
             @DelegatesTo(value = MetaDsl::class, strategy = Closure.DELEGATE_FIRST)
             block: Closure<*>
-        ) = localVariable(lvOrd, startOp, *names) {
+        ) = localVariable(lvOrd, startOp, *names.toTypedArray()) {
             block.delegate = this
             block.resolveStrategy = Closure.DELEGATE_FIRST
-            block.call()
+            block.callDelegate()
         }
     }
 

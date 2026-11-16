@@ -16,11 +16,11 @@ class GroovyMappingTreeDslTest {
 
     @Test
     fun `closure delegates build the tree`() {
-        val tree = mappingTree("official", "named", block = closure<GroovyMappingTreeDsl> { dsl ->
+        val tree = mappingTree(listOf("official", "named"), block = closure<GroovyMappingTreeDsl> { dsl ->
             dsl.pkg("a/", "b/")
-            dsl.clazz("a/A", "b/B", block = closure<GroovyMappingTreeDsl.GroovyClassDsl> { cls ->
+            dsl.clazz(listOf("a/A", "b/B"), block = closure<GroovyMappingTreeDsl.GroovyClassDsl> { cls ->
                 cls.field("f;I", "g")
-                cls.method("m;()V", "n", block = closure<GroovyMappingTreeDsl.GroovyMethodDsl> { m ->
+                cls.method(listOf("m;()V", "n"), block = closure<GroovyMappingTreeDsl.GroovyMethodDsl> { m ->
                     m.parameter(0, null, null, "arg")
                     m.localVariable(0, null, null, "v")
                 })

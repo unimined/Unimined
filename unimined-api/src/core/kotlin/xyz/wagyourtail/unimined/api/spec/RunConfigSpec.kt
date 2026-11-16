@@ -12,6 +12,16 @@ interface RunConfigSpec {
     val name: String
 
     /**
+     * Loader run-config key the launch resolves against — the
+     * `runs.<type>` entry in forge userdev-style profiles. Defaults
+     * to [name]; users may set `runs.named("myDatagen") {
+     * type.set("data") }` to bind a differently-named run to the
+     * loader's `data` launch shape. Mutators may overwrite it to
+     * retarget a run mid-resolution.
+     */
+    var type: String
+
+    /**
      * Whether the run launches against the production-namespace
      * classpath (the remapped jar + prod views). Mutators must gate
      * dev-only classpath surgery on this — dev class dirs do not

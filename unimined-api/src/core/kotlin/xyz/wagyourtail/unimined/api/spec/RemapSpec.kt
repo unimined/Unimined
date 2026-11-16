@@ -33,6 +33,17 @@ interface RemapSpec {
     val scanAliases: List<ClasspathScanAlias>
         get() = emptyList()
 
+    /**
+     * Bootstrap-method owner internal names whose invokedynamic
+     * callsite names carry remappable member names — declared by the
+     * input artifact's manifest (`Fabric-Loom-Known-Indy-BSMS`, the
+     * loom dep-jar contract) or the host's own configuration. Remap
+     * engines union this set with their built-in defaults; empty when
+     * the artifact declares none.
+     */
+    val knownIndyBsms: List<String>
+        get() = emptyList()
+
 }
 
 /**
