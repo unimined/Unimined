@@ -9,8 +9,10 @@ import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
 import org.gradle.api.tasks.SourceSet
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.publish.PublishAttributes
+import xyz.wagyourtail.unimined.publish.PublishConfigurations
 
 /**
  * Dev-channel variant wiring — the `*ApiElements`/`*RuntimeElements`/
@@ -22,6 +24,7 @@ import xyz.wagyourtail.unimined.publish.PublishAttributes
  * helpers) is a distinct concept from prod-channel remap wiring and
  * component lifecycle.
  */
+@NoGroovyTwin("internal wiring — conf/spec helpers called from plugin code, never a build-script verb")
 internal object PublishDevVariantWiring {
 
     class DevConf(
@@ -40,8 +43,12 @@ internal object PublishDevVariantWiring {
         /** Maven classifier for the artifact — dev-channel files must
          *  not collide with the prod (null-classifier) main artifact;
          *  null leaves the artifact as the publication's main file
-         *  (the only-channel case: identity envs, no remap pipeline). */
-        val artifactClassifier: String?
+         *  (the only-channel case: identity envs, no remap pipeline).
+         *  Lazily evaluated inside the outgoing-artifact action, which
+         *  runs post-configuration — the prod-channel existence check
+         *  it depends on sees the final task set regardless of which
+         *  plugin's afterEvaluate registered the producer. */
+        val artifactClassifier: () -> String?
     )
 
     /**
@@ -52,8 +59,8 @@ internal object PublishDevVariantWiring {
         project: Project,
         environment: MinecraftEnvironment,
         sourceSet: SourceSet,
-        prodJar: Boolean,
-        prodSources: Boolean
+        prodJar: () -> Boolean,
+        prodSources: () -> Boolean
     ): Map<String, DevConf> {
         val result = linkedMapOf<String, DevConf>()
         for (spec in devSpecs(environment, sourceSet, prodJar, prodSources)) {
@@ -66,8 +73,8 @@ internal object PublishDevVariantWiring {
     private fun devSpecs(
         environment: MinecraftEnvironment,
         sourceSet: SourceSet,
-        prodJar: Boolean,
-        prodSources: Boolean
+        prodJar: () -> Boolean,
+        prodSources: () -> Boolean
     ): List<DevConf> {
         val jarTask = sourceSet.jarTaskName
         val sourcesTask = sourceSet.sourcesJarTaskName
@@ -82,7 +89,7 @@ internal object PublishDevVariantWiring {
                 // dev artifacts are classified extras only when a prod
                 // channel exists to be the main artifact — identity
                 // envs and missing remap pipelines leave dev as main
-                artifactClassifier = if (prodJar) "dev" else null
+                artifactClassifier = { if (prodJar()) "dev" else null }
             ),
             DevConf(
                 confName = runtimeElementsName(sourceSet),
@@ -91,7 +98,7 @@ internal object PublishDevVariantWiring {
                 docType = null,
                 role = PublishAttributes.ROLE_JAR,
                 devUsage = PublishAttributes.USAGE_DEV_RUNTIME,
-                artifactClassifier = if (prodJar) "dev" else null
+                artifactClassifier = { if (prodJar()) "dev" else null }
             ),
             DevConf(
                 confName = sourcesElementsName(sourceSet),
@@ -102,7 +109,7 @@ internal object PublishDevVariantWiring {
                 role = PublishAttributes.ROLE_SOURCES,
                 devUsage = PublishAttributes.USAGE_DEV_SOURCES,
                 artifactClassifier =
-                    if (prodSources) "dev-sources" else "sources"
+                    { if (prodSources()) "dev-sources" else "sources" }
             )
         )
     }
@@ -151,7 +158,9 @@ internal object PublishDevVariantWiring {
         task?.let { t ->
             conf.outgoing.artifact(t.archiveFile) { a ->
                 a.builtBy(t)
-                spec.artifactClassifier?.let { a.classifier = it }
+                // deferred: the artifact action runs post-configuration
+                // so the classifier decision sees the final task set
+                spec.artifactClassifier()?.let { a.classifier = it }
             }
         }
         return conf
@@ -202,14 +211,14 @@ internal object PublishDevVariantWiring {
 
     private fun ensureJarArtifact(
         project: Project, confName: String, taskName: String,
-        classifier: String? = null
+        classifier: () -> String? = { null }
     ) {
         val conf = project.configurations.findByName(confName) ?: return
         if (conf.outgoing.artifacts.isNotEmpty()) return
         val task = project.tasks.findByName(taskName) as? Jar ?: return
         conf.outgoing.artifact(task.archiveFile) { a ->
             a.builtBy(task)
-            if (classifier != null) a.classifier = classifier
+            classifier()?.let { a.classifier = it }
         }
     }
 
@@ -256,11 +265,11 @@ internal object PublishDevVariantWiring {
     // java's shared `apiElements`) so components.java stays untouched
 
     internal fun apiElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}ApiElements"
+        PublishConfigurations.apiElementsName(sourceSet)
 
     internal fun runtimeElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}RuntimeElements"
+        PublishConfigurations.runtimeElementsName(sourceSet)
 
     internal fun sourcesElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}SourcesElements"
+        PublishConfigurations.sourcesElementsName(sourceSet)
 }

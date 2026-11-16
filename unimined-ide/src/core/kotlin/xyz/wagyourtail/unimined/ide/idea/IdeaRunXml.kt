@@ -33,6 +33,9 @@ object IdeaRunXml {
         val type: String,
         @XmlSerialName("factoryName")
         val factoryName: String,
+        /** IntelliJ "single instance only" — emitted only when true. */
+        @XmlSerialName("singleton")
+        val singleton: String? = null,
         @XmlSerialName("option")
         val options: List<Option> = emptyList(),
         @XmlSerialName("module")
@@ -107,11 +110,17 @@ object IdeaRunXml {
      * @param displayName the run's name in the IDE (`unimined <env>:<run>`)
      * @param moduleName the IntelliJ Gradle-imported module
      *  (`<projectName>.<sourceSetName>`)
+     * @param argfile absolute path of the run's `@argfile` (jvm args +
+     *  `-cp`); when set, `VM_PARAMETERS` points at it and jar entries
+     *  drop out of `classpathModifications` so the XML stays stable
+     *  across dependency changes — only project output dirs remain
+     *  (module classpath context for main-class resolution)
      */
     fun renderRunConfiguration(
         model: IdeRunModel,
         displayName: String,
-        moduleName: String
+        moduleName: String,
+        argfile: String? = null
     ): String {
         val options = mutableListOf(
             Option("MAIN_CLASS_NAME", model.mainClass)
@@ -121,32 +130,37 @@ object IdeaRunXml {
                 "PROGRAM_PARAMETERS", model.programArgs.joinToString(" ")
             )
         }
-        if (model.jvmArgs.isNotEmpty()) {
-            options += Option(
-                "VM_PARAMETERS", model.jvmArgs.joinToString(" ")
-            )
-        }
+        options += Option(
+            "VM_PARAMETERS",
+            argfile?.let { "@$it" } ?: model.jvmArgs.joinToString(" ")
+        )
         options += Option(
             "WORKING_DIRECTORY", "\$PROJECT_DIR\$/${model.workingDirectory}"
         )
 
         // explicit classpath — dev runs still work without the
         // module classpath-groups wiring; prod runs carry their own
-        // (raw MC + shipped jars) classpath this way
+        // (raw MC + shipped jars) classpath this way. With an argfile
+        // the jar paths ride `-cp` inside the file — only the stable
+        // project output dirs stay here
+        val cpEntries = model.classpath.filter {
+            argfile == null || it.group ==
+                    xyz.wagyourtail.unimined.ide.ClasspathGroup.PROJECT
+        }
         val config = Configuration(
             default = "false",
             name = displayName,
             type = "Application",
             factoryName = "Application",
+            singleton = if (model.singleInstance) "true" else null,
             options = options,
             module = Module(moduleName),
             envs = if (model.environmentVariables.isEmpty()) null
             else Envs(model.environmentVariables.map { (k, v) ->
                 Env(k, v)
             }),
-            classpathModifications = ClasspathModifications(
-                model.classpath.map { Entry(it.jar) }
-            ),
+            classpathModifications = if (cpEntries.isEmpty()) null
+            else ClasspathModifications(cpEntries.map { Entry(it.jar) }),
             method = Method("2", listOf(Option("Make", "true"))),
         )
         return xml.encodeToString(

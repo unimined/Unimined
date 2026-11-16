@@ -1,10 +1,13 @@
 package xyz.wagyourtail.unimined.ide.internal
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.UniminedCache
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.ide.ClasspathEntry
 import xyz.wagyourtail.unimined.ide.ClasspathGroup
 import xyz.wagyourtail.unimined.ide.IdeClasspathModel
@@ -16,6 +19,7 @@ import xyz.wagyourtail.unimined.mclauncher.VersionChain
 import xyz.wagyourtail.unimined.mclauncher.VersionData
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.ModGroups
 import xyz.wagyourtail.unimined.runs.RunConfig
 import xyz.wagyourtail.unimined.runs.internal.MutableRunConfigSpec
 import xyz.wagyourtail.unimined.transform.TransformExtension
@@ -39,6 +43,7 @@ internal object IdeModelResolver {
         run: RunConfig
     ): Provider<MutableRunConfigSpec> = project.provider {
         MutableRunConfigSpec(run.name, run.prod.get()).also { spec ->
+            spec.type = run.type.orElse(run.name).get()
             transform.sourceSet(environmentId)
                 .effectiveRunMutators().forEach { it.execute(spec) }
         }
@@ -62,7 +67,22 @@ internal object IdeModelResolver {
         // resolves from — loader jars & provider extras land in the
         // residual bucket, displayed under LOADER
         return project.provider {
-            val files: Set<java.io.File> = if (run.prod.get()) {
+            val mut = mutated.get()
+            // mods{} declared groups — dev-launch parity with
+            // run<Name>: the selection joins the launch classpath and
+            // serializes onto the loader's mod-grouping channel
+            // (`classpathGroups` sysprop / `modGroupsEnv` env var —
+            // loom's DLI emit adds fabric.classPathGroups to
+            // IDE-launched configs the same way)
+            val modGroups = ModGroups.selected(
+                environment, run.loadedMods.orNull.orEmpty(),
+                run.prod.get())
+            val modGroupFiles = modGroups.flatMap { it.launchFiles() }
+            val descriptor = environment.loaderSpec.orNull?.let {
+                xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
+                    .resolve(it.name)
+            }
+            val files: Set<java.io.File> = (if (run.prod.get()) {
                 project.configurations
                     .findByName(environment.minecraftRawViewName)
                     ?.files.orEmpty() +
@@ -76,21 +96,21 @@ internal object IdeModelResolver {
                         project.configurations.findByName(
                             "${environment.modRuntimeOnlyConfigurationName}Direct")
                     ).flatMap { it.files } +
-                    remapJarFiles(project, environmentId)
+                    remapJarFiles(project, minecraft, environmentId)
             } else {
                 sourceSet.runtimeClasspath.files
-            }
+            }) + modGroupFiles
             // mirror `run<Name>` execution: merge the version
             // document through `LaunchResolver` — spec args layer on
             // top of the plan's, game args are client-only, and the
             // monolithic launchwrapper-era ASM jars drop when a
             // modern `asm-<v>` artifact is present
             val deduped = dedupeAsm(files.toList())
-            val mut = mutated.get()
             val artifacts = minecraft.artifacts(environmentId).get()
             val metadata = artifacts.launch
-                ?: error("env '$environmentId' exposes no" +
-                        " launch metadata")
+                ?: project.failProblem("ide/launch-metadata",
+                    "unimined: env '$environmentId' exposes no launch " +
+                        "metadata")
             val document = VersionData.parse(VersionChain.resolve(
                 metadata.versionJson(metadata.rootId),
                 metadata::versionJson))
@@ -120,6 +140,22 @@ internal object IdeModelResolver {
                     extraJvmArgs = betacraftProxyArgs(
                         project, document.id),
                 ))
+            val mutEnv = mut.environment.toMutableMap()
+            descriptor?.capabilities?.get("modGroupsEnv")?.let { envKey ->
+                mutEnv[envKey] = ModGroups.mergeModClasses(
+                    mut.environment[envKey],
+                    ModGroups.modClassesEntries(modGroups)
+                        .joinToString(java.io.File.pathSeparator))
+            }
+            val systemPropertyArgs =
+                run.systemProperties.get().map { (k, v) -> "-D$k=$v" } +
+                    listOfNotNull(
+                        descriptor?.capabilities?.get("classpathGroups")
+                            ?.let { prop ->
+                                "-D$prop=${
+                                    ModGroups.classpathGroupsValue(modGroups)
+                                }"
+                            })
             // `${key}` substitution values — env-level defaults as
             // wired by RunsWiring, plus transform mutator properties
             val subst = mapOf(
@@ -138,9 +174,14 @@ internal object IdeModelResolver {
                 "natives_directory" to nativesDir.absolutePath,
                 "library_directory" to
                     runDir.resolve("libraries").absolutePath,
-            ) + mut.properties.mapValues { (_, v) -> v() }
+            // user `setProperty` keys win over env defaults and
+            // mutator keys — same precedence as run<Name>
+            ) + mut.properties.mapValues { (_, v) -> v() } +
+                run.launchProperties.get()
             IdeRunModel(
-                name = run.name,
+                name = run.ideName.orElse(run.name).get(),
+                folderName = run.ideFolderName.orNull,
+                singleInstance = run.singleInstance.getOrElse(false),
                 environmentId = environmentId,
                 side = run.side.get().name,
                 prod = run.prod.get(),
@@ -151,6 +192,7 @@ internal object IdeModelResolver {
                 jvmArgs = subst.resolveLaunchArgs(
                     plan.jvmArgs +
                         "-Djava.library.path=${nativesDir.absolutePath}" +
+                        systemPropertyArgs +
                         run.jvmArgs.get() + mut.jvmArgs),
                 // the version document's `game` args are client-only
                 programArgs = subst.resolveLaunchArgs(
@@ -159,13 +201,17 @@ internal object IdeModelResolver {
                         run.programArgs.get() + mut.programArgs),
                 environmentVariables = plan.environment +
                     subst.resolveLaunchArgs(
-                        mut.environment +
+                        mutEnv +
                             run.environmentVariables.get()),
                 workingDirectory = workDir,
                 classpath = deduped.map { f ->
                     ClasspathEntry(
                         jar = f.absolutePath,
-                        group = groupOf(project, environment, f),
+                        // mods{} group files are declared mod content —
+                        // they render in the IDE's mod bucket like the
+                        // dep views' jars
+                        group = if (f in modGroupFiles) ClasspathGroup.MODS
+                            else groupOf(project, environment, f),
                     )
                 }
             )
@@ -180,8 +226,12 @@ internal object IdeModelResolver {
     ): Provider<IdeClasspathModel> {
         val environmentId = environment.environmentId
         return project.provider {
+            // mod entries resolved once — the MODS group consumes the
+            // paired entries, LOADER subtraction their jar set
+            val modEntries = modEntries(project, environment, ClasspathGroup.MODS)
+            val modJars = modEntries.mapTo(HashSet()) { java.io.File(it.jar) }
             val groups = ClasspathGroup.values().associateWith { g ->
-                when (g) {
+                val files = when (g) {
                     ClasspathGroup.MINECRAFT -> project.configurations
                         .findByName(environment.minecraftDevViewName)
                         ?.files.orEmpty()
@@ -189,12 +239,9 @@ internal object IdeModelResolver {
                         .findByName(environment
                             .minecraftLibrariesConfigurationName)
                         ?.files.orEmpty()
-                    ClasspathGroup.MODS -> listOfNotNull(
-                        project.configurations.findByName(
-                            "${environment.modImplementationConfigurationName}Remapped"),
-                        project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Remapped")
-                    ).flatMap { it.files }.toSet()
+                    // mod jars are paired with their sources — entries
+                    // produced directly, not through the file map
+                    ClasspathGroup.MODS -> null
                     // loader jars + provider file collections =
                     // the env runtime classpath minus the groups
                     // already claimed
@@ -204,15 +251,12 @@ internal object IdeModelResolver {
                         ?.files.orEmpty() - project.configurations
                         .findByName(environment
                             .minecraftLibrariesConfigurationName)
-                        ?.files.orEmpty() - listOfNotNull(
-                        project.configurations.findByName(
-                            "${environment.modImplementationConfigurationName}Remapped"),
-                        project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Remapped")
-                    ).flatMap { it.files }.toSet() -
+                        ?.files.orEmpty() - modJars -
                             sourceSet.output.files
                     ClasspathGroup.PROJECT -> sourceSet.output.files
-                }.map { ClasspathEntry(jar = it.absolutePath, group = g) }
+                }
+                files?.map { ClasspathEntry(jar = it.absolutePath, group = g) }
+                    ?: modEntries
             }
             IdeClasspathModel(
                 environmentId = environmentId,
@@ -222,12 +266,79 @@ internal object IdeModelResolver {
         }
     }
 
-    /** Files of the env's remapJar task outputs (prod classpath). */
+    /** Dev-classpath mod view names per mod bucket — `*Direct` for
+     *  identity envs (the pick the source set itself makes), the
+     *  remapped views otherwise; [sources] swaps in the paired
+     *  `-sources.jar` views ([MinecraftExtension.modDevSourcesViewConfigurations]).
+     *  Internal for tests. */
+    internal fun modViewNames(
+        project: Project,
+        environment: MinecraftEnvironment,
+        sources: Boolean = false
+    ): List<String> {
+        val environmentId = environment.environmentId
+        val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
+        val suffix = if (minecraft.isIdentityRemap(environmentId).get())
+            "Direct" else "Remapped"
+        return listOf(
+            environment.modImplementationConfigurationName,
+            environment.modRuntimeOnlyConfigurationName
+        ).map { if (sources) "${it}Sources$suffix" else "$it$suffix" }
+    }
+
+    /** MODS entries paired with their dev-namespace `-sources.jar`s —
+     *  the sources views resolve each dep's published sources through
+     *  the env's SOURCES remap pipeline so IDE navigation lands on
+     *  dev-namespace names (loom's per-dep sources-remap parity).
+     *  Sources resolution is lenient + component-filtered: deps with
+     *  no sources variant contribute nothing, and file deps can't
+     *  masquerade as their own sources. Pairing keys on the artifact's
+     *  component id, which survives the artifact transforms.
+     *  Internal for tests. */
+    internal fun modEntries(
+        project: Project,
+        environment: MinecraftEnvironment,
+        group: ClasspathGroup
+    ): List<ClasspathEntry> {
+        val jarViews = modViewNames(project, environment)
+        val sourcesViews = modViewNames(project, environment, sources = true)
+        return jarViews.zip(sourcesViews).flatMap { (jarName, sourcesName) ->
+            val sourcesByComponent = project.configurations
+                .findByName(sourcesName)?.incoming
+                ?.artifactView { view ->
+                    view.lenient(true)
+                    view.componentFilter {
+                        it is ModuleComponentIdentifier ||
+                                it is ProjectComponentIdentifier
+                    }
+                }?.artifacts?.artifacts.orEmpty()
+                .associate { it.id.componentIdentifier to it.file }
+            project.configurations.findByName(jarName)?.incoming
+                ?.artifactView { it.lenient(true) }?.artifacts?.artifacts.orEmpty()
+                .map { artifact ->
+                    ClasspathEntry(
+                        jar = artifact.file.absolutePath,
+                        sources = sourcesByComponent[
+                            artifact.id.componentIdentifier]?.absolutePath,
+                        group = group
+                    )
+                }
+        }.distinct()
+    }
+
+    /** Files of the env's remapJar task outputs (prod classpath) —
+     *  a split client env rides the parent's combined `remapJar`
+     *  (its own `<env>Jar` is client-only output and
+     *  `splitEnvironmentSourceSets` disables its remap twin). */
     private fun remapJarFiles(
-        project: Project, environmentId: String
+        project: Project, minecraft: MinecraftExtension,
+        environmentId: String
     ): Set<java.io.File> {
-        val name = if (environmentId == SourceSet.MAIN_SOURCE_SET_NAME)
-            "remapJar"
+        val splitClient = environmentId != SourceSet.MAIN_SOURCE_SET_NAME &&
+            minecraft.environments.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+                ?.splitClientEnvironment?.orNull == environmentId
+        val name = if (environmentId == SourceSet.MAIN_SOURCE_SET_NAME ||
+            splitClient) "remapJar"
         else "remap${environmentId.replaceFirstChar(Char::uppercase)}Jar"
         return project.tasks.findByName(name)?.outputs?.files?.files
             ?: emptySet()

@@ -18,15 +18,13 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.publish.PublishAttributes
+import xyz.wagyourtail.unimined.publish.PublishConfigurations
 import xyz.wagyourtail.unimined.publish.PublishExtension
 
 /**
  * Per-environment publish variants (plan §11).
  *
- * Everything runs at `projectsEvaluated`: the java plugin only creates
- * `apiElements`/`runtimeElements`/`sourcesElements`/`javadocElements`
- * for `main`, and those confs are shared with `components.java` — so
- * this wiring creates *its own* consumable configurations per
+ * This wiring creates *its own* consumable configurations per
  * environment (`mainApiElements`, `fabricApiElements`, ...) and stamps
  * the full attribute set on them eagerly. Conf attributes ARE the
  * published variant attributes (configuration ↔ variant is 1:1), and
@@ -37,6 +35,13 @@ import xyz.wagyourtail.unimined.publish.PublishExtension
  * unimined confs separate from java's also means `components.java`
  * (the `javaPublication()` opt-in) is never polluted with dev usages
  * or `unimined.*` attributes.
+ *
+ * Producer-task existence is checked *lazily* — remap/sources/javadoc
+ * tasks register in other plugins' `afterEvaluate`, whose order
+ * relative to this plugin's `afterDslEval` depends on apply order —
+ * so the checks live in deferred artifact actions (classifier
+ * decisions) and `addVariantsFromConfiguration` `details.skip()`
+ * guards (variant exposure), all of which run post-configuration.
  *
  * - **dev channel** — the source set's own jar tasks (dev namespace,
  *   `-dev` classifier). Conf/variant `Usage` is a custom
@@ -68,15 +73,13 @@ internal object PublishVariantWiring {
         envPub: PublishExtension.EnvironmentPublication,
         component: AdhocComponentWithVariants
     ) {
-        // task registration (env jars, remap tasks, sources/javadoc
-        // jars) completes in other plugins' afterEvaluate — all variant
-        // wiring is deferred to projectsEvaluated
-        project.gradle.projectsEvaluated {
-            wireVariants(project, environment, sourceSet, envPub, component)
-        }
+        // caller is already inside the env's afterDslEval; producer
+        // tasks that may register in other plugins' afterEvaluate are
+        // only checked lazily (classifier lambdas, details.skip)
+        wireVariants(project, environment, sourceSet, envPub, component)
     }
 
-    /** The `projectsEvaluated` body — internal so tests can drive it
+    /** The post-DSL body — internal so tests can drive it
      *  without a full build lifecycle. */
     internal fun wireVariants(
         project: Project,
@@ -98,14 +101,17 @@ internal object PublishVariantWiring {
         // artifacts publish as classified extras or as the module's
         // main (null-classifier) files: Maven publications need a
         // unique (extension, classifier) per artifact and reject a
-        // publication with no main artifact
+        // publication with no main artifact. Lazy: the checks run in
+        // deferred artifact actions post-configuration — remap tasks
+        // register in other plugins' afterEvaluate, whose order vs.
+        // this plugin's afterDslEval depends on apply order
         val remapJarName = "remap${sourceSet.jarTaskName.replaceFirstChar(Char::uppercase)}"
         val remapSourcesName =
             "remap${sourceSet.sourcesJarTaskName.replaceFirstChar(Char::uppercase)}"
-        val prodJar = envPub.publishProduction && !declaredIdentity &&
-                project.tasks.findByName(remapJarName) is Jar
-        val prodSources = envPub.publishProduction && !declaredIdentity &&
-                project.tasks.findByName(remapSourcesName) is Jar
+        val prodJar = { envPub.publishProduction && !declaredIdentity &&
+                project.tasks.findByName(remapJarName) is Jar }
+        val prodSources = { envPub.publishProduction && !declaredIdentity &&
+                project.tasks.findByName(remapSourcesName) is Jar }
 
         // dev confs are created unconditionally — they double as the
         // prod templates and project-dependency targets; only the
@@ -126,28 +132,38 @@ internal object PublishVariantWiring {
             // javadoc is only published when a javadocJar producer
             // exists (java.withJavadocJar or a custom registration) —
             // creating it unconditionally would run javadoc on every
-            // publish and fail on doclint errors
+            // publish and fail on doclint errors. The producer check
+            // defers to variant realization (details action), which
+            // sees the final task set regardless of apply order —
+            // an absent producer leaves a variant-free conf that
+            // publishes nothing
             val javadocJarName = javadocJarTaskName(sourceSet)
-            if (project.tasks.findByName(javadocJarName) is Jar) {
-                val spec = PublishDevVariantWiring.DevConf(
-                    confName = javadocElementsName(sourceSet),
-                    depBuckets = emptyList(),
-                    artifactTaskName = javadocJarName,
-                    docType = DocsType.JAVADOC,
-                    role = PublishAttributes.ROLE_JAVADOC,
-                    devUsage = PublishAttributes.USAGE_DEV_JAVADOC,
-                    artifactClassifier = "javadoc"
+            val spec = PublishDevVariantWiring.DevConf(
+                confName = javadocElementsName(sourceSet),
+                depBuckets = emptyList(),
+                artifactTaskName = javadocJarName,
+                docType = DocsType.JAVADOC,
+                role = PublishAttributes.ROLE_JAVADOC,
+                devUsage = PublishAttributes.USAGE_DEV_JAVADOC,
+                artifactClassifier = { "javadoc" }
+            )
+            PublishDevVariantWiring.ensureDevConf(project, spec, sourceSet)?.let { conf ->
+                stampAttributes(
+                    conf.attributes, project, environment,
+                    PublishAttributes.CHANNEL_DEV, spec.role,
+                    devNamespace
                 )
-                PublishDevVariantWiring.ensureDevConf(project, spec, sourceSet)?.let { conf ->
-                    stampAttributes(
-                        conf.attributes, project, environment,
-                        PublishAttributes.CHANNEL_DEV, spec.role,
-                        devNamespace
-                    )
-                    component.addVariantsFromConfiguration(conf) {}
+                component.addVariantsFromConfiguration(conf) { details ->
+                    if (project.tasks.findByName(javadocJarName) !is Jar) details.skip()
                 }
             }
         }
+
+        // access-doc variants — `unimined<Env>AccessTransformer`
+        // consume conf + `*Elements` producer conf (NG/MDG
+        // data-file-collection parity, plan §4.1); the variant
+        // self-skips when the env declares no access docs
+        PublishAccessDocWiring.wire(project, environment, component)
 
         if (envPub.publishDataFiles) {
             val dataConf = dataElementsName(sourceSet)
@@ -235,16 +251,18 @@ internal object PublishVariantWiring {
         val selectors = mutableMapOf<String, Pair<TaskProvider<Sync>, Provider<RegularFile>>>()
 
         for (spec in specs) {
-            val remapTask = project.tasks.findByName(spec.remapTaskName) as? Jar
-                ?: continue // no remap pipeline — nothing to publish as prod
-            // the dev conf supplies the dependency parents; it exists
-            // whenever the dev task does (ensureDevConfigurations)
+            // confs/selector are created unconditionally — the remap
+            // producer registers in another plugin's afterEvaluate,
+            // whose order vs. this hook depends on apply order, so
+            // existence is checked at variant realization instead:
+            // no remap pipeline → the variant is skipped (the conf
+            // itself remains as an artifact-less consumable, matching
+            // dev confs whose producer is absent)
             val devConf = project.configurations.findByName(spec.devConfName)
                 ?: continue
-            val devTask = project.tasks.findByName(spec.devTaskName) as? Jar
             val (selector, output) = selectors.getOrPut(spec.remapTaskName) {
-                prodArtifactTask(project, environment, remapTask, devTask,
-                    spec.remapTaskName)
+                prodArtifactTask(project, environment, spec.remapTaskName,
+                    spec.devTaskName)
             }
             val conf = prodConfiguration(project, spec.confName, devConf, spec)
             conf.outgoing.artifact(output) { a ->
@@ -258,7 +276,9 @@ internal object PublishVariantWiring {
                 conf.attributes, project, environment,
                 PublishAttributes.CHANNEL_PROD, spec.role, prodNamespace
             )
-            component.addVariantsFromConfiguration(conf) {}
+            component.addVariantsFromConfiguration(conf) { details ->
+                if (project.tasks.findByName(spec.remapTaskName) !is Jar) details.skip()
+            }
         }
     }
 
@@ -295,18 +315,17 @@ internal object PublishVariantWiring {
     private fun prodArtifactTask(
         project: Project,
         environment: MinecraftEnvironment,
-        remapTask: Jar,
-        devTask: Jar?,
-        remapTaskName: String
+        remapTaskName: String,
+        devTaskName: String
     ): Pair<TaskProvider<Sync>, Provider<RegularFile>> {
         val envId = environment.environmentId
         val kind = remapTaskName.removePrefix("remap")
         val dir = "unimined-publish/$envId/${kind.replaceFirstChar(Char::lowercase)}"
-        // capture the tasks' archiveFile *providers*, not the task
-        // instances — task objects inside a serialized provider are
-        // not configuration-cache friendly
-        val remapOut = remapTask.archiveFile
-        val devOut = devTask?.archiveFile
+        // producer tasks resolve by *name* inside providers — the
+        // remap task registers in another plugin's afterEvaluate,
+        // whose order vs. this wiring depends on apply order, so the
+        // lookups defer to execution (when the task set is final and
+        // the variant-skip check has already gated consumption)
         val selector = project.tasks.register(
             "uniminedProd$kind", Sync::class.java
         ) { t ->
@@ -314,14 +333,20 @@ internal object PublishVariantWiring {
             t.description = "Selects the production '$kind' artifact " +
                     "for env '$envId' (remapped output, or the dev " +
                     "output when the env does not remap)"
-            t.dependsOn(remapTask)
-            if (devTask != null) t.dependsOn(devTask)
+            t.dependsOn(project.provider {
+                listOfNotNull(
+                    project.tasks.findByName(remapTaskName),
+                    project.tasks.findByName(devTaskName)
+                )
+            })
             t.from(project.provider {
-                val remapFile = remapOut.get().asFile
-                if (remapFile.isFile) {
+                val remapFile = (project.tasks.findByName(remapTaskName) as? Jar)
+                    ?.archiveFile?.get()?.asFile
+                if (remapFile != null && remapFile.isFile) {
                     remapFile
                 } else {
-                    devOut?.get()?.asFile
+                    (project.tasks.findByName(devTaskName) as? Jar)
+                        ?.archiveFile?.get()?.asFile
                         ?: throw org.gradle.api.GradleException(
                             "unimined-publish: environment '$envId' has " +
                                     "publishProduction=true but no dev " +
@@ -423,12 +448,12 @@ internal object PublishVariantWiring {
         "${sourceSet.name}DataElements"
 
     private fun prodApiElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}ProdApiElements"
+        PublishConfigurations.prodApiElementsName(sourceSet)
 
     private fun prodRuntimeElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}ProdRuntimeElements"
+        PublishConfigurations.prodRuntimeElementsName(sourceSet)
 
     private fun prodSourcesElementsName(sourceSet: SourceSet): String =
-        "${sourceSet.name}ProdSourcesElements"
+        PublishConfigurations.prodSourcesElementsName(sourceSet)
 
 }

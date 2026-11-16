@@ -3,6 +3,10 @@ plugins {
 }
 
 dependencies {
+    // deps.LoaderApi (core) parses loader api poms/meta
+    "coreImplementation"(libs.kotlinx.serialization.json)
+    // NoGroovyTwin parity-guard opt-out marker
+    "coreImplementation"(project(":unimined-api"))
     api(project(":unimined-minecraft"))
     api(project(":unimined-mapping"))
     api(project(":unimined-remap"))
@@ -27,6 +31,11 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+    // GroovyTwinParity reflective guard — scans the whole bundled stack
+    "testGradleImplementation"(testFixtures(project(":unimined-api")))
+    "testGradleImplementation"(gradleTestKit())
+    "testGradleImplementation"(libs.junit.jupiter)
+    "testGradleRuntimeOnly"(libs.junit.platform.launcher)
 }
 
 gradlePlugin {

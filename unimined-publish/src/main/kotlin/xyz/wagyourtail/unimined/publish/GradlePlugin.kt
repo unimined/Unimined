@@ -67,10 +67,45 @@ class GradlePlugin : Plugin<Project> {
             MavenPublicationWiring.addPublication(target, ext, comp)
         }
 
-        target.gradle.projectsEvaluated {
-            if (ext.mavenPublications.get()) {
-                MavenPublicationWiring.finish(target, ext)
-            }
+        // coordinate uniqueness is an execution-time check — the
+        // publication set is only final once every project's
+        // configuration ran, and the failure only matters when
+        // publishing actually happens (replacing the old
+        // projectsEvaluated pass)
+        val coordinateCheck = target.tasks.register(
+            "checkUniminedPublications",
+            xyz.wagyourtail.unimined.publish.task
+                .CheckUniminedPublicationsTask::class.java
+        ) { t ->
+            t.group = "verification"
+            t.description = "Fails when unimined publications share " +
+                "Maven coordinates"
+            t.onlyIf { ext.mavenPublications.get() }
+            t.publicationCoordinates.set(target.provider {
+                val publishing = target.extensions
+                    .getByType(org.gradle.api.publish.PublishingExtension::class.java)
+                publishing.publications
+                    .withType(org.gradle.api.publish.maven.MavenPublication::class.java)
+                    .filter { pub ->
+                        pub.name.startsWith("unimined") ||
+                            (ext.javaPublication.get() &&
+                                ext.mavenPublications.get() &&
+                                pub.name == "java")
+                    }
+                    .map { pub ->
+                        "${pub.name}=${pub.groupId ?: target.group}:" +
+                            "${pub.artifactId ?: target.name}:" +
+                            (pub.version ?: target.version)
+                    }
+            })
+        }
+        // publish-family tasks realize only when publishing runs —
+        // the name check lives inside configureEach so registering the
+        // rule never forces task realization
+        target.tasks.configureEach {
+            if (it.name.startsWith("publish") ||
+                it.name.startsWith("generatePomFileFor")
+            ) it.dependsOn(coordinateCheck)
         }
 
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {

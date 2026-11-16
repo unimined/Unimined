@@ -1,7 +1,9 @@
 package xyz.wagyourtail.unimined.publish
 
+import groovy.lang.GroovyShell
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -38,6 +40,28 @@ class PublishExtensionTest {
         env!!
         assertTrue(env.publishProduction)
         assertFalse(env.publishDev)
+    }
+
+    @Test
+    fun `environment groovy closure delegates to the publication spec`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply(GradlePlugin::class.java)
+        val ext = project.extensions.getByType(PublishExtension::class.java)
+
+        val shell = GroovyShell()
+        shell.setVariable("ext", ext)
+        shell.evaluate(
+            "ext.environment('main') {\n" +
+                    "    groupId = 'com.example'\n" +
+                    "    version = '9.9'\n" +
+                    "    publishDataFiles = false\n" +
+                    "}"
+        )
+
+        val env = ext.environments["main"]!!
+        assertEquals("com.example", env.groupId)
+        assertEquals("9.9", env.version)
+        assertFalse(env.publishDataFiles)
     }
 
 }

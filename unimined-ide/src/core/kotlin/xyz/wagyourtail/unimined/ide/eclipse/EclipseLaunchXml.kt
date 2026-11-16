@@ -100,7 +100,12 @@ object EclipseLaunchXml {
     fun renderLaunchFile(
         model: IdeRunModel,
         projectName: String,
-        displayName: String
+        displayName: String,
+        /** Absolute `@argfile` path — when set, `VM_ARGUMENTS` points
+         *  at it (jvm args + `-cp` ride the file) and the `CLASSPATH`
+         *  list shrinks to the stable project output dirs so the
+         *  `.launch` stays dep-change-proof. */
+        argfile: String? = null
     ): String {
         val stringAttrs = mutableListOf(
             StringAttribute(
@@ -121,10 +126,10 @@ object EclipseLaunchXml {
                 model.programArgs.joinToString(" ")
             )
         }
-        if (model.jvmArgs.isNotEmpty()) {
+        if (argfile != null || model.jvmArgs.isNotEmpty()) {
             stringAttrs += StringAttribute(
                 "org.eclipse.jdt.launching.VM_ARGUMENTS",
-                model.jvmArgs.joinToString(" ")
+                argfile?.let { "@$it" } ?: model.jvmArgs.joinToString(" ")
             )
         }
         val config = LaunchConfiguration(
@@ -149,7 +154,11 @@ object EclipseLaunchXml {
                 add(
                     ListAttribute(
                         "org.eclipse.jdt.launching.CLASSPATH",
-                        model.classpath.map { ListEntry(cpMemento(it.jar)) }
+                        model.classpath.filter {
+                            argfile == null || it.group ==
+                                    xyz.wagyourtail.unimined.ide
+                                        .ClasspathGroup.PROJECT
+                        }.map { ListEntry(cpMemento(it.jar)) }
                     )
                 )
             },

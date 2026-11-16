@@ -5,6 +5,8 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.delegatingTo
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.mapping.MappingExtension
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -26,10 +28,12 @@ abstract class MigrateExtension @Inject constructor(
 ) {
 
     /**
-     * Registers `migrateMappings` (`migrateMappings<Ss>` for non-main)
+     * Registers `migrateMappings` (`migrate<Ss>Mappings` for non-main)
      * to migrate [environmentId]'s sources onto a different mappings
      * release — configure the target inside [action] via
      * `target { yarn(...) }` / `target { mcp(...) }` / `target { maven(...) }`.
+     * The pre-convention `migrateMappings<Ss>` name is kept as a
+     * deprecated alias.
      */
     /** Groovy DSL overload —
      *  `migrateMappings("main") { target { yarn(...) } }`. */
@@ -44,8 +48,11 @@ abstract class MigrateExtension @Inject constructor(
         val mapping = project.extensions.getByType(MappingExtension::class.java)
         val sourceSet = project.extensions.getByType(SourceSetContainer::class.java)
             .getByName(environmentId)
-        val name = "migrateMappings" + if (environmentId == "main") ""
-            else environmentId.replaceFirstChar(Char::uppercase)
+        // verb<Env>Noun naming: `migrateFabricMappings` —
+        // `migrateMappings` stays the main-env (bare) form
+        val envCap = environmentId.replaceFirstChar(Char::uppercase)
+        val name = if (environmentId == "main") "migrateMappings"
+            else "migrate${envCap}Mappings"
         // registers its own produceMappingBundle task — must happen
         // outside the tasks.register below (nested registration is
         // illegal)
@@ -54,7 +61,7 @@ abstract class MigrateExtension @Inject constructor(
             minecraft.devNamespace(environmentId),
             minecraft.modSourceNamespaces(environmentId).map { it.first() }
         )
-        project.tasks.register(name, MigrateMappingsTask::class.java) { t ->
+        val task = project.tasks.register(name, MigrateMappingsTask::class.java) { t ->
             t.group = "unimined"
             t.description = "Migrates '${sourceSet.name}' sources onto different mappings"
             t.environmentId.set(environmentId)
@@ -75,13 +82,20 @@ abstract class MigrateExtension @Inject constructor(
                 xyz.wagyourtail.unimined.api.util.UniminedCache
                     .global(project).resolve("mapping-cache").toFile()
             }))
-        }.configure { t ->
+        }
+        task.configure { t ->
             action.execute(t)
             // materialize the spec `target {}` populated — the provider
             // resolves to FILES at store/execution time, so the
             // non-serializable spec object never hits the config cache
-            val spec = t.targetSpec ?: error(
-                "unimined.migrateMappings: configure the target via `target { ... }`"
+            val spec = t.targetSpec ?: project.failProblem(
+                "migrate/target-missing",
+                "unimined: migrateMappings('$environmentId') declares no " +
+                    "target mappings",
+                "configure one inside the migrateMappings block via " +
+                    "`target { yarn(...) }`, `target { mcp(...) }`, " +
+                    "`target { maven(...) }`, or another mappings spec " +
+                    "verb"
             )
             val mavenResolver = Function<String, Path> { notation ->
                 xyz.wagyourtail.unimined.mapping.UniminedRepos(project)
@@ -116,6 +130,11 @@ abstract class MigrateExtension @Inject constructor(
             t.targetClasspath.from(project.providers.provider {
                 t.classpathNotations.get().map(mavenResolver::apply)
             })
+        }
+        // 1.x/old-name bridge — the env-suffix form predates the
+        // verb<Env>Noun convention
+        if (environmentId != "main") {
+            project.registerDeprecatedTaskAlias("migrateMappings$envCap", task)
         }
     }
 

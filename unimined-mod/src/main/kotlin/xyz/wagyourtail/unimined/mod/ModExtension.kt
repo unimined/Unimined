@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.mod
 
 import groovy.lang.Closure
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
@@ -95,7 +96,7 @@ abstract class ModExtension @Inject constructor(
     ) {
         action.delegate = mixins
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /**
@@ -120,7 +121,7 @@ abstract class ModExtension @Inject constructor(
         loader(name, Action<LoaderSection> { section ->
             action.delegate = section
             action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
+            action.callDelegate()
         })
     }
 

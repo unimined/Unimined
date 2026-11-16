@@ -42,8 +42,17 @@ data class ClasspathEntry(
 /** A fully-resolved run the IDE emitters render. Field names mirror
  *  `RunConfig` so the producer maps spec→model 1:1. */
 data class IdeRunModel(
-    /** RunConfig name (`client`, `prodClient`, ...). */
+    /** IDE display/file name — `RunConfig.ideName` (defaults to the
+     *  run name). */
     val name: String,
+
+    /** Optional IDE folder/group label — `RunConfig.ideFolderName`;
+     *  emitters that support config grouping honor it. */
+    val folderName: String? = null,
+
+    /** `RunConfig.singleInstance` — emitters that model a
+     *  "single instance only" flag honor it (IDEA `singleton`). */
+    val singleInstance: Boolean = false,
 
     /** Environment sourceSet id (`main`, ...). */
     val environmentId: String,

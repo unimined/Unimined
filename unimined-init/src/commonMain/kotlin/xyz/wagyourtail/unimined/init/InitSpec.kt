@@ -126,8 +126,31 @@ data class InitSpec(
     val wrapperGradleVersion: String
         get() = gradleVersion ?: DEFAULT_GRADLE_VERSION
 
+    /**
+     * [loaders] plus the `jarmod` pseudo-loader implied by [jarmod] —
+     * emission sites use this so `--jarmod` specs still declare
+     * `loader("jarmod", <agent>)`. Without it the generated env is
+     * inert: no transform claim, no `jarmod-agent` dep, and the
+     * per-loader scaffold loop emits no entrypoints/transform stubs.
+     * An explicit jarmod-family declaration wins — [jarmod] then only
+     * adds the side-jar scaffold.
+     */
+    val effectiveLoaders: List<Pair<String, String>>
+        get() = if (jarmod && loaders.none {
+                it.first.lowercase() in JARMOD_FAMILY })
+            listOf("jarmod" to JARMOD_AGENT_VERSION) + loaders
+        else loaders
+
     companion object {
         const val DEFAULT_GRADLE_VERSION = "9.8.2"
+
+        /** JarModAgent version emitted for synthesized `jarmod`
+         *  loaders — matches the pin the fg1 wiring uses internally. */
+        const val JARMOD_AGENT_VERSION = "0.1.5"
+
+        /** Loader ids routed through the jarmod-family transform —
+         *  declaring one already implies the JarModAgent machinery. */
+        val JARMOD_FAMILY = setOf("jarmod", "fg1", "liteloader", "rift")
 
         /** MC's post-obfuscation version scheme — `26.x` releases and
          *  their `26.x-snapshot-N`/`-pre`/`-rc` builds (bare major ≥ 26,

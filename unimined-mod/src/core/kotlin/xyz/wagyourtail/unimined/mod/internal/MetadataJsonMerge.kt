@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import xyz.wagyourtail.unimined.api.util.Json5Text
 
 /**
  * Structural merge of a generated metadata document over a manually
@@ -24,14 +25,17 @@ import kotlinx.serialization.json.jsonObject
 internal object MetadataJsonMerge {
 
     fun merge(existing: ByteArray, generated: ByteArray): ByteArray {
+        // the manual file may be qmj5 (comments, trailing commas, bare
+        // keys) — normalize before strict parse; idempotent on the
+        // generated doc
         val base = runCatching {
             kotlinx.serialization.json.Json.parseToJsonElement(
-                existing.decodeToString()
+                Json5Text.toJson(existing.decodeToString())
             )
         }.getOrNull() ?: return generated
         val overlay = runCatching {
             kotlinx.serialization.json.Json.parseToJsonElement(
-                generated.decodeToString()
+                Json5Text.toJson(generated.decodeToString())
             )
         }.getOrNull() ?: return generated
         if (base !is JsonObject || overlay !is JsonObject) return generated

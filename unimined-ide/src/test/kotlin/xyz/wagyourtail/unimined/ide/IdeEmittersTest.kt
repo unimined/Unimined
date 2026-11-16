@@ -24,6 +24,7 @@ class IdeEmittersTest {
             ClasspathEntry("/m2/minecraft-dev.jar", group = ClasspathGroup.MINECRAFT),
             ClasspathEntry("/m2/loader.jar", group = ClasspathGroup.LOADER),
             ClasspathEntry("/m2/mod-remapped.jar", group = ClasspathGroup.MODS),
+            ClasspathEntry("/build/classes/java/main", group = ClasspathGroup.PROJECT),
         ),
     )
 
@@ -45,6 +46,17 @@ class IdeEmittersTest {
         assertTrue(xml.contains("classpathModifications"))
         assertTrue(xml.contains("/m2/minecraft-dev.jar"))
         assertTrue(xml.contains("/m2/mod-remapped.jar"))
+    }
+
+    @Test
+    fun `idea config emits singleton for single-instance runs`() {
+        val xml = IdeaRunXml.renderRunConfiguration(
+            model.copy(singleInstance = true), "x", "y.main"
+        )
+        assertTrue(xml.contains("singleton=\"true\""))
+        // default stays absent — IDEA treats missing as parallel-ok
+        val plain = IdeaRunXml.renderRunConfiguration(model, "x", "y.main")
+        assertFalse(plain.contains("singleton"))
     }
 
     @Test
@@ -94,5 +106,50 @@ class IdeEmittersTest {
         assertTrue(xml.contains("runtimeClasspathEntry"))
         assertTrue(xml.contains("minecraft-dev.jar"))
         assertTrue(xml.contains("workspace_loc"))
+    }
+
+    private val argfile = "/build/unimined/ideArgs/unimined_main_client.args"
+
+    @Test
+    fun `idea config indirection drops baked jars and jvm args`() {
+        val xml = IdeaRunXml.renderRunConfiguration(
+            model, "unimined main:client", "bta.main", argfile
+        )
+        // VM_PARAMETERS points at the argfile instead of baked args
+        assertTrue(xml.contains("@$argfile"))
+        assertFalse(xml.contains("-Xmx2G"))
+        // jar entries leave the XML; the stable project dir stays
+        assertFalse(xml.contains("minecraft-dev.jar"))
+        assertFalse(xml.contains("mod-remapped.jar"))
+        assertTrue(xml.contains("/build/classes/java/main"))
+        // fields the IDE still needs are untouched
+        assertTrue(xml.contains("net.minecraft.client.Minecraft"))
+        assertTrue(xml.contains("--username Dev"))
+    }
+
+    @Test
+    fun `vscode launch json indirection drops baked jars`() {
+        val json = VsCodeLaunchJson.renderLaunchJson(
+            listOf(model), "bta"
+        ) { argfile }
+        assertTrue(json.contains("\"vmArgs\": \"@$argfile\""))
+        assertFalse(json.contains("-Xmx2G"))
+        assertFalse(json.contains("minecraft-dev.jar"))
+        assertFalse(json.contains("mod-remapped.jar"))
+        assertTrue(json.contains("\"/build/classes/java/main\""))
+        assertTrue(json.contains("net.minecraft.client.Minecraft"))
+    }
+
+    @Test
+    fun `eclipse launch file indirection drops baked jars`() {
+        val xml = EclipseLaunchXml.renderLaunchFile(
+            model, "bta", "unimined main:client", argfile
+        )
+        assertTrue(xml.contains("@$argfile"))
+        assertFalse(xml.contains("-Xmx2G"))
+        assertFalse(xml.contains("minecraft-dev.jar"))
+        assertFalse(xml.contains("mod-remapped.jar"))
+        assertTrue(xml.contains("/build/classes/java/main"))
+        assertTrue(xml.contains("net.minecraft.client.Minecraft"))
     }
 }

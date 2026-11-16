@@ -56,6 +56,12 @@ object PublishAttributes {
     const val ROLE_SOURCES = "sources"
     const val ROLE_JAVADOC = "javadoc"
     const val ROLE_DATA = "data"
+    const val ROLE_ACCESS_DOCS = "access-docs"
+
+    /** `org.gradle.category` value on access-document variants —
+     *  NG `AccessTransformerPublishing.ACCESS_TRANSFORMER_CATEGORY` /
+     *  MDG `DataFileCollections` parity. */
+    const val CATEGORY_ACCESS_TRANSFORMER = "accesstransformer"
 
     /** Custom `org.gradle.usage` values on dev-channel variants — see
      *  class kdoc for the consumer-side selection snippet. */

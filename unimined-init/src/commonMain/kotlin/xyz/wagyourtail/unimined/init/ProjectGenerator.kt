@@ -44,7 +44,7 @@ object ProjectGenerator {
                         Render.Text(Templates.multiloaderSettings(spec)))
                     put("common/build.gradle$scriptSuffix",
                         Render.Text(Templates.multiloaderModule(spec, null)))
-                    for ((loader, _) in spec.loaders) {
+                    for ((loader, _) in spec.effectiveLoaders) {
                         put("$loader/build.gradle$scriptSuffix",
                             Render.Text(Templates.multiloaderModule(spec, loader)))
                     }
@@ -77,11 +77,11 @@ object ProjectGenerator {
             // src/<loader>/{java,resources} bound via sourceSet("<loader>")
             // MULTILOADER places entrypoints inside each module dir
             val pkg = spec.basePackage
-            val multi = spec.loaders.size > 1 &&
+            val multi = spec.effectiveLoaders.size > 1 &&
                     spec.layout != InitSpec.Layout.MULTILOADER
             // no loaders (bare product env / vanilla): no entrypoint —
             // there is no loader API to implement
-            for ((loader, _) in spec.loaders) {
+            for ((loader, _) in spec.effectiveLoaders) {
                 // a MULTILOADER module has a single env — it lives on
                 // main inside the module dir; FLAT multi-loader uses
                 // per-loader source sets instead

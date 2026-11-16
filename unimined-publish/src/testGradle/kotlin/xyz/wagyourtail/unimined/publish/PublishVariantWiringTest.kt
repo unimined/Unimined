@@ -4,7 +4,12 @@ import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.DocsType
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
+import org.gradle.api.Action
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConsumableConfiguration
 import org.gradle.api.component.AdhocComponentWithVariants
+import org.gradle.api.component.ConfigurationVariantDetails
+import org.gradle.api.provider.Provider
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
@@ -27,9 +32,10 @@ import xyz.wagyourtail.unimined.publish.internal.PublishVariantWiring
  * `remap<Jar>` outputs, identity environments publish one artifact,
  * and the `publish*` toggles gate each channel.
  *
- * `projectsEvaluated` does not fire under `ProjectBuilder`, so tests
- * invoke [PublishVariantWiring.wireVariants] directly after
- * `project.evaluate()` has run the component wiring.
+ * Tests drive the real plugin path: `project.evaluate()` fires
+ * `afterDslEval`, which runs [PublishVariantWiring.wireVariants] per
+ * bound env — state that shapes wiring (env toggles, namespaces,
+ * stub remap tasks) must be in place before evaluation.
  */
 class PublishVariantWiringTest {
 
@@ -49,11 +55,17 @@ class PublishVariantWiringTest {
         val envPub: PublishExtension.EnvironmentPublication
     )
 
-    /** Bind [envId] through the real plugin path and return the pieces
-     *  [PublishVariantWiring.wireVariants] needs. */
-    private fun bound(p: ProjectInternal, envId: String): Bound {
+    /** Bind [envId] through the real plugin path — `evaluate()` fires
+     *  `afterDslEval`, which runs the variant wiring — and return the
+     *  pieces assertions need. [preEval] mutates env/publish state
+     *  before evaluation so wiring sees it. */
+    private fun bound(
+        p: ProjectInternal, envId: String,
+        preEval: (ProjectInternal) -> Unit = {}
+    ): Bound {
         val minecraft = p.extensions.getByType(MinecraftExtension::class.java)
         if (envId != "main") minecraft.sourceSet(envId) {}
+        preEval(p)
         p.evaluate()
         val env = minecraft.environments.getByName(envId)
         val sourceSet = p.extensions.getByType(SourceSetContainer::class.java)
@@ -66,9 +78,6 @@ class PublishVariantWiringTest {
             .environments[envId]!!
         return Bound(env, sourceSet, component, envPub)
     }
-
-    private fun wire(b: Bound, p: ProjectInternal) =
-        PublishVariantWiring.wireVariants(p, b.env, b.sourceSet, b.envPub, b.component)
 
     private fun conf(p: ProjectInternal, name: String) =
         p.configurations.findByName(name)
@@ -85,8 +94,6 @@ class PublishVariantWiringTest {
     fun `non-main env gets consumable dev configurations`() {
         val p = project()
         val b = bound(p, "fabric")
-        wire(b, p)
-
         val api = conf(p, "fabricApiElements")
         assertNotNull(api, "fabricApiElements must be created")
         api!!
@@ -124,8 +131,6 @@ class PublishVariantWiringTest {
         p.tasks.register("remapFabricJar", Jar::class.java)
         p.tasks.register("remapFabricSourcesJar", Jar::class.java)
         val b = bound(p, "fabric")
-        wire(b, p)
-
         for (name in listOf(
             "fabricProdApiElements", "fabricProdRuntimeElements",
             "fabricProdSourcesElements"
@@ -153,8 +158,6 @@ class PublishVariantWiringTest {
         p.tasks.register("remapFabricJar", Jar::class.java)
         p.tasks.register("remapFabricSourcesJar", Jar::class.java)
         val b = bound(p, "fabric")
-        wire(b, p)
-
         assertNull(conf(p, "fabricProdApiElements"))
         assertNotNull(conf(p, "fabricApiElements"),
             "dev variants are unaffected by publishProduction")
@@ -165,14 +168,16 @@ class PublishVariantWiringTest {
         val p = project()
         p.tasks.register("remapFabricJar", Jar::class.java)
         p.tasks.register("remapFabricSourcesJar", Jar::class.java)
-        val b = bound(p, "fabric")
         // declared-equal dev/prod namespaces — the identity case the
-        // remap pipeline resolves lazily; declaring them lets wiring
-        // skip prod without resolving mappings
-        b.env.devNamespace.set("named")
-        b.env.modSourceNamespaces.set(listOf("named"))
-        wire(b, p)
-
+        // remap pipeline resolves lazily; declaring them before
+        // evaluation lets wiring skip prod without resolving mappings
+        bound(p, "fabric") { proj ->
+            proj.extensions.getByType(MinecraftExtension::class.java)
+                .environments.named("fabric") { e ->
+                    e.devNamespace.set("named")
+                    e.modSourceNamespaces.set(listOf("named"))
+                }
+        }
         assertNull(conf(p, "fabricProdApiElements"),
             "identity envs publish one artifact — no prod variants")
         assertNull(conf(p, "fabricProdRuntimeElements"))
@@ -186,8 +191,6 @@ class PublishVariantWiringTest {
         p.tasks.register("remapJar", Jar::class.java)
         p.tasks.register("remapSourcesJar", Jar::class.java)
         val b = bound(p, "main")
-        wire(b, p)
-
         // unimined confs are prefixed per source set even for main —
         // java's apiElements/runtimeElements are shared with
         // components.java and must never carry dev usages or
@@ -231,11 +234,9 @@ class PublishVariantWiringTest {
         p.tasks.register("remapFabricJar", Jar::class.java)
         p.tasks.register("remapFabricSourcesJar", Jar::class.java)
         val b = bound(p, "fabric")
-        wire(b, p)
-
         // confs are still created — they double as the prod templates
         // and project-dependency targets; only the component variants
-        // are gated, which projectsEvaluated wiring owns
+        // are gated, which the afterDslEval wiring owns
         assertNotNull(conf(p, "fabricApiElements"))
         assertNotNull(conf(p, "fabricProdApiElements"),
             "publishDev=false must not gate the prod channel")
@@ -245,9 +246,112 @@ class PublishVariantWiringTest {
     fun `data files variant is skipped when no data conf exists`() {
         val p = project()
         val b = bound(p, "fabric")
-        wire(b, p)
         assertNull(conf(p, "fabricDataElements"),
             "wiring must not invent a data conf — a producer creates it")
+    }
+
+    /** Records which configurations were added as component
+     *  variants — reading `usages` on the real component realizes
+     *  outgoing artifact providers (the Minecraft pipeline), so the
+     *  gate is asserted at the `addVariantsFromConfiguration` call. */
+    @xyz.wagyourtail.unimined.api.util.NoGroovyTwin(
+        "test-only recording fake — implements the Gradle component " +
+                "interface, not a DSL surface"
+    )
+    private class RecordingComponent : AdhocComponentWithVariants {
+        val variantConfs = mutableListOf<String>()
+        override fun getName() = "recording"
+        override fun addVariantsFromConfiguration(
+            outgoing: Configuration,
+            action: Action<in ConfigurationVariantDetails>
+        ) {
+            variantConfs += outgoing.name
+        }
+
+        override fun addVariantsFromConfiguration(
+            outgoing: Provider<ConsumableConfiguration>,
+            action: Action<in ConfigurationVariantDetails>
+        ) {
+            // provider form is not exercised here; recording the
+            // provider itself would realize it
+            variantConfs += "<provider>"
+        }
+
+        override fun withVariantsFromConfiguration(
+            outgoing: Configuration,
+            action: Action<in ConfigurationVariantDetails>
+        ) {
+            variantConfs += outgoing.name
+        }
+
+        override fun withVariantsFromConfiguration(
+            outgoing: Provider<ConsumableConfiguration>,
+            action: Action<in ConfigurationVariantDetails>
+        ) {
+            variantConfs += "<provider>"
+        }
+    }
+
+    /** Drive [PublishVariantWiring.wireVariants] directly — the
+     *  variant-realizing assertions in other tests go through the
+     *  plugin path, but the publishDataFiles gate only needs the
+     *  `addVariantsFromConfiguration` call set, which a recording
+     *  component captures without touching artifact providers. */
+    private fun wiredVariants(
+        p: ProjectInternal,
+        envPub: PublishExtension.EnvironmentPublication
+    ): RecordingComponent {
+        val env = p.extensions.getByType(MinecraftExtension::class.java)
+            .environments.getByName("fabric")
+        val sourceSet = p.extensions.getByType(SourceSetContainer::class.java)
+            .getByName("fabric")
+        val component = RecordingComponent()
+        PublishVariantWiring.wireVariants(p, env, sourceSet, envPub, component)
+        return component
+    }
+
+    @Test
+    fun `publishDataFiles false gates the data variant off the component`() {
+        val p = project()
+        val ext = p.extensions.getByType(PublishExtension::class.java)
+        p.extensions.getByType(MinecraftExtension::class.java)
+            .sourceSet("fabric") {}
+        ext.environment("fabric") { it.publishDataFiles = false }
+        val envPub = ext.environments["fabric"]!!
+        p.configurations.maybeCreate("fabricDataElements").apply {
+            isCanBeConsumed = true
+            isCanBeResolved = false
+        }
+        val component = wiredVariants(p, envPub)
+        assertFalse(
+            "fabricDataElements" in component.variantConfs,
+            "publishDataFiles=false must skip the data variant: " +
+                    component.variantConfs
+        )
+        assertTrue(
+            component.variantConfs.isNotEmpty(),
+            "dev/prod variants are unaffected by publishDataFiles"
+        )
+    }
+
+    @Test
+    fun `publishDataFiles default contributes the data variant`() {
+        val p = project()
+        val ext = p.extensions.getByType(PublishExtension::class.java)
+        p.extensions.getByType(MinecraftExtension::class.java)
+            .sourceSet("fabric") {}
+        ext.environment("fabric") {}
+        val envPub = ext.environments["fabric"]!!
+        p.configurations.maybeCreate("fabricDataElements").apply {
+            isCanBeConsumed = true
+            isCanBeResolved = false
+        }
+        val component = wiredVariants(p, envPub)
+        assertTrue(
+            "fabricDataElements" in component.variantConfs,
+            "the data conf becomes a component variant by default: " +
+                    component.variantConfs
+        )
     }
 
     @Test
@@ -259,7 +363,6 @@ class PublishVariantWiringTest {
             isCanBeConsumed = true
             isCanBeResolved = false
         }
-        wire(b, p)
         val data = conf(p, "fabricDataElements")
         assertNotNull(data)
         assertTrue(data!!.isCanBeConsumed)
@@ -319,6 +422,62 @@ class PublishVariantWiringTest {
             Category.DOCUMENTATION,
             sources.attributes.getAttribute(
                 Category.CATEGORY_ATTRIBUTE)?.toString())
+    }
+
+    @Test
+    fun `access doc conf pair feeds the env's dep-doc channel`() {
+        val p = project()
+        val declared = java.io.File.createTempFile("mod", ".cfg").apply {
+            writeText("accessible\tfield\tnet/minecraft/Example\tf_0\tI\n")
+            deleteOnExit()
+        }
+        val b = bound(p, "fabric") { proj ->
+            val env = proj.extensions.getByType(MinecraftExtension::class.java)
+                .environments.getByName("fabric")
+            env.accessFile(declared) {}
+        }
+
+        // consumer: resolvable, category-stamped — resolved docs feed
+        // the env's dep-doc channel, not the jar-shipping collections
+        val consume = conf(p, "uniminedFabricAccessTransformer")
+        assertNotNull(consume, "consume conf must be created")
+        consume!!
+        assertTrue(consume.isCanBeResolved)
+        assertFalse(consume.isCanBeConsumed)
+        assertEquals(
+            "accesstransformer",
+            consume.attributes.getAttribute(
+                Category.CATEGORY_ATTRIBUTE)?.toString())
+        assertTrue(b.env.consumedAccessDocs.from.contains(consume),
+            "consumedAccessDocs must pull from the consume conf")
+
+        // producer: consumable elements conf carries the declared doc —
+        // getAttribute() is unusable here (realizes the lazy
+        // jvm-version provider → the Minecraft pipeline); the category
+        // value is asserted on the consume conf above, which carries
+        // only plain attributes
+        val elements = conf(p, "uniminedFabricAccessTransformerElements")
+        assertNotNull(elements, "elements conf must be created")
+        elements!!
+        assertTrue(elements.isCanBeConsumed)
+        assertFalse(elements.isCanBeResolved)
+        assertTrue(attributeKeys(elements).contains("org.gradle.category"))
+        assertTrue(attributeKeys(elements).contains("unimined.environment"))
+        assertTrue(
+            elements.outgoing.artifacts.any {
+                it.classifier == "access-transformer-1"
+            },
+            "declared accessFile must publish as access-transformer-1")
+    }
+
+    @Test
+    fun `env without access docs gets empty elements conf`() {
+        val p = project()
+        bound(p, "fabric")
+        val elements = conf(p, "uniminedFabricAccessTransformerElements")
+        assertNotNull(elements)
+        assertTrue(elements!!.outgoing.artifacts.isEmpty(),
+            "no access declarations → no artifacts → variant skips")
     }
 
 }

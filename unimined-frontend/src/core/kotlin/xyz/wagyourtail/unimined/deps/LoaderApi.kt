@@ -154,6 +154,9 @@ class OslApiProvider : PomModulesProvider(
 object LoaderApi {
 
     /** `url -> bytes` — injectable for tests / offline resolution. */
+    @set:xyz.wagyourtail.unimined.api.util.NoGroovyTwin(
+        "test seam — swapped by unit tests, not a DSL verb"
+    )
     var fetch: (String) -> String = { URI.create(it).toURL().readBytes().decodeToString() }
 
     private val pomCache = mutableMapOf<String, Document>()

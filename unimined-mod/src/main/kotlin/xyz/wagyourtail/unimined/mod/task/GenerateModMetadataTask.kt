@@ -19,6 +19,8 @@ import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.util.FabricNamespaces
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
@@ -33,6 +35,7 @@ import xyz.wagyourtail.unimined.mod.internal.ModMetadataScan
 import xyz.wagyourtail.unimined.mod.spi.ModMetadataEmitter
 import xyz.wagyourtail.unimined.api.spec.DeclaredAccessFile
 import xyz.wagyourtail.unimined.remapper.access.AccessFormatConvert
+import xyz.wagyourtail.unimined.mapping.formats.access.detect
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -104,6 +107,13 @@ abstract class GenerateModMetadataTask : DefaultTask() {
      *  data — fed to [ModMetadataEmitter.EmitContext.namedNamespaces]. */
     @get:Input
     abstract val namedNamespaces: SetProperty<String>
+
+    /** The project's maven group — fed to
+     *  [ModMetadataEmitter.EmitContext.mavenGroup] for loaders whose
+     *  metadata requires a maven coordinate (qmj `quilt_loader.group`). */
+    @get:Input
+    @get:Optional
+    abstract val mavenGroup: Property<String>
 
     /** Existing resource roots — scanned for emitted-path merges and
      *  discovered mixin/access files. */
@@ -240,10 +250,12 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         val loader = loaderName.orNull
 
         if (loader == null && meta.sections.isNotEmpty()) {
-            throw GradleException(
-                "mod { loader(...) } declared on environment " +
-                        "'${environmentId.get()}' but the environment declares " +
-                        "no loader — the emitted metadata would never attach"
+            project.failProblem(
+                "metadata/loader-missing",
+                "unimined: mod { loader(...) } declared on environment " +
+                        "'${environmentId.get()}' but the environment " +
+                        "declares no loader",
+                "the emitted metadata would never attach"
             )
         }
         validate(meta)
@@ -360,7 +372,8 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 side = side.get(),
                 devNamespace = devNamespace.get(),
                 prodNamespaces = prodNamespaces.get(),
-                namedNamespaces = namedNamespaces.get()
+                namedNamespaces = namedNamespaces.get(),
+                mavenGroup = mavenGroup.orNull
             )
             emitter.emitManifest(ctx)?.let {
                 emitted[ModMetadataEmitter.MANIFEST_PATH] = it
@@ -439,11 +452,12 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 matches.forEach { f -> mergedSources += f.toAbsolutePath().toString() }
                 MetadataJsonMerge.merge(manual!!, content)
             } else {
-                throw GradleException(
-                    "generated mod metadata '$path' collides with the " +
-                            "manual file ${matches.first()} — only JSON " +
-                            "metadata merges; remove the manual file or " +
-                            "drop the generated declaration"
+                project.failProblem(
+                    "metadata/manual-collision",
+                    "unimined: generated mod metadata '$path' collides " +
+                            "with the manual file ${matches.first()}",
+                    "only JSON metadata merges; remove the manual file " +
+                            "or drop the generated declaration"
                 )
             }
             val target = out.resolve(path)
@@ -496,9 +510,10 @@ abstract class GenerateModMetadataTask : DefaultTask() {
     ): List<AccessOutput> {
         val format = accessFormatOverride.orNull?.let { name ->
             AccessFormatConvert.Format.byName(name)
-                ?: throw GradleException(
-                    "access { format = '$name' } isn't a known access " +
-                            "format (aw, at, legacy_at)")
+                ?: project.failProblem(
+                    "access/format",
+                    "unimined: access { format = '$name' } isn't a " +
+                            "known access format (aw, at, legacy_at)")
         } ?: emitter.accessFormat
             ?.let(AccessFormatConvert.Format::byName)
         val pathTemplate = emitter.accessPath
@@ -506,8 +521,9 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             if (accessPathOverride.isPresent ||
                 accessFormatOverride.isPresent
             ) {
-                logger.warn(
-                    "[unimined] accessFileName/access { format } " +
+                project.reportProblem(
+                    "access/override-ignored",
+                    "unimined: accessFileName/access { format } " +
                             "ignored — loader has no access-file " +
                             "convention"
                 )
@@ -517,11 +533,12 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         if (accessFormatOverride.isPresent &&
             accessFormatOverride.get() != emitter.accessFormat
         ) {
-            logger.warn(
-                "[unimined] access doc emits as '${format.name}' " +
+            project.reportProblem(
+                "access/emit-format",
+                "unimined: access doc emits as '${format.name}' " +
                         "instead of the loader's conventional " +
-                        "'${emitter.accessFormat}' — ensure the " +
-                        "loader parses it at that path"
+                        "'${emitter.accessFormat}'",
+                "ensure the loader parses it at that path"
             )
         }
         // whether the canonical doc may carry classTweaker directives —
@@ -539,9 +556,11 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 specSourceFormats[Paths.get(spec.path)
                     .toAbsolutePath().normalize()] =
                     AccessFormatConvert.Format.byName(name)
-                        ?: throw GradleException(
-                            "accessFile(format='$name') isn't a known " +
-                                    "access format (aw, at, legacy_at)")
+                        ?: project.failProblem(
+                            "access/format",
+                            "unimined: accessFile(format='$name') isn't " +
+                                    "a known access format (aw, at, " +
+                                    "legacy_at)")
             }
         }
         val overridePaths = overrides.mapTo(HashSet()) {
@@ -613,7 +632,9 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                     .view<MappingTree>()
             }
         }
-        val warn: (String) -> Unit = { logger.warn("[unimined] $it") }
+        val warn: (String) -> Unit = {
+            project.reportProblem("access/convert", "unimined: $it")
+        }
         val ctRows = extraCtRows.toMutableList()
         val converted = files.map { f ->
             val bytes = Files.readAllBytes(f)
@@ -625,15 +646,18 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 // CT doc — access directives ride the AW merge; CT-only
                 // directives accumulate for the emit decision below
                 doc = ctDocToAw(bytes, ctRows)
-                    ?: throw GradleException(
-                        "access file '$f' has a classTweaker header but " +
-                                "malformed content"
+                    ?: project.failProblem(
+                        "access/malformed",
+                        "unimined: access file '$f' has a classTweaker " +
+                                "header but malformed content"
                     )
                 src = AccessFormatConvert.Format.AW
             }
-            src ?: throw GradleException(
-                "env-declared access file '$f' isn't an AT/AW/CT " +
-                        "document (no recognized header/directive)"
+            src ?: project.failProblem(
+                "access/unknown-doc",
+                "unimined: env-declared access file '$f' isn't an " +
+                        "AT/AW/CT document (no recognized " +
+                        "header/directive)"
             )
             try {
                 AccessFormatConvert.convert(
@@ -647,6 +671,16 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                     src != AccessFormatConvert.Format.AW &&
                     format == AccessFormatConvert.Format.AW
                 ) {
+                    project.reportProblem(
+                        "access/convert-needs-tree",
+                        "unimined: converting '$f' to AW needs the " +
+                                "env's mapping tree for member " +
+                                "descriptors",
+                        "declare the file under `accessTransformers` " +
+                                "so the wiring attaches the mapping bundle",
+                        xyz.wagyourtail.unimined.api.util.UniminedProblems
+                            .Severity.ERROR
+                    )
                     throw GradleException(
                         "converting '$f' to AW needs the env's mapping " +
                                 "tree for member descriptors — declare " +
@@ -804,12 +838,16 @@ abstract class GenerateModMetadataTask : DefaultTask() {
 
     private fun validate(meta: ModMetadata) {
         if (meta.sections.isEmpty() && mixinConfigs.get().isEmpty()) return
-        val id = meta.id ?: throw GradleException(
-            "mod { } declares metadata but no `id` — set `mod.id`"
+        val id = meta.id ?: project.failProblem(
+            "metadata/id-missing",
+            "unimined: mod { } declares metadata but no `id` — set " +
+                "`mod.id`"
         )
-        require(id.matches(Regex("[a-z][a-z0-9_-]*"))) {
-            "mod.id '$id' is invalid — must match [a-z][a-z0-9_-]*"
-        }
+        if (!id.matches(Regex("[a-z][a-z0-9_-]*"))) project.failProblem(
+            "metadata/id-invalid",
+            "unimined: mod.id '$id' is invalid — must match " +
+                "[a-z][a-z0-9_-]*"
+        )
     }
 
     private fun mixinJson(config: MixinConfigData): ByteArray = buildJsonObject {

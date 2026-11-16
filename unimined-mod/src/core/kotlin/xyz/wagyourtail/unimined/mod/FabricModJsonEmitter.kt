@@ -53,13 +53,40 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
     /** Entrypoint kind receiving [ModMetadataEmitter.EmitContext.clientGametestEntrypoints]. */
     protected open val clientGametestEntrypointKey = "fabric-client-gametest"
 
-    override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
+    /**
+     * Loader-agnostic values resolved from the emit context — fabric
+     * and quilt (a fabric-loader fork) share the model interpretation
+     * but shape different JSON documents, so both emitters consume
+     * this and lay out keys their own way.
+     */
+    protected class ResolvedEmit(
+        /** `section.environment ?: meta.environment` — raw fmj value
+         *  (`*`/`client`/`server`); emitters translate to their own
+         *  vocabulary where the loader's differ (qmj
+         *  `dedicated_server`). */
+        val environment: String?,
+        /** Declared entrypoints merged with discovered gametest
+         *  classes (declaration order preserved). */
+        val entrypoints: Map<String, List<String>>,
+        /** Generated + discovered + section-declared mixin configs. */
+        val mixinRefs: List<String>,
+        /** `section.custom` entries as json values — emitters place
+         *  them per their extension convention (fmj `custom` object,
+         *  qmj top-level namespaced keys). */
+        val sectionCustom: Map<String, kotlinx.serialization.json.JsonElement>,
+        /** Target internal name → injected interface internal names,
+         *  dev namespace. */
+        val injections: Map<String, List<String>>,
+        /** `section.accessWidener ?: context.accessFile` — the access
+         *  doc path emitters declare (fmj `accessWidener`, qmj
+         *  `access_widener`). */
+        val accessRef: String?,
+    )
+
+    /** Shared emit resolution — see [ResolvedEmit]. */
+    protected fun resolveEmit(context: ModMetadataEmitter.EmitContext): ResolvedEmit {
         val meta = context.metadata
         val section = meta.sections[loader]
-        val mixinRefs = (context.mixinFiles + context.discoveredMixinConfigs +
-                section?.mixinConfigs.orEmpty()).distinct()
-        val env = section?.environment ?: meta.environment
-
         // declared entrypoints union discovered gametest classes —
         // dedupe preserves declaration order
         val entrypoints = LinkedHashMap<String, List<String>>()
@@ -76,12 +103,26 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
                 (entrypoints[clientGametestEntrypointKey].orEmpty() +
                         context.clientGametestEntrypoints).distinct()
         }
-
-        val injections = context.interfaceInjections
         val custom = LinkedHashMap<String, kotlinx.serialization.json.JsonElement>()
         section?.custom?.forEach { (key, value) ->
             custom[key] = JsonPrimitive(value.toString())
         }
+        return ResolvedEmit(
+            environment = section?.environment ?: meta.environment,
+            entrypoints = entrypoints,
+            mixinRefs = (context.mixinFiles + context.discoveredMixinConfigs +
+                    section?.mixinConfigs.orEmpty()).distinct(),
+            sectionCustom = custom,
+            injections = context.interfaceInjections,
+            accessRef = section?.accessWidener ?: context.accessFile,
+        )
+    }
+
+    override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
+        val meta = context.metadata
+        val resolved = resolveEmit(context)
+        val injections = resolved.injections
+        val custom = LinkedHashMap(resolved.sectionCustom)
         if (injections.isNotEmpty()) {
             // a hand-written fmj carrying the same key merges at the
             // physical-file level (MetadataJsonMerge) — per-target
@@ -107,18 +148,20 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
             }
             meta.license?.let { put("license", it) }
             meta.icon?.let { put("icon", it) }
-            env?.let { put("environment", it) }
-            if (entrypoints.isNotEmpty()) {
+            resolved.environment?.let { put("environment", it) }
+            if (resolved.entrypoints.isNotEmpty()) {
                 putJsonObject("entrypoints") {
-                    entrypoints.forEach { (kind, classes) ->
+                    resolved.entrypoints.forEach { (kind, classes) ->
                         putJsonArray(kind) {
                             classes.forEach { add(JsonPrimitive(it)) }
                         }
                     }
                 }
             }
-            if (mixinRefs.isNotEmpty()) {
-                putJsonArray("mixins") { mixinRefs.forEach { add(JsonPrimitive(it)) } }
+            if (resolved.mixinRefs.isNotEmpty()) {
+                putJsonArray("mixins") {
+                    resolved.mixinRefs.forEach { add(JsonPrimitive(it)) }
+                }
             }
             // fmj v1 has no `classTweakers` array — CT-format content is
             // consumed through the `accessWidener` file itself on
@@ -128,8 +171,7 @@ abstract class FabricModJsonEmitter : ModMetadataEmitter {
                     meta.depends.forEach { (modId, range) -> put(modId, range) }
                 }
             }
-            (section?.accessWidener ?: context.accessFile)
-                ?.let { put("accessWidener", it) }
+            resolved.accessRef?.let { put("accessWidener", it) }
             if (custom.isNotEmpty()) {
                 putJsonObject("custom") {
                     custom.forEach { (key, value) -> put(key, value) }

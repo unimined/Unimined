@@ -284,8 +284,8 @@ class ProjectGeneratorTest {
         val build = (files["build.gradle.kts"] as ProjectGenerator.Render.Text)
             .content
         assertTrue("bta {" in build)
-        assertTrue("version = providers.gradleProperty(" +
-                "\"minecraft_version\").get()" in build)
+        assertTrue("version.set(providers.gradleProperty(" +
+                "\"minecraft_version\"))" in build)
         assertTrue("minecraft {" !in build)
     }
 
@@ -314,6 +314,43 @@ class ProjectGeneratorTest {
                 ProjectGenerator.Render.Text).content
         assertTrue("clientJar" in build && "serverJar" in build)
         assertTrue("JarModAgent-Transforms" in build)
+    }
+
+    /** `--jarmod` alone (`loaders` empty — the real CLI path) must still
+     *  declare `loader("jarmod", <agent>)`: without it the generated env
+     *  has no transform claim and no classpath. The version routes
+     *  through `jarmod_version` like any other loader. */
+    @Test
+    fun `jarmod-only spec synthesizes the jarmod loader declaration`() {
+        val spec = spec().copy(jarmod = true, loaders = emptyList())
+        assertEquals(listOf("jarmod" to InitSpec.JARMOD_AGENT_VERSION),
+            spec.effectiveLoaders)
+        val files = ProjectGenerator.files(spec)
+        val build = (files["build.gradle.kts"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue(
+            "loader(\"jarmod\", providers.gradleProperty(" +
+                    "\"jarmod_version\").get())" in build,
+            "jarmod env must declare loader(\"jarmod\", ...) — got:\n$build")
+        assertTrue("https://maven.wagyourtail.xyz/releases/" in build,
+            "jarmod-agent resolves from wagyourtail maven — got:\n$build")
+        // the scaffold loop needs the effective loader list too —
+        // empty loaders must not skip the side stubs
+        assertTrue("src/client/resources/my_mod-client.transform" in files)
+        val props = (files["gradle.properties"] as
+                ProjectGenerator.Render.Text).content
+        assertTrue("jarmod_version=${InitSpec.JARMOD_AGENT_VERSION}" in props,
+            "jarmod_version prop must land in gradle.properties — got:\n$props")
+    }
+
+    /** An explicit jarmod-family loader (`fg1`, `liteloader`, …)
+     *  already implies the agent machinery — `jarmod = true` adds the
+     *  side-jar scaffold only, not a second loader line. */
+    @Test
+    fun `jarmod flag does not duplicate a declared jarmod-family loader`() {
+        val spec = spec().copy(jarmod = true,
+            loaders = listOf("liteloader" to "1.12.2-SNAPSHOT"))
+        assertEquals(spec.loaders, spec.effectiveLoaders)
     }
 
     @Test

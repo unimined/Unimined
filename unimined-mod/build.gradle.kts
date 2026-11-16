@@ -7,8 +7,10 @@ dependencies {
     api(project(":unimined-minecraft"))
     // access-file format conversion for GenerateModMetadataTask
     implementation(project(":unimined-remap:remapper-access"))
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.asm)
+    // metadata emit/merge/scan are core-side (FabricModJsonEmitter,
+    // ModMetadataScan, MetadataJsonMerge) — their deps ride core too
+    "coreImplementation"(libs.kotlinx.serialization.json)
+    "coreImplementation"(libs.asm)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.publish
 
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.provider.Property
@@ -61,7 +62,7 @@ abstract class PublishExtension {
         environment(name, Action {
             action.delegate = it
             action.resolveStrategy = groovy.lang.Closure.DELEGATE_FIRST
-            action.call()
+            action.callDelegate()
         })
     }
 

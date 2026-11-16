@@ -80,6 +80,10 @@ internal object Templates {
                             full.substringAfterLast("build.").toIntOrNull()
                                 ?.toString() ?: return emptyList())
                 } ?: emptyList()
+            // jarmod-era (ModLoader / jar-injection) maps on MCPHackers'
+            // retro MCP — checked before the b1.x nostalgia fallback so
+            // a b1.x jarmod env doesn't pull ornithe-era mappings
+            l == "jarmod" -> listOf(MappingLine("retroMCP()"))
             mc.startsWith("b1.") ->
                 versioned("nostalgia", "nostalgia_mappings",
                     Probed.expand("nostalgia").firstOrNull {
@@ -148,14 +152,14 @@ internal object Templates {
         if (!spec.versionProps) return emptyList()
         val mappingProps = if (spec.mappings.isNotEmpty())
             spec.mappings.flatMap { propifyLine(spec, it).props }
-        else spec.loaders.map { defaultMappingLines(spec, it.first) }
+        else spec.effectiveLoaders.map { defaultMappingLines(spec, it.first) }
             .firstOrNull { it.isNotEmpty() }
             ?.flatMap { it.props } ?: emptyList()
         return listOf("minecraft_version" to spec.mcVersion) +
-            spec.loaders.map { (l, v) ->
+            spec.effectiveLoaders.map { (l, v) ->
                 "${l.lowercase().replace('-', '_')}_version" to v } +
             mappingProps +
-            spec.loaders.filter { it.first == "fabric" }.mapNotNull {
+            spec.effectiveLoaders.filter { it.first == "fabric" }.mapNotNull {
                 Probed.expand("fabric-api").firstOrNull { v ->
                     v.endsWith("+${spec.mcVersion}") }
                     ?.let { v -> "fabric_api_version" to v }
@@ -173,6 +177,20 @@ internal object Templates {
     private fun verRef(spec: InitSpec, key: String, literal: String) =
         if (spec.versionProps) "providers.gradleProperty(\"$key\").get()"
         else literal
+
+    /**
+     * `name.set(providers.gradleProperty("k"))` — identical in both
+     *  DSLs and keeps the value a `Provider` (read lazily at binding)
+     *  instead of `.get()`-ing it during script eval. Only for
+     *  `Property`-backed fields (`version`, `id`, `name`) — spec-value
+     *  function args (`loader(name, v)`, mapping verbs) still need
+     *  [verRef]'s `.get()` since specs serialize plain values.
+     */
+    private fun propSetLazy(
+        spec: InitSpec, name: String, key: String, literal: String
+    ) = if (spec.versionProps)
+        "$name.set(providers.gradleProperty(\"$key\"))"
+    else propSet(spec, name, literal)
 
     /** One emitted mappings-block line + the gradle.properties entries
      *  its version args resolve through (empty → literal). */
@@ -230,7 +248,7 @@ internal object Templates {
 
     /** Loader-specific Maven repos needed for metadata resolution. */
     private fun loaderRepos(spec: InitSpec): List<String> =
-        spec.loaders.map { (loader, _) -> loader.lowercase() }
+        spec.effectiveLoaders.map { (loader, _) -> loader.lowercase() }
             .mapNotNull {
                 when {
                     it.contains("fabric") -> "https://maven.fabricmc.net/"
@@ -249,6 +267,10 @@ internal object Templates {
                     // rift + dimdev mixin — dimdev.org offline,
                     // wagyourtail releases mirrors org.dimdev
                     it == "rift" -> "https://maven.wagyourtail.xyz/releases/"
+                    // the jarmod-agent artifact + FG1-era de.oceanlabs
+                    // mcp zips live on wagyourtail's maven
+                    it == "jarmod" || it == "fg1" ->
+                        "https://maven.wagyourtail.xyz/releases/"
                     else -> null
                 }
             }.distinct()
@@ -294,7 +316,7 @@ internal object Templates {
      * block per loader (§10 layout).
      */
     private fun minecraftBody(spec: InitSpec): String =
-        if (spec.loaders.size > 1) {
+        if (spec.effectiveLoaders.size > 1) {
             // loader-less top-level env carries version/side/mappings;
             // sourceSet envs inherit it via implicit parent (no explicit
             // combineWith — applyImplicitParent covers non-aux envs)
@@ -303,20 +325,20 @@ internal object Templates {
             // it via implicit parent; intermediary rides along only when
             // a fabric-family env needs the runtime chain
             val sharedMappings = buildList {
-                if (spec.loaders.any { it.first.contains("fabric") } &&
+                if (spec.effectiveLoaders.any { it.first.contains("fabric") } &&
                         !InitSpec.isUnobfEra(mc))
                     add("intermediary()")
                 if (Probed.expand("mojmap").contains(mc)) add("mojmap()")
                 else addAll(
-                    spec.loaders.map { defaultMappingLines(spec, it.first) }
+                    spec.effectiveLoaders.map { defaultMappingLines(spec, it.first) }
                         .firstOrNull { it.isNotEmpty() }?.map { it.text }
                         ?: emptyList())
             }
             // top-level minecraft{} IS the main env — shared
             // version/mappings live there; loader envs combineWith it
             val sharedLines = mutableListOf(
-                propSet(spec, "version",
-                    verRef(spec, "minecraft_version", "\"$mc\"")))
+                propSetLazy(spec, "version",
+                    "minecraft_version", "\"$mc\""))
             sideLine(spec).takeIf { it.isNotEmpty() }
                 ?.let { sharedLines.add(it) }
             if (sharedMappings.isNotEmpty()) {
@@ -325,7 +347,7 @@ internal object Templates {
                 sharedLines.add("}")
             }
             val common = sharedLines.joinToString("\n")
-            spec.loaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
+            spec.effectiveLoaders.joinToString("\n", prefix = "$common\n") { (loader, version) ->
                 render("partials/source-set-env.gradle", mapOf(
                     "LOADER" to loader,
                     "LOADER_VERSION" to verRef(spec,
@@ -337,11 +359,11 @@ internal object Templates {
             }
         } else {
             render("partials/minecraft-env.gradle", mapOf(
-                "MC_VERSION" to propSet(spec, "version",
-                    verRef(spec, "minecraft_version",
-                        "\"${spec.mcVersion}\"")),
+                "MC_VERSION" to propSetLazy(spec, "version",
+                    "minecraft_version",
+                    "\"${spec.mcVersion}\""),
                 "SIDE" to sideLine(spec),
-                "LOADER_LINES" to spec.loaders.joinToString("\n") { (l, v) ->
+                "LOADER_LINES" to spec.effectiveLoaders.joinToString("\n") { (l, v) ->
                     render("partials/loader-line.gradle", mapOf(
                         "LOADER" to l, "LOADER_VERSION" to verRef(spec,
                             "${l.lowercase().replace('-', '_')}_version",
@@ -371,12 +393,15 @@ internal object Templates {
         if (!spec.metadataFromDsl) "" else "\n" + render(
             "partials/mod-block.gradle", mapOf(
                 "PROP_LINES" to listOf(
-                    propSet(spec, "id",
-                        verRef(spec, "modid", "\"${spec.modId}\"")),
+                    propSetLazy(spec, "id",
+                        "modid", "\"${spec.modId}\""),
                     propSet(spec, "name", "\"${spec.name}\""),
-                    propSet(spec, "version",
-                        verRef(spec, "version", "\"${spec.version}\"")),
+                    propSetLazy(spec, "version",
+                        "version", "\"${spec.version}\""),
                 ).joinToString("\n") { "    $it" },
+                // declared loaders only — a synthesized `jarmod` entry
+                // would emit a meaningless `jarmod { }` mod-metadata
+                // section (jarmod-era metadata is the .transform stubs)
                 "LOADER_SECTIONS" to spec.loaders.joinToString("\n") { (l, _) ->
                     "    " + render("partials/mod-loader-section.gradle", mapOf(
                         "LOADER" to l,
@@ -429,7 +454,7 @@ internal object Templates {
 
     /** Modules a MULTILOADER project emits — `common` + one per loader. */
     fun modules(spec: InitSpec): List<String> =
-        listOf("common") + spec.loaders.map { it.first }
+        listOf("common") + spec.effectiveLoaders.map { it.first }
 
     /** Root `settings.gradle` for MULTILOADER — `include()`s every module. */
     fun multiloaderSettings(spec: InitSpec): String =
@@ -458,25 +483,25 @@ internal object Templates {
             },
             "MINECRAFT_BODY" to if (loader == null) {
                 render("partials/minecraft-env.gradle", mapOf(
-                    "MC_VERSION" to propSet(spec, "version",
-                        verRef(spec, "minecraft_version",
-                            "\"${spec.mcVersion}\"")),
+                    "MC_VERSION" to propSetLazy(spec, "version",
+                        "minecraft_version",
+                        "\"${spec.mcVersion}\""),
                     "SIDE" to sideLine(spec),
                     "LOADER_LINES" to "",
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
             } else {
                 render("partials/minecraft-env.gradle", mapOf(
-                    "MC_VERSION" to propSet(spec, "version",
-                        verRef(spec, "minecraft_version",
-                            "\"${spec.mcVersion}\"")),
+                    "MC_VERSION" to propSetLazy(spec, "version",
+                        "minecraft_version",
+                        "\"${spec.mcVersion}\""),
                     "SIDE" to sideLine(spec),
                     "LOADER_LINES" to render("partials/loader-line.gradle",
                         mapOf("LOADER" to loader,
                             "LOADER_VERSION" to verRef(spec,
                                 "${loader.lowercase().replace('-', '_')}" +
                                         "_version",
-                                "\"${spec.loaders.first {
+                                "\"${spec.effectiveLoaders.first {
                                     it.first == loader }.second}\""))),
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
@@ -511,10 +536,10 @@ internal object Templates {
             }
             if (kts) "    $verb(\"$arg\")\n" else "    $verb('$arg')\n"
         } ?: ""
-        val versionLine = "    " + propSet(spec, "version",
-            verRef(spec, "minecraft_version",
-                if (kts) "\"$spec.mcVersion\"" else "'${spec.mcVersion}'"))
-        val loaderLines = spec.loaders.joinToString("\n") { (l, v) ->
+        val versionLine = "    " + propSetLazy(spec, "version",
+            "minecraft_version",
+            if (kts) "\"$spec.mcVersion\"" else "'${spec.mcVersion}'")
+        val loaderLines = spec.effectiveLoaders.joinToString("\n") { (l, v) ->
             if (v.isEmpty()) "    loader(\"$l\")"
             else "    loader(\"$l\", \"$v\")"
         }

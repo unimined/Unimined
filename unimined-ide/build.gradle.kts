@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     api(project(":unimined-runs"))
+    "coreApi"(project(":unimined-api"))
     "coreApi"(libs.kotlinx.serialization.json)
     "coreApi"(libs.xmlutil.serialization)
 

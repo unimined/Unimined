@@ -72,6 +72,33 @@ class MavenPublicationTest {
     }
 
     @Test
+    fun `groupId and version overrides land on the publication`() {
+        val p = project()
+        p.group = "com.project"
+        p.version = "1.0"
+        val ext = p.extensions.getByType(PublishExtension::class.java)
+        ext.environment("main") {
+            it.groupId = "com.example"
+            it.version = "9.9"
+        }
+        p.evaluate()
+        val pub = publication(p, "uniminedMain")!!
+        assertEquals("com.example", pub.groupId)
+        assertEquals("9.9", pub.version)
+    }
+
+    @Test
+    fun `unset overrides fall back to project coordinates`() {
+        val p = project()
+        p.group = "com.project"
+        p.version = "1.0"
+        p.evaluate()
+        val pub = publication(p, "uniminedMain")!!
+        assertEquals("com.project", pub.groupId)
+        assertEquals("1.0", pub.version)
+    }
+
+    @Test
     fun `identical coordinates across envs fail`() {
         val p = project()
         val ext = p.extensions.getByType(PublishExtension::class.java)

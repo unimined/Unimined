@@ -187,7 +187,8 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
         }
 
         fun defaultMappings(): List<String> {
-            val l = loaders.firstOrNull()?.first?.lowercase() ?: ""
+            val l = loaders.firstOrNull()?.first?.lowercase()
+                ?: if (jarmod) "jarmod" else ""
             return when {
                 // 26.x unobfuscated needs no mapping layer at all
                 InitSpec.isUnobfEra(mc) -> emptyList()
@@ -199,6 +200,10 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 // mixed-gen merge crashes
                 l == "osl" || l == "ornithe" || product == "ornithe" ->
                     listOf("ornitheGenVersion = 2", "feather(latest)")
+                // jarmod-era (ModLoader / jar-injection) maps on
+                // MCPHackers' retro MCP — before the b1.x nostalgia
+                // fallback so b1.x jarmod envs don't pull ornithe-era
+                l == "jarmod" -> listOf("retroMCP()")
                 mc == "b1.7.3" || mc.startsWith("b1.") ->
                     listOf("nostalgia(latest)")
                 l == "rift" -> listOf("searge()")
@@ -266,8 +271,10 @@ abstract class Generate(name: String) : CliktCommand(name = name) {
                 throw IllegalArgumentException("missing required --package") },
             mcVersion = mc,
             loaders = loaders,
-            mappings = if (mappings.isEmpty() && loaders.size == 1) defaultMappings()
-                else mappings.map { resolveMappingLine(it) },
+            mappings = if (mappings.isEmpty() &&
+                    (loaders.size == 1 || (jarmod && loaders.isEmpty())))
+                defaultMappings()
+            else mappings.map { resolveMappingLine(it) },
             dsl = if (dsl == "groovy") InitSpec.Dsl.GROOVY
                 else InitSpec.Dsl.KOTLIN,
             pluginVersion = (if (template != null || includeBuild != null) ""

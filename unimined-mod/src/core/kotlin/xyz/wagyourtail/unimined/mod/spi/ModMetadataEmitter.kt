@@ -184,7 +184,12 @@ interface ModMetadataEmitter {
          *  (`Fabric-Mapping-Namespace`) use this to classify prod
          *  namespaces by role. The dev namespace itself is named-role
          *  even when unflagged, so treat it as a member too. */
-        val namedNamespaces: Set<String> = emptySet()
+        val namedNamespaces: Set<String> = emptySet(),
+        /** The project's maven group (`project.group`) — emitters for
+         *  loaders whose metadata requires a maven coordinate
+         *  (qmj's mandatory `quilt_loader.group`) use it. `null` when
+         *  the host doesn't supply one. */
+        val mavenGroup: String? = null
     ) : Serializable
 
 }

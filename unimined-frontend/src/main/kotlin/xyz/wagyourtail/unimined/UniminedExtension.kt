@@ -4,11 +4,14 @@ import groovy.lang.Closure
 import groovy.lang.MissingMethodException
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.api.Deprecations
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
+import xyz.wagyourtail.unimined.api.util.callDelegate
 import xyz.wagyourtail.unimined.api.util.delegatingTo
+import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.deps.LoaderApi
 import xyz.wagyourtail.unimined.mod.ModExtension
@@ -34,7 +37,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
      */
     private val removed1xVerbs: Map<String, String> = buildMap {
         // env blocks moved inside unimined.minecraft { sourceSet(name) {} }
-        this["reIndev"] = "the ReIndev preset is `reindev { }` in 2.0 — `unimined { reindev { ... } }` or per-env `minecraft { sourceSet(\"x\") { reindev { } } }`"
+        this["reIndev"] = "the ReIndev preset is `reindev { }` in 2.0 — `unimined.minecraft { reindev { ... } }` or per-env `minecraft { sourceSet(\"x\") { reindev { } } }`"
         this["modsRemapRepo"] = "mod dependencies resolve through unimined's managed repositories automatically — remove this call"
         // repo helpers: maven repos are auto-registered per loader
         val repos = "maven repositories are auto-registered per loader environment in 2.0 — remove this call (custom repos can be added via `repositories {}`)"
@@ -55,18 +58,27 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
     fun methodMissing(name: String, args: Any): Any? {
         val argArray = args as Array<*>
         if (name == "minecraft" && argArray.isNotEmpty()) {
-            throw GradleException(
-                "unimined.minecraft(<sourceSet>) { } moved in Unimined 2.0 — " +
+            project.failProblem(
+                "dsl/moved-minecraft",
+                "unimined.minecraft(<sourceSet>) { } moved in Unimined 2.0",
                 "use `unimined.minecraft { }` and configure the source-set " +
                 "environment inside (`minecraft { sourceSet(<name>) { } }`). " +
                 "See docs/migration-1x-to-2.0.md for the 2.0 migration notes."
             )
         }
         removed1xVerbs[name]?.let {
-            throw GradleException(
+            project.failProblem(
+                "dsl/removed-verb",
                 "unimined.$name(...) was removed in Unimined 2.0 — $it"
             )
         }
+        project.reportProblem(
+            "dsl/method-missing",
+            "unimined: no method '$name' on the unimined extension",
+            "call was ${name}(" +
+                argArray.joinToString { it?.toString() ?: "null" } + ")",
+            UniminedProblems.Severity.ERROR
+        )
         throw MissingMethodException(name, javaClass,
             argArray.filterNotNull().toTypedArray())
     }
@@ -162,7 +174,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
             xyz.wagyourtail.unimined.runs.RunsExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** `unimined.mapping { }` → the `unimined-mapping` extension. */
@@ -180,7 +192,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
             xyz.wagyourtail.unimined.mapping.MappingExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** `unimined.source { }` → the `unimined-source` extension. */
@@ -198,7 +210,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
             xyz.wagyourtail.unimined.source.SourceExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     @Deprecated("moved to top-level in 2.0", level = DeprecationLevel.ERROR)
@@ -224,12 +236,12 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         val extension = project.extensions.getByType(MinecraftExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /**
      * `unimined.migrateMappings("main") { target { yarn(...) } }` —
-     * registers the `migrateMappings<SS>` task migrating the source
+     * registers the `migrate<Ss>Mappings` task migrating the source
      * set's sources onto a different mappings release — delegates to
      * the `unimined-migrate` plugin's `migrate` extension (see
      * `MigrateMappingsTask` / plan.md §6).
@@ -248,7 +260,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
 
     /**
      * `unimined.exportMappings("main") { export { ... } }` — registers
-     * the `exportMappings<SS>` task writing the environment's resolved
+     * the `export<Ss>Mappings` task writing the environment's resolved
      * mappings through UML writers (1.x `exportMappings` parity) —
      * delegates to `unimined-minecraft`'s extension.
      */
@@ -282,7 +294,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         val extension = project.extensions.getByType(MigrateExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** `unimined.remap { }` → the `unimined-remap` extension. */
@@ -298,7 +310,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         val extension = project.extensions.getByType(RemapExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /** `unimined.mod { }` → the `unimined-mod` extension. */
@@ -314,7 +326,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         val extension = project.extensions.getByType(ModExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
     /**
@@ -355,7 +367,7 @@ abstract class UniminedExtension @Inject constructor(private val project: Projec
         val extension = project.extensions.getByType(TransformExtension::class.java)
         action.delegate = extension
         action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        action.callDelegate()
     }
 
 }

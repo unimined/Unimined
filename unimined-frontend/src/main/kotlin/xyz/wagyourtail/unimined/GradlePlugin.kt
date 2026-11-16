@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.Perf
+import xyz.wagyourtail.unimined.api.util.reportProblem
 
 /**
  * Plugin id `xyz.wagyourtail.unimined` — the frontend aggregation facade.
@@ -13,6 +14,12 @@ class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         Perf.syncFrom(target)
+        // the frontend is the mod-project facade — every env binds to a
+        // Gradle source set, so `java` is effectively required. Apply it
+        // rather than let a missing declaration leave all envs silently
+        // inert (the `withPlugin("java")` gates in the stack below never
+        // fire). Sub-plugins keep their own gating for standalone use.
+        target.pluginManager.apply("java")
         for (id in DEFAULT_STACK) {
             target.pluginManager.apply(id)
         }
@@ -34,12 +41,15 @@ class GradlePlugin : Plugin<Project> {
      */
     private fun warnOnLowDaemonHeap(target: Project) {
         if (Runtime.getRuntime().maxMemory() < MIN_DAEMON_HEAP) {
-            target.logger.warn("")
-            target.logger.warn("[Unimined] The Gradle daemon has less than ${MIN_DAEMON_HEAP shr 30}GB of heap.")
-            target.logger.warn("[Unimined] Remapping Minecraft and mod artifacts will likely fail with OutOfMemoryError.")
-            target.logger.warn("[Unimined] Add to your gradle.properties:")
-            target.logger.warn("[Unimined]   org.gradle.jvmargs=-Xmx${MIN_DAEMON_HEAP shr 30}g")
-            target.logger.warn("")
+            target.reportProblem(
+                "env/daemon-heap",
+                "the Gradle daemon has less than " +
+                    "${MIN_DAEMON_HEAP shr 30}GB of heap — remapping " +
+                    "Minecraft and mod artifacts will likely fail with " +
+                    "OutOfMemoryError",
+                "add to your gradle.properties: " +
+                    "org.gradle.jvmargs=-Xmx${MIN_DAEMON_HEAP shr 30}g"
+            )
         }
     }
 

@@ -24,6 +24,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -184,13 +185,17 @@ abstract class MigrateMappingsTask @Inject constructor(
         val inputTree = SerializedMappingData.readEither(
             inputBundleFile.get().asFile.toPath()
         ).view<MappingTree>()
-            ?: error("input bundle contains no UML MappingTree view")
+            ?: project.failProblem("migrate/no-tree-view",
+                "unimined: input bundle contains no UML MappingTree " +
+                    "view")
         val targetTree = readMaterializedManifest(
             targetSourcesManifest.get(),
             environmentId.get(), logger,
             globalCacheDir.orNull?.asFile?.toPath()
         ).view<MappingTree>()
-            ?: error("target mapping data does not expose a UML MappingTree view")
+            ?: project.failProblem("migrate/no-tree-view",
+                "unimined: target mapping data does not expose a UML " +
+                    "MappingTree view")
 
         val fromNs = Namespace(devNamespace.get())
         val toNsName = pickTargetNamespace(targetTree, targetDevNamespace.orNull)
@@ -201,11 +206,12 @@ abstract class MigrateMappingsTask @Inject constructor(
         val shared = inputTree.namespaces.toSet() intersect targetTree.namespaces.toSet()
         val via = pickBridgeNamespace(
             shared, bridgeNamespace.orNull, prodNamespaces.get()
-        ) ?: error(
-            "cannot migrate: input tree namespaces " +
+        ) ?: project.failProblem(
+            "migrate/no-bridge-namespace",
+            "unimined: cannot migrate: input tree namespaces " +
                     "${inputTree.namespaces} and target tree namespaces " +
-                    "${targetTree.namespaces} share none — set " +
-                    "`bridgeNamespace` or choose compatible mappings"
+                    "${targetTree.namespaces} share none",
+            "set `bridgeNamespace` or choose compatible mappings"
         )
 
         log.lifecycle(

@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.publish.internal
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.api.util.failProblem
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -117,10 +117,12 @@ internal object MavenPublicationWiring {
             "${pubs.joinToString(", ") { it.name }} -> " +
                 "${coord.first}:${coord.second}:${coord.third}"
         }
-        throw GradleException(
+        project.failProblem(
+            "publish/duplicate-coordinates",
             "unimined-publish: multiple publications resolve to the " +
-                "same coordinates ($detail). Set a distinct artifactId per " +
-                "environment via uniminedPublish { environment(\"<env>\") { " +
+                "same coordinates ($detail)",
+            "set a distinct artifactId per environment via " +
+                "uniminedPublish { environment(\"<env>\") { " +
                 "artifactId = \"...\" } }"
         )
     }

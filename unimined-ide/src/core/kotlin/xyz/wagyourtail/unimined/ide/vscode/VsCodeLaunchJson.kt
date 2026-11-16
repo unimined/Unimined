@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.ide.vscode
 
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
 import xyz.wagyourtail.unimined.ide.IdeRunModel
 
 /**
@@ -9,6 +10,7 @@ import xyz.wagyourtail.unimined.ide.IdeRunModel
  * and prod runs launch correctly without any buildship/JDT
  * classpath wiring.
  */
+@NoGroovyTwin("IDE launch.json renderer — programmatic API")
 object VsCodeLaunchJson {
 
     private fun esc(s: String): String = s
@@ -27,7 +29,12 @@ object VsCodeLaunchJson {
         projectName: String,
         envToDisplay: (IdeRunModel) -> String = {
             "unimined ${it.environmentId}:${it.name}"
-        }
+        },
+        /** Absolute `@argfile` path per run name — when present the
+         *  `vmArgs` field points at it and `classPaths` shrinks to the
+         *  stable project output dirs (the jar classpath rides `-cp`
+         *  inside the argfile), keeping launch.json dep-change-proof. */
+        argfile: (IdeRunModel) -> String? = { null }
     ): String = buildString {
         append("{\n")
         append("    \"version\": \"0.2.0\",\n")
@@ -54,10 +61,12 @@ object VsCodeLaunchJson {
                             "\"${esc(model.programArgs.joinToString(" "))}\",\n"
                 )
             }
-            if (model.jvmArgs.isNotEmpty()) {
+            val argPath = argfile(model)
+            if (argPath != null || model.jvmArgs.isNotEmpty()) {
                 append(
                     "            \"vmArgs\": " +
-                            "\"${esc(model.jvmArgs.joinToString(" "))}\",\n"
+                            "\"${esc(argPath?.let { "@$it" }
+                                ?: model.jvmArgs.joinToString(" "))}\",\n"
                 )
             }
             append(
@@ -78,10 +87,14 @@ object VsCodeLaunchJson {
                 append("            },\n")
             }
             append("            \"classPaths\": [\n")
-            model.classpath.forEachIndexed { j, entry ->
+            val cpEntries = model.classpath.filter {
+                argPath == null || it.group ==
+                        xyz.wagyourtail.unimined.ide.ClasspathGroup.PROJECT
+            }
+            cpEntries.forEachIndexed { j, entry ->
                 append(
                     "                \"${esc(entry.jar)}\"" +
-                            (if (j < model.classpath.size - 1) ",\n" else "\n")
+                            (if (j < cpEntries.size - 1) ",\n" else "\n")
                 )
             }
             append("            ]\n")

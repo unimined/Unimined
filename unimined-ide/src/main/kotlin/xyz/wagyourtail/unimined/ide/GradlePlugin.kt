@@ -4,7 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.DefaultTaskExecutionRequest
 import xyz.wagyourtail.unimined.api.spi.IdeSyncTasks
-import xyz.wagyourtail.unimined.ide.internal.GenerateIdeRunsTask
+import xyz.wagyourtail.unimined.ide.task.GenerateIdeRunsTask
 import xyz.wagyourtail.unimined.ide.internal.IdeWiring
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 

@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.ide.internal
+package xyz.wagyourtail.unimined.ide.task
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -47,34 +47,67 @@ abstract class GenerateIdeRunsTask : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    /** Per-run `@argfile`s — jvm args + resolved `-cp`, written here
+     *  so the IDE config files stay byte-stable across dependency
+     *  changes (the config points at the file; only its content
+     *  refreshes). */
+    @get:OutputDirectory
+    abstract val argfilesDir: DirectoryProperty
+
     private fun displayName(model: IdeRunModel) =
         "unimined ${model.environmentId}:${model.name}"
 
     private fun fileName(model: IdeRunModel) =
         "unimined_${model.environmentId}_${model.name}"
 
+    private fun argfileFor(model: IdeRunModel): File =
+        argfilesDir.get().asFile.resolve("${fileName(model)}.args")
+
+    /** JVM `@argfile` content: one token per line — `-cp` + jvm args.
+     *  Backslashes and quotes are escaped per the launcher format;
+     *  program args + main class stay in the IDE config (IDE fields
+     *  require them and their content is dep-stable). */
+    private fun writeArgfile(model: IdeRunModel): File {
+        fun tok(s: String): String {
+            val esc = s.replace("\\", "\\\\").replace("\"", "\\\"")
+            return if (esc.any { it.isWhitespace() }) "\"$esc\"" else esc
+        }
+        val args = argfileFor(model)
+        args.parentFile.mkdirs()
+        args.writeText(
+            (model.jvmArgs + listOf(
+                "-cp", model.classpath.joinToString(
+                    java.io.File.pathSeparator) { it.jar }
+            )).joinToString("\n") { tok(it) } + "\n"
+        )
+        return args
+    }
+
     @TaskAction
     fun generate() {
         val out = outputDir.get().asFile
         out.mkdirs()
         val models = runModels.get()
+        val argfiles = models.associate { it.name to writeArgfile(it) }
         when (format.get()) {
             IdeFormat.IDEA -> models.forEach { model ->
                 File(out, "${fileName(model)}.xml").writeText(
                     IdeaRunXml.renderRunConfiguration(
-                        model, displayName(model), moduleName.get()
+                        model, displayName(model), moduleName.get(),
+                        argfiles[model.name]?.absolutePath
                     )
                 )
             }
             IdeFormat.VSCODE -> File(out, "launch.json").writeText(
                 VsCodeLaunchJson.renderLaunchJson(
                     models, projectName.get()
-                )
+                ) { argfiles[it.name]?.absolutePath }
             )
             IdeFormat.ECLIPSE -> models.forEach { model ->
                 File(out, "${fileName(model)}.launch").writeText(
                     EclipseLaunchXml.renderLaunchFile(
-                        model, projectName.get(), displayName(model)
+                        model, projectName.get(), displayName(model),
+                        argfiles[model.name]?.absolutePath
                     )
                 )
             }

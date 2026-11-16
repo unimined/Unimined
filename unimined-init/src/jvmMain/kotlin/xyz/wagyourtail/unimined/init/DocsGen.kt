@@ -66,7 +66,10 @@ fun main(args: Array<String>) {
         loaders = listOf("forge" to "47.2.0"), side = "server"),
         Templates::build)
     putBoth("jarmod", base.copy(
-        mcVersion = "b1.7.3", loaders = emptyList(), jarmod = true),
+        mcVersion = "b1.7.3", loaders = emptyList(), jarmod = true,
+        // ModLoader-era maps on MCPHackers' retro MCP, not yarn —
+        // and `effectiveLoaders` synthesizes `loader("jarmod", ...)`
+        mappings = listOf("retroMCP()")),
         Templates::build)
     putBoth("jars-split", base.copy(splitJars = true), Templates::build)
     putBoth("jars-merged", base.copy(splitJars = false), Templates::build)

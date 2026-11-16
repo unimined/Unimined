@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.api.util.registerDeprecatedTaskAlias
 import xyz.wagyourtail.unimined.minecraft.AccessDslSpec
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
@@ -28,10 +29,14 @@ internal object ModPackagingWiring {
 
     fun wire(project: Project, environment: MinecraftEnvironment, sourceSet: SourceSet) {
         val environmentId = environment.environmentId
+        // verb<Env>Noun + `gen` abbreviation (repo-wide convention) —
+        // `gen<Fabric>ModMetadata`; the pre-convention
+        // `generate<Env>ModMetadata` names stay as deprecated aliases
+        val envCap = environmentId.cap()
         val taskName = if (environmentId == "main") {
-            "generateModMetadata"
+            "genModMetadata"
         } else {
-            "generate${environmentId.cap()}ModMetadata"
+            "gen${envCap}ModMetadata"
         }
 
         val outDir = project.layout.buildDirectory
@@ -76,6 +81,7 @@ internal object ModPackagingWiring {
             t.devNamespace.set(minecraft.devNamespace(environmentId))
             t.prodNamespaces.set(minecraft.modSourceNamespaces(environmentId))
             t.namedNamespaces.set(minecraft.namedNamespaces(environmentId))
+            t.mavenGroup.set(project.provider { project.group.toString() })
             // plain paths, not the live FileCollection — the generated
             // srcDir below would otherwise feed the task's own output back
             // as an input and self-depend
@@ -162,6 +168,15 @@ internal object ModPackagingWiring {
                 )
             }
         }
+
+        // pre-convention `generate<Env>ModMetadata` names — deprecated
+        // aliases (the abbreviation is `gen` repo-wide)
+        val oldTaskName = if (environmentId == "main") {
+            "generateModMetadata"
+        } else {
+            "generate${envCap}ModMetadata"
+        }
+        project.registerDeprecatedTaskAlias(oldTaskName, task)
 
         // publish the env's resolved mod id for run-config `{modid}`
         // templating (fabric client gametest's
