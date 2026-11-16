@@ -1920,20 +1920,24 @@ features you'll hit while porting (each links to its guide page):</p>
 <code>minecraftForge</code>, <code>neoForge</code>/<code>neoForged</code>/<code>neoforge</code>, <code>cleanroom</code>,
 <code>legacyFabric</code>, <code>babric</code>, <code>ornitheFabric</code>/<code>ornithe</code>, <code>jarMod</code>,
 <code>foxLoader</code>, <code>liteloader</code>, <code>rift</code>, <code>spigot</code>, <code>paper</code>,
-<code>bukkit</code>/<code>craftBukkit</code> — is now <code>loader("&lt;id&gt;", "&lt;version&gt;")</code>
-(<code>bukkit</code>/<code>craftBukkit</code> → <code>loader("craftbukkit", …)</code>). The jar-mod
-era keeps dedicated verbs too: <code>env.jarmod("x")</code> / <code>env.fg1("x")</code> /
-<code>env.customSearge()</code>.</p>
+<code>bukkit</code>/<code>craftBukkit</code> — is now a named <strong>version-arg verb</strong>:
+<code>fabric("0.16.0")</code>, <code>forge("47.2.0")</code>, <code>neoForge("21.0.0")</code>, … Each
+verb is exactly <code>loader("&lt;id&gt;", "&lt;version&gt;")</code> under the hood, and the
+generic form stays available for ids without a verb
+(<code>bukkit</code>/<code>craftBukkit</code> → <code>craftbukkit(…)</code> → <code>craftbukkit(…)</code>;
+see the <a href="../guide/loaders/">verb table</a>). Spec-config still rides
+the trailing block — <code>fabric("0.16.0") { spec -&gt; … }</code> delegates to
+the transform spec, not a 1.x patcher object.</p>
 <p>Special cases:</p>
 <ul>
-<li><strong><code>merged { fabric; forge }</code></strong> — gone as a block; repeat
-  <code>loader(...)</code> in one env instead. The <strong>first</strong> declaration is
+<li><strong><code>merged { fabric; forge }</code></strong> — gone as a block; repeat loader
+  declarations in one env instead. The <strong>first</strong> declaration is
   the primary (owns prod namespace, remap, metadata, runs); later
   ones are compile-only secondaries
   (<a href="../guide/multi-project/#merged-several-loaders-on-one-environment">Multi-project</a>).</li>
 <li><strong><code>modloader</code>/<code>risugami</code> (Risugami's ModLoader)</strong> — ModLoader is
   not a loader in 2.0; it's a jar-mod dependency. Declare
-  <code>jarmod("&lt;agentVersion&gt;")</code> (or <code>loader("jarmod", …)</code>) and put
+  <code>jarMod("&lt;agentVersion&gt;")</code> and put
   <code>jarMod("risugami:modloader:&lt;mcVersion&gt;")</code> on the env — the
   <code>jarmod-modloader-fixes</code> step patches <code>ModLoader.class</code> in dev
   automatically. <code>loader("modloader")</code>/<code>loader("risugami")</code> fail
@@ -1941,6 +1945,10 @@ era keeps dedicated verbs too: <code>env.jarmod("x")</code> / <code>env.fg1("x")
 <li><strong><code>nil</code> (NilLoader), <code>folia</code>, <code>arch</code></strong> — no 2.0 loader
   descriptor exists yet; <code>loader("&lt;id&gt;")</code> for these fails with
   <em>unknown loader</em>. NilLoader is on the planned list.</li>
+<li><strong>JarMod era extras</strong> — <code>env.jarmod("x")</code>/<code>env.jarMod("x")</code> /
+  <code>env.fg1("x")</code> declare the loader; <code>env.customSearge()</code> toggles
+  the user-supplied searge/mcp chain (requires the
+  <code>transform.jarmod</code> plugin).</li>
 <li><strong><code>flint { }</code></strong> — removed entirely: maven.flintloader.net is
   offline so <code>net.flintloader:*</code> artifacts are unresolvable. The
   descriptor can return via <code>LoaderRegistry</code> + a mirrored repo if

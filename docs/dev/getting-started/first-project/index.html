@@ -1514,7 +1514,7 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">))</span>
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="n">fabric</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">            </span><span class="n">yarn</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"yarn_mappings"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">        </span><span class="p">}</span>
@@ -1547,7 +1547,7 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">))</span>
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">,</span><span class="w"> </span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="n">fabric</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">            </span><span class="n">yarn</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"yarn_mappings"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="o">}</span>
@@ -1588,8 +1588,9 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <p>Key pieces:</p>
 <ul>
 <li><code>unimined { minecraft { } }</code> — an <em>environment</em> bound to the <code>main</code>
-  source set. <code>version</code> is the MC version; <code>loader("fabric", "…")</code>
-  applies a loader.</li>
+  source set. <code>version</code> is the MC version; <code>fabric("…")</code> applies a
+  loader (named verbs like <code>forge(…)</code>/<code>neoforge(…)</code> are sugar for the
+  generic <code>loader("&lt;id&gt;", "…")</code> — see <a href="../../guide/loaders/">Loaders</a>).</li>
 <li><code>mappings { }</code> — the remap chain (<code>yarn(...)</code> here — the version
   lives in <code>gradle.properties</code>; see
   <a href="../../guide/mappings/">Mappings</a>).</li>

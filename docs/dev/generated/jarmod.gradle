@@ -13,7 +13,7 @@ unimined {
     minecraft {
         version.set(providers.gradleProperty("minecraft_version"))
 
-        loader("jarmod", providers.gradleProperty("jarmod_version").get())
+        jarmod(providers.gradleProperty("jarmod_version").get())
         mappings {
             retroMCP()
         }

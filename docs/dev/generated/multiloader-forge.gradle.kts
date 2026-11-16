@@ -14,7 +14,7 @@ unimined {
     minecraft {
         version.set(providers.gradleProperty("minecraft_version"))
 
-        loader("forge", providers.gradleProperty("forge_version").get())
+        forge(providers.gradleProperty("forge_version").get())
         mappings {
             yarn(providers.gradleProperty("yarn_mappings").get())
         }

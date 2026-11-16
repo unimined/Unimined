@@ -959,6 +959,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-mixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using mixins
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1566,6 +1577,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-mixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using mixins
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1628,7 +1650,7 @@ mods.toml, …) at build time:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">        </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">))</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">fabric</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">            </span><span class="n">yarn</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"yarn_mappings"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="p">}</span>
@@ -1656,7 +1678,7 @@ mods.toml, …) at build time:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">))</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">,</span><span class="w"> </span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="n">fabric</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">            </span><span class="n">yarn</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"yarn_mappings"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="o">}</span>
@@ -1751,6 +1773,26 @@ project's own compile classpath — casts against injected interfaces
 in first-party sources need a declared rule (<code>access {
 injectInterface(...) }</code>), which applies to the dev artifact <em>and</em>
 ships for dependents. The scan only adds dependents-facing metadata.</p>
+<h2 id="using-mixins">Using mixins<a class="headerlink" href="#using-mixins" title="Permanent link">&para;</a></h2>
+<p>No MixinGradle-style plugin or annotation-processor wiring is
+needed — declare configs and unimined handles the rest:</p>
+<ul>
+<li><strong>Declare</strong> — <code>mixins { create("my.mixins") { } }</code> generates
+  <code>*.mixins.json</code> files; hand-written configs in resources are
+  picked up by <code>discoverMixinConfigs</code> (default on) and unioned in.</li>
+<li><strong>Reference</strong> — the emitted loader document points at every
+  config automatically (fmj <code>mixins</code> array, <code>MixinConfigs</code> manifest
+  attribute on forge-family, <code>mixin</code> key on quilt).</li>
+<li><strong>Refmaps</strong> — mod dependencies that carry <code>*.mixins.json</code> get
+  dev-namespace refmaps during dependency remap, and your own
+  production repack emits the production refmap — mixin works in
+  dev and prod on every loader family with no extra setup
+  (<a href="../remap-pipeline/">remap pipeline</a>).</li>
+<li><strong>Interface injection</strong> — opt in with
+  <code>interfaceInjectionScan</code> to derive <code>inject-interface</code> metadata
+  from your <code>@Mixin</code> classes, or declare rules directly with
+  <code>access { injectInterface(...) }</code> (<a href="#discovery">above</a>).</li>
+</ul>
 <h2 id="access-files">Access files<a class="headerlink" href="#access-files" title="Permanent link">&para;</a></h2>
 <p>No DSL is required — an access file under the environment's
 resource roots (<code>*.accesswidener</code>, <code>*.classtweaker</code>/<code>.ct</code>,

@@ -362,6 +362,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -378,6 +396,36 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1423,6 +1471,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1442,6 +1509,29 @@
 
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gradle</strong></td>
+<td>9.x — the daemon runs on <strong>Java 17+</strong>; toolchain-managed JDKs still compile for whatever <code>javaVersion</code> the env targets</td>
+</tr>
+<tr>
+<td><strong>IDE</strong></td>
+<td>run configs are emitted for IntelliJ IDEA (<code>.idea</code> XML), Eclipse (<code>.launch</code>), and VS Code (<code>launch.json</code>) via <code>genIdeRuns</code> — no IDE plugin required</td>
+</tr>
+<tr>
+<td><strong>Heap</strong></td>
+<td>give the daemon ≥4G (<code>org.gradle.jvmargs=-Xmx4g</code> in <code>gradle.properties</code>) — remapping Minecraft artifacts under less risks <code>OutOfMemoryError</code>, and unimined warns at startup</td>
+</tr>
+</tbody>
+</table>
 <p>Unimined 2.0 is a Gradle plugin. Your <code>settings.gradle.kts</code> carries
 three pieces:</p>
 <ul>

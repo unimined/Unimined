@@ -13,7 +13,7 @@ unimined {
     minecraft {
         version.set(providers.gradleProperty("minecraft_version"))
 
-        loader("forge", providers.gradleProperty("forge_version").get())
+        forge(providers.gradleProperty("forge_version").get())
         mappings {
             mcp(providers.gradleProperty("mcp_channel").get(), providers.gradleProperty("mcp_version").get())
         }
