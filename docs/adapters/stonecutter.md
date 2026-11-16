@@ -197,3 +197,6 @@ one project.
   adapter module targets 21 too (the rest of Unimined stays at 17)
 - `dev.kikugie.stonecutter` must be applied; without it the
   adapter logs a warning and does nothing
+- The Stonecutter version is whatever you put in your `plugins {}`
+  block — the adapter detects it via `withPlugin`, so bump it there
+  without waiting on Unimined

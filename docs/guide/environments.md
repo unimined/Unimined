@@ -41,11 +41,21 @@ dependency configurations.
   with `EnvironmentSection`s) composes one into another, and nested
   envs (`datagen()`/`gametest()`) inherit their parent implicitly.
 - `side` selects `Side.CLIENT`/`SERVER`/`MERGED`
-  ([example](../generated/side-server.gradle.kts) / [groovy](../generated/side-server.gradle)).
+  ([example](../generated/side-server.gradle.kts) / [groovy](../generated/side-server.gradle));
+  `Side.COMMON` is applied by `splitEnvironmentSourceSets()`
+  ([below](#split-environment-source-sets)).
 - Multiple envs in one project = flat multi-env;
   [multi-module](../guide/multi-project.md) is the alternative.
 
 Envs are also the scope of `mod { }` metadata and `runs { }`.
+
+**Task naming.** Per-environment tasks follow `verb<Env>Noun` — the
+environment id (capitalized) sits between the verb and the object:
+`genFabricSources`, `validateForgeAccess`, `remapClientJar`,
+`exportPaperDevBundle`. The `main` environment elides the infix:
+`genSources`, `validateAccess`, `remapJar`. Task names normalized
+onto this convention keep their old shape as a deprecated alias —
+`gradlew oldName` warns and runs the canonical task.
 
 ## Environment knobs
 
@@ -57,13 +67,23 @@ Everything below lives inside an env block (`minecraft { … }` or
   toolchains for env-scoped compiles (conventioned from the
   extension-level `unimined.useToolchains`); `requiredJavaVersion`
   reads the effective requirement — version-json `javaVersion`
-  raised by your `javaVersion` — and feeds toolchains, launchers,
-  and tool-exec fallbacks.
+  raised by your `javaVersion` — and feeds launchers and tool-exec
+  fallbacks. `compileJavaVersion` is the level `compile*` tasks
+  actually emit at (toolchain selection, `--release`,
+  `sourceCompatibility`/`targetCompatibility`, Kotlin `jvmTarget`)
+  — it conventions to `requiredJavaVersion`, and the
+  [jvmdg adapter](../adapters/jvmdg.md)'s `source` raises it without
+  moving the run floor.
 - **Access widening** — `accessWideners` / `accessTransformers` are
   file collections of `*.accesswidener` / `accesstransformer.cfg`
   applied to the dev artifact; `transitiveAccessWideners` (default
   `true`) lets AW `transitive-*` directives from compile-classpath
-  mods contribute — set `false` to isolate the dev jar. The
+  mods contribute — set `false` to isolate the dev jar.
+  `dependencyInterfaceInjection` (default `true`, loom's
+  `interfaceInjection.enableDependencyInterfaceInjection`) controls
+  dependency-declared `*injected_interfaces` independently — mods
+  injecting interfaces you compile against still apply when
+  `transitiveAccessWideners` is off. The
   [`access { }` block](#access-declarations) below covers inline
   rules, file declarations, and resource auto-discovery.
 - **Prod packaging** — `defaultRemapJar` (default `true`) auto-wires
@@ -85,9 +105,146 @@ Everything below lives inside an env block (`minecraft { … }` or
   `libraryFilter { dep -> … }` keeps a library only when every
   filter accepts it; `libraryCoordFilters` maps whole coords;
   `obfuscatedLibraries` flags coords that remap with the MC jar.
+- **LWJGL 3 swap** — `lwjgl3 { }` drops every `org.lwjgl.lwjgl:*`
+  library (jars *and* natives entries) and puts lwjgl3 artifacts on
+  the classpath and the host natives set instead — the
+  RetroFuturaGradle surface for running old Minecraft on modern
+  JVMs:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    minecraft {
+        sourceSet("main") {
+            version = "1.7.10"
+            lwjgl3 {
+                version.set("3.3.3")
+                bindings.add("stb")           // + natives
+                nativeslessBindings.add("harfbuzz")
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    minecraft {
+        sourceSet("main") {
+            version.set("1.7.10")
+            lwjgl3 {
+                version = "3.3.3"
+                bindings.add("stb")
+                nativeslessBindings.add("harfbuzz")
+            }
+        }
+    }
+    ```
+
+  Natives resolve under the host's lwjgl3 classifier
+  (`natives-windows`/`natives-linux`/`natives-macos` + `-x86`/`-arm64`
+  variants). The lwjgl3ify mod itself — for environments needing the
+  lwjgl2 API at runtime — is a normal `modImplementation`/`include`
+  dependency; this block only swaps the bindings.
+- **Ornithe artifact passes** — `loader("ornithe", …)` environments
+  get Ploceus's default-on Minecraft-jar passes automatically:
+  `condor` synthesizes `LocalVariableTable` debug info on the dev
+  artifact (versions before 1.8.2 — every alpha/beta build plus
+  releases and snapshots up to `1.8.2-pre*`; infdev and older stay
+  out) so decompilers and Mixin `@Local` captures see real variable
+  slots, and `preen` splits ProGuard-merged bridge methods back into
+  `ACC_BRIDGE` delegates on every Ornithe version. The newest
+  `net.ornithemc:nests` build published for the env's version + side
+  also joins the mapping chain automatically (see
+  [Mappings](mappings.md#ornithe-enrichers)). Each pass opts out
+  individually:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    minecraft {
+        sourceSet("main") {
+            version = "b1.7.3"
+            loader("ornithe", "0.19.5")
+            disableLvtPatch()   // skip the condor LVT pass
+            disablePreen()      // skip the bridge-method pass
+            disableNests()      // skip the auto nests source
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    minecraft {
+        sourceSet("main") {
+            version.set("b1.7.3")
+            loader("ornithe", "0.19.5")
+            disableLvtPatch()
+            disablePreen()
+            disableNests()
+        }
+    }
+    ```
+
+  The passes scope to the environment artifact — remapped dependency
+  views and `remapJar` outputs never see them. `patchLvts`,
+  `applyPreen` and `autoNests` are the underlying booleans behind
+  the `disable*` verbs.
 - `combinedSources` / `combinedOutputs` — file collections
   populated by `combineWith`; read-mostly, used by generated
   source jars and mod packaging.
+
+## Split environment source sets
+
+Loom `splitEnvironmentSourceSets()` parity — compile-time
+client/server separation on a single project:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            version = "1.20.1"
+            loader("fabric", "0.16.0")
+            splitEnvironmentSourceSets()
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            version.set("1.20.1")
+            loader("fabric", "0.16.0")
+            splitEnvironmentSourceSets()
+        }
+    }
+    ```
+
+`src/main` compiles against the **common** artifact — the intersection
+of the client and server jars (`Side.COMMON`) — so shared code can't
+reference client-only classes (`Minecraft`, screens, rendering).
+Client-only code lives in `src/client`, which compiles against the
+full client jar and sees `main`'s output (its compile classpath picks
+up `main`'s classesDirs, its runtime classpath the full output).
+
+- `main` → `Side.COMMON`; the `client` env (`src/client`) →
+  `Side.CLIENT` and aux status — it inherits `main`'s
+  loader/dependency/access sections and produces no separate published
+  artifact or mod metadata of its own.
+- `jar` folds the client output in, so `remapJar`/`remapSourcesJar`
+  carry it through production; `sourcesJar` gains the client sources;
+  `test` sees the client's classpath view.
+- `runClient`/`runProdClient` — and any client-side run bound to
+  `main` — launch through the client environment (the common jar
+  can't launch a client); `runServer`/`runProdServer` stay on `main`,
+  where the common jar is the server's view.
+- On providers without genuinely split distributions (declared
+  legacydist jars, dev bundles, BuildTools outputs) the common
+  artifact aliases the merged jar — the client-only fence then only
+  covers entries the shared jar lacks. Non-mergeable conversion
+  products (independent forks like BTA/ReIndev/NSSS) reject `COMMON`
+  outright — split-source-set mode needs real client+server
+  distributions.
+- The call is idempotent; a pre-existing `sourceSet("client")` env is
+  repurposed as the split client.
 
 ## Access declarations
 
@@ -122,6 +279,15 @@ no AT analog; narrowing `at()` access has no AW form).
                     // is the loader's consumed format
                     fileName = "META-INF/{modid}_at.cfg"
                     format = "legacy_at"
+
+                    // fail the build when a declared target doesn't
+                    // exist in the dev artifact — NFRT
+                    // `--validated-access-transformer` parity; covers
+                    // every own declaration channel (these rules,
+                    // from(...) files, accessWideners/
+                    // accessTransformers). Dependency docs are never
+                    // validated. Default false.
+                    validate = true
 
                     // existing files — format detected per file,
                     // routed like accessWideners.from(...) /
@@ -222,6 +388,22 @@ no AT analog; narrowing `at()` access has no AW form).
 - `combineWith` propagates access rules alongside the declared file
   collections, so combined environments share declarations.
 
+#### `validate<Env>Access`
+
+Environments that declare access documents also get a
+`validate<Env>Access` task (loom `validateAccessWidener` parity):
+every own declaration — `access { }` rules, `from(...)` files,
+`accessFile(...)`, `accessWideners`/`accessTransformers` — is checked
+against the dev Minecraft artifact and the build fails listing each
+declared target that matched nothing, without running a remap.
+Dependency docs and coordinate-consumed docs are never validated.
+`check` depends on it, so it runs in a normal `build`; the task only
+exists when the environment actually declares access docs.
+
+This is the standalone form of `access { validate = true }` — the
+in-block flag validates during the remap pipeline instead; either
+catches stale targets, the task form without needing a remap run.
+
 ### Auto-fill flags
 
 Metadata auto-discovery toggles (see
@@ -232,6 +414,44 @@ Metadata auto-discovery toggles (see
 | `discoverMixinConfigs` | `true` | `*.mixins.json` resources auto-fill the `mixins` array |
 | `discoverGametestEntrypoints` | `true` | compiled-class scan for loader gametest interfaces/annotations |
 | `interfaceInjectionScan` | `false` | mixin-class scan deriving `inject-interface` rules (opt-in — `access { injectInterface(...) }` is the always-on path) |
+
+## Mod classpath groups
+
+Multi-mod projects tell the dev launch which classpath entries belong
+to which mod via the env-scoped `mods { }` container — the group name
+should match the mod id:
+
+```kotlin
+minecraft {
+    sourceSet("fabric") {
+        loader("fabric", "...")
+        mods {
+            register("mymod") {
+                sourceSet("main")
+                modFiles("libs/extra-mod-lib.jar")
+            }
+            register("integration") {
+                sourceSet("integration")
+            }
+        }
+    }
+}
+```
+
+Each group joins the launch classpath and serializes into the loader's
+mod-grouping channel:
+
+- **fabric-family** — the `fabric.classPathGroups` system property
+  (fabric-loader's classpath-group contract — loom `mods { }` parity),
+  groups separated by a doubled path separator;
+- **forge-family** — `id%%dir` entries appended to `MOD_CLASSES`
+  alongside the loader's own source-set groups.
+
+A run loads every declared group by default; `loadedMods` on the run
+selects a subset (see
+[run configs](run-configs.md#runconfig-fields)). Groups inherit
+through `inheritParent`/`combineWith` like other env state — a child
+re-declaring a group name shadows the parent's.
 
 ## Minecraft artifact configurations
 

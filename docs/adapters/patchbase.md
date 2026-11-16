@@ -102,16 +102,56 @@ verbatim.
     }
     ```
 
-Wires three tasks per environment:
+Wires the loop tasks per environment (the full loop is walked through
+in [Fork Development with Patch Sets](../guide/fork-dev.md)):
 
 | Task | Does |
 |---|---|
-| `applySourcePatch<Env>` | applies `patches/` unified diffs onto the `gen<Env>Sources` output, writing **only patch-covered files** to `src/<env>/java` (generated — gitignore it) so compile + JarModAgent see patched sources |
-| `createSourcePatch<Env>` | diffs `src/<env>/java` back into `patches/` — keeps the git-tracked patch source in sync |
-| `createClassPatch<Env>` | diffs the `remap<Env>Jar` output vs `minecraftRaw` into the shippable patch jar (classifier `patch[-env]`) |
+| `apply<Env>SourcePatch` | applies `patches/` unified diffs onto the `gen<Env>Sources` output, writing **only patch-covered files** to `src/<env>/java` (generated — gitignore it) so compile + JarModAgent see patched sources. Skips when the patch dir doesn't exist |
+| `create<Env>SourcePatch` | diffs `src/<env>/java` back into `patches/` — keeps the git-tracked patch source in sync. Skips when the overlay dir doesn't exist |
+| `create<Env>ClassPatch` | diffs the `remap<Env>Jar` output vs `minecraftRaw` into the shippable patch jar (classifier `patch[-env]`) |
+| `recompile<Env>McClasses` | compiles the overlay's `.java` files against the env's dev jar + Minecraft libraries |
+| `recompile<Env>Mc` | merges the compiled classes + resource patches over the dev jar → a full dev-namespace Minecraft jar (classifier `recompiled`; the FG-era `recompMc` analog). Skips when the overlay doesn't exist |
+
+The `main` environment drops `<Env>` (`applySourcePatch`,
+`createSourcePatch`, `createClassPatch`, `recompileMc`,
+`recompileMcClasses`). The pre-2.0-convention names
+(`applySourcePatch<Env>`, `recompileMc<Env>`, …) still run — each is
+a deprecated alias that warns and delegates to the canonical task.
 
 Only `patches/` belongs in git. The generated patched sources and
 the built patch jar are artifacts.
+
+!!! warning
+    Both source-patch tasks wipe and repopulate their output tree.
+    `src/<env>/java` is the patch set's generated *checkout* — keep
+    hand-written sources out of it, or retarget the overlay:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    sourceSet("main") {
+        patchBaseCreator {
+            patchDir.set(layout.projectDirectory.dir("mc-patches"))
+            sourceDir.set(layout.projectDirectory.dir("fork-src"))
+            diffContextSize.set(5)      // hunk context lines (default 3)
+            trimWhitespace.set(true)    // strip leading whitespace (default)
+            patchFormat.set("bdiff")    // or "binpatch" (default)
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    sourceSet("main") {
+        patchBaseCreator {
+            patchDir.set(layout.projectDirectory.dir("mc-patches"))
+            sourceDir.set(layout.projectDirectory.dir("fork-src"))
+            diffContextSize.set(5)      // hunk context lines (default 3)
+            trimWhitespace.set(true)    // strip leading whitespace (default)
+            patchFormat.set("bdiff")    // or "binpatch" (default)
+        }
+    }
+    ```
 
 ## Notes
 
@@ -123,3 +163,5 @@ the built patch jar are artifacts.
 - The dev flow mirrors Forge binpatches: the patch jar mutates the
   MC jar, so the loader's classes exist for compile and runtime
   without loader sources or a recompile
+- The patch-set version lives in the `patchBase("g:a:v")` coordinate
+  you declare on the env — there is no bundled default to override

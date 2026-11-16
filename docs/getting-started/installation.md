@@ -44,6 +44,13 @@ Then apply the plugin in `build.gradle.kts`:
     }
     ```
 
+The frontend applies the `java` plugin for you — source sets, compile
+tasks, and the IDE model are wired without declaring it. (The
+lower-level `xyz.wagyourtail.unimined.*` plugins stay Java-agnostic on
+purpose; if you apply them individually instead of the frontend,
+declare `java` yourself or environments stay inert and a warning is
+logged.)
+
 !!! tip "Skip the typing"
     `unimined-cli new mymod --group com.example --version 1.20.1 --loader fabric=0.16.0`
     emits this whole structure for you — see [unimined-cli](cli.md).

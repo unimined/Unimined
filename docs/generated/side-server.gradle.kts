@@ -11,7 +11,7 @@ repositories {
 
 unimined {
     minecraft {
-        version = providers.gradleProperty("minecraft_version").get()
+        version.set(providers.gradleProperty("minecraft_version"))
         side = xyz.wagyourtail.unimined.api.spec.Side.SERVER
         loader("forge", providers.gradleProperty("forge_version").get())
         mappings {

@@ -160,3 +160,29 @@ Sources jars get the marker but skip metadata/class checks (a sources
 jar legitimately lacks `.class` files). Only unimined-produced
 artifacts are linted — third-party jars in transforms are never
 validated.
+
+## Scripting surface
+
+The pipeline is data, not code — specs serialize at transform
+registration — but three escape hatches cover scripting needs:
+
+- **`applyClassTweaker { ... }`** (and the other `apply*` verbs shown
+  above) attach a custom bytecode transform to a surface without
+  writing a step type.
+- **`step(spec)` / `step(MySpec::class.java) { ... }`** append any
+  `StepSpec` to a surface. Engine plugins expose their own verbs by
+  registering them via `RemapExtension.registerDslVerb(name, factory)`
+  — this is what makes `jst {}`, `unpick {}` etc. reachable from
+  Groovy (`methodMissing` dispatch), where Kotlin extension functions
+  would be invisible.
+- **`uniminedTools { ... }`** overrides the resolved coordinates of
+  external tool jars the pipeline shells out to (`jst`, `unprotect`,
+  `mcpcleanup`, `diffpatch`, `stitch`, `forgix`,
+  `classpathPluginLoader`, `jvmdowngraderJavaApi`) — see
+  [Adapters](../adapters/index.md).
+
+The resolved pipeline is inspectable lazily:
+`uniminedRemap.stepSpecs(envName, RemapSurface.MINECRAFT)` returns a
+`Provider<List<StepSpec>>` — useful for diagnostics or wiring
+downstream tasks off the effective step list without re-resolving
+mappings.

@@ -195,4 +195,5 @@ you want it on a specific product instead of env-wide:
 - Java 17+
 - `xyz.wagyourtail.unimined.expect-platform` ≥ **1.2.0** for side
   stripping; the agent jar resolves from the applied plugin's
-  version
+  version — bump it in your `plugins {}` block, the adapter detects
+  it via `withPlugin`

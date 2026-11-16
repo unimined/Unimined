@@ -50,7 +50,9 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: docs
+      check_paths: true
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -79,6 +81,7 @@ nav:
     - Mod Metadata: guide/metadata.md
     - Multiple Source Sets & Projects: guide/multi-project.md
     - Publishing: guide/publishing.md
+    - Fork Development: guide/fork-dev.md
   - Adapters:
     - Overview: adapters/index.md
     - JvmDowngrader: adapters/jvmdg.md

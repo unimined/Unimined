@@ -106,7 +106,9 @@ are never selectable.
 
 - Java 17+
 - ModPublisher applied separately — the adapter is plumbing, not a
-  redistribution
+  redistribution. Its version is whatever you put in `plugins {}`
+  (`com.hypherionmc.modutils.modpublisher`); the adapter detects it
+  via `withPlugin`
 - API keys live in `publisher.apiKeys { }` as ModPublisher expects —
   resolve them from env vars/gradle properties; they are never logged
   by the adapter

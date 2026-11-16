@@ -85,6 +85,77 @@ the supplied sources remap straight to the dev namespace.
 
 ## Mod sources
 
-`genModSources` / `gen<Env>ModSources` remaps the mod's own sources
-jar through the same `SOURCES` surface so published `-sources`
-classifiers carry the production namespace.
+Three distinct "mod sources" flows exist — they answer different
+questions:
+
+- **Your own sources for publishing** — the env's `remap<SourcesJar>`
+  output rides the `*ProdSourcesElements` variant of the
+  `unimined<Env>` component, so a published `-sources` classifier
+  carries the production namespace (see
+  [Publishing](publishing.md)).
+- **Dependencies' published `-sources` jars** — the
+  `<bucket>SourcesRemapped` views below remap each dep's shipped
+  sources artifact into the dev namespace for IDE attach.
+- **Dependencies without shipped sources** — `genModSources` /
+  `gen<Env>ModSources` *decompiles* the env's `modImplementation` /
+  `modRuntimeOnly` dependencies (already remapped to the dev
+  namespace) through the same engine + `RemapSurface.SOURCES`
+  pipeline as `genSources`, then publishes each result under the
+  dep's own coordinates in the env's generated local repo. The dep
+  set is resolution-time and unbounded, so the decompile runs as an
+  artifact transform chained off the remapped mod views — the task
+  just resolves the views and writes the repo entries.
+
+## Dependency `-sources` attach
+
+Every bound environment also gets per-bucket views over the mod
+dependencies' *published* sources jars, complementing `genModSources`
+for deps that ship `-sources` at all (no decompile, no repo
+publish — the remapped file materializes at resolution like any
+transform output):
+
+- `<bucket>SourcesRemapped` requests each dep's docs variant
+  (`category=documentation`, `docsType=sources` — maven's
+  `-sources.jar` or a `withSourcesJar`-style `sourcesElements`
+  variant) and runs it through the environment's
+  `RemapSurface.SOURCES` pipeline, mod source namespace → dev
+  namespace, so IDE-attached sources carry dev names.
+- `<bucket>SourcesDirect` is the identity-environment pass-through
+  twin; consumers pick by `isIdentityRemap` exactly like the
+  `*Direct`/`*Remapped` jar views.
+
+The active remapped views are registered on
+`MinecraftExtension.modDevSourcesViewConfigurations` under
+`"<environmentId>:<bucket>"` keys (the sources counterpart of
+`modDevViewConfigurations`). Because the dep source namespace is
+the declared one — `modSourceNamespaces`, like the jar views — a
+sources jar published in another namespace remaps wrongly.
+
+Consumers resolve leniently and filtered to module/project
+component ids: deps that ship no `-sources` artifact contribute
+nothing, and file deps must be excluded or they would contribute
+their own jar as "sources".
+
+## Decompiler cleanup on mod sources
+
+Fernflower-era decompilers emit raw numeric arguments for OpenGL
+calls — `GL11.glBegin(7)` instead of `GL11.glBegin(GL11.GL_QUADS)`.
+Each bound environment gets an opt-in `cleanupSources` /
+`cleanup<Env>Sources` task that rewrites those literals to the named
+`GLxx`/`ARB*` constants using the same `gl_constants.json` dataset
+RetroFuturaGradle ships (`applyDecompilerCleanupToMain` parity):
+
+```bash
+./gradlew cleanupSources        # main environment's source set
+./gradlew cleanupServerSources  # the 'server' environment
+```
+
+The task walks the environment's bound source set's `java.srcDirs`
+and **modifies matching `.java` files in place** — run it once after
+pasting decompiled code into your mod, not as part of the normal
+build. Only files importing `org.lwjgl.opengl.` are touched, only
+changed files are written (atomically), and constant-owning classes
+the rewrite references (e.g. `ARBVertexBufferObject`) get their
+imports inserted automatically. Generated/patched source dirs the
+environment injects under `build/` are excluded — the task is for
+your checked-in sources.

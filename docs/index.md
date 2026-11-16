@@ -38,12 +38,14 @@ everything from alpha-era jar mods to current releases.
 - [Craftbukkit/Spigot](https://hub.spigotmc.org) and
   [Paper](https://papermc.io)
 - Vanilla conversions — ReIndev, NSSS, Better-Than-Adventure, FoxLoader
+- Merged multi-loader environments — repeat `loader()` in one env;
+  the first declaration is primary
+  (see [Multiple Source Sets & Projects](guide/multi-project.md#merged-several-loaders-on-one-environment))
 
 ### Planned
 
 - Sponge
 - NilLoader
-- merged multi-loader environments
 - ~~Flint Loader~~ (removed — maven.flintloader.net offline;
   reintroducible if the host returns)
 

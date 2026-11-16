@@ -61,6 +61,61 @@ configuration and classpath:
 Sibling `sourceSet` envs at `minecraft {}` top level don't share —
 `combineWith("main")` is the way to layer the main env's config in.
 
+### Merged: several loaders on one environment
+
+Repeat `loader(name, version)` inside a single `sourceSet` env to
+compile that source set against several loaders' APIs at once — the
+2.0 analog of 1.x's `merged { fabric; forge }`. The **first**
+`loader(...)` is the environment's primary: it owns the production
+namespace, remapping, metadata emission, and run configs. Every
+further `loader(...)` declares a *secondary* whose product and
+libraries merge onto the env's **compile** classpath only — this is
+not a client/server merge (`Side.MERGED` is the other axis) and not
+a packaging merge:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            sourceSet("common") {
+                version = "1.20.1"
+                loader("fabric", "0.16.0")   // primary — prod/remap/runs
+                loader("forge", "47.2.0")    // secondary — compile only
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            sourceSet("common") {
+                version.set("1.20.1")
+                loader("fabric", "0.16.0")   // primary — prod/remap/runs
+                loader("forge", "47.2.0")    // secondary — compile only
+            }
+        }
+    }
+    ```
+
+The env's effective `javaVersion` floor takes the strictest across
+all declared loaders. Secondary loaders land on dedicated
+configurations (`mergedLoader<Env>` for most loaders, the
+family-probed `forgeMergedLoader<Env>` plus
+`fabricMergedLoaderLibraries<Env>` for loader-embedded libs) — all
+compile-only, so `common` sources see every declared loader's API
+while production stays per-loader through the normal artifact
+ladder.
+
+Per-loader envs that need their own runs or outputs compose from the
+merged env: `combineWith("common")` (or
+`copyFrom("common", LOADER)`) validates by *membership* — an env may
+combine from a merged source when its own loader is among the
+source's declared loaders. Run configs themselves stay per-loader —
+the merged env's runs launch under the primary; to launch under a
+secondary, give that loader its own env combining the merged one.
+
 ## Multi-module: common + per-loader subprojects
 
 This is what `unimined new mymod --modules --loader fabric=…
@@ -75,10 +130,7 @@ This is what `unimined new mymod --modules --loader fabric=…
     ```groovy
     --8<-- "generated/multiloader-settings.gradle"
     ```
-`common` gets a loader-less env (MC classpath + mappings only); a
-loader module applies unimined, declares its env on `main`, and
-depends on `:common` for shared code — the fabric/forge scripts are
-the same shape with a different `loader()`:
+`common` gets a loader-less env (MC classpath + mappings only):
 
 === "Kotlin `common/build.gradle.kts`"
     ```kotlin
@@ -90,6 +142,12 @@ the same shape with a different `loader()`:
     --8<-- "generated/multiloader-common.gradle"
     ```
 
+A loader module applies unimined, declares its env on `main`, and
+depends on `:common` for shared code — the fabric/forge scripts are
+the same shape with a different `loader()`.
+
+**`fabric/build.gradle.kts`**:
+
 === "Kotlin `fabric/build.gradle.kts`"
     ```kotlin
     --8<-- "generated/multiloader-fabric.gradle.kts"
@@ -99,6 +157,8 @@ the same shape with a different `loader()`:
     ```groovy
     --8<-- "generated/multiloader-fabric.gradle"
     ```
+
+**`forge/build.gradle.kts`**:
 
 === "Kotlin `forge/build.gradle.kts`"
     ```kotlin

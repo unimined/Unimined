@@ -110,6 +110,55 @@ Inputs may be `File`s, task references, or providers — task-output
 providers carry their producer, so inputs always build before the
 merge runs.
 
+## Engine version
+
+The adapter does **not** link Forgix from its own classpath —
+`mergeLoaderJars` resolves it from the `loaderMergeForgix`
+configuration and invokes `Forgix.mergeLoaders` through an isolated
+classloader, so the coordinate you set is literally the merge
+implementation that runs.
+
+- **Bundled default:** `io.github.pacifistmc.forgix:Forgix:2.0.0`
+  (the version the release was tested against)
+- **Override — coordinate:** set `uniminedTools.forgix`:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    uniminedTools {
+        forgix.set("io.github.pacifistmc.forgix:Forgix:2.1.0")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    uniminedTools {
+        forgix.set('io.github.pacifistmc.forgix:Forgix:2.1.0')
+    }
+    ```
+
+- **Override — direct dependency** (useful for forks, local jars, or
+  a different repository artifact): declaring anything on
+  `loaderMergeForgix` replaces the default entirely:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    dependencies {
+        loaderMergeForgix("io.github.pacifistmc.forgix:Forgix:2.1.0")
+        // or loaderMergeForgix(files("libs/Forgix-custom.jar"))
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    dependencies {
+        loaderMergeForgix 'io.github.pacifistmc.forgix:Forgix:2.1.0'
+    }
+    ```
+
+The only contract is `Forgix.mergeLoaders(Map, File)` — an
+incompatible version fails the task with an explicit "does not expose
+mergeLoaders" error rather than a `NoSuchMethodError`.
+
 ## Consumers
 
 `adapter-modpublisher` prefers the `mergedElements` artifact as the

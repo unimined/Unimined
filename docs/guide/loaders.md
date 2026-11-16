@@ -101,9 +101,10 @@ The manual equivalent of `unimined-cli new --loader <name>=<ver>`:
        ```
 
 2. **Mappings** — the env's `mappings { }` chain (quilt:
-   `quiltMappings(...)`/`hashed()`; forge: `official()`/`mcp(...)`/
-   `searge()`; see [Mappings](mappings.md)). Nested envs inherit the
-   `main` env's declarations — override per env as needed.
+   `quilt(build)` named layer — `intermediary` is contributed
+   automatically; forge: `official()`/`mcp(...)`/`searge()`; see
+   [Mappings](mappings.md)). Nested envs inherit the `main` env's
+   declarations — override per env as needed.
 
 3. **Metadata** — the env's `mod { }` block emits the loader's
    descriptor (`fabric.mod.json`, `META-INF/mods.toml`,

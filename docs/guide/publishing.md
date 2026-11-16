@@ -109,6 +109,81 @@ environments publish a single artifact. The loader-merge merged
 artifact is intentionally not part of the Maven path — it belongs to
 ModPublisher uploads.
 
+### In-build production dependencies
+
+Cross-project consumption works the same way inside one build —
+this is the `reobfArtifactConfiguration` equivalent. A consumer that
+needs a sibling project's *production* jar (e.g. a buildSrc tool or a
+downstream test module) selects it by attribute on a resolvable
+configuration or the dependency itself:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    configurations.create("prodTool") {
+        attributes {
+            attribute(PublishAttributes.CHANNEL, "prod")
+            attribute(PublishAttributes.ENVIRONMENT, "fabric")
+        }
+    }
+    dependencies {
+        prodTool(project(":parentmod"))
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    configurations.create("prodTool") {
+        attributes {
+            attribute(PublishAttributes.CHANNEL, "prod")
+            attribute(PublishAttributes.ENVIRONMENT, "fabric")
+        }
+    }
+    dependencies {
+        prodTool project(":parentmod")
+    }
+    ```
+
+Plain `java-api`/`java-runtime` usage already resolves to the prod
+variant, so `CHANNEL = "prod"` is explicit documentation of intent;
+`ENVIRONMENT` (and `NAMESPACE`) disambiguate multi-env producers. The
+consumable producer configurations are named
+`<sourceSet>Prod{Api,Runtime,Sources}Elements` — exposed as
+`PublishConfigurations.prod*ElementsName(sourceSet)` for the
+`project(path = ..., configuration = ...)` escape hatch. Same-project
+consumption is just `tasks.named("remap<Jar>")`.
+
+### Access documents
+
+Each environment also gets an `accesstransformer`-category variant
+pair (NeoGradle `accessTransformer` / ModDevGradle data-file parity):
+the environment's generated canonical access doc plus every
+`access { from(path) { } }`/`accessFile(path) { }` declaration is
+published as `unimined<Env>AccessTransformerElements` artifacts
+(classified `access-transformer[-N]`). Dependents pull them by module
+coordinate instead of scanning the jar:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    dependencies {
+        uniminedFabricAccessTransformer("com.example:parentmod:1.0")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    dependencies {
+        uniminedFabricAccessTransformer "com.example:parentmod:1.0"
+    }
+    ```
+
+Resolved documents join the environment's dependency access channel —
+they apply like dep-jar access documents (producer-namespace binding,
+no `transitive-` filter, never validated against your mappings) and are
+not re-shipped inside your own jar. A producer that declares no access
+documents publishes no variant; when a producer ships several
+environments' docs, disambiguate with
+`attribute(unimined.environment, "<env>")` on the dependency.
+
 ## ModPublisher
 
 `xyz.wagyourtail.unimined.publish-modpublisher` feeds artifacts and

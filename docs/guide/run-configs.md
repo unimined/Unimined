@@ -13,6 +13,13 @@ configurations from `genIdeRuns`.
 | datagen envs | the env's own name (e.g. `data` → `runData`) |
 | gametest envs | `<env>Client`/`<env>Server` plus `test`-task wiring |
 
+Forge-family loaders (forge, lexforge, neoforge, cleanroom) also
+declare the userdev run types — `data`, `clientData`, `serverData`,
+`gameTestServer`, `junit` — which materialize as `runData`,
+`runGameTestServer`, … (`<env>Data` on non-main envs) with no
+`runs.create` needed. A run type the resolved profile doesn't
+declare launches the plain environment launch.
+
 The `prod*` variants launch against `minecraftProd` — Minecraft in
 the namespace shipped mod jars are remapped to — with your `remapJar`
 output and *direct* (un-remapped) mod dependencies: the
@@ -37,6 +44,9 @@ runtime-deobf flags instead of the pre-deobfed artifact.
             runs.configureEach {        // every run
                 environmentVariables.put("MC_DEBUG", "1")
             }
+            configFirst("client") {     // applies before other config
+                jvmArgs.add("-Xms1G")   // (declare it first)
+            }
         }
     }
     ```
@@ -54,9 +64,19 @@ runtime-deobf flags instead of the pre-deobfed artifact.
             runs.configureEach {        // every run
                 environmentVariables.put("MC_DEBUG", "1")
             }
+            configFirst("client") {     // applies before other config
+                jvmArgs.add("-Xms1G")   // (declare it first)
+            }
         }
     }
     ```
+
+`configFirst` applies its action ahead of `named`/`create`/
+`configureEach`/`all` configuration of the same run — the 1.x hook
+for laying down values later blocks can override (plugins use it for
+defaults). Declare it before other configuration of the run: a
+`configFirst` issued after the run already configured applies
+immediately — after whatever already ran.
 
 Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 `runFabricData`, …
@@ -69,31 +89,44 @@ Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 | `enabled` | `false` = the `run<Name>` task exists but fails with a "disabled" message — gate runs on env/CI conditions |
 | `beforeRun(task)` / `beforeRun { }` | task deps/actions wired ahead of launch (e.g. build a datapack first) |
 | `side` | `CLIENT`/`SERVER` — defaults from the run name |
+| `type` | loader run-config key (`runs.<type>` in forge userdev profiles) — defaults to the run name; set `type.set("data")` on a renamed run to bind the `data` launch shape |
 | `prod` | `true` = production-namespace MC artifact + remapped jar |
 | `mainClass` | launch main class (loader-provided by default) |
 | `jvmArgs` / `programArgs` | launch arguments |
 | `javaagents` | file collection rendered as `-javaagent:` flags (unimined agents attach here — jarmod, expectplatform, CPL) |
 | `environmentVariables` | process env |
+| `systemProperties` | `-D` JVM system properties — typed alternative to raw `jvmArgs` `-D` strings; rendered ahead of `jvmArgs` so an explicit `-D` there still wins |
+| `launchProperties` / `setProperty(k, v)` | `${key}` substitution values applied to args/jvmArgs/env at launch — `setProperty("user", "Dev")` then `programArgs.add("--username=\${user}")`. Lazy forms: `Provider`, `() -> String`, and a Groovy closure; user keys win over env defaults and loader keys |
+| `logLevel` / `loggingConfigFile` | root log level for a generated log4j2 dev config (`-Dlog4j.configurationFile` is added automatically), or an explicit config file that overrides it |
+| `additionalRuntimeClasspath` | per-run classpath additions — files appended to this run's launch only; maven coords go on the `run<Name>Dependencies` configuration |
 | `stdin` | piped into the launched process |
 | `features` | version-json rule features (`is_demo_user`, `has_custom_resolution`) |
 | `width`/`height` | `--width`/`--height` args |
 | `downloadAssets` | fetch assets before launching (default true) |
 | `username` | offline-name shorthand bridging into `auth.username` |
 | `auth { }` | typed session spec — see [Auth](auth.md) |
+| `ideName` / `ideFolderName` | IDE run-configuration display/file name (defaults to the run name) and an optional folder/group label |
+| `ideConfigGenerated` | `false` suppresses this run's IDE run-configuration emission — `genIdeRuns` skips it |
+| `singleInstance` | `true` marks the emitted IntelliJ configuration "single instance only" (`singleton="true"` — IDEA refuses a second concurrent launch); IDEA emitter only, no effect on `run<Name>` execution |
+| `unitTest` | marks the run as a JUnit test run — a Gradle `Test` task (`test<Name>`) materializes alongside `run<Name>`; conventions to `true` for `junit`-typed runs on forge-family loaders (`gametestJunit` capability). The loader's program args ride an args-file in `fml.junit.argsfile`, jvm args an `@argfile` |
+| `unitTestSources` | source sets supplying test classes + classpath for a `unitTest` run — defaults to `test` |
+| `loadedMods` | which of the environment's `mods { "<id>" { } }` groups this run loads — `loadedMods("a", "b")` selects a subset; empty (default) loads all declared groups. Selected groups join the launch classpath and serialize into the loader's mod-grouping channel (`fabric.classPathGroups` / `MOD_CLASSES`) |
 
 ## Argument substitution
 
 Loader capability templates and your own args support `${...}`
 launch-property substitution (game_directory, auth_*, classpath, …)
 plus `{modid}` — resolved against `mod { id }` at run time (e.g.
-fabric gametest's `-Dfabric.client.gametest.modid={modid}`).
+fabric gametest's `-Dfabric.client.gametest.modid={modid}`). Declare
+your own keys with `setProperty` — they resolve lazily at launch and
+override the built-in/loader-supplied values for that run.
 
 ## Dev-time manifest attributes
 
 Dev runs launch *exploded* output dirs, not a jar — but FML (modern
 `SecureJar` and legacy `CoreModManager`) parses `META-INF/MANIFEST.MF`
 inside classpath **directories**, so manifest attrs still apply.
-`generate<Env>ModMetadata` writes the emitted manifest body into
+`gen<Env>ModMetadata` writes the emitted manifest body into
 generated resources (`build/generated/unimined/mod/<env>`), which the
 source set packs into the resources output — `runClient`/`runServer`
 classify the env's output with `FMLModType`, `MixinConfigs`, `FMLAT`,
@@ -116,6 +149,43 @@ what a run would do:
 ```bash
 ./gradlew runClient -Punimined.run.dryRun
 ```
+
+## Launch scripts
+
+`genLaunchScript<Name>` resolves the same launch as `run<Name>` but
+writes runnable `run<Name>.sh` / `run<Name>.cmd` into the run's
+working directory (`run/<env>-<name>/`) instead of exec'ing — for
+launching outside Gradle, e.g. under a debugger or another terminal.
+`genLaunchScripts` (plural) emits them for every declared run:
+
+```bash
+./gradlew genLaunchScriptClient
+# or everything:
+./gradlew genLaunchScripts
+./run/main-client/runClient.sh
+```
+
+The scripts `cd` into their own directory, export the launch
+environment, and exec `java` with the fully resolved args/classpath —
+the same values `run<Name>` would use.
+
+## Listing runs
+
+`uniminedRuns` prints one line per declared run config (task, env,
+side, type, prod flag, enabled, main class) — a quick check of what
+`runs { }` materialized:
+
+```bash
+./gradlew uniminedRuns
+```
+
+## Cache maintenance
+
+`pruneUniminedCache` prunes the global unimined cache
+(`~/.gradle/caches/unimined`), deleting entries idle longer than 30
+days by default — `--age-days 0` removes everything, `--project`
+additionally wipes the project's `.gradle/unimined`, `--assets`
+includes the shared assets dir.
 
 ## IDE integration
 

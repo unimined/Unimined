@@ -26,6 +26,25 @@ mods.toml, …) at build time:
 `--metadata dsl` on the CLI emits this block instead of hardcoding
 values in the loader descriptor.
 
+### Loader documents
+
+Each loader family gets its own document shape from the same model:
+
+- **fabric-family** → `fabric.mod.json` (fmj): `schemaVersion`,
+  top-level `id`, `custom` object, `loom:injected_interfaces`.
+- **quilt** → `quilt.mod.json` (real qmj): `schema_version`,
+  `quilt_loader { group, id, version, metadata { name, description,
+  contributors, contact, license, icon }, entrypoints, depends[] }`,
+  `minecraft.environment` (fmj's `server` value translates to
+  `dedicated_server`), top-level `mixin` / `access_widener`, section
+  `custom` entries emitted as top-level namespaced keys (qmj's
+  extension convention), interface injections under top-level
+  `quilt_loom.injected_interfaces`. `quilt_loader.group` is required
+  by the loader and comes from `project.group` (`unspecified` when
+  unset).
+- **forge-family** → `mods.toml` / `neoforge.mods.toml` + manifest
+  attributes per the table below.
+
 ## Merging with hand-written files
 
 If a resource already contains the loader's metadata file
@@ -37,7 +56,7 @@ from `processResources`. Non-JSON collisions still fail the build.
 
 ## Discovery
 
-`generate<Env>ModMetadata` scans the environment's resources and
+`gen<Env>ModMetadata` scans the environment's resources and
 compiled classes at execution time, gated by three env flags:
 
 - `*.mixins.json` files found in resources are referenced from the
@@ -52,8 +71,10 @@ compiled classes at execution time, gated by three env flags:
   Each pair becomes an `inject-interface` rule: on loaders whose
   access doc can carry classTweaker directives (fabric ≥ `0.18.0`)
   the rules merge into the canonical `*.accesswidener` file, and on
-  every loader they emit a `custom.loom:injected_interfaces` entry
-  for IDE/dependents. Rules already present in the project's own
+  every loader they emit the loader's injected-interfaces metadata
+  (`custom.loom:injected_interfaces` on fabric, top-level
+  `quilt_loom.injected_interfaces` on quilt) for IDE/dependents.
+  Rules already present in the project's own
   CT/AW files or `access { }` declarations are not re-emitted.
 
 Interface-injection names are emitted in the dev namespace; the
@@ -143,7 +164,7 @@ source sets (`<env>Data`, `<env>Gametest`). They inherit the parent's
 version/mappings and see its classes on their classpath, but emit **no**
 metadata of their own — the parent's descriptor references their
 classes (entrypoints, generated data). A second same-id metadata file
-would collide on the classpath, so `generate<Env>ModMetadata` no-ops
+would collide on the classpath, so `gen<Env>ModMetadata` no-ops
 for aux envs.
 
 Server gametests run through the loader's JUnit artifact

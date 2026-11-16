@@ -34,6 +34,59 @@ gone by design). If your mod set mixes namespaces, set the env's
 `modSourceNamespaces` to match or declare per-namespace
 `remap.remappedViews(...)` and wire the buckets yourself.
 
+Whether a jar remaps at all is decided by a marker scan of its
+contents (mod metadata, namespace attributes, MC references); plain
+libraries pass through. Metadata reads are qmj5-tolerant — a
+`quilt.mod.json` written in JSON5 (comments, trailing commas, bare
+keys) parses the same as strict JSON, both in dependency jars and in
+your own resources. Loom's manifest contract is honored —
+`Fabric-Loom-Remap: false` opts a jar out even when markers exist,
+`true` forces remap of an unmarked jar. The user-side escape is
+`forceRemap { dep -> … }` on the environment (NeoGradle's
+`forceDeobfuscation` equivalent) — predicates select components that
+must remap regardless of markers:
+
+```kotlin
+unimined.minecraft {
+    sourceSet("main") {
+        // …
+        forceRemap { it.group == "com.example" && it.name == "obf-lib" }
+    }
+}
+```
+
+`forceRemap` also accepts a `group:name[:version]` coordinate string
+(`forceRemap("com.example:obf-lib")`); malformed notation fails the
+build with an actionable error.
+
+## Repositories
+
+Loader environments auto-register the mavens their artifacts resolve
+from (Mojang Libraries, the loader's own maven, and friends) — no
+`repositories { }` entries are needed for unimined-managed
+coordinates. Your own repos still go through the normal
+`repositories { }` block, and the `uniminedRepos` catalog can ensure
+a known repo by name (`uniminedRepos.fabric.ensure()`).
+
+After the build script evaluates, unimined runs repository
+diagnostics automatically — the FG7 `checkRepos` equivalent, but as
+post-DSL validation, not a task you invoke. The checks are warn-only
+and land in the Gradle problems report (`unimined/repo-missing`,
+`unimined/repo-order`) as well as the console:
+
+- every repo unimined *ensured* earlier is still present — a repo
+  removed or renamed mid-configuration is flagged;
+- `MavenRepo` (Maven Central) must precede `Mojang Libraries` —
+  module artifacts pin to the repo that served their metadata, so a
+  mojang-first order hides central-only classifiers (e.g. netty
+  natives).
+
+A `dependencyResolutionManagement.repositoriesMode` build is
+honored rather than bypassed: a repo already declared in settings
+satisfies the ensure, `FAIL_ON_PROJECT_REPOS` without one fails with
+the settings block to paste, and `PREFER_SETTINGS` reports a problem
+and skips the project-level registration.
+
 ## Jar-in-jar (include)
 
 Each env exposes an `include` configuration (`<env>Include` for named
@@ -55,6 +108,13 @@ production jar and declared in its loader metadata:
         include(files("libs/local.jar"))
     }
     ```
+
+`include` is an ordinary declarable configuration, so bulk
+composition rides `extendsFrom` rather than a dedicated option —
+e.g. `configurations { include extendsFrom(embedThese) }` embeds
+everything declared on a custom bucket. Inherited deps still produce
+`version.range` metadata entries, so platform-include-style grouping
+needs no extra DSL.
 
 Two formats, chosen per environment — normally by the loader claim
 (fabric-family → `fabric`, forge → `jarjar`) or explicitly:
@@ -172,20 +232,22 @@ without `mods.toml` inside it:
     ```
 
 Unset entries aren't blindly left alone — during the rewrite pass
-the embedder detects layer-bound signals inside each jar:
+the embedder resolves layer signals in order:
 
-| Found inside the jar | Stamps | Why |
+| Signal | Stamps | Why |
 |---|---|---|
+| the jar's own `FMLModType` manifest attribute | keeps it | the author knows its layer — outranks every heuristic |
 | `META-INF/services/…​IModLanguageProvider` (or `IModLanguageLoader`) | `LANGPROVIDER` | providers must be PLUGIN-layer — the Kotlin-for-Forge case |
 | `META-INF/mods.toml` / `neoforge.mods.toml` | `MOD` | it is a mod file |
 | `Obfuscated-By` manifest attribute | `GAMELIBRARY` | needs game-layer runtime remap |
 | parent jar's `FMLModType` is `LIBRARY`/`LANGPROVIDER`/`CUSTOM` | `LIBRARY` | plugin-layer parents propagate to their deps — FML does the same at runtime post-1.20 |
 
-Explicit config always wins over detection; `LIBRARY` is never
-auto-detected (nothing inside a jar proves it doesn't touch game
-classes) beyond the parent-propagation rule. With no signal at all
-the jar embeds unstamped — FML's `GAMELIBRARY` default applies,
-which can't break anything since GAME sees PLUGIN.
+Explicit config always wins over everything, including a shipped
+`FMLModType`; `LIBRARY` is never auto-detected (nothing inside a jar
+proves it doesn't touch game classes) beyond the parent-propagation
+rule. With no signal at all the jar embeds unstamped — FML's
+`GAMELIBRARY` default applies, which can't break anything since GAME
+sees PLUGIN.
 
 Detection only rides the rewrite pass: `recompress.set(false)`
 embeds verbatim with no stamp unless you declare a type explicitly —
@@ -251,3 +313,49 @@ sub-module. Both also record the api modid into `mod { depends }`.
 
 `mod { depend("modid", "versionRange") }` declares runtime deps in the
 emitted mod metadata without touching the classpath.
+
+## Tool coordinates
+
+Unimined resolves several build-time tools into detached
+configurations — JST (source-transform enrichment), `unprotect`
+(forge dev launches), `mcpcleanup`/`DiffPatch` (mcpconfig pipelines),
+the jvmdowngrader java-api, the bukkit classpath-plugin-loader, and
+`stitch` (yarn-v1 field-name proposals). Each coordinate is a
+`Property<String>` on the `uniminedTools` extension, so the version —
+or a fork — is user-overridable:
+
+=== "Kotlin `build.gradle.kts`"
+
+    ```kotlin
+    uniminedTools {
+        jst.set("net.neoforged.jst:jst-cli:2.1.0")
+        diffpatch.set("com.example:DiffPatchFork:1.0")
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+
+    ```groovy
+    uniminedTools {
+        jst.set("net.neoforged.jst:jst-cli:2.1.0")
+        diffpatch.set("com.example:DiffPatchFork:1.0")
+    }
+    ```
+
+Available keys and defaults:
+
+| Key | Default coordinate | Used for |
+|---|---|---|
+| `jst` | `net.neoforged.jst:jst-cli:2.0.11` | Forge userdev source-pipeline enrichment |
+| `unprotect` | `io.github.juuxel:unprotect:1.3.0` | Forge-era dev launches |
+| `mcpcleanup` | `net.minecraftforge:mcpcleanup:2.3.6` | Notch-obf userdev sources chain |
+| `diffpatch` | `net.minecraftforge:DiffPatch:2.0.12` | MCPConfig diff/patch steps |
+| `jvmdowngraderJavaApi` | `xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.0.1` | `jvmdg` adapter runtime dep |
+| `classpathPluginLoader` | `xyz.wagyourtail.unimined:classpath-plugin-loader:0.1.0-SNAPSHOT:all` | Bukkit plugin-classpath agent |
+| `stitch` | `net.fabricmc:stitch:0.6.2` | yarn-v1 `proposeFieldNames` |
+
+Overrides match by the default `group:artifact` — wherever the
+default tool coordinate appears (including inside mcpconfig
+`functions` tables and userdev tool lists) the overridden notation is
+substituted. Coordinates a loader profile itself declares stay
+profile-driven unless their `group:artifact` matches a key above.

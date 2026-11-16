@@ -48,6 +48,26 @@ mappings — fails loud if the provider can't supply the archive),
 zips), and `yarnv1(build)` — Tiny-v1 Yarn for legacy Fabric envs,
 with stitch `proposeFieldNames` filled from the client jar.
 
+## Ornithe enrichers
+
+`nests(build)` (inner-class attributes), `sparrow(build)` (generic
+signatures) and `raven(build)` (exception mappings) graft
+`net.ornithemc` metadata artifacts onto the environment's official
+columns — split-era merged versions emit one declaration per side.
+Their elements apply during remap: nests restore `InnerClasses`
+attributes for decompilers, signatures and exceptions feed the same
+metadata path.
+
+On `loader("ornithe", …)` environments the latest published
+`nests` build for the env's version + side is contributed to the
+chain automatically — the equivalent of Ploceus's always-appended
+nests mapping layer. An explicit `nests(...)` declaration wins over
+the auto-picked build, and `disableNests()` on the environment
+opts it out (the contribution also stays inert offline or when the
+Ornithe meta index is unreachable). The meta base URL is
+overridable with `-Punimined.ornitheMeta=<url>` for mirrors or
+airgapped caches.
+
 ## Stub mappings
 
 `stubs` declares inline mapping rows when a real channel doesn't
@@ -81,14 +101,60 @@ you bind:
 Member entries are `name[;desc]` per namespace; a `null` cell leaves
 that namespace unmapped.
 
-Set `customIntermediaries = true` on the mappings spec to tell
+Set `customIntermediaries` on the mappings spec to tell
 fabric-family loaders your intermediary column is your own, not
 upstream's — their wiring checks this before contributing
-`net.fabricmc:intermediary`.
+`net.fabricmc:intermediary`:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    mappings {
+        customIntermediaries.set(true)
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    mappings {
+        customIntermediaries = true
+    }
+    ```
+
+## Bytecode hierarchy fill
+
+`hierarchyNameFill` scans the environment's raw Minecraft jar plus
+its runtime libraries for the real class hierarchy, then propagates
+mapped method and parameter names to overriding declarations the
+chain leaves unmapped — synthesizing verbatim class/method cells for
+tree-absent rows so remap does not break references (ploceus
+`MappingFiller` parity; this *extends* the name copying
+`fillMissingNames` performs on rows that already exist). The default
+auto-enables when Ornithe enrichers (`nests`/`sparrow`/`raven`) are
+declared; `true`/`false` forces it:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    mappings {
+        feather(4)
+        nests(4)
+        hierarchyNameFill.set(true) // explicit — unset auto-enables on enrichers
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    mappings {
+        feather(4)
+        nests(4)
+        hierarchyNameFill = true
+    }
+    ```
 
 ## Exporting
 
 `uniminedMinecraft.exportMappings(envId) { }` registers an
-`exportMappings<Env>` task (`exportMappings` for `main`) that writes
+`export<Env>Mappings` task (`exportMappings` for `main`) that writes
 the env's resolved tree in a chosen format (SRG/TSRG/Tiny/MCP —
-see `ExportMappingsTask` for the format + output inputs).
+see `ExportMappingsTask` for the format + output inputs). The
+pre-convention `exportMappings<Env>` name stays as a deprecated
+alias.

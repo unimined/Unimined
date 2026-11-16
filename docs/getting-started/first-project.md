@@ -3,7 +3,9 @@
 A flat, single-loader mod environment on native Minecraft — three
 files: `settings.gradle.kts` (plugin + dependency repos — see
 [Installation](installation.md) for what each block does),
-`build.gradle.kts`, and `gradle.properties`:
+`build.gradle.kts`, and `gradle.properties`.
+
+**`settings.gradle.kts`** — plugin + dependency repos:
 
 === "Kotlin `settings.gradle.kts`"
     ```kotlin
@@ -15,6 +17,8 @@ files: `settings.gradle.kts` (plugin + dependency repos — see
     --8<-- "generated/settings.gradle"
     ```
 
+**`build.gradle.kts`** — plugin, env, mappings, deps:
+
 === "Kotlin `build.gradle.kts`"
     ```kotlin
     --8<-- "generated/flat-fabric.gradle.kts"
@@ -24,6 +28,8 @@ files: `settings.gradle.kts` (plugin + dependency repos — see
     ```groovy
     --8<-- "generated/flat-fabric.gradle"
     ```
+
+**`gradle.properties`** — versions pinned per prop key:
 
 === "`gradle.properties`"
     ```properties

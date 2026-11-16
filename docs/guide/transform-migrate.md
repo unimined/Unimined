@@ -80,7 +80,7 @@ Then:
 
 ```bash
 ./gradlew migrateMappings          # main env
-./gradlew migrateMappingsFabric    # a non-main env
+./gradlew migrateFabricMappings    # a non-main env (migrateMappings<Foo> still runs as a deprecated alias)
 ```
 
 Migrated sources land in `remappedSrc/` — outside `src/` so they
