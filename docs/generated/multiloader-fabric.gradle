@@ -14,7 +14,7 @@ unimined {
     minecraft {
         version.set(providers.gradleProperty("minecraft_version"))
 
-        loader("fabric", providers.gradleProperty("fabric_version").get())
+        fabric(providers.gradleProperty("fabric_version").get())
         mappings {
             yarn(providers.gradleProperty("yarn_mappings").get())
         }

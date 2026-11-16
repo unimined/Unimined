@@ -8,7 +8,7 @@ own blocks:
     ```kotlin
     unimined {
         bta { loader("bta-babric", "1.7.6") }       // Better Than Adventure
-        reindev { loader("foxloader", "…") }        // ReIndev + FoxLoader
+        reindev { foxloader("…") }                // ReIndev + FoxLoader
         nsss { file("dist.jar") }                   // Not So Seecret Saturday
         custom("myproduct") { file("custom.jar") }  // arbitrary dist
     }
@@ -18,7 +18,7 @@ own blocks:
     ```groovy
     unimined {
         bta { loader("bta-babric", "1.7.6") }       // Better Than Adventure
-        reindev { loader("foxloader", "…") }        // ReIndev + FoxLoader
+        reindev { foxloader("…") }                // ReIndev + FoxLoader
         nsss { file("dist.jar") }                   // Not So Seecret Saturday
         custom("myproduct") { file("custom.jar") }  // arbitrary dist
     }

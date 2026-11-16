@@ -27,7 +27,7 @@ my-mod/
     unimined {
         minecraft {
             version = "1.7.10"
-            loader("forge", "10.13.4.1614")
+            forge("10.13.4.1614")
             // global defaults — opts every env in:
             // compile at 21, emit each env's era floor
             jvmdowngrader {
@@ -47,7 +47,7 @@ my-mod/
     unimined {
         minecraft {
             version.set("1.7.10")
-            loader("forge", "10.13.4.1614")
+            forge("10.13.4.1614")
             // global defaults — opts every env in:
             // compile at 21, emit each env's era floor
             jvmdowngrader {

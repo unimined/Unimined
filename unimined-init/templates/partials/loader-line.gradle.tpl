@@ -1,1 +1,1 @@
-loader("@@LOADER@@", @@LOADER_VERSION@@)
+@@LOADER_CALL@@

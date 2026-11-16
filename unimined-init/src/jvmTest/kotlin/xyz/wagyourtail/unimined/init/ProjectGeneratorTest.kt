@@ -78,7 +78,7 @@ class ProjectGeneratorTest {
         assertTrue("\r\n" in Files.readString(dir.resolve("gradlew.bat")),
             "gradlew.bat not CRLF-normalized")
         val build = Files.readString(dir.resolve("build.gradle.kts"))
-        assertTrue("loader(\"fabric\", providers.gradleProperty(" +
+        assertTrue("fabric(providers.gradleProperty(" +
                 "\"fabric_version\").get())" in build)
         assertTrue("yarn(providers.gradleProperty(\"yarn_mappings\")" +
                 ".get().toInt())" in build)
@@ -99,7 +99,7 @@ class ProjectGeneratorTest {
         ProjectGenerator.generate(
             spec().copy(versionProps = false), dir.toString())
         val build = Files.readString(dir.resolve("build.gradle.kts"))
-        assertTrue("loader(\"fabric\", \"0.16.0\")" in build)
+        assertTrue("fabric(\"0.16.0\")" in build)
         assertTrue("yarn(10)" in build)
         assertTrue("version = \"1.20.1\"" in build)
         assertTrue("gradleProperty" !in build)
@@ -126,7 +126,7 @@ class ProjectGeneratorTest {
         ).map { dir.relativize(java.nio.file.Path.of(it)).toString() }
         assertTrue("src/main/resources/paper-plugin.yml" in written)
         val build = Files.readString(dir.resolve("build.gradle.kts"))
-        assertTrue("loader(\"paper\", providers.gradleProperty(" +
+        assertTrue("paper(providers.gradleProperty(" +
                 "\"paper_version\").get())" in build)
         assertTrue("paper_version=1.21.8-R0.1-SNAPSHOT" in
             Files.readString(dir.resolve("gradle.properties")))
@@ -268,7 +268,7 @@ class ProjectGeneratorTest {
                 "\"forge\"" in settings)
         val forgeBuild = (files["forge/build.gradle.kts"] as
                 ProjectGenerator.Render.Text).content
-        assertTrue("loader(\"forge\", providers.gradleProperty(" +
+        assertTrue("forge(providers.gradleProperty(" +
                 "\"forge_version\").get())" in forgeBuild)
         assertTrue("project(\":common\")" in forgeBuild)
         assertTrue("fabric/src/main/java/com/example/mymod/MyMod.java" in files)
@@ -329,9 +329,9 @@ class ProjectGeneratorTest {
         val build = (files["build.gradle.kts"] as
                 ProjectGenerator.Render.Text).content
         assertTrue(
-            "loader(\"jarmod\", providers.gradleProperty(" +
+            "jarmod(providers.gradleProperty(" +
                     "\"jarmod_version\").get())" in build,
-            "jarmod env must declare loader(\"jarmod\", ...) — got:\n$build")
+            "jarmod env must declare jarmod(...) — got:\n$build")
         assertTrue("https://maven.wagyourtail.xyz/releases/" in build,
             "jarmod-agent resolves from wagyourtail maven — got:\n$build")
         // the scaffold loop needs the effective loader list too —

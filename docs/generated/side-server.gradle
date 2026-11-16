@@ -13,7 +13,7 @@ unimined {
     minecraft {
         version.set(providers.gradleProperty("minecraft_version"))
         side.set(xyz.wagyourtail.unimined.api.spec.Side.SERVER)
-        loader("forge", providers.gradleProperty("forge_version").get())
+        forge(providers.gradleProperty("forge_version").get())
         mappings {
             yarn(providers.gradleProperty("yarn_mappings").get())
         }

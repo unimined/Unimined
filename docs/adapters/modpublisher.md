@@ -33,11 +33,11 @@ my-mod/
     unimined {
         minecraft {
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             sourceSet("forge") {
                 version = "1.20.1"
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }
@@ -66,11 +66,11 @@ my-mod/
     unimined {
         minecraft {
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             sourceSet("forge") {
                 version.set("1.20.1")
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }

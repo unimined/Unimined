@@ -365,14 +365,34 @@ internal object Templates {
                 "SIDE" to sideLine(spec),
                 "LOADER_LINES" to spec.effectiveLoaders.joinToString("\n") { (l, v) ->
                     render("partials/loader-line.gradle", mapOf(
-                        "LOADER" to l, "LOADER_VERSION" to verRef(spec,
-                            "${l.lowercase().replace('-', '_')}_version",
-                            "\"$v\"")
+                        "LOADER_CALL" to loaderCall(spec, l, v)
                     ))
                 },
                 "MAPPINGS" to mappingsBlock(spec, ""),
             ))
         }.indented("        ")
+
+    /** Loader ids with a named env verb — `fabric(v)` — as opposed to
+     *  the generic `loader("custom-id", v)` form. Mirrors the member
+     *  verbs on `MinecraftEnvironment`. */
+    private val VERB_LOADERS = setOf(
+        "fabric", "quilt", "forge", "lexforge", "neoforge", "cleanroom",
+        "legacyfabric", "babric", "ornithe", "jarmod", "fg1",
+        "foxloader", "liteloader", "rift", "spigot", "paper",
+        "craftbukkit",
+    )
+
+    /** `fabric(<verRef>)` for ids with a named verb; the generic
+     *  `loader("custom-id", v)` otherwise — and `loader("id")` when
+     *  the loader resolves its own version (foxloader). */
+    private fun loaderCall(spec: InitSpec, loader: String, version: String): String {
+        if (version.isEmpty()) return "loader(\"$loader\")"
+        val v = verRef(spec,
+            "${loader.lowercase().replace('-', '_')}_version",
+            "\"$version\"")
+        return if (loader in VERB_LOADERS) "$loader($v)"
+               else "loader(\"$loader\", $v)"
+    }
 
     /** `(\"fabric\", ...) — coords` trailing the `loaderApi` dep
      *  comment — prop ref + concrete coords when a fabric-api axis
@@ -497,12 +517,9 @@ internal object Templates {
                         "\"${spec.mcVersion}\""),
                     "SIDE" to sideLine(spec),
                     "LOADER_LINES" to render("partials/loader-line.gradle",
-                        mapOf("LOADER" to loader,
-                            "LOADER_VERSION" to verRef(spec,
-                                "${loader.lowercase().replace('-', '_')}" +
-                                        "_version",
-                                "\"${spec.effectiveLoaders.first {
-                                    it.first == loader }.second}\""))),
+                        mapOf("LOADER_CALL" to loaderCall(spec, loader,
+                            spec.effectiveLoaders.first {
+                                it.first == loader }.second))),
                     "MAPPINGS" to mappingsBlock(spec, ""),
                 ))
             }.indented("        "),
@@ -540,8 +557,7 @@ internal object Templates {
             "minecraft_version",
             if (kts) "\"$spec.mcVersion\"" else "'${spec.mcVersion}'")
         val loaderLines = spec.effectiveLoaders.joinToString("\n") { (l, v) ->
-            if (v.isEmpty()) "    loader(\"$l\")"
-            else "    loader(\"$l\", \"$v\")"
+            "    " + loaderCall(spec, l, v)
         }
         val side = sideLine(spec).takeIf { it.isNotEmpty() }
             ?.let { "    $it\n" } ?: ""

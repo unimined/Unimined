@@ -74,7 +74,7 @@ class EnvGroovyDslTest {
             .mapNotNull { it.message }.joinToString(" | ")
 
     /** 1.x `fabric { }` patcher blocks removed in 2.0 must surface the
-     *  `loader("fabric", v)` migration note through Groovy dispatch —
+     *  `fabric("<version>")` migration note through Groovy dispatch —
      *  not a bare missing-method error. */
     @Test
     fun `removed loader patcher verb warns with migration note`() {
@@ -87,11 +87,45 @@ class EnvGroovyDslTest {
         }
         val msg = messages(e)
         assertTrue(msg.contains("fabric") && msg.contains("loader"),
-            "expected the loader(\"fabric\") migration note, got: $msg")
+            "expected the fabric(\"<version>\") migration note, got: $msg")
+    }
+
+    /** Named loader verbs declare through the same `loader(name, v)`
+     *  machinery — `env.fabric '0.16.0'` == `env.loader 'fabric',
+     *  '0.16.0'`, including merged multi-loader ordering. */
+    @Test
+    fun `named loader verbs declare loaders like loader()`() {
+        val env = project().extensions
+            .getByType(MinecraftExtension::class.java).main
+        val shell = GroovyShell()
+        shell.setVariable("env", env)
+        shell.evaluate("env.fabric '0.16.0'")
+        assertEquals("fabric", env.loaderSpec.get().name)
+        assertEquals("0.16.0", env.loaderSpec.get().version)
+        // a second named declaration joins as compile-only secondary
+        shell.evaluate("env.forge '47.2.0'")
+        assertEquals("forge", env.loaderSpecs[1].name)
+        // 1.x spellings resolve to the canonical descriptor id
+        shell.evaluate("env.neoForge '21.0.0'")
+        assertEquals("neoforge", env.loaderSpecs[2].name)
+    }
+
+    /** `minecraft { fabric '0.16.0' }` — the extension facade on
+     *  `main` dispatches the same declaration. */
+    @Test
+    fun `extension facade declares on main`() {
+        val unimined = project().extensions
+            .getByType(MinecraftExtension::class.java)
+        val shell = GroovyShell()
+        shell.setVariable("unimined", unimined)
+        shell.evaluate("unimined.fabric '0.16.0'")
+        assertEquals("fabric", unimined.main.loaderSpec.get().name)
     }
 
     /** Env verbs contributed by unapplied plugins name the plugin —
-     *  `env.jarmod(v)` without `transform.jarmod` applied. */
+     *  `env.customSearge()` without `transform.jarmod` applied.
+     *  (`jarmod`/`fg1` are member declaration verbs now, so they no
+     *  longer ride the plugin-verb diagnostic.) */
     @Test
     fun `plugin-contributed verb names its plugin`() {
         val env = project().extensions
@@ -99,7 +133,7 @@ class EnvGroovyDslTest {
         val shell = GroovyShell()
         shell.setVariable("env", env)
         val e = assertThrows(Exception::class.java) {
-            shell.evaluate("env.jarmod '1.0'")
+            shell.evaluate("env.customSearge()")
         }
         val msg = messages(e)
         assertTrue(msg.contains("transform.jarmod"), msg)

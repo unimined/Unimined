@@ -58,7 +58,7 @@ Their elements apply during remap: nests restore `InnerClasses`
 attributes for decompilers, signatures and exceptions feed the same
 metadata path.
 
-On `loader("ornithe", …)` environments the latest published
+On `ornithe(…)` environments the latest published
 `nests` build for the env's version + side is contributed to the
 chain automatically — the equivalent of Ploceus's always-appended
 nests mapping layer. An explicit `nests(...)` declaration wins over

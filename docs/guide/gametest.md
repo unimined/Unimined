@@ -9,7 +9,7 @@ JVM `test` run:
     unimined {
         minecraft {
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             gametest()                         // env "gametest"
         }
@@ -21,7 +21,7 @@ JVM `test` run:
     unimined {
         minecraft {
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             gametest()                         // env "gametest"
         }

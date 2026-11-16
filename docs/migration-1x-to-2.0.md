@@ -135,21 +135,25 @@ Loader declaration moves onto the environment. Every 1.x
 `minecraftForge`, `neoForge`/`neoForged`/`neoforge`, `cleanroom`,
 `legacyFabric`, `babric`, `ornitheFabric`/`ornithe`, `jarMod`,
 `foxLoader`, `liteloader`, `rift`, `spigot`, `paper`,
-`bukkit`/`craftBukkit` — is now `loader("<id>", "<version>")`
-(`bukkit`/`craftBukkit` → `loader("craftbukkit", …)`). The jar-mod
-era keeps dedicated verbs too: `env.jarmod("x")` / `env.fg1("x")` /
-`env.customSearge()`.
+`bukkit`/`craftBukkit` — is now a named **version-arg verb**:
+`fabric("0.16.0")`, `forge("47.2.0")`, `neoForge("21.0.0")`, … Each
+verb is exactly `loader("<id>", "<version>")` under the hood, and the
+generic form stays available for ids without a verb
+(`bukkit`/`craftBukkit` → `craftbukkit(…)` → `craftbukkit(…)`;
+see the [verb table](guide/loaders.md)). Spec-config still rides
+the trailing block — `fabric("0.16.0") { spec -> … }` delegates to
+the transform spec, not a 1.x patcher object.
 
 Special cases:
 
-- **`merged { fabric; forge }`** — gone as a block; repeat
-  `loader(...)` in one env instead. The **first** declaration is
+- **`merged { fabric; forge }`** — gone as a block; repeat loader
+  declarations in one env instead. The **first** declaration is
   the primary (owns prod namespace, remap, metadata, runs); later
   ones are compile-only secondaries
   ([Multi-project](guide/multi-project.md#merged-several-loaders-on-one-environment)).
 - **`modloader`/`risugami` (Risugami's ModLoader)** — ModLoader is
   not a loader in 2.0; it's a jar-mod dependency. Declare
-  `jarmod("<agentVersion>")` (or `loader("jarmod", …)`) and put
+  `jarMod("<agentVersion>")` and put
   `jarMod("risugami:modloader:<mcVersion>")` on the env — the
   `jarmod-modloader-fixes` step patches `ModLoader.class` in dev
   automatically. `loader("modloader")`/`loader("risugami")` fail
@@ -157,6 +161,10 @@ Special cases:
 - **`nil` (NilLoader), `folia`, `arch`** — no 2.0 loader
   descriptor exists yet; `loader("<id>")` for these fails with
   *unknown loader*. NilLoader is on the planned list.
+- **JarMod era extras** — `env.jarmod("x")`/`env.jarMod("x")` /
+  `env.fg1("x")` declare the loader; `env.customSearge()` toggles
+  the user-supplied searge/mcp chain (requires the
+  `transform.jarmod` plugin).
 - **`flint { }`** — removed entirely: maven.flintloader.net is
   offline so `net.flintloader:*` artifacts are unresolvable. The
   descriptor can return via `LoaderRegistry` + a mirrored repo if

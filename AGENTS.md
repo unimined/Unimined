@@ -12,7 +12,7 @@ present).
 
 | You want to change… | Look at |
 |---|---|
-| Loader DSL (`minecraft { sourceSet("x") { loader(n,v) } }`), env model | `unimined-minecraft/.../MinecraftExtension.kt`, `MinecraftEnvironment.kt` |
+| Loader DSL (`fabric(v)`/`loader(n,v)` verbs on env + `minecraft {}`), env model | `unimined-minecraft/.../MinecraftExtension.kt`, `MinecraftEnvironment.kt` (named-verb regions); Kotlin `Action` spec twins in `unimined-transform/.../LoaderEnvDsl.kt` |
 | Mapping spec/`mappings {}` DSL, source materialization | `unimined-mapping/.../MappingsSpecImpl.kt`, `internal/MappingResolver.kt`, `sources/` (Builtin/File/Maven providers) |
 | Mapping read providers (`uml` format dispatch) | `unimined-mapping/.../MappingProviderRegistry.kt`, `uml/UmlMappingProvider.kt` (only MappingProvider impl — UML is the universal reader) |
 | Remap pipeline (`remap { }`, step specs) | `unimined-remap/.../RemapExtension.kt`, step spec classes; engines under `unimined-remap/remapper-*` |

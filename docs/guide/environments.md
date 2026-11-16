@@ -10,10 +10,10 @@ dependency configurations.
         minecraft {
             // bound to main by default
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
             // or a named source-set env:
             sourceSet("server") {
-                loader("forge", "47.2.0")
+                forge("47.2.0")
                 side = Side.SERVER
             }
         }
@@ -26,10 +26,10 @@ dependency configurations.
         minecraft {
             // bound to main by default
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
             // or a named source-set env:
             sourceSet("server") {
-                loader("forge", "47.2.0")
+                forge("47.2.0")
                 side.set(Side.SERVER)
             }
         }
@@ -144,7 +144,7 @@ Everything below lives inside an env block (`minecraft { … }` or
   variants). The lwjgl3ify mod itself — for environments needing the
   lwjgl2 API at runtime — is a normal `modImplementation`/`include`
   dependency; this block only swaps the bindings.
-- **Ornithe artifact passes** — `loader("ornithe", …)` environments
+- **Ornithe artifact passes** — `ornithe(…)` environments
   get Ploceus's default-on Minecraft-jar passes automatically:
   `condor` synthesizes `LocalVariableTable` debug info on the dev
   artifact (versions before 1.8.2 — every alpha/beta build plus
@@ -162,7 +162,7 @@ Everything below lives inside an env block (`minecraft { … }` or
     minecraft {
         sourceSet("main") {
             version = "b1.7.3"
-            loader("ornithe", "0.19.5")
+            ornithe("0.19.5")
             disableLvtPatch()   // skip the condor LVT pass
             disablePreen()      // skip the bridge-method pass
             disableNests()      // skip the auto nests source
@@ -175,7 +175,7 @@ Everything below lives inside an env block (`minecraft { … }` or
     minecraft {
         sourceSet("main") {
             version.set("b1.7.3")
-            loader("ornithe", "0.19.5")
+            ornithe("0.19.5")
             disableLvtPatch()
             disablePreen()
             disableNests()
@@ -201,7 +201,7 @@ client/server separation on a single project:
     unimined {
         minecraft {
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
             splitEnvironmentSourceSets()
         }
     }
@@ -212,7 +212,7 @@ client/server separation on a single project:
     unimined {
         minecraft {
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
             splitEnvironmentSourceSets()
         }
     }
@@ -424,7 +424,7 @@ should match the mod id:
 ```kotlin
 minecraft {
     sourceSet("fabric") {
-        loader("fabric", "...")
+        fabric("...")
         mods {
             register("mymod") {
                 sourceSet("main")

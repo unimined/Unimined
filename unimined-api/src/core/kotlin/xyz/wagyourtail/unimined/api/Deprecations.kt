@@ -15,9 +15,15 @@ object Deprecations {
         )
     }
 
-    /** Loader patcher blocks became `loader("name", "version")`. */
-    fun loaderBlock(loader: String): Nothing =
-        movedDsl("$loader { }", "loader(\"$loader\", \"<version>\")")
+    /** Loader patcher blocks became `verb("version")` — equivalently
+     *  `loader("id", "version")` when the verb name differs from the
+     *  loader descriptor id. */
+    fun loaderBlock(loader: String, id: String = loader): Nothing =
+        movedDsl(
+            "$loader { }",
+            "$loader(\"<version>\") (equivalently " +
+                    "loader(\"$id\", \"<version>\"))"
+        )
 
     /** Loader removed entirely — no migration path. */
     fun removedLoader(loader: String, why: String): Nothing {

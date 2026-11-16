@@ -13,7 +13,7 @@ unimined {
     custom("myoverhaul") {
         version.set(providers.gradleProperty("minecraft_version"))
         maven("com.example:myoverhaul:1.0")
-        loader("fabric", "0.16.0")
+        fabric(providers.gradleProperty("fabric_version").get())
     }
 
 }

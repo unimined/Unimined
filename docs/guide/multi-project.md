@@ -19,11 +19,11 @@ environment — its own product, loader, mappings, runs:
     ```kotlin
     unimined {
         minecraft {
-            loader("fabric", "0.16.0")            // env "main"
+            fabric("0.16.0")            // env "main"
 
             sourceSet("forge") {
                 version = "1.20.1"
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }
@@ -33,11 +33,11 @@ environment — its own product, loader, mappings, runs:
     ```groovy
     unimined {
         minecraft {
-            loader("fabric", "0.16.0")            // env "main"
+            fabric("0.16.0")            // env "main"
 
             sourceSet("forge") {
                 version.set("1.20.1")
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }
@@ -63,12 +63,12 @@ Sibling `sourceSet` envs at `minecraft {}` top level don't share —
 
 ### Merged: several loaders on one environment
 
-Repeat `loader(name, version)` inside a single `sourceSet` env to
+Repeat loader declarations inside a single `sourceSet` env to
 compile that source set against several loaders' APIs at once — the
 2.0 analog of 1.x's `merged { fabric; forge }`. The **first**
-`loader(...)` is the environment's primary: it owns the production
+declaration is the environment's primary: it owns the production
 namespace, remapping, metadata emission, and run configs. Every
-further `loader(...)` declares a *secondary* whose product and
+further declaration adds a *secondary* whose product and
 libraries merge onto the env's **compile** classpath only — this is
 not a client/server merge (`Side.MERGED` is the other axis) and not
 a packaging merge:
@@ -79,8 +79,8 @@ a packaging merge:
         minecraft {
             sourceSet("common") {
                 version = "1.20.1"
-                loader("fabric", "0.16.0")   // primary — prod/remap/runs
-                loader("forge", "47.2.0")    // secondary — compile only
+                fabric("0.16.0")   // primary — prod/remap/runs
+                forge("47.2.0")    // secondary — compile only
             }
         }
     }
@@ -92,12 +92,15 @@ a packaging merge:
         minecraft {
             sourceSet("common") {
                 version.set("1.20.1")
-                loader("fabric", "0.16.0")   // primary — prod/remap/runs
-                loader("forge", "47.2.0")    // secondary — compile only
+                fabric("0.16.0")   // primary — prod/remap/runs
+                forge("47.2.0")    // secondary — compile only
             }
         }
     }
     ```
+
+Named verbs and `loader(name, version)` mix freely — declaration
+order is all that matters.
 
 The env's effective `javaVersion` floor takes the strictest across
 all declared loaders. Secondary loaders land on dedicated

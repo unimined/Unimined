@@ -554,6 +554,210 @@ abstract class MinecraftExtension @Inject constructor(
     fun transform(action: Closure<*>) =
         action.delegatingTo(main.transformSpec())
 
+    // region named loader verbs — `minecraft { fabric("0.16.0") }`
+    // facades onto `main`'s member verbs; see MinecraftEnvironment's
+    // named-verb region for the full contract.
+
+    /** Declares Fabric on `main` — `loader("fabric", version)`. */
+    fun fabric(version: String) = main.fabric(version)
+
+    /** Groovy spec-config twin — `fabric "0.16.0", { }` on `main`. */
+    fun fabric(version: String, action: Closure<*>) =
+        main.fabric(version, action)
+
+    /** Declares Quilt on `main` — `loader("quilt", version)`. */
+    fun quilt(version: String) = main.quilt(version)
+
+    /** Groovy spec-config twin — `quilt "0.26.0", { }` on `main`. */
+    fun quilt(version: String, action: Closure<*>) =
+        main.quilt(version, action)
+
+    /** Declares Forge on `main` — `loader("forge", version)`. */
+    fun forge(version: String) = main.forge(version)
+
+    /** Groovy spec-config twin — `forge "47.2.0", { }` on `main`. */
+    fun forge(version: String, action: Closure<*>) =
+        main.forge(version, action)
+
+    /** Declares LexForge on `main` — `loader("lexforge", version)`. */
+    fun lexforge(version: String) = main.lexforge(version)
+
+    /** Groovy spec-config twin — `lexforge "47.1.0", { }` on `main`. */
+    fun lexforge(version: String, action: Closure<*>) =
+        main.lexforge(version, action)
+
+    /** Declares NeoForge on `main` — `loader("neoforge", version)`. */
+    fun neoforge(version: String) = main.neoforge(version)
+
+    /** Groovy spec-config twin — `neoforge "21.0.0", { }` on `main`. */
+    fun neoforge(version: String, action: Closure<*>) =
+        main.neoforge(version, action)
+
+    /** 1.x spelling — `loader("neoforge", version)` on `main`. */
+    fun neoForge(version: String) = main.neoForge(version)
+
+    /** Groovy spec-config twin — `neoForge "21.0.0", { }` on `main`. */
+    fun neoForge(version: String, action: Closure<*>) =
+        main.neoForge(version, action)
+
+    /** 1.x spelling — `loader("neoforge", version)` on `main`. */
+    fun neoForged(version: String) = main.neoForged(version)
+
+    /** Groovy spec-config twin — `neoForged "21.0.0", { }` on `main`. */
+    fun neoForged(version: String, action: Closure<*>) =
+        main.neoForged(version, action)
+
+    /** 1.x spelling — `loader("forge", version)` on `main`. */
+    fun minecraftForge(version: String) = main.minecraftForge(version)
+
+    /** Groovy spec-config twin — `minecraftForge "47.2.0", { }` on `main`. */
+    fun minecraftForge(version: String, action: Closure<*>) =
+        main.minecraftForge(version, action)
+
+    /** Declares Cleanroom on `main` — `loader("cleanroom", version)`. */
+    fun cleanroom(version: String) = main.cleanroom(version)
+
+    /** Groovy spec-config twin — `cleanroom "0.4.0", { }` on `main`. */
+    fun cleanroom(version: String, action: Closure<*>) =
+        main.cleanroom(version, action)
+
+    /** Declares LegacyFabric on `main` —
+     *  `loader("legacyfabric", version)`. */
+    fun legacyfabric(version: String) = main.legacyfabric(version)
+
+    /** Groovy spec-config twin — `legacyfabric "0.16.0", { }` on `main`. */
+    fun legacyfabric(version: String, action: Closure<*>) =
+        main.legacyfabric(version, action)
+
+    /** 1.x spelling — `loader("legacyfabric", version)` on `main`. */
+    fun legacyFabric(version: String) = main.legacyFabric(version)
+
+    /** Groovy spec-config twin — `legacyFabric "0.16.0", { }` on `main`. */
+    fun legacyFabric(version: String, action: Closure<*>) =
+        main.legacyFabric(version, action)
+
+    /** Declares Babric on `main` — `loader("babric", version)`. */
+    fun babric(version: String) = main.babric(version)
+
+    /** Groovy spec-config twin — `babric "0.16.0", { }` on `main`. */
+    fun babric(version: String, action: Closure<*>) =
+        main.babric(version, action)
+
+    /** Declares Ornithe on `main` — `loader("ornithe", version)`. */
+    fun ornithe(version: String) = main.ornithe(version)
+
+    /** Groovy spec-config twin — `ornithe "0.19.5", { }` on `main`. */
+    fun ornithe(version: String, action: Closure<*>) =
+        main.ornithe(version, action)
+
+    /** 1.x spelling — `loader("ornithe", version)` on `main`. */
+    fun ornitheFabric(version: String) = main.ornitheFabric(version)
+
+    /** Groovy spec-config twin — `ornitheFabric "0.19.5", { }` on `main`. */
+    fun ornitheFabric(version: String, action: Closure<*>) =
+        main.ornitheFabric(version, action)
+
+    /** Declares JarMod on `main` — `loader("jarmod", version)`. */
+    fun jarmod(version: String) = main.jarmod(version)
+
+    /** Groovy spec-config twin — `jarmod "0.1.5", { }` on `main`. */
+    fun jarmod(version: String, action: Closure<*>) =
+        main.jarmod(version, action)
+
+    /** 1.x spelling — `loader("jarmod", version)` on `main`. */
+    fun jarMod(version: String) = main.jarMod(version)
+
+    /** Groovy spec-config twin — `jarMod "0.1.5", { }` on `main`. */
+    fun jarMod(version: String, action: Closure<*>) =
+        main.jarMod(version, action)
+
+    /** Declares an FG1-era Forge env — `loader("fg1", version)`. */
+    fun fg1(version: String) = main.fg1(version)
+
+    /** Groovy spec-config twin — `fg1 "1.0.0", { }` on `main`. */
+    fun fg1(version: String, action: Closure<*>) =
+        main.fg1(version, action)
+
+    /** Declares FoxLoader on `main` — `loader("foxloader", version)`. */
+    fun foxloader(version: String) = main.foxloader(version)
+
+    /** Version-omitting form — FoxLoader resolves its own version. */
+    fun foxloader() = main.foxloader()
+
+    /** Groovy spec-config twin — `foxloader "2.0", { }` on `main`. */
+    fun foxloader(version: String, action: Closure<*>) =
+        main.foxloader(version, action)
+
+    /** Groovy spec-config twin — `foxloader { }` on `main`. */
+    fun foxloader(action: Closure<*>) = main.foxloader(action)
+
+    /** 1.x spelling — `loader("foxloader", version)` on `main`. */
+    fun foxLoader(version: String) = main.foxLoader(version)
+
+    /** Version-omitting form — `loader("foxloader")` on `main`. */
+    fun foxLoader() = main.foxLoader()
+
+    /** Groovy spec-config twin — `foxLoader "2.0", { }` on `main`. */
+    fun foxLoader(version: String, action: Closure<*>) =
+        main.foxLoader(version, action)
+
+    /** Groovy spec-config twin — `foxLoader { }` on `main`. */
+    fun foxLoader(action: Closure<*>) = main.foxLoader(action)
+
+    /** Declares LiteLoader on `main` —
+     *  `loader("liteloader", version)`. */
+    fun liteloader(version: String) = main.liteloader(version)
+
+    /** Groovy spec-config twin — `liteloader "1.12.2", { }` on `main`. */
+    fun liteloader(version: String, action: Closure<*>) =
+        main.liteloader(version, action)
+
+    /** Declares Rift on `main` — `loader("rift", version)`. */
+    fun rift(version: String) = main.rift(version)
+
+    /** Groovy spec-config twin — `rift "1.0.4", { }` on `main`. */
+    fun rift(version: String, action: Closure<*>) =
+        main.rift(version, action)
+
+    /** Declares Spigot on `main` — `loader("spigot", version)`. */
+    fun spigot(version: String) = main.spigot(version)
+
+    /** Groovy spec-config twin — `spigot "1.20.1", { }` on `main`. */
+    fun spigot(version: String, action: Closure<*>) =
+        main.spigot(version, action)
+
+    /** Declares Paper on `main` — `loader("paper", version)`. */
+    fun paper(version: String) = main.paper(version)
+
+    /** Groovy spec-config twin — `paper "1.20.1", { }` on `main`. */
+    fun paper(version: String, action: Closure<*>) =
+        main.paper(version, action)
+
+    /** Declares CraftBukkit on `main` —
+     *  `loader("craftbukkit", version)`. */
+    fun craftbukkit(version: String) = main.craftbukkit(version)
+
+    /** Groovy spec-config twin — `craftbukkit "1.20.1", { }` on `main`. */
+    fun craftbukkit(version: String, action: Closure<*>) =
+        main.craftbukkit(version, action)
+
+    /** 1.x spelling — `loader("craftbukkit", version)` on `main`. */
+    fun craftBukkit(version: String) = main.craftBukkit(version)
+
+    /** Groovy spec-config twin — `craftBukkit "1.20.1", { }` on `main`. */
+    fun craftBukkit(version: String, action: Closure<*>) =
+        main.craftBukkit(version, action)
+
+    /** Family-name shorthand — `loader("craftbukkit", version)` on
+     *  `main`. */
+    fun bukkit(version: String) = main.bukkit(version)
+
+    /** Groovy spec-config twin — `bukkit "1.20.1", { }` on `main`. */
+    fun bukkit(version: String, action: Closure<*>) =
+        main.bukkit(version, action)
+
+    // endregion
+
     /** Configure `main` as a Better Than Adventure dist —
      *  `provider("conversion")` + `product("minecraft:bta")` preset. */
     fun bta(action: Action<DistSpec>) = main.bta(action)
@@ -604,12 +808,36 @@ abstract class MinecraftExtension @Inject constructor(
         Deprecations.loaderBlock("forge")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun lexforge(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("lexforge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun neoforge(action: Action<Any>): Nothing =
         Deprecations.loaderBlock("neoforge")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun neoForge(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("neoForge", "neoforge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun neoForged(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("neoForged", "neoforge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun minecraftForge(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("minecraftForge", "forge")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun cleanroom(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("cleanroom")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun legacyfabric(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("legacyfabric")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun legacyFabric(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("legacyFabric")
+        Deprecations.loaderBlock("legacyFabric", "legacyfabric")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun babric(action: Action<Any>): Nothing =
@@ -620,20 +848,44 @@ abstract class MinecraftExtension @Inject constructor(
         Deprecations.loaderBlock("ornithe")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun ornitheFabric(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("ornitheFabric", "ornithe")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun modloader(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("modloader")
+        Deprecations.movedDsl(
+            "modloader { }",
+            "jarMod(\"<version>\") + a " +
+                    "`jarMod(\"risugami:modloader:<mc>\")` dependency"
+        )
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun risugami(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("risugami")
+        Deprecations.movedDsl(
+            "risugami { }",
+            "jarMod(\"<version>\") + a " +
+                    "`jarMod(\"risugami:modloader:<mc>\")` dependency"
+        )
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun jarmod(action: Action<Any>): Nothing =
         Deprecations.loaderBlock("jarmod")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun jarMod(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("jarMod", "jarmod")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun fg1(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("fg1")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun nil(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("nil")
+        Deprecations.removedLoader(
+            "nil",
+            "NilLoader has no 2.0 loader descriptor — planned, not " +
+                    "yet supported"
+        )
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun flint(action: Action<Any>): Nothing =
@@ -646,13 +898,33 @@ abstract class MinecraftExtension @Inject constructor(
         )
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun foxloader(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("foxloader")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun foxLoader(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("foxLoader")
+        Deprecations.loaderBlock("foxLoader", "foxloader")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun liteloader(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("liteloader")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun rift(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("rift")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun bukkit(action: Action<Any>): Nothing =
         // "bukkit" is the family name — craftbukkit is the descriptor
-        Deprecations.movedDsl("bukkit { }", "loader(\"craftbukkit\", \"<version>\")")
+        Deprecations.loaderBlock("bukkit", "craftbukkit")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun craftbukkit(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("craftbukkit")
+
+    @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
+    fun craftBukkit(action: Action<Any>): Nothing =
+        Deprecations.loaderBlock("craftBukkit", "craftbukkit")
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun spigot(action: Action<Any>): Nothing =
@@ -664,11 +936,19 @@ abstract class MinecraftExtension @Inject constructor(
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun folia(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("folia")
+        Deprecations.removedLoader(
+            "folia",
+            "no 2.0 descriptor — `paper(\"<version>\")` covers Paper; " +
+                    "Folia support is planned"
+        )
 
     @Deprecated("removed in 2.0", level = DeprecationLevel.ERROR)
     fun arch(action: Action<Any>): Nothing =
-        Deprecations.loaderBlock("arch")
+        Deprecations.movedDsl(
+            "arch { }",
+            "a specific loader verb — `fabric(\"<version>\")`, " +
+                    "`forge(\"<version>\")`, `neoforge(\"<version>\")`, …"
+        )
 
     // endregion
 

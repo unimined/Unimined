@@ -78,7 +78,7 @@ version-free:
         minecraft {
             // env.version conventions to stonecutter.current.version —
             // "1.20.4" when building that project, "1.21.1" for the other
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
         }
     }
 
@@ -105,7 +105,7 @@ version-free:
         minecraft {
             // env.version conventions to stonecutter.current.version —
             // "1.20.4" when building that project, "1.21.1" for the other
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
         }
     }
 
@@ -153,10 +153,10 @@ versions/1.20.4/
     // central build.gradle.kts
     unimined {
         minecraft {
-            loader("fabric", "0.16.0")            // main env
+            fabric("0.16.0")            // main env
 
             sourceSet("forge") {
-                loader("forge", "47.2.0")         // forge env — also
+                forge("47.2.0")         // forge env — also
             }                                     //   chiseled per version
         }
     }
@@ -167,10 +167,10 @@ versions/1.20.4/
     // central build.gradle
     unimined {
         minecraft {
-            loader("fabric", "0.16.0")            // main env
+            fabric("0.16.0")            // main env
 
             sourceSet("forge") {
-                loader("forge", "47.2.0")         // forge env — also
+                forge("47.2.0")         // forge env — also
             }                                     //   chiseled per version
         }
     }

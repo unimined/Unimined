@@ -38,8 +38,9 @@ files: `settings.gradle.kts` (plugin + dependency repos — see
 Key pieces:
 
 - `unimined { minecraft { } }` — an *environment* bound to the `main`
-  source set. `version` is the MC version; `loader("fabric", "…")`
-  applies a loader.
+  source set. `version` is the MC version; `fabric("…")` applies a
+  loader (named verbs like `forge(…)`/`neoforge(…)` are sugar for the
+  generic `loader("<id>", "…")` — see [Loaders](../guide/loaders.md)).
 - `mappings { }` — the remap chain (`yarn(...)` here — the version
   lives in `gradle.properties`; see
   [Mappings](../guide/mappings.md)).

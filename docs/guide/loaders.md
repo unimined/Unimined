@@ -1,9 +1,11 @@
 # Loaders
 
-Each environment declares its loaders inside the env block —
-`loader("<name>", "<version>")`. Multi-loader projects either use
-one env per loader or repeat `loader(...)` on a single merged env
-where the extra loaders are compile-only secondaries
+Each environment declares its loaders inside the env block — a named
+verb like `fabric("0.16.0")`, or the generic
+`loader("<name>", "<version>")` for ids without a verb (products,
+custom descriptors). Multi-loader projects either use one env per
+loader or repeat declarations on a single merged env where the extra
+loaders are compile-only secondaries
 ([merged multi-loader](multi-project.md#merged-several-loaders-on-one-environment)):
 
 === "Kotlin `build.gradle.kts`"
@@ -11,11 +13,11 @@ where the extra loaders are compile-only secondaries
     unimined {
         minecraft {
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             sourceSet("forge") {
                 version = "1.20.1"
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }
@@ -26,11 +28,11 @@ where the extra loaders are compile-only secondaries
     unimined {
         minecraft {
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             sourceSet("forge") {
                 version.set("1.20.1")
-                loader("forge", "47.2.0")
+                forge("47.2.0")
             }
         }
     }
@@ -40,7 +42,38 @@ Loader names resolve through the loader registry:
 
 --8<-- "generated/tables/loaders.md"
 
-- **Forge is era-aware** — `loader("forge", …)` emits FG1-era wiring
+Each verb below is exactly `loader("<id>", "<version>")` — aliases are
+accepted spellings that map to the same descriptor:
+
+| Verb | Loader id | Aliases |
+|---|---|---|
+| `fabric(v)` | `fabric` | |
+| `quilt(v)` | `quilt` | |
+| `forge(v)` | `forge` | `minecraftForge` |
+| `lexforge(v)` | `lexforge` | |
+| `neoforge(v)` | `neoforge` | `neoForge`, `neoForged` |
+| `cleanroom(v)` | `cleanroom` | |
+| `legacyfabric(v)` | `legacyfabric` | `legacyFabric` |
+| `babric(v)` | `babric` | |
+| `ornithe(v)` | `ornithe` | `ornitheFabric` |
+| `jarmod(v)` | `jarmod` | `jarMod` |
+| `fg1(v)` | `fg1` | |
+| `foxloader(v)`, `foxloader()` | `foxloader` | `foxLoader` |
+| `liteloader(v)` | `liteloader` | |
+| `rift(v)` | `rift` | |
+| `spigot(v)` | `spigot` | |
+| `paper(v)` | `paper` | |
+| `craftbukkit(v)` | `craftbukkit` | `craftBukkit`, `bukkit` |
+
+- **Spec-config form** — `fabric("0.16.0") { spec -> nestedJars { } }`
+  declares the loader and configures the env's transform spec in one
+  place (the Kotlin `Action` overload lives in
+  `xyz.wagyourtail.unimined.transform`; Groovy's closure twin is a
+  member — see [Remap pipeline](remap-pipeline.md)).
+- **Version-omitting** — `foxloader()` resolves the newest release
+  pairing with the dist; every other verb requires a version
+  (`loader("id")` likewise).
+- **Forge is era-aware** — `forge(…)` emits FG1-era wiring
   on ≤1.7.10, FML-style on 1.8–1.12, and modern Forge ≥1.13
   (scripts: [1.7.10](../generated/flat-forge-170.gradle.kts),
   [1.12.2](../generated/flat-forge-112.gradle.kts),
@@ -85,7 +118,7 @@ The manual equivalent of `unimined-cli new --loader <name>=<ver>`:
            minecraft {
                sourceSet("quilt") {
                    version = "1.20.1"
-                   loader("quilt", "0.26.0")
+                   quilt("0.26.0")
                }
            }
        }
@@ -97,7 +130,7 @@ The manual equivalent of `unimined-cli new --loader <name>=<ver>`:
            minecraft {
                sourceSet("quilt") {
                    version.set("1.20.1")
-                   loader("quilt", "0.26.0")
+                   quilt("0.26.0")
                }
            }
        }

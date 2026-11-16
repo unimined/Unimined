@@ -130,8 +130,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     private val removed1xVerbs: Map<String, String> = buildMap {
         val loader = { verb: String, id: String ->
             "1.x `$verb { }` patcher blocks became " +
-                    "`loader(\"$id\", \"<version>\")` in 2.0 " +
-                    "(see docs/migration-1x-to-2.0.md)"
+                    "`$verb(\"<version>\")` in 2.0 " +
+                    "(equivalently `loader(\"$id\", \"<version>\")`; " +
+                    "see docs/migration-1x-to-2.0.md)"
         }
         // loader patcher blocks → loader("name", "version")
         this["fabric"] = loader("fabric", "fabric")
@@ -163,8 +164,8 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         this["folia"] = "Folia has no 2.0 loader descriptor — " +
                 "paper covers Paper; Folia support is planned"
         this["arch"] = "Arch-based loaders have no 2.0 descriptor — " +
-                "use the specific loader verb (`loader(\"forge\")`, " +
-                "`loader(\"fabric\")`, …)"
+                "use a specific loader verb (`forge(\"<version>\")`, " +
+                "`fabric(\"<version>\")`, …)"
         // "bukkit" is the family name — craftbukkit is the descriptor
         this["bukkit"] = loader("bukkit", "craftbukkit")
         this["craftBukkit"] = loader("craftBukkit", "craftbukkit")
@@ -1306,6 +1307,219 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         loader(name)
         action.delegatingTo(transformSpec())
     }
+
+    // region named loader verbs — 1.x spellings restored as member
+    // sugar: `fabric("0.16.0")` == `loader("fabric", "0.16.0")`, so
+    // repeated named declarations merge loaders the same way
+    // `loader(...)` does. The `(version, Closure)` twin configures
+    // the transform spec, mirroring `loader(name, version, Closure)`;
+    // Kotlin DSL gets typed `Action<TransformEnvironmentSpec>` twins
+    // from the transform module's `LoaderEnvDsl.kt`. A bare
+    // `verb { }` (no version) still routes through [methodMissing]
+    // to a same-named env extension or a migration note.
+
+    /** Declares the Fabric loader — `loader("fabric", version)`. */
+    fun fabric(version: String) = loader("fabric", version)
+
+    /** Groovy spec-config twin — `fabric "0.16.0", { nestedJars { } }`. */
+    fun fabric(version: String, action: Closure<*>) =
+        loader("fabric", version, action)
+
+    /** Declares the Quilt loader — `loader("quilt", version)`. */
+    fun quilt(version: String) = loader("quilt", version)
+
+    /** Groovy spec-config twin — `quilt "0.26.0", { }`. */
+    fun quilt(version: String, action: Closure<*>) =
+        loader("quilt", version, action)
+
+    /** Declares the Forge loader — `loader("forge", version)`. */
+    fun forge(version: String) = loader("forge", version)
+
+    /** Groovy spec-config twin — `forge "47.2.0", { }`. */
+    fun forge(version: String, action: Closure<*>) =
+        loader("forge", version, action)
+
+    /** Declares the LexForge loader — `loader("lexforge", version)`. */
+    fun lexforge(version: String) = loader("lexforge", version)
+
+    /** Groovy spec-config twin — `lexforge "47.1.0", { }`. */
+    fun lexforge(version: String, action: Closure<*>) =
+        loader("lexforge", version, action)
+
+    /** Declares the NeoForge loader — `loader("neoforge", version)`. */
+    fun neoforge(version: String) = loader("neoforge", version)
+
+    /** Groovy spec-config twin — `neoforge "21.0.0", { }`. */
+    fun neoforge(version: String, action: Closure<*>) =
+        loader("neoforge", version, action)
+
+    /** 1.x spelling — `loader("neoforge", version)`. */
+    fun neoForge(version: String) = neoforge(version)
+
+    /** Groovy spec-config twin — `neoForge "21.0.0", { }`. */
+    fun neoForge(version: String, action: Closure<*>) =
+        neoforge(version, action)
+
+    /** 1.x spelling — `loader("neoforge", version)`. */
+    fun neoForged(version: String) = neoforge(version)
+
+    /** Groovy spec-config twin — `neoForged "21.0.0", { }`. */
+    fun neoForged(version: String, action: Closure<*>) =
+        neoforge(version, action)
+
+    /** 1.x spelling — `loader("forge", version)`. */
+    fun minecraftForge(version: String) = forge(version)
+
+    /** Groovy spec-config twin — `minecraftForge "47.2.0", { }`. */
+    fun minecraftForge(version: String, action: Closure<*>) =
+        forge(version, action)
+
+    /** Declares the Cleanroom loader — `loader("cleanroom", version)`. */
+    fun cleanroom(version: String) = loader("cleanroom", version)
+
+    /** Groovy spec-config twin — `cleanroom "0.4.0", { }`. */
+    fun cleanroom(version: String, action: Closure<*>) =
+        loader("cleanroom", version, action)
+
+    /** Declares the LegacyFabric loader —
+     *  `loader("legacyfabric", version)`. */
+    fun legacyfabric(version: String) = loader("legacyfabric", version)
+
+    /** Groovy spec-config twin — `legacyfabric "0.16.0", { }`. */
+    fun legacyfabric(version: String, action: Closure<*>) =
+        loader("legacyfabric", version, action)
+
+    /** 1.x spelling — `loader("legacyfabric", version)`. */
+    fun legacyFabric(version: String) = legacyfabric(version)
+
+    /** Groovy spec-config twin — `legacyFabric "0.16.0", { }`. */
+    fun legacyFabric(version: String, action: Closure<*>) =
+        legacyfabric(version, action)
+
+    /** Declares the Babric loader — `loader("babric", version)`. */
+    fun babric(version: String) = loader("babric", version)
+
+    /** Groovy spec-config twin — `babric "0.16.0", { }`. */
+    fun babric(version: String, action: Closure<*>) =
+        loader("babric", version, action)
+
+    /** Declares the Ornithe loader — `loader("ornithe", version)`. */
+    fun ornithe(version: String) = loader("ornithe", version)
+
+    /** Groovy spec-config twin — `ornithe "0.19.5", { }`. */
+    fun ornithe(version: String, action: Closure<*>) =
+        loader("ornithe", version, action)
+
+    /** 1.x spelling — `loader("ornithe", version)`. */
+    fun ornitheFabric(version: String) = ornithe(version)
+
+    /** Groovy spec-config twin — `ornitheFabric "0.19.5", { }`. */
+    fun ornitheFabric(version: String, action: Closure<*>) =
+        ornithe(version, action)
+
+    /** Declares the JarMod loader — `loader("jarmod", version)`. */
+    fun jarmod(version: String) = loader("jarmod", version)
+
+    /** Groovy spec-config twin — `jarmod "0.1.5", { }`. */
+    fun jarmod(version: String, action: Closure<*>) =
+        loader("jarmod", version, action)
+
+    /** 1.x spelling — `loader("jarmod", version)`. */
+    fun jarMod(version: String) = jarmod(version)
+
+    /** Groovy spec-config twin — `jarMod "0.1.5", { }`. */
+    fun jarMod(version: String, action: Closure<*>) =
+        jarmod(version, action)
+
+    /** Declares an FG1-era Forge env — `loader("fg1", version)`. */
+    fun fg1(version: String) = loader("fg1", version)
+
+    /** Groovy spec-config twin — `fg1 "1.0.0", { }`. */
+    fun fg1(version: String, action: Closure<*>) =
+        loader("fg1", version, action)
+
+    /** Declares the FoxLoader loader — `loader("foxloader", version)`. */
+    fun foxloader(version: String) = loader("foxloader", version)
+
+    /** Version-omitting form — the FoxLoader descriptor resolves the
+     *  newest release pairing with the dist. */
+    fun foxloader() = loader("foxloader")
+
+    /** Groovy spec-config twin — `foxloader "2.0", { }`. */
+    fun foxloader(version: String, action: Closure<*>) =
+        loader("foxloader", version, action)
+
+    /** Groovy spec-config twin — `foxloader { }` is live (unlike other
+     *  verbs' bare-closure form) because FoxLoader resolves its own
+     *  version, mirroring `loader("foxloader") { }`. */
+    fun foxloader(action: Closure<*>) = loader("foxloader", action)
+
+    /** 1.x spelling — `loader("foxloader", version)`. */
+    fun foxLoader(version: String) = foxloader(version)
+
+    /** Version-omitting form — `loader("foxloader")`. */
+    fun foxLoader() = foxloader()
+
+    /** Groovy spec-config twin — `foxLoader "2.0", { }`. */
+    fun foxLoader(version: String, action: Closure<*>) =
+        foxloader(version, action)
+
+    /** Groovy spec-config twin — `loader("foxloader") { }`. */
+    fun foxLoader(action: Closure<*>) = foxloader(action)
+
+    /** Declares the LiteLoader loader —
+     *  `loader("liteloader", version)`. */
+    fun liteloader(version: String) = loader("liteloader", version)
+
+    /** Groovy spec-config twin — `liteloader "1.12.2", { }`. */
+    fun liteloader(version: String, action: Closure<*>) =
+        loader("liteloader", version, action)
+
+    /** Declares the Rift loader — `loader("rift", version)`. */
+    fun rift(version: String) = loader("rift", version)
+
+    /** Groovy spec-config twin — `rift "1.0.4", { }`. */
+    fun rift(version: String, action: Closure<*>) =
+        loader("rift", version, action)
+
+    /** Declares the Spigot loader — `loader("spigot", version)`. */
+    fun spigot(version: String) = loader("spigot", version)
+
+    /** Groovy spec-config twin — `spigot "1.20.1", { }`. */
+    fun spigot(version: String, action: Closure<*>) =
+        loader("spigot", version, action)
+
+    /** Declares the Paper loader — `loader("paper", version)`. */
+    fun paper(version: String) = loader("paper", version)
+
+    /** Groovy spec-config twin — `paper "1.20.1", { }`. */
+    fun paper(version: String, action: Closure<*>) =
+        loader("paper", version, action)
+
+    /** Declares the CraftBukkit loader —
+     *  `loader("craftbukkit", version)`. */
+    fun craftbukkit(version: String) = loader("craftbukkit", version)
+
+    /** Groovy spec-config twin — `craftbukkit "1.20.1", { }`. */
+    fun craftbukkit(version: String, action: Closure<*>) =
+        loader("craftbukkit", version, action)
+
+    /** 1.x spelling — `loader("craftbukkit", version)`. */
+    fun craftBukkit(version: String) = craftbukkit(version)
+
+    /** Groovy spec-config twin — `craftBukkit "1.20.1", { }`. */
+    fun craftBukkit(version: String, action: Closure<*>) =
+        craftbukkit(version, action)
+
+    /** Family-name shorthand — `loader("craftbukkit", version)`;
+     *  `spigot`/`paper` have their own descriptors. */
+    fun bukkit(version: String) = craftbukkit(version)
+
+    /** Groovy spec-config twin — `bukkit "1.20.1", { }`. */
+    fun bukkit(version: String, action: Closure<*>) =
+        craftbukkit(version, action)
+
+    // endregion
 
     /** Groovy DSL — `transform { nestedJars { } }`: configures this
      *  env's transform spec. The Kotlin counterpart is the transform

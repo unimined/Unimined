@@ -7,7 +7,7 @@ The 2.0 DSL surface, by extension:
 | `unimined { }` | root | top-level plugin extension |
 | `minecraft { }` | `unimined` | env bound to a source set (native product) |
 | `bta`/`reindev`/`nsss`/`custom(n)` | `unimined` | product envs |
-| `loader(n, v)` | env | apply a modloader |
+| `fabric(v)`/`forge(v)`/`loader(n, v)` | env | apply a modloader (named verbs or the generic form) |
 | `mappings { }` | env | remap chain |
 | `mod { }` | `unimined` | mod metadata (id/depends/loader()/mixins) |
 | `runs { }` | root | run configurations |

@@ -35,6 +35,14 @@ class DslParityFunctionalTest {
             unimined {
                 minecraft {
                     version.set('1.20.1')
+                    // named loader verbs — `loader("fabric", v)` sugar;
+                    // sibling envs inherit main, so main stays loaderless
+                    sourceSet('fabric') {
+                        fabric('0.16.0')
+                    }
+                    sourceSet('forge') {
+                        forge('47.2.0')
+                    }
                 }
                 remap {
                     jar {
@@ -60,6 +68,14 @@ class DslParityFunctionalTest {
             unimined {
                 minecraft {
                     version.set("1.20.1")
+                    // named loader verbs — `loader("fabric", v)` sugar;
+                    // sibling envs inherit main, so main stays loaderless
+                    sourceSet("fabric") {
+                        fabric("0.16.0")
+                    }
+                    sourceSet("forge") {
+                        forge("47.2.0")
+                    }
                 }
                 remap {
                     jar {

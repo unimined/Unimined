@@ -158,7 +158,7 @@ to:
     ```kotlin
     unimined {
         minecraft {
-            loader("forge", "47.2.0") {
+            forge("47.2.0") {
                 nestedJars { recompress.set(false) }
             }
         }
@@ -169,7 +169,7 @@ to:
     ```groovy
     unimined {
         minecraft {
-            loader("forge", "47.2.0") {
+            forge("47.2.0") {
                 nestedJars { recompress.set(false) }
             }
         }

@@ -10,7 +10,7 @@ inheritance:
     unimined {
         minecraft {
             version = "1.20.1"
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             datagen()                          // env "data" → runData
             // or: datagen(client = true)      // client-side pack
@@ -23,7 +23,7 @@ inheritance:
     unimined {
         minecraft {
             version.set("1.20.1")
-            loader("fabric", "0.16.0")
+            fabric("0.16.0")
 
             datagen()                          // env "data" → runData
             // or: datagen("data", true)       // client-side pack
