@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/getting-started/installation/">
+        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/latest/getting-started/installation/">
       
       
         <link rel="prev" href="../..">
@@ -455,6 +455,8 @@
   
     
     
+      
+        
       
         
       
@@ -938,6 +940,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1496,6 +1526,12 @@ three pieces:</p>
 </div>
 </div>
 </div>
+<p>The frontend applies the <code>java</code> plugin for you — source sets, compile
+tasks, and the IDE model are wired without declaring it. (The
+lower-level <code>xyz.wagyourtail.unimined.*</code> plugins stay Java-agnostic on
+purpose; if you apply them individually instead of the frontend,
+declare <code>java</code> yourself or environments stay inert and a warning is
+logged.)</p>
 <div class="admonition tip">
 <p class="admonition-title">Skip the typing</p>
 <p><code>unimined-cli new mymod --group com.example --version 1.20.1 --loader fabric=0.16.0</code>

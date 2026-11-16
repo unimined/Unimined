@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -114,6 +114,21 @@
               </div>
             </div>
           </div>
+<a data-name="1044960081%2FClasslikes%2F1700007794" anchor-label="LegacyDistArtifactProducer" id="1044960081%2FClasslikes%2F1700007794" data-filterable-set=":unimined-minecraft:provider-legacydist/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-legacydist/main" data-filterable-set=":unimined-minecraft:provider-legacydist/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-legacy-dist-artifact-producer/index.html"><span>Legacy</span><wbr><span>Dist</span><wbr><span>Artifact</span><wbr><span><span>Producer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1044960081%2FClasslikes%2F1700007794"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-legacydist/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-legacy-dist-artifact-producer/index.html">LegacyDistArtifactProducer</a> : <a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-product-artifact-producer/index.html">ProductArtifactProducer</a></div><div class="brief "><p class="paragraph">Execution-time counterpart to <a href="-legacy-dist-provider/index.html">LegacyDistProvider</a>: materializes the declared-source artifact inside the raw-artifact transform — local file/url sources into the shared <code class="lang-kotlin">native-cache</code>, <code class="lang-kotlin">producer()</code> sources via a <code class="lang-kotlin">ProcessBuilder</code> runner (<code class="lang-kotlin">BuildToolsArtifactProducer</code> proved a subprocess works in transform isolation; the descriptor-keyed cache is the same "declared inputs are the contract" model BuildTools' opaque output already carries).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="1168219524%2FClasslikes%2F1700007794" anchor-label="LegacyDistProvider" id="1168219524%2FClasslikes%2F1700007794" data-filterable-set=":unimined-minecraft:provider-legacydist/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-legacydist/main" data-filterable-set=":unimined-minecraft:provider-legacydist/main">
             <div class="main-subrow keyValue ">
@@ -124,7 +139,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-legacydist/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-legacy-dist-provider/index.html">LegacyDistProvider</a> : <a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-product-provider/index.html">ProductProvider</a></div><div class="brief "><p class="paragraph">Declared-source provider — <code class="lang-kotlin">provider("legacydist")</code>, or implicitly when an env declares <code class="lang-kotlin">legacydist {}</code>. Claims any spec carrying a <code class="lang-kotlin">declaredSource</code>; materializes it (local file / URL+SHA-256 / external producer) into a content-addressed cache under <code class="lang-kotlin">.gradle/unimined/legacydist-cache</code>. No manifest is consulted — works for non-MC-version jars (BTA/ReIndev, pre-1.8 bukkit, air-gapped artifacts).</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-legacydist/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-legacy-dist-provider/index.html">LegacyDistProvider</a> : <a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-product-provider/index.html">ProductProvider</a></div><div class="brief "><p class="paragraph">Declared-source provider — <code class="lang-kotlin">provider("legacydist")</code>, or implicitly when an env declares <code class="lang-kotlin">legacydist {}</code>. Claims any spec carrying a <code class="lang-kotlin">declaredSource</code>; materializes it (local file / URL+SHA-256 / external producer) into a content-addressed cache under the shared <code class="lang-kotlin">native-cache</code> root — the same dir <a href="-legacy-dist-artifact-producer/index.html">LegacyDistArtifactProducer</a> resolves inside the raw-artifact transform, so the jar is produced once whichever path asks first. No manifest is consulted — works for non-MC-version jars (BTA/ReIndev, pre-1.8 bukkit, air-gapped artifacts).</p></div></div></div>
                 </div>
               </div>
             </div>

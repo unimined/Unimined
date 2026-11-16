@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -760,6 +762,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#scripting-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripting surface
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1008,6 +1021,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1502,6 +1543,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#scripting-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripting surface
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1711,6 +1763,30 @@ mistakes that compile fine but fail at runtime:</p>
 jar legitimately lacks <code>.class</code> files). Only unimined-produced
 artifacts are linted — third-party jars in transforms are never
 validated.</p>
+<h2 id="scripting-surface">Scripting surface<a class="headerlink" href="#scripting-surface" title="Permanent link">&para;</a></h2>
+<p>The pipeline is data, not code — specs serialize at transform
+registration — but three escape hatches cover scripting needs:</p>
+<ul>
+<li><strong><code>applyClassTweaker { ... }</code></strong> (and the other <code>apply*</code> verbs shown
+  above) attach a custom bytecode transform to a surface without
+  writing a step type.</li>
+<li><strong><code>step(spec)</code> / <code>step(MySpec::class.java) { ... }</code></strong> append any
+  <code>StepSpec</code> to a surface. Engine plugins expose their own verbs by
+  registering them via <code>RemapExtension.registerDslVerb(name, factory)</code>
+  — this is what makes <code>jst {}</code>, <code>unpick {}</code> etc. reachable from
+  Groovy (<code>methodMissing</code> dispatch), where Kotlin extension functions
+  would be invisible.</li>
+<li><strong><code>uniminedTools { ... }</code></strong> overrides the resolved coordinates of
+  external tool jars the pipeline shells out to (<code>jst</code>, <code>unprotect</code>,
+  <code>mcpcleanup</code>, <code>diffpatch</code>, <code>stitch</code>, <code>forgix</code>,
+  <code>classpathPluginLoader</code>, <code>jvmdowngraderJavaApi</code>) — see
+  <a href="../../adapters/">Adapters</a>.</li>
+</ul>
+<p>The resolved pipeline is inspectable lazily:
+<code>uniminedRemap.stepSpecs(envName, RemapSurface.MINECRAFT)</code> returns a
+<code>Provider&lt;List&lt;StepSpec&gt;&gt;</code> — useful for diagnostics or wiring
+downstream tasks off the effective step list without re-resolving
+mappings.</p>
 
 
 

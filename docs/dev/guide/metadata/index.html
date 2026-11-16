@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/guide/metadata/">
+        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/latest/guide/metadata/">
       
       
         <link rel="prev" href="../gametest/">
@@ -445,6 +445,8 @@
   
     
     
+      
+        
       
         
       
@@ -924,6 +926,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#loader-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loader documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#merging-with-hand-written-files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1030,6 +1043,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1492,6 +1533,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#loader-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loader documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#merging-with-hand-written-files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1574,7 +1626,7 @@ mods.toml, …) at build time:</p>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">).</span><span class="na">get</span><span class="p">()</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">        </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">))</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
@@ -1583,9 +1635,9 @@ mods.toml, …) at build time:</p>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="n">mod</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"modid"</span><span class="p">).</span><span class="na">get</span><span class="p">()</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="n">id</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"modid"</span><span class="p">))</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"examplemod"</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"version"</span><span class="p">).</span><span class="na">get</span><span class="p">()</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"version"</span><span class="p">))</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="p">}</span>
@@ -1602,7 +1654,7 @@ mods.toml, …) at build time:</p>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">))</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">,</span><span class="w"> </span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
@@ -1611,9 +1663,9 @@ mods.toml, …) at build time:</p>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="o">}</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="n">mod</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="n">id</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"modid"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="n">id</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"modid"</span><span class="o">))</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">name</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"examplemod"</span><span class="o">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"version"</span><span class="o">))</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">)</span><span class="w"> </span><span class="o">{}</span>
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="o">}</span>
@@ -1643,6 +1695,24 @@ mods.toml, …) at build time:</p>
 </ul>
 <p><code>--metadata dsl</code> on the CLI emits this block instead of hardcoding
 values in the loader descriptor.</p>
+<h3 id="loader-documents">Loader documents<a class="headerlink" href="#loader-documents" title="Permanent link">&para;</a></h3>
+<p>Each loader family gets its own document shape from the same model:</p>
+<ul>
+<li><strong>fabric-family</strong> → <code>fabric.mod.json</code> (fmj): <code>schemaVersion</code>,
+  top-level <code>id</code>, <code>custom</code> object, <code>loom:injected_interfaces</code>.</li>
+<li><strong>quilt</strong> → <code>quilt.mod.json</code> (real qmj): <code>schema_version</code>,
+  <code>quilt_loader { group, id, version, metadata { name, description,
+  contributors, contact, license, icon }, entrypoints, depends[] }</code>,
+  <code>minecraft.environment</code> (fmj's <code>server</code> value translates to
+  <code>dedicated_server</code>), top-level <code>mixin</code> / <code>access_widener</code>, section
+  <code>custom</code> entries emitted as top-level namespaced keys (qmj's
+  extension convention), interface injections under top-level
+  <code>quilt_loom.injected_interfaces</code>. <code>quilt_loader.group</code> is required
+  by the loader and comes from <code>project.group</code> (<code>unspecified</code> when
+  unset).</li>
+<li><strong>forge-family</strong> → <code>mods.toml</code> / <code>neoforge.mods.toml</code> + manifest
+  attributes per the table below.</li>
+</ul>
 <h2 id="merging-with-hand-written-files">Merging with hand-written files<a class="headerlink" href="#merging-with-hand-written-files" title="Permanent link">&para;</a></h2>
 <p>If a resource already contains the loader's metadata file
 (e.g. <code>src/fabric/resources/fabric/fabric.mod.json</code>), the generated
@@ -1651,7 +1721,7 @@ recursively, arrays union and deduplicate, and generated scalar
 values win. Only the merged copy ships — the source file is excluded
 from <code>processResources</code>. Non-JSON collisions still fail the build.</p>
 <h2 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h2>
-<p><code>generate&lt;Env&gt;ModMetadata</code> scans the environment's resources and
+<p><code>gen&lt;Env&gt;ModMetadata</code> scans the environment's resources and
 compiled classes at execution time, gated by three env flags:</p>
 <ul>
 <li><code>*.mixins.json</code> files found in resources are referenced from the
@@ -1666,8 +1736,10 @@ compiled classes at execution time, gated by three env flags:</p>
   Each pair becomes an <code>inject-interface</code> rule: on loaders whose
   access doc can carry classTweaker directives (fabric ≥ <code>0.18.0</code>)
   the rules merge into the canonical <code>*.accesswidener</code> file, and on
-  every loader they emit a <code>custom.loom:injected_interfaces</code> entry
-  for IDE/dependents. Rules already present in the project's own
+  every loader they emit the loader's injected-interfaces metadata
+  (<code>custom.loom:injected_interfaces</code> on fabric, top-level
+  <code>quilt_loom.injected_interfaces</code> on quilt) for IDE/dependents.
+  Rules already present in the project's own
   CT/AW files or <code>access { }</code> declarations are not re-emitted.</li>
 </ul>
 <p>Interface-injection names are emitted in the dev namespace; the
@@ -1768,7 +1840,7 @@ source sets (<code>&lt;env&gt;Data</code>, <code>&lt;env&gt;Gametest</code>). Th
 version/mappings and see its classes on their classpath, but emit <strong>no</strong>
 metadata of their own — the parent's descriptor references their
 classes (entrypoints, generated data). A second same-id metadata file
-would collide on the classpath, so <code>generate&lt;Env&gt;ModMetadata</code> no-ops
+would collide on the classpath, so <code>gen&lt;Env&gt;ModMetadata</code> no-ops
 for aux envs.</p>
 <p>Server gametests run through the loader's JUnit artifact
 (<code>fabric-loader-junit</code>) wired onto <code>testImplementation</code> by

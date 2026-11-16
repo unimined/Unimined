@@ -1,0 +1,284 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>UniminedTools</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.1.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-api/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-api/main" data-filter=":unimined-api/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-api::xyz.wagyourtail.unimined.api.util/UniminedTools///PointingToDeclaration//868987598">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-api</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.api.util</a><span class="delimiter">/</span><span class="current">UniminedTools</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Unimined</span><wbr><span><span>Tools</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">UniminedTools</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div><p class="paragraph">Detached-tool coordinate registry — <code class="lang-kotlin">uniminedTools { }</code>.</p><p class="paragraph">Every hardcoded tool coordinate Unimined resolves into a detached configuration is surfaced here as a <code class="lang-kotlin">Property&lt;String&gt;</code> holding the full <code class="lang-kotlin">g:a:v[:classifier][@ext]</code> notation, so users can override the version (or fork) without forking the plugin:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">uniminedTools {<br>    jst.set("net.neoforged.jst:jst-cli:2.1.0")<br>}</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">Registered lazily via <a href="../unimined-tools.html">Project.uniminedTools</a> — any plugin module can look it up without apply-order coupling. Properties carry conventions, so reading them never triggers resolution.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="298291282%2FConstructors%2F868987598" anchor-label="UniminedTools" id="298291282%2FConstructors%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-unimined-tools.html"><span>Unimined</span><wbr><span><span>Tools</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="298291282%2FConstructors%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span></div></div><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">objects<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.model/ObjectFactory///PointingToDeclaration/">ObjectFactory</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-1278135970%2FProperties%2F868987598" anchor-label="classpathPluginLoader" id="-1278135970%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="classpath-plugin-loader.html"><span>classpath</span><wbr><span>Plugin</span><wbr><span><span>Loader</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1278135970%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="classpath-plugin-loader.html">classpathPluginLoader</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">ClasspathPluginLoader agent jar (with <code class="lang-kotlin">:all</code> classifier) — bukkit environments' plugin classpath loader.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-55987362%2FProperties%2F868987598" anchor-label="diffpatch" id="-55987362%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="diffpatch.html"><span><span>diffpatch</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-55987362%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="diffpatch.html">diffpatch</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">DiffPatch</code> — MCPConfig <code class="lang-kotlin">mcpconfig:diffpatch</code> tool used by userdev sources and binpatch subpipelines.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-791900468%2FProperties%2F868987598" anchor-label="forgix" id="-791900468%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="forgix.html"><span><span>forgix</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-791900468%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="forgix.html">forgix</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Forgix engine — resolved into <code class="lang-kotlin">loaderMergeForgix</code> and invoked reflectively by <code class="lang-kotlin">mergeLoaderJars</code>, so bumping the version here swaps the merge implementation without a unimined release (entry point: <code class="lang-kotlin">Forgix.mergeLoaders(Map, File)</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1317979766%2FProperties%2F868987598" anchor-label="jst" id="1317979766%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jst.html"><span><span>jst</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1317979766%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jst.html">jst</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">JST CLI — enriches the <code class="lang-kotlin">RemapSurface.SOURCES</code> pipeline on forge userdev so generated sources carry AT/interface-injection.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1252252703%2FProperties%2F868987598" anchor-label="jvmdowngraderJavaApi" id="1252252703%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="jvmdowngrader-java-api.html"><span>jvmdowngrader</span><wbr><span>Java</span><wbr><span><span>Api</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1252252703%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="jvmdowngrader-java-api.html">jvmdowngraderJavaApi</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">jvmdowngrader java-api — runtime dep the <code class="lang-kotlin">jvmdg</code> adapter adds to downgraded environments' classpaths.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1364420111%2FProperties%2F868987598" anchor-label="mcpcleanup" id="1364420111%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mcpcleanup.html"><span><span>mcpcleanup</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1364420111%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="mcpcleanup.html">mcpcleanup</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">mcpcleanup</code> — MCPConfig <code class="lang-kotlin">forge:mcpCleanup</code> splice-in for notch-obf userdev sources chains.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="894489864%2FProperties%2F868987598" anchor-label="stitch" id="894489864%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="stitch.html"><span><span>stitch</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="894489864%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="stitch.html">stitch</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">stitch</code> — yarn-v1 <code class="lang-kotlin">proposeFieldNames</code> tool invoked during mappings materialization.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-671479797%2FProperties%2F868987598" anchor-label="unprotect" id="-671479797%2FProperties%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="unprotect.html"><span><span>unprotect</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-671479797%2FProperties%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="unprotect.html">unprotect</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">unprotect</code> — strips legacy-runtime protections before dev launch on forge-era environments.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="91358719%2FFunctions%2F868987598" anchor-label="remapToolCoord" id="91358719%2FFunctions%2F868987598" data-filterable-set=":unimined-api/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-api/main" data-filterable-set=":unimined-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="remap-tool-coord.html"><span>remap</span><wbr><span>Tool</span><wbr><span><span>Coord</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="91358719%2FFunctions%2F868987598"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-api/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="remap-tool-coord.html"><span class="token function">remapToolCoord</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">coord<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Resolve a tool coordinate through this registry: when <a href="remap-tool-coord.html">coord</a>'s <code class="lang-kotlin">group:artifact</code> matches a known tool's default, the tool's (possibly user-overridden) notation is substituted; otherwise <a href="remap-tool-coord.html">coord</a> passes through untouched — profile-declared tool versions stay profile-driven.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

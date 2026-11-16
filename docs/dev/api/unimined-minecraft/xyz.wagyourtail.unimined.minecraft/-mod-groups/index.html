@@ -1,0 +1,186 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>ModGroups</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.1.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-minecraft/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-minecraft/main" data-filter=":unimined-minecraft/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-minecraft::xyz.wagyourtail.unimined.minecraft/ModGroups///PointingToDeclaration//-1355253599">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-minecraft</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.minecraft</a><span class="delimiter">/</span><span class="current">ModGroups</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Mod</span><wbr><span><span>Groups</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="index.html">ModGroups</a></div><p class="paragraph">Launch-side consumption of the environment's <code class="lang-kotlin">mods { "&lt;id&gt;" { } }</code> groups — the selection rule plus the two loader serializations, shared by every launch surface (<code class="lang-kotlin">run&lt;Name&gt;</code>, the <code class="lang-kotlin">test&lt;Name&gt;</code> JUnit twin, and IDE-emitted run configs) so the formats can't drift.</p><ul><li><p class="paragraph"><code class="lang-kotlin">classpathGroups</code>-capable loaders (fabric-family) take <a href="classpath-groups-value.html">classpathGroupsValue</a> as a system property — fabric-loader #585.</p></li><li><p class="paragraph"><code class="lang-kotlin">modGroupsEnv</code>-capable loaders (forge-family) take <a href="mod-classes-entries.html">modClassesEntries</a> appended to that env var (<code class="lang-kotlin">MOD_CLASSES</code> <code class="lang-kotlin">id%%dir</code> pairs — Loom <code class="lang-kotlin">loom.mods</code> / NFRT parity).</p></li></ul></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="362214343%2FFunctions%2F-1355253599" anchor-label="classpathGroupsValue" id="362214343%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="classpath-groups-value.html"><span>classpath</span><wbr><span>Groups</span><wbr><span><span>Value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="362214343%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="classpath-groups-value.html"><span class="token function">classpathGroupsValue</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">groups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../-mod-group-spec/index.html">ModGroupSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">classpathGroups</code> capability value (fabric-loader #585 — <code class="lang-kotlin">fabric.classPathGroups</code>): groups separated by a doubled path separator, each group's launch files by a single one. An empty group list serializes to <code class="lang-kotlin">""</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2133910538%2FFunctions%2F-1355253599" anchor-label="mergeModClasses" id="2133910538%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="merge-mod-classes.html"><span>merge</span><wbr><span>Mod</span><wbr><span><span>Classes</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2133910538%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="merge-mod-classes.html"><span class="token function">mergeModClasses</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">existing<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">ours<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Merge <a href="mod-classes-entries.html">modClassesEntries</a> output into an existing <code class="lang-kotlin">modGroupsEnv</code> value — the loader's own contribution (<a href="merge-mod-classes.html">existing</a>, e.g. forge's <code class="lang-kotlin">MOD_CLASSES</code> from <code class="lang-kotlin">runs.&lt;side&gt;</code>) stays first, ours append path-separated. <code class="lang-kotlin">null</code>/<code class="lang-kotlin">""</code> inputs drop out; all-empty yields <code class="lang-kotlin">""</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1910784933%2FFunctions%2F-1355253599" anchor-label="modClassesEntries" id="1910784933%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mod-classes-entries.html"><span>mod</span><wbr><span>Classes</span><wbr><span><span>Entries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1910784933%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="mod-classes-entries.html"><span class="token function">modClassesEntries</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">groups<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../-mod-group-spec/index.html">ModGroupSpec</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">modGroupsEnv</code> capability entries (forge <code class="lang-kotlin">MOD_CLASSES</code>) — one <code class="lang-kotlin">&lt;id&gt;%%&lt;path&gt;</code> pair per launch file, <code class="lang-kotlin">:</code>s in the group id flattened to <code class="lang-kotlin">_</code> (1.x <code class="lang-kotlin">parent.groups</code> shape).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-591809525%2FFunctions%2F-1355253599" anchor-label="selected" id="-591809525%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="selected.html"><span><span>selected</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-591809525%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="selected.html"><span class="token function">selected</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">environment<span class="token operator">: </span><a href="../-minecraft-environment/index.html">MinecraftEnvironment</a><span class="token punctuation">, </span></span><span class="parameter ">loadedMods<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">prod<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../-mod-group-spec/index.html">ModGroupSpec</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The groups one run loads: <a href="selected.html">loadedMods</a> (<code class="lang-kotlin">RunConfig.loadedMods</code>) selects a subset by name, an empty set loads every declared group. Mod groups are a dev-launch channel — <a href="selected.html">prod</a> runs launch the shipped jar, where dev source-set outputs on the classpath would double the mod's classes (the run wiring itself keeps <code class="lang-kotlin">sourceSet.output</code> off prod classpaths for the same reason), so a prod run selects nothing.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

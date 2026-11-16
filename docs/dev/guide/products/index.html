@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -733,6 +735,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Products
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -749,6 +769,64 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#declared-source-dists-legacydist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declared-source dists (legacydist)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperweight-dev-bundles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paperweight dev bundles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paperweight dev bundles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exporting-a-dev-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting a dev bundle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -938,6 +1016,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1393,6 +1499,53 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#declared-source-dists-legacydist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declared-source dists (legacydist)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperweight-dev-bundles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paperweight dev bundles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paperweight dev bundles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exporting-a-dev-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting a dev bundle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1442,6 +1595,212 @@ stays the same either way.</p>
 <p>Full generated build scripts: <a href="../../generated/product-bta.gradle.kts">BTA</a>
 / <a href="../../generated/product-custom.gradle.kts">custom product</a> (<code>.gradle</code>
 siblings are the Groovy twins).</p>
+<h2 id="declared-source-dists-legacydist">Declared-source dists (<code>legacydist</code>)<a class="headerlink" href="#declared-source-dists-legacydist" title="Permanent link">&para;</a></h2>
+<p><code>xyz.wagyourtail.unimined.provider.legacydist</code> is the provider behind
+envs that declare their game jar directly — <code>legacydist { }</code> selects
+it implicitly, and <code>custom(...) { file(...) }</code> envs negotiate to it
+from the declared source. Apply the plugin, then declare the artifact
+inside the env:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">id</span><span class="p">(</span><span class="s">"xyz.wagyourtail.unimined.provider.legacydist"</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="n">legacydist</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">                </span><span class="n">file</span><span class="p">(</span><span class="s">"libs/dist.jar"</span><span class="p">)</span><span class="w">                    </span><span class="c1">// local jar</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">                </span><span class="c1">// url("https://…", sha256 = "…")         // pinned fetch</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">                </span><span class="c1">// producer("./gradlew", "buildDist")     // external builder</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">                </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"official"</span><span class="w">                   </span><span class="c1">// prod namespace</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"obf"</span><span class="w">                           </span><span class="c1">// optional hint</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined.provider.legacydist'</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="o">}</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="n">legacydist</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">                </span><span class="n">file</span><span class="w"> </span><span class="s1">'libs/dist.jar'</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">                </span><span class="n">namespace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'official'</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The declared jar is consumed as-is — no manifest is consulted, so it
+works for non-version artifacts (BTA/ReIndev overlays, pre-1.8 bukkit,
+air-gapped jars). <code>file()</code> copies into a descriptor-keyed cache under
+the shared unimined cache; <code>url()</code> downloads once with the SHA-256 pin
+verified before publish (unpinned URLs warn); <code>maven()</code> resolves from
+the project's repositories at declaration time; <code>producer()</code> runs the
+declared executable inside the artifact transform and expects its
+<code>output</code> in the work dir. <code>format = "obf"</code> marks the jar as obfuscated
+so it rides the raw→dev remap view; a <code>format</code> matching another
+registered provider (<code>"devbundle"</code>) routes there instead.</p>
+<h2 id="paperweight-dev-bundles">Paperweight dev bundles<a class="headerlink" href="#paperweight-dev-bundles" title="Permanent link">&para;</a></h2>
+<p><code>xyz.wagyourtail.unimined.provider.devbundle</code> consumes
+paperweight-format dev-bundle zips — the <code>data/</code> + <code>patches/</code> +
+<code>config.json</code> layout paperweight uses for paper/folia/custom forks
+without distribution endpoints (data versions 2–8). Apply the plugin,
+then declare the bundle on an env with <code>devbundle { }</code> (or
+<code>legacydist { }</code> with <code>format = "devbundle"</code>):</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">id</span><span class="p">(</span><span class="s">"xyz.wagyourtail.unimined.provider.devbundle"</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">}</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">            </span><span class="n">devbundle</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">                </span><span class="n">file</span><span class="p">(</span><span class="s">"myfork-dev-bundle.zip"</span><span class="p">)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">                </span><span class="c1">// url("https://example/bundle.zip", sha256 = "…") also works</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined.provider.devbundle'</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="o">}</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">            </span><span class="n">devbundle</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">                </span><span class="n">file</span><span class="w"> </span><span class="s1">'myfork-dev-bundle.zip'</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The provider extracts the bundle's embedded mojang-mapped paperclip
+jar and runs it (patch-only) against the vanilla <code>server.jar</code>
+download, caching everything under the shared unimined cache. The
+result is an already-patched, mojmap-named server jar — reported with
+<code>namespaceMode = IDENTITY</code>, so no remap step runs on the dev
+classpath.</p>
+<p>What the bundle maps onto:</p>
+<ul>
+<li><strong>Artifact</strong> — the patched server jar, keyed by <code>side</code>
+  (<code>SERVER</code>/<code>MERGED</code>; <code>CLIENT</code> is rejected — bundles are
+  server-only). <code>completedStages</code> reports <code>paperclip:binpatch</code>.</li>
+<li><strong>Libraries</strong> — the bundle's declared api/compile/runtime
+  coordinates plus the paperclip's own <code>META-INF/libraries.list</code>
+  entries. Maven Central, Mojang Libraries, and Paper's repo are
+  ensured; the bundle's own <code>libraryRepositories</code> are mirrored onto
+  the project.</li>
+<li><strong>Mappings</strong> — <code>server_mappings</code>/<code>client_mappings</code> channels serve
+  the vanilla server-side Mojang map (the bundle's artifact is a
+  server jar, so both keys point there), plus <code>reobf_mappings</code> /
+  <code>access_transformer</code> aux artifacts when the bundle ships them
+  (data versions ≤7 / ≤5 respectively) and <code>paperclip_jar</code> for the
+  extracted tool.</li>
+</ul>
+<p>Gaps and edges:</p>
+<ul>
+<li><code>producer()</code> declared sources can't run inside the artifact
+  transform — use <code>file()</code>/<code>url()</code>.</li>
+<li>The bundle's source <code>patches/</code> are not applied — the paperclip
+  output is already patched.</li>
+<li><code>launch</code> metadata is absent: Paper servers launch from the patched
+  jar + libraries, not a version-JSON launch profile.</li>
+<li><code>custom(name) { provider.set("devbundle"); file(...) }</code> is
+  equivalent for forks that want a <code>custom:&lt;name&gt;</code> product id.</li>
+</ul>
+<h3 id="exporting-a-dev-bundle">Exporting a dev bundle<a class="headerlink" href="#exporting-a-dev-bundle" title="Permanent link">&para;</a></h3>
+<p>The same plugin is also the <em>producer</em>: every env gets a
+<code>devBundleExport</code> spec and an <code>export&lt;Env&gt;DevBundle</code> task that writes
+a consumable bundle (data version 6) of that env's production
+artifact:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">            </span><span class="n">devBundleExport</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">                </span><span class="n">apiCoordinates</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"com.example:myfork-api:1.0"</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">                </span><span class="c1">// serverJar.set(...)        // defaults to the env's</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">                </span><span class="c1">//                           // minecraftProd view</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">                </span><span class="c1">// outputZip.set(...)        // defaults to</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">                </span><span class="c1">//                           // build/devBundle/main-dev-bundle.zip</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">            </span><span class="n">devBundleExport</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">                </span><span class="n">apiCoordinates</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s1">'com.example:myfork-api:1.0'</span><span class="o">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>./gradlew<span class="w"> </span>exportDevBundle<span class="w">          </span><span class="c1"># main env (export&lt;Env&gt;DevBundle otherwise)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># → build/devBundle/main-dev-bundle.zip — declare it on the consuming</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">#   side with devbundle { file("…") }</span>
+</code></pre></div>
+<p>A unimined bundle is a <em>self-contained reproducer</em>: the env's
+already-built prod jar rides inside <code>data/paperclip-mojang.jar</code>'s
+<code>META-INF/versions/</code> entries and the paperclip's <code>Main-Class</code> is a
+generated stand-in that extracts it — consumers get byte-identical
+output to what the env built, no binary patching involved (so the zip
+is larger than a patch-based bundle, and exact). <code>patches/</code> and
+<code>reobf_mappings</code> carry through for source-level consumers when you
+supply them (<code>sourcePatches</code>, <code>reobfMappingsFile</code>); the bundle is
+otherwise deterministic — re-running the task on unchanged inputs
+produces identical bytes.</p>
+<p>What the export maps onto:</p>
+<ul>
+<li><strong>serverJar</strong> — the env's <code>minecraftProd</code> view by default (the
+  prod-namespace artifact through the whole JAR pipeline); point it
+  elsewhere for a custom product.</li>
+<li><strong>Libraries</strong> — the env's <code>minecraft&lt;Env&gt;Libraries</code> deps become
+  <code>META-INF/libraries.list</code> rows <em>and</em> embed physically
+  (<code>META-INF/libraries/</code>) so the bundle launches like a real
+  paperclip; <code>embeddedLibraries.setFrom()</code> empties that for a
+  coords-only slim bundle. <code>libraryRepositories</code> conventions to the
+  project's declared maven repos.</li>
+<li><strong>Side</strong> — dev bundles carry server artifacts; exporting a <code>CLIENT</code>
+  env warns (a deliberate <code>serverJar</code> override may still be right),
+  and a non-<code>mojmap</code> production namespace warns for the same reason.</li>
+<li><strong>Extras</strong> — <code>apiCoordinates</code>/<code>mojangApiCoordinates</code> seed the
+  consumer's compile classpath; <code>bundleId</code> names the bundler
+  <code>version.json</code>/<code>versions.list</code> entry (<code>unimined-&lt;env&gt;-&lt;version&gt;</code>);
+  <code>mainClass</code> writes <code>META-INF/main-class</code> for direct <code>java -jar</code>
+  launch.</li>
+</ul>
 
 
 

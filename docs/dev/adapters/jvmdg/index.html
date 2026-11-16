@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -939,6 +941,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1109,6 +1139,61 @@
     <span class="md-ellipsis">
       
         build.gradle.kts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-and-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        source and target
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolchains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toolchains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-gets-downgraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What gets downgraded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#engine-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engine flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream versions
       
     </span>
   </a>
@@ -1492,6 +1577,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#source-and-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        source and target
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolchains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toolchains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-gets-downgraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What gets downgraded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#engine-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engine flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1527,7 +1667,7 @@
 <p>Bridges <a href="https://github.com/unimined/JvmDowngrader">JvmDowngrader</a>
 into Unimined so environments targeting ancient JVMs (Java 8 and
 below-era loaders) can compile on a modern JDK while producing
-downgraded bytecode for dev runs, jars, and api jars.</p>
+downgraded bytecode for dev runs, production jars, and api jars.</p>
 <h2 id="project-layout">Project layout<a class="headerlink" href="#project-layout" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>my-mod/
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── build.gradle.kts
@@ -1546,12 +1686,13 @@ downgraded bytecode for dev runs, jars, and api jars.</p>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"1.7.10"</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"forge"</span><span class="p">,</span><span class="w"> </span><span class="s">"10.13.4.1614"</span><span class="p">)</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="c1">// downgrading is already on — only write jvmdowngrader {}</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="c1">// to change the inferred target or opt this env out</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">jvmdowngrader</span><span class="p">(</span><span class="m">8</span><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="c1">// or jvmdowngrader { enabled.set(false) }</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="c1">// global defaults — opts every env in:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="c1">// compile at 21, emit each env's era floor</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">jvmdowngrader</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">            </span><span class="n">source</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="m">21</span><span class="p">)</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1564,36 +1705,175 @@ downgraded bytecode for dev runs, jars, and api jars.</p>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"1.7.10"</span><span class="o">)</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"forge"</span><span class="o">,</span><span class="w"> </span><span class="s2">"10.13.4.1614"</span><span class="o">)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="c1">// downgrading is already on — only write jvmdowngrader {}</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="c1">// to change the inferred target or opt this env out</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="n">jvmdowngrader</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">target</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="mi">8</span><span class="o">)</span><span class="w"> </span><span class="o">}</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="c1">// or jvmdowngrader { enabled.set(false) }</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="o">}</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="c1">// global defaults — opts every env in:</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="c1">// compile at 21, emit each env's era floor</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="n">jvmdowngrader</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">            </span><span class="n">source</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="mi">21</span><span class="o">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<p>Downgrading is <strong>on by default for every environment</strong> — applying
-the plugin is the opt-in. <code>target</code> conventions to each env's own
-Java floor (the version-json <code>javaVersion</code>, floored at 7 for
-≤1.6.4-era), so most projects need no per-env config at all.</p>
-<p>Envs whose compile output is already at/below the target pass
-through untouched. When enabled it:</p>
+<p>Applying the plugin is <strong>not</strong> the opt-in — it only adds a
+<code>jvmdowngrader</code> extension to every environment <strong>and</strong> a global one
+on <code>minecraft</code> itself, with <code>enabled</code> defaulting to <code>false</code>
+everywhere. Envs opt in by configuring either spec:
+<code>jvmdowngrader { }</code>, <code>jvmdowngrader(N)</code>, or <code>enabled.set(true)</code> — and
+<code>enabled.set(false)</code> inside a block still wins, so the DSL can't
+re-enable an env you meant to keep off.</p>
+<p><code>minecraft { jvmdowngrader { } }</code> is the <strong>global</strong> spec — its values
+apply to every environment in the extension. Per-env specs on
+<code>sourceSet("x") { jvmdowngrader { } }</code> override it, and for any flag
+the precedence is: the env's own set, then its inherited envs
+(nearest first), then the global spec, then the built-in default.
+An env can opt back out under a global enable with
+<code>enabled.set(false)</code>.</p>
+<h2 id="source-and-target"><code>source</code> and <code>target</code><a class="headerlink" href="#source-and-target" title="Permanent link">&para;</a></h2>
+<p>Two separate levels, because downgrading decouples them:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source</code></td>
+<td>Java level <code>compile*</code> tasks run at — toolchain selection, <code>--release</code>, <code>sourceCompatibility</code>/<code>targetCompatibility</code>, Kotlin <code>jvmTarget</code></td>
+<td>the env's Java requirement (era floor or <code>javaVersion</code>)</td>
+</tr>
+<tr>
+<td><code>target</code></td>
+<td>class-file level JvmDowngrader emits, as a major (<code>8</code> → v52)</td>
+<td>the env's Minecraft Java floor — the version-json <code>javaVersion</code>, floored at 7 for ≤1.6.4-era</td>
+</tr>
+</tbody>
+</table>
+<p><code>source</code> raises the compile level <strong>only</strong> — run launchers and
+tool executions still use the env's Java requirement, so a 1.7.10 env
+with <code>source.set(21)</code> compiles on a Java 21 toolchain while FML still
+launches on Java 8. Unset, the env compiles at its requirement and
+the downgrade passes through untouched.</p>
+<p><code>target</code> is a convention, not a fixed value — most projects leave it
+alone and get the era floor. To override:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">jvmdowngrader</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">source</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="m">21</span><span class="p">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">target</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="m">11</span><span class="p">)</span><span class="w"> </span><span class="c1">// emit v55 instead of the era floor</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">jvmdowngrader</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">source</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="mi">21</span><span class="o">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">target</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="mi">11</span><span class="o">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p><code>jvmdowngrader(N)</code> remains as shorthand for <code>jvmdowngrader {
+target.set(N) }</code>.</p>
+<h2 id="toolchains">Toolchains<a class="headerlink" href="#toolchains" title="Permanent link">&para;</a></h2>
+<p>With <code>minecraft.useToolchains</code> on (the default), <code>source</code> selects the
+Java toolchain for <code>compile*</code> independently of the run JVM — e.g. a
+Java 21 toolchain compiles while the run still launches on the era
+JVM. With toolchains off, the build JVM itself must meet <code>source</code> —
+a 1.7.10 env with <code>source.set(21)</code> requires running Gradle on Java
+21+, and fails with a clear diagnostic otherwise.</p>
+<h2 id="what-gets-downgraded">What gets downgraded<a class="headerlink" href="#what-gets-downgraded" title="Permanent link">&para;</a></h2>
+<p>Once enabled and <code>source</code> exceeds <code>target</code>:</p>
 <ul>
-<li>supplies a <code>downgrade</code> step on the JAR surface — the shipped jar
-  carries downgraded bytecode</li>
-<li>produces a downgraded api jar for downstream consumers</li>
-<li>makes dev <code>run*</code> tasks launch against downgraded copies of your
-  compile outputs — old forge runtimes (ASM 4 / patched ASM 5.2)
-  can't read modern class files, so this is required for them to
-  run at all</li>
+<li><strong>dev runs</strong> — <code>run*</code> tasks launch against JvmDowngrader-processed
+  copies of <code>classesDirs</code> plus downgraded api jars, so era loaders
+  whose bundled ASM can't read modern class files (FG-era
+  LaunchWrapper/FML reads ≤v52; ≤1.6.4-era reads ≤v51) run
+  modern-compiled mods</li>
+<li><strong>production</strong> — the same downgrade is contributed to the env's
+  production jar pipeline, so <code>runProd</code> and published artifacts carry
+  era-readable bytecode instead of raw <code>javac</code> output. It applies to
+  the env's own jar only — the Minecraft artifact and remapped
+  dependency views are untouched</li>
+<li><strong>api</strong> — <code>jvmdowngrader-java-api</code> stubs are shaded into an
+  <code>api-*.jar</code> next to the outputs so emitted classes resolve their
+  <code>xyz.wagyourtail.jvmdg.jdk.stub.*</code> references at runtime</li>
 </ul>
+<p>For ad-hoc jars outside the env pipeline, <code>remap { downgrade(8) }</code>
+still applies the step directly to any remap surface.</p>
+<h2 id="engine-flags">Engine flags<a class="headerlink" href="#engine-flags" title="Permanent link">&para;</a></h2>
+<p>Both specs implement JvmDowngrader's Gradle <code>ShadeFlags</code>, so the
+engine's own knobs are settable on either block — globally or per
+env — and flow to both the dev-class and prod-jar downgrades:
+<code>downgradeTo</code> (engine-level emit
+level; a direct set wins over <code>target</code>), <code>apiJar</code>, <code>ignoreWarningsIn</code>,
+<code>logLevel</code>, <code>multiReleaseVersions</code>, <code>shadeInlining</code>, <code>quiet</code>, and the
+<code>debug*</code> switches. See JvmDowngrader's
+<a href="https://github.com/unimined/JvmDowngrader"><code>DowngradeFlags</code></a> docs for
+the full list.</p>
+<h2 id="upstream-versions">Upstream versions<a class="headerlink" href="#upstream-versions" title="Permanent link">&para;</a></h2>
+<p>Two pieces carry versions — they override independently.</p>
+<p><strong>java-api stub jar</strong> — bundled default
+<code>xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.0.1</code>, resolved
+per-environment from <code>uniminedTools.jvmdowngraderJavaApi</code>. Bump it to
+pick up newer stub coverage (e.g. a newer Java major's
+<code>VersionProvider</code>s) without a Unimined release:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">jvmdowngraderJavaApi</span><span class="p">.</span><span class="na">set</span><span class="p">(</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="s">"xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.1.0"</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">jvmdowngraderJavaApi</span><span class="o">.</span><span class="na">set</span><span class="o">(</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="s1">'xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.1.0'</span><span class="o">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>A direct <code>jvmdgJavaApi&lt;Env&gt;</code> dependency also works and replaces the
+default for that environment.</p>
+<p><strong>Engine + global flags</strong> — the engine stays on the adapter's
+classpath at the bundled version, but applying JvmDowngrader's own
+Gradle plugin (<code>xyz.wagyourtail.jvmdowngrader</code>) alongside this
+adapter does two things: its <code>jvmdg { }</code> extension is detected and
+becomes the deepest global flag layer (env set &gt; inherited &gt;
+<code>minecraft { jvmdowngrader { } }</code> &gt; <code>jvmdg { }</code> &gt; built-in default),
+and your <code>plugins {}</code> version wins classpath conflict resolution —
+effectively bumping the engine the adapter links against:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">id</span><span class="p">(</span><span class="s">"xyz.wagyourtail.jvmdowngrader"</span><span class="p">)</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s">"2.1.0"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.jvmdowngrader'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'2.1.0'</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>For an engine bump <em>without</em> applying upstream, use the classpath
+substitution shown in <a href="../#upstream-versions">upstream versions</a>.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Java 17+ to <em>run the build</em> (the adapter itself targets 17)</li>
 <li>Consumes <code>xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:2.0.1</code>
-  directly — <strong>do not also apply JvmDowngrader's own Gradle plugin</strong>,</li>
+  directly (overridable via <code>uniminedTools.jvmdowngraderJavaApi</code>)</li>
 <li>Old-forge dev runs <em>require</em> this when your compile target is
   newer than Java 8</li>
 </ul>

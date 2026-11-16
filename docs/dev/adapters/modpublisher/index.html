@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -926,6 +928,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1667,7 +1697,9 @@ are never selectable.</p>
 <ul>
 <li>Java 17+</li>
 <li>ModPublisher applied separately — the adapter is plumbing, not a
-  redistribution</li>
+  redistribution. Its version is whatever you put in <code>plugins {}</code>
+  (<code>com.hypherionmc.modutils.modpublisher</code>); the adapter detects it
+  via <code>withPlugin</code></li>
 <li>API keys live in <code>publisher.apiKeys { }</code> as ModPublisher expects —
   resolve them from env vars/gradle properties; they are never logged
   by the adapter</li>

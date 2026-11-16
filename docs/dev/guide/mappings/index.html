@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -683,10 +685,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ornithe-enrichers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ornithe enrichers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stub-mappings" class="md-nav__link">
     <span class="md-ellipsis">
       
         Stub mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-hierarchy-fill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bytecode hierarchy fill
       
     </span>
   </a>
@@ -1008,6 +1032,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1481,10 +1533,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ornithe-enrichers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ornithe enrichers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stub-mappings" class="md-nav__link">
     <span class="md-ellipsis">
       
         Stub mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-hierarchy-fill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bytecode hierarchy fill
       
     </span>
   </a>
@@ -1568,6 +1642,23 @@ mappings — fails loud if the provider can't supply the archive),
 <code>forgeBuiltinMCP(version)</code> (MCP data bundled in FG1 forge <code>:src</code>
 zips), and <code>yarnv1(build)</code> — Tiny-v1 Yarn for legacy Fabric envs,
 with stitch <code>proposeFieldNames</code> filled from the client jar.</p>
+<h2 id="ornithe-enrichers">Ornithe enrichers<a class="headerlink" href="#ornithe-enrichers" title="Permanent link">&para;</a></h2>
+<p><code>nests(build)</code> (inner-class attributes), <code>sparrow(build)</code> (generic
+signatures) and <code>raven(build)</code> (exception mappings) graft
+<code>net.ornithemc</code> metadata artifacts onto the environment's official
+columns — split-era merged versions emit one declaration per side.
+Their elements apply during remap: nests restore <code>InnerClasses</code>
+attributes for decompilers, signatures and exceptions feed the same
+metadata path.</p>
+<p>On <code>loader("ornithe", …)</code> environments the latest published
+<code>nests</code> build for the env's version + side is contributed to the
+chain automatically — the equivalent of Ploceus's always-appended
+nests mapping layer. An explicit <code>nests(...)</code> declaration wins over
+the auto-picked build, and <code>disableNests()</code> on the environment
+opts it out (the contribution also stays inert offline or when the
+Ornithe meta index is unreachable). The meta base URL is
+overridable with <code>-Punimined.ornitheMeta=&lt;url&gt;</code> for mirrors or
+airgapped caches.</p>
 <h2 id="stub-mappings">Stub mappings<a class="headerlink" href="#stub-mappings" title="Permanent link">&para;</a></h2>
 <p><code>stubs</code> declares inline mapping rows when a real channel doesn't
 cover what you need — values are positional across the namespaces
@@ -1600,15 +1691,63 @@ you bind:</p>
 </div>
 <p>Member entries are <code>name[;desc]</code> per namespace; a <code>null</code> cell leaves
 that namespace unmapped.</p>
-<p>Set <code>customIntermediaries = true</code> on the mappings spec to tell
+<p>Set <code>customIntermediaries</code> on the mappings spec to tell
 fabric-family loaders your intermediary column is your own, not
 upstream's — their wiring checks this before contributing
-<code>net.fabricmc:intermediary</code>.</p>
+<code>net.fabricmc:intermediary</code>:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">customIntermediaries</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">customIntermediaries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="bytecode-hierarchy-fill">Bytecode hierarchy fill<a class="headerlink" href="#bytecode-hierarchy-fill" title="Permanent link">&para;</a></h2>
+<p><code>hierarchyNameFill</code> scans the environment's raw Minecraft jar plus
+its runtime libraries for the real class hierarchy, then propagates
+mapped method and parameter names to overriding declarations the
+chain leaves unmapped — synthesizing verbatim class/method cells for
+tree-absent rows so remap does not break references (ploceus
+<code>MappingFiller</code> parity; this <em>extends</em> the name copying
+<code>fillMissingNames</code> performs on rows that already exist). The default
+auto-enables when Ornithe enrichers (<code>nests</code>/<code>sparrow</code>/<code>raven</code>) are
+declared; <code>true</code>/<code>false</code> forces it:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">feather</span><span class="p">(</span><span class="m">4</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="n">nests</span><span class="p">(</span><span class="m">4</span><span class="p">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="n">hierarchyNameFill</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="c1">// explicit — unset auto-enables on enrichers</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">feather</span><span class="o">(</span><span class="mi">4</span><span class="o">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="n">nests</span><span class="o">(</span><span class="mi">4</span><span class="o">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="n">hierarchyNameFill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="exporting">Exporting<a class="headerlink" href="#exporting" title="Permanent link">&para;</a></h2>
 <p><code>uniminedMinecraft.exportMappings(envId) { }</code> registers an
-<code>exportMappings&lt;Env&gt;</code> task (<code>exportMappings</code> for <code>main</code>) that writes
+<code>export&lt;Env&gt;Mappings</code> task (<code>exportMappings</code> for <code>main</code>) that writes
 the env's resolved tree in a chosen format (SRG/TSRG/Tiny/MCP —
-see <code>ExportMappingsTask</code> for the format + output inputs).</p>
+see <code>ExportMappingsTask</code> for the format + output inputs). The
+pre-convention <code>exportMappings&lt;Env&gt;</code> name stays as a deprecated
+alias.</p>
 
 
 

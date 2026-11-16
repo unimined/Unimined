@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/guide/loaders/">
+        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/latest/guide/loaders/">
       
       
         <link rel="prev" href="../sources/">
@@ -445,6 +445,8 @@
   
     
     
+      
+        
       
         
       
@@ -999,6 +1001,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1479,8 +1509,11 @@
 
 
 <h1 id="loaders">Loaders<a class="headerlink" href="#loaders" title="Permanent link">&para;</a></h1>
-<p>One loader per environment; multi-loader means one env per loader.
-Declare it inside the env block — <code>loader("&lt;name&gt;", "&lt;version&gt;")</code>:</p>
+<p>Each environment declares its loaders inside the env block —
+<code>loader("&lt;name&gt;", "&lt;version&gt;")</code>. Multi-loader projects either use
+one env per loader or repeat <code>loader(...)</code> on a single merged env
+where the extra loaders are compile-only secondaries
+(<a href="../multi-project/#merged-several-loaders-on-one-environment">merged multi-loader</a>):</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1632,9 +1665,10 @@ see <a href="../dependencies/">Dependencies</a>.</p>
 <ol>
 <li>
 <p><strong>Mappings</strong> — the env's <code>mappings { }</code> chain (quilt:
-   <code>quiltMappings(...)</code>/<code>hashed()</code>; forge: <code>official()</code>/<code>mcp(...)</code>/
-   <code>searge()</code>; see <a href="../mappings/">Mappings</a>). Nested envs inherit the
-   <code>main</code> env's declarations — override per env as needed.</p>
+   <code>quilt(build)</code> named layer — <code>intermediary</code> is contributed
+   automatically; forge: <code>official()</code>/<code>mcp(...)</code>/<code>searge()</code>; see
+   <a href="../mappings/">Mappings</a>). Nested envs inherit the <code>main</code> env's
+   declarations — override per env as needed.</p>
 </li>
 <li>
 <p><strong>Metadata</strong> — the env's <code>mod { }</code> block emits the loader's

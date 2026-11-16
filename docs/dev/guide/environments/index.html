@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -599,6 +601,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#split-environment-source-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Split environment source sets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-declarations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -609,6 +622,17 @@
   
     <nav class="md-nav" aria-label="Access declarations">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validateenvaccess" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate&lt;Env&gt;Access
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#auto-fill-flags" class="md-nav__link">
@@ -623,6 +647,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-classpath-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod classpath groups
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1025,6 +1060,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1498,6 +1561,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#split-environment-source-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Split environment source sets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-declarations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1508,6 +1582,17 @@
   
     <nav class="md-nav" aria-label="Access declarations">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validateenvaccess" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate&lt;Env&gt;Access
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#auto-fill-flags" class="md-nav__link">
@@ -1522,6 +1607,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-classpath-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod classpath groups
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1600,11 +1696,20 @@ dependency configurations.</p>
   with <code>EnvironmentSection</code>s) composes one into another, and nested
   envs (<code>datagen()</code>/<code>gametest()</code>) inherit their parent implicitly.</li>
 <li><code>side</code> selects <code>Side.CLIENT</code>/<code>SERVER</code>/<code>MERGED</code>
-  (<a href="../../generated/side-server.gradle.kts">example</a> / <a href="../../generated/side-server.gradle">groovy</a>).</li>
+  (<a href="../../generated/side-server.gradle.kts">example</a> / <a href="../../generated/side-server.gradle">groovy</a>);
+  <code>Side.COMMON</code> is applied by <code>splitEnvironmentSourceSets()</code>
+  (<a href="#split-environment-source-sets">below</a>).</li>
 <li>Multiple envs in one project = flat multi-env;
   <a href="../multi-project/">multi-module</a> is the alternative.</li>
 </ul>
 <p>Envs are also the scope of <code>mod { }</code> metadata and <code>runs { }</code>.</p>
+<p><strong>Task naming.</strong> Per-environment tasks follow <code>verb&lt;Env&gt;Noun</code> — the
+environment id (capitalized) sits between the verb and the object:
+<code>genFabricSources</code>, <code>validateForgeAccess</code>, <code>remapClientJar</code>,
+<code>exportPaperDevBundle</code>. The <code>main</code> environment elides the infix:
+<code>genSources</code>, <code>validateAccess</code>, <code>remapJar</code>. Task names normalized
+onto this convention keep their old shape as a deprecated alias —
+<code>gradlew oldName</code> warns and runs the canonical task.</p>
 <h2 id="environment-knobs">Environment knobs<a class="headerlink" href="#environment-knobs" title="Permanent link">&para;</a></h2>
 <p>Everything below lives inside an env block (<code>minecraft { … }</code> or
 <code>sourceSet("x") { … }</code>):</p>
@@ -1614,13 +1719,23 @@ dependency configurations.</p>
   toolchains for env-scoped compiles (conventioned from the
   extension-level <code>unimined.useToolchains</code>); <code>requiredJavaVersion</code>
   reads the effective requirement — version-json <code>javaVersion</code>
-  raised by your <code>javaVersion</code> — and feeds toolchains, launchers,
-  and tool-exec fallbacks.</li>
+  raised by your <code>javaVersion</code> — and feeds launchers and tool-exec
+  fallbacks. <code>compileJavaVersion</code> is the level <code>compile*</code> tasks
+  actually emit at (toolchain selection, <code>--release</code>,
+  <code>sourceCompatibility</code>/<code>targetCompatibility</code>, Kotlin <code>jvmTarget</code>)
+  — it conventions to <code>requiredJavaVersion</code>, and the
+  <a href="../../adapters/jvmdg/">jvmdg adapter</a>'s <code>source</code> raises it without
+  moving the run floor.</li>
 <li><strong>Access widening</strong> — <code>accessWideners</code> / <code>accessTransformers</code> are
   file collections of <code>*.accesswidener</code> / <code>accesstransformer.cfg</code>
   applied to the dev artifact; <code>transitiveAccessWideners</code> (default
   <code>true</code>) lets AW <code>transitive-*</code> directives from compile-classpath
-  mods contribute — set <code>false</code> to isolate the dev jar. The
+  mods contribute — set <code>false</code> to isolate the dev jar.
+  <code>dependencyInterfaceInjection</code> (default <code>true</code>, loom's
+  <code>interfaceInjection.enableDependencyInterfaceInjection</code>) controls
+  dependency-declared <code>*injected_interfaces</code> independently — mods
+  injecting interfaces you compile against still apply when
+  <code>transitiveAccessWideners</code> is off. The
   <a href="#access-declarations"><code>access { }</code> block</a> below covers inline
   rules, file declarations, and resource auto-discovery.</li>
 <li><strong>Prod packaging</strong> — <code>defaultRemapJar</code> (default <code>true</code>) auto-wires
@@ -1642,9 +1757,148 @@ dependency configurations.</p>
   <code>libraryFilter { dep -&gt; … }</code> keeps a library only when every
   filter accepts it; <code>libraryCoordFilters</code> maps whole coords;
   <code>obfuscatedLibraries</code> flags coords that remap with the MC jar.</li>
-<li><code>combinedSources</code> / <code>combinedOutputs</code> — file collections
+<li><strong>LWJGL 3 swap</strong> — <code>lwjgl3 { }</code> drops every <code>org.lwjgl.lwjgl:*</code>
+  library (jars <em>and</em> natives entries) and puts lwjgl3 artifacts on
+  the classpath and the host natives set instead — the
+  RetroFuturaGradle surface for running old Minecraft on modern
+  JVMs:</li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"1.7.10"</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span><span class="n">lwjgl3</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">            </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"3.3.3"</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">            </span><span class="n">bindings</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"stb"</span><span class="p">)</span><span class="w">           </span><span class="c1">// + natives</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">            </span><span class="n">nativeslessBindings</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"harfbuzz"</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"1.7.10"</span><span class="o">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="n">lwjgl3</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">            </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"3.3.3"</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">            </span><span class="n">bindings</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s2">"stb"</span><span class="o">)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">            </span><span class="n">nativeslessBindings</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s2">"harfbuzz"</span><span class="o">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Natives resolve under the host's lwjgl3 classifier
+  (<code>natives-windows</code>/<code>natives-linux</code>/<code>natives-macos</code> + <code>-x86</code>/<code>-arm64</code>
+  variants). The lwjgl3ify mod itself — for environments needing the
+  lwjgl2 API at runtime — is a normal <code>modImplementation</code>/<code>include</code>
+  dependency; this block only swaps the bindings.
+- <strong>Ornithe artifact passes</strong> — <code>loader("ornithe", …)</code> environments
+  get Ploceus's default-on Minecraft-jar passes automatically:
+  <code>condor</code> synthesizes <code>LocalVariableTable</code> debug info on the dev
+  artifact (versions before 1.8.2 — every alpha/beta build plus
+  releases and snapshots up to <code>1.8.2-pre*</code>; infdev and older stay
+  out) so decompilers and Mixin <code>@Local</code> captures see real variable
+  slots, and <code>preen</code> splits ProGuard-merged bridge methods back into
+  <code>ACC_BRIDGE</code> delegates on every Ornithe version. The newest
+  <code>net.ornithemc:nests</code> build published for the env's version + side
+  also joins the mapping chain automatically (see
+  <a href="../mappings/#ornithe-enrichers">Mappings</a>). Each pass opts out
+  individually:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"b1.7.3"</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"ornithe"</span><span class="p">,</span><span class="w"> </span><span class="s">"0.19.5"</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="n">disableLvtPatch</span><span class="p">()</span><span class="w">   </span><span class="c1">// skip the condor LVT pass</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="n">disablePreen</span><span class="p">()</span><span class="w">      </span><span class="c1">// skip the bridge-method pass</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="n">disableNests</span><span class="p">()</span><span class="w">      </span><span class="c1">// skip the auto nests source</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"b1.7.3"</span><span class="o">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"ornithe"</span><span class="o">,</span><span class="w"> </span><span class="s2">"0.19.5"</span><span class="o">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="n">disableLvtPatch</span><span class="o">()</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="n">disablePreen</span><span class="o">()</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="n">disableNests</span><span class="o">()</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The passes scope to the environment artifact — remapped dependency
+  views and <code>remapJar</code> outputs never see them. <code>patchLvts</code>,
+  <code>applyPreen</code> and <code>autoNests</code> are the underlying booleans behind
+  the <code>disable*</code> verbs.
+- <code>combinedSources</code> / <code>combinedOutputs</code> — file collections
   populated by <code>combineWith</code>; read-mostly, used by generated
-  source jars and mod packaging.</li>
+  source jars and mod packaging.</p>
+<h2 id="split-environment-source-sets">Split environment source sets<a class="headerlink" href="#split-environment-source-sets" title="Permanent link">&para;</a></h2>
+<p>Loom <code>splitEnvironmentSourceSets()</code> parity — compile-time
+client/server separation on a single project:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"1.20.1"</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="s">"0.16.0"</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="n">splitEnvironmentSourceSets</span><span class="p">()</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"1.20.1"</span><span class="o">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">,</span><span class="w"> </span><span class="s2">"0.16.0"</span><span class="o">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="n">splitEnvironmentSourceSets</span><span class="o">()</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p><code>src/main</code> compiles against the <strong>common</strong> artifact — the intersection
+of the client and server jars (<code>Side.COMMON</code>) — so shared code can't
+reference client-only classes (<code>Minecraft</code>, screens, rendering).
+Client-only code lives in <code>src/client</code>, which compiles against the
+full client jar and sees <code>main</code>'s output (its compile classpath picks
+up <code>main</code>'s classesDirs, its runtime classpath the full output).</p>
+<ul>
+<li><code>main</code> → <code>Side.COMMON</code>; the <code>client</code> env (<code>src/client</code>) →
+  <code>Side.CLIENT</code> and aux status — it inherits <code>main</code>'s
+  loader/dependency/access sections and produces no separate published
+  artifact or mod metadata of its own.</li>
+<li><code>jar</code> folds the client output in, so <code>remapJar</code>/<code>remapSourcesJar</code>
+  carry it through production; <code>sourcesJar</code> gains the client sources;
+  <code>test</code> sees the client's classpath view.</li>
+<li><code>runClient</code>/<code>runProdClient</code> — and any client-side run bound to
+  <code>main</code> — launch through the client environment (the common jar
+  can't launch a client); <code>runServer</code>/<code>runProdServer</code> stay on <code>main</code>,
+  where the common jar is the server's view.</li>
+<li>On providers without genuinely split distributions (declared
+  legacydist jars, dev bundles, BuildTools outputs) the common
+  artifact aliases the merged jar — the client-only fence then only
+  covers entries the shared jar lacks. Non-mergeable conversion
+  products (independent forks like BTA/ReIndev/NSSS) reject <code>COMMON</code>
+  outright — split-source-set mode needs real client+server
+  distributions.</li>
+<li>The call is idempotent; a pre-existing <code>sourceSet("client")</code> env is
+  repurposed as the split client.</li>
 </ul>
 <h2 id="access-declarations">Access declarations<a class="headerlink" href="#access-declarations" title="Permanent link">&para;</a></h2>
 <p>Everything in this section is <strong>optional</strong> — dropping a
@@ -1663,80 +1917,89 @@ fabric-family, FML <code>accesstransformer.cfg</code> on forge-family). Rules
 the target format can't express are converted when possible or
 dropped with a build warning (<code>inject-interface</code>/<code>extend-enum</code> have
 no AT analog; narrowing <code>at()</code> access has no AW form).</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">                </span><span class="c1">// rename / reformat the merged canonical doc</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">                </span><span class="c1">// (where the loader declares it in metadata) —</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">                </span><span class="c1">// here a legacy-FML-style AT at a custom `_at.cfg`</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">                </span><span class="c1">// path; format: "aw", "at", "legacy_at", default</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">                </span><span class="c1">// is the loader's consumed format</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/{modid}_at.cfg"</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">                </span><span class="c1">// existing files — format detected per file,</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">                </span><span class="c1">// routed like accessWideners.from(...) /</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">                </span><span class="c1">// accessTransformers.from(...)</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/testmod.accesswidener"</span><span class="p">)</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">                </span><span class="c1">// per-file packaging options where the loader</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">                </span><span class="c1">// declares the path — rides the accessFile(...){}</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">                </span><span class="c1">// channel: `output` ships the file at a custom jar</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">                </span><span class="c1">// path, `declare=false` applies it dev-side only,</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">                </span><span class="c1">// `format` forces interpretation when detection</span>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">                </span><span class="c1">// can't (e.g. a legacy-AT file with an odd name):</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">                </span><span class="c1">// "aw"/"accesswidener", "at"/"accesstransformer",</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">                </span><span class="c1">// "legacy_at"/"legacyat" — classTweaker is</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">                </span><span class="c1">// detected by its header, not settable</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/extra.cfg"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/extra.cfg"</span>
-<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">                    </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
-<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">                </span><span class="c1">// AW directives (+ transitive* twins)</span>
-<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">)</span>
-<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span><span class="w"> </span><span class="s">"method_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"()V"</span><span class="p">)</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">                </span><span class="n">extendable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">)</span>
-<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">                </span><span class="n">mutable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">,</span><span class="w"> </span><span class="s">"field_7"</span><span class="p">,</span><span class="w"> </span><span class="s">"I"</span><span class="p">)</span>
-<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>
-<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">                </span><span class="c1">// CT directives — interface injection / enum</span>
-<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">                </span><span class="c1">// extension (dev jar + shipped CT where the loader</span>
-<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">                </span><span class="c1">// parses it)</span>
-<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">                </span><span class="n">injectInterface</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span>
-<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">                    </span><span class="s">"com/example/IThing"</span><span class="p">)</span>
-<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">                </span><span class="n">extendEnum</span><span class="p">(</span><span class="s">"net/minecraft/class_789"</span><span class="p">,</span><span class="w"> </span><span class="s">"MY_CONST"</span><span class="p">)</span>
-<a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a>
-<a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">                </span><span class="c1">// raw FML AT entries — `at("public-f", "a/B", "f", "I")`</span>
-<a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">                </span><span class="n">at</span><span class="p">(</span><span class="s">"public"</span><span class="p">,</span><span class="w"> </span><span class="s">"com/example/Opened"</span><span class="p">)</span>
-<a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="p">.</span><span class="na">main</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">                </span><span class="c1">// rename / reformat the merged canonical doc</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">                </span><span class="c1">// (where the loader declares it in metadata) —</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">                </span><span class="c1">// here a legacy-FML-style AT at a custom `_at.cfg`</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">                </span><span class="c1">// path; format: "aw", "at", "legacy_at", default</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">                </span><span class="c1">// is the loader's consumed format</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/{modid}_at.cfg"</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">                </span><span class="c1">// fail the build when a declared target doesn't</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">                </span><span class="c1">// exist in the dev artifact — NFRT</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">                </span><span class="c1">// `--validated-access-transformer` parity; covers</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">                </span><span class="c1">// every own declaration channel (these rules,</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">                </span><span class="c1">// from(...) files, accessWideners/</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">                </span><span class="c1">// accessTransformers). Dependency docs are never</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="w">                </span><span class="c1">// validated. Default false.</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">                </span><span class="n">validate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="w">                </span><span class="c1">// existing files — format detected per file,</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="w">                </span><span class="c1">// routed like accessWideners.from(...) /</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="w">                </span><span class="c1">// accessTransformers.from(...)</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/testmod.accesswidener"</span><span class="p">)</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="w">                </span><span class="c1">// per-file packaging options where the loader</span>
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="w">                </span><span class="c1">// declares the path — rides the accessFile(...){}</span>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="w">                </span><span class="c1">// channel: `output` ships the file at a custom jar</span>
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a><span class="w">                </span><span class="c1">// path, `declare=false` applies it dev-side only,</span>
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="w">                </span><span class="c1">// `format` forces interpretation when detection</span>
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a><span class="w">                </span><span class="c1">// can't (e.g. a legacy-AT file with an odd name):</span>
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a><span class="w">                </span><span class="c1">// "aw"/"accesswidener", "at"/"accesstransformer",</span>
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a><span class="w">                </span><span class="c1">// "legacy_at"/"legacyat" — classTweaker is</span>
+<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a><span class="w">                </span><span class="c1">// detected by its header, not settable</span>
+<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a><span class="w">                </span><span class="n">from</span><span class="p">(</span><span class="s">"src/main/resources/extra.cfg"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"META-INF/extra.cfg"</span>
+<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a><span class="w">                    </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"legacy_at"</span>
+<a id="__codelineno-8-39" name="__codelineno-8-39" href="#__codelineno-8-39"></a><span class="w">                </span><span class="p">}</span>
+<a id="__codelineno-8-40" name="__codelineno-8-40" href="#__codelineno-8-40"></a>
+<a id="__codelineno-8-41" name="__codelineno-8-41" href="#__codelineno-8-41"></a><span class="w">                </span><span class="c1">// AW directives (+ transitive* twins)</span>
+<a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">)</span>
+<a id="__codelineno-8-43" name="__codelineno-8-43" href="#__codelineno-8-43"></a><span class="w">                </span><span class="n">accessible</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span><span class="w"> </span><span class="s">"method_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"()V"</span><span class="p">)</span>
+<a id="__codelineno-8-44" name="__codelineno-8-44" href="#__codelineno-8-44"></a><span class="w">                </span><span class="n">extendable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">)</span>
+<a id="__codelineno-8-45" name="__codelineno-8-45" href="#__codelineno-8-45"></a><span class="w">                </span><span class="n">mutable</span><span class="p">(</span><span class="s">"net/minecraft/class_456"</span><span class="p">,</span><span class="w"> </span><span class="s">"field_7"</span><span class="p">,</span><span class="w"> </span><span class="s">"I"</span><span class="p">)</span>
+<a id="__codelineno-8-46" name="__codelineno-8-46" href="#__codelineno-8-46"></a>
+<a id="__codelineno-8-47" name="__codelineno-8-47" href="#__codelineno-8-47"></a><span class="w">                </span><span class="c1">// CT directives — interface injection / enum</span>
+<a id="__codelineno-8-48" name="__codelineno-8-48" href="#__codelineno-8-48"></a><span class="w">                </span><span class="c1">// extension (dev jar + shipped CT where the loader</span>
+<a id="__codelineno-8-49" name="__codelineno-8-49" href="#__codelineno-8-49"></a><span class="w">                </span><span class="c1">// parses it)</span>
+<a id="__codelineno-8-50" name="__codelineno-8-50" href="#__codelineno-8-50"></a><span class="w">                </span><span class="n">injectInterface</span><span class="p">(</span><span class="s">"net/minecraft/class_123"</span><span class="p">,</span>
+<a id="__codelineno-8-51" name="__codelineno-8-51" href="#__codelineno-8-51"></a><span class="w">                    </span><span class="s">"com/example/IThing"</span><span class="p">)</span>
+<a id="__codelineno-8-52" name="__codelineno-8-52" href="#__codelineno-8-52"></a><span class="w">                </span><span class="n">extendEnum</span><span class="p">(</span><span class="s">"net/minecraft/class_789"</span><span class="p">,</span><span class="w"> </span><span class="s">"MY_CONST"</span><span class="p">)</span>
+<a id="__codelineno-8-53" name="__codelineno-8-53" href="#__codelineno-8-53"></a>
+<a id="__codelineno-8-54" name="__codelineno-8-54" href="#__codelineno-8-54"></a><span class="w">                </span><span class="c1">// raw FML AT entries — `at("public-f", "a/B", "f", "I")`</span>
+<a id="__codelineno-8-55" name="__codelineno-8-55" href="#__codelineno-8-55"></a><span class="w">                </span><span class="n">at</span><span class="p">(</span><span class="s">"public"</span><span class="p">,</span><span class="w"> </span><span class="s">"com/example/Opened"</span><span class="p">)</span>
+<a id="__codelineno-8-56" name="__codelineno-8-56" href="#__codelineno-8-56"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-8-57" name="__codelineno-8-57" href="#__codelineno-8-57"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-58" name="__codelineno-8-58" href="#__codelineno-8-58"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-59" name="__codelineno-8-59" href="#__codelineno-8-59"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/{modid}_at.cfg"</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"legacy_at"</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/testmod.accesswidener"</span><span class="o">)</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/extra.cfg"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/extra.cfg"</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">                </span><span class="o">}</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">                </span><span class="n">accessible</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">)</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">                </span><span class="n">injectInterface</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">,</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">                    </span><span class="s2">"com/example/IThing"</span><span class="o">)</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">                </span><span class="n">at</span><span class="o">(</span><span class="s2">"public"</span><span class="o">,</span><span class="w"> </span><span class="s2">"com/example/Opened"</span><span class="o">)</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">            </span><span class="o">}</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">            </span><span class="n">access</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">                </span><span class="n">fileName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/{modid}_at.cfg"</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">                </span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"legacy_at"</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/testmod.accesswidener"</span><span class="o">)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">                </span><span class="n">from</span><span class="o">(</span><span class="s2">"src/main/resources/extra.cfg"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">                    </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"META-INF/extra.cfg"</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">                </span><span class="o">}</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">                </span><span class="n">accessible</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">)</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">                </span><span class="n">injectInterface</span><span class="o">(</span><span class="s2">"net/minecraft/class_123"</span><span class="o">,</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">                    </span><span class="s2">"com/example/IThing"</span><span class="o">)</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">                </span><span class="n">at</span><span class="o">(</span><span class="s2">"public"</span><span class="o">,</span><span class="w"> </span><span class="s2">"com/example/Opened"</span><span class="o">)</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -1779,6 +2042,19 @@ no AT analog; narrowing <code>at()</code> access has no AW form).</p>
 <li><code>combineWith</code> propagates access rules alongside the declared file
   collections, so combined environments share declarations.</li>
 </ul>
+<h4 id="validateenvaccess"><code>validate&lt;Env&gt;Access</code><a class="headerlink" href="#validateenvaccess" title="Permanent link">&para;</a></h4>
+<p>Environments that declare access documents also get a
+<code>validate&lt;Env&gt;Access</code> task (loom <code>validateAccessWidener</code> parity):
+every own declaration — <code>access { }</code> rules, <code>from(...)</code> files,
+<code>accessFile(...)</code>, <code>accessWideners</code>/<code>accessTransformers</code> — is checked
+against the dev Minecraft artifact and the build fails listing each
+declared target that matched nothing, without running a remap.
+Dependency docs and coordinate-consumed docs are never validated.
+<code>check</code> depends on it, so it runs in a normal <code>build</code>; the task only
+exists when the environment actually declares access docs.</p>
+<p>This is the standalone form of <code>access { validate = true }</code> — the
+in-block flag validates during the remap pipeline instead; either
+catches stale targets, the task form without needing a remap run.</p>
 <h3 id="auto-fill-flags">Auto-fill flags<a class="headerlink" href="#auto-fill-flags" title="Permanent link">&para;</a></h3>
 <p>Metadata auto-discovery toggles (see
 <a href="../metadata/#discovery">metadata</a>):</p>
@@ -1808,6 +2084,39 @@ no AT analog; narrowing <code>at()</code> access has no AW form).</p>
 </tr>
 </tbody>
 </table>
+<h2 id="mod-classpath-groups">Mod classpath groups<a class="headerlink" href="#mod-classpath-groups" title="Permanent link">&para;</a></h2>
+<p>Multi-mod projects tell the dev launch which classpath entries belong
+to which mod via the env-scoped <code>mods { }</code> container — the group name
+should match the mod id:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="s">"..."</span><span class="p">)</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="n">mods</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">            </span><span class="n">register</span><span class="p">(</span><span class="s">"mymod"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">                </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">                </span><span class="n">modFiles</span><span class="p">(</span><span class="s">"libs/extra-mod-lib.jar"</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">            </span><span class="n">register</span><span class="p">(</span><span class="s">"integration"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">                </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"integration"</span><span class="p">)</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">}</span>
+</code></pre></div>
+<p>Each group joins the launch classpath and serializes into the loader's
+mod-grouping channel:</p>
+<ul>
+<li><strong>fabric-family</strong> — the <code>fabric.classPathGroups</code> system property
+  (fabric-loader's classpath-group contract — loom <code>mods { }</code> parity),
+  groups separated by a doubled path separator;</li>
+<li><strong>forge-family</strong> — <code>id%%dir</code> entries appended to <code>MOD_CLASSES</code>
+  alongside the loader's own source-set groups.</li>
+</ul>
+<p>A run loads every declared group by default; <code>loadedMods</code> on the run
+selects a subset (see
+<a href="../run-configs/#runconfig-fields">run configs</a>). Groups inherit
+through <code>inheritParent</code>/<code>combineWith</code> like other env state — a child
+re-declaring a group name shadows the parent's.</p>
 <h2 id="minecraft-artifact-configurations">Minecraft artifact configurations<a class="headerlink" href="#minecraft-artifact-configurations" title="Permanent link">&para;</a></h2>
 <p>Each environment registers resolvable configurations producing the
 Minecraft artifact at each mapping namespace — <code>minecraftRaw</code>,

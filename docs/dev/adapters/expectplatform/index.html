@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -926,6 +928,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1821,7 +1851,8 @@ you want it on a specific product instead of env-wide:</p>
 <li>Java 17+</li>
 <li><code>xyz.wagyourtail.unimined.expect-platform</code> ≥ <strong>1.2.0</strong> for side
   stripping; the agent jar resolves from the applied plugin's
-  version</li>
+  version — bump it in your <code>plugins {}</code> block, the adapter detects
+  it via <code>withPlugin</code></li>
 </ul>
 
 

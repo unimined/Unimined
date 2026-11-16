@@ -6,16 +6,16 @@ plugins {
 
 repositories {
     mavenCentral()
-
+    maven("https://maven.wagyourtail.xyz/releases/")
 }
 
 unimined {
     minecraft {
-        version.set(providers.gradleProperty("minecraft_version").get())
+        version.set(providers.gradleProperty("minecraft_version"))
 
-
+        loader("jarmod", providers.gradleProperty("jarmod_version").get())
         mappings {
-            yarn(providers.gradleProperty("yarn_mappings").get())
+            retroMCP()
         }
     }
 

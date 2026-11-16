@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -1025,6 +1027,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1647,7 +1677,7 @@ mappings release (or a different mapping family) in one pass.</p>
 </div>
 <p>Then:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>migrateMappings<span class="w">          </span><span class="c1"># main env</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>./gradlew<span class="w"> </span>migrateMappingsFabric<span class="w">    </span><span class="c1"># a non-main env</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>./gradlew<span class="w"> </span>migrateFabricMappings<span class="w">    </span><span class="c1"># a non-main env (migrateMappings&lt;Foo&gt; still runs as a deprecated alias)</span>
 </code></pre></div>
 <p>Migrated sources land in <code>remappedSrc/</code> — outside <code>src/</code> so they
 can't become an accidental source root. Non-code files copy verbatim;

@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -926,6 +928,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1666,7 +1696,8 @@ verbatim.</p>
 </div>
 </div>
 </div>
-<p>Wires three tasks per environment:</p>
+<p>Wires the loop tasks per environment (the full loop is walked through
+in <a href="../../guide/fork-dev/">Fork Development with Patch Sets</a>):</p>
 <table>
 <thead>
 <tr>
@@ -1676,21 +1707,68 @@ verbatim.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>applySourcePatch&lt;Env&gt;</code></td>
-<td>applies <code>patches/</code> unified diffs onto the <code>gen&lt;Env&gt;Sources</code> output, writing <strong>only patch-covered files</strong> to <code>src/&lt;env&gt;/java</code> (generated — gitignore it) so compile + JarModAgent see patched sources</td>
+<td><code>apply&lt;Env&gt;SourcePatch</code></td>
+<td>applies <code>patches/</code> unified diffs onto the <code>gen&lt;Env&gt;Sources</code> output, writing <strong>only patch-covered files</strong> to <code>src/&lt;env&gt;/java</code> (generated — gitignore it) so compile + JarModAgent see patched sources. Skips when the patch dir doesn't exist</td>
 </tr>
 <tr>
-<td><code>createSourcePatch&lt;Env&gt;</code></td>
-<td>diffs <code>src/&lt;env&gt;/java</code> back into <code>patches/</code> — keeps the git-tracked patch source in sync</td>
+<td><code>create&lt;Env&gt;SourcePatch</code></td>
+<td>diffs <code>src/&lt;env&gt;/java</code> back into <code>patches/</code> — keeps the git-tracked patch source in sync. Skips when the overlay dir doesn't exist</td>
 </tr>
 <tr>
-<td><code>createClassPatch&lt;Env&gt;</code></td>
+<td><code>create&lt;Env&gt;ClassPatch</code></td>
 <td>diffs the <code>remap&lt;Env&gt;Jar</code> output vs <code>minecraftRaw</code> into the shippable patch jar (classifier <code>patch[-env]</code>)</td>
+</tr>
+<tr>
+<td><code>recompile&lt;Env&gt;McClasses</code></td>
+<td>compiles the overlay's <code>.java</code> files against the env's dev jar + Minecraft libraries</td>
+</tr>
+<tr>
+<td><code>recompile&lt;Env&gt;Mc</code></td>
+<td>merges the compiled classes + resource patches over the dev jar → a full dev-namespace Minecraft jar (classifier <code>recompiled</code>; the FG-era <code>recompMc</code> analog). Skips when the overlay doesn't exist</td>
 </tr>
 </tbody>
 </table>
+<p>The <code>main</code> environment drops <code>&lt;Env&gt;</code> (<code>applySourcePatch</code>,
+<code>createSourcePatch</code>, <code>createClassPatch</code>, <code>recompileMc</code>,
+<code>recompileMcClasses</code>). The pre-2.0-convention names
+(<code>applySourcePatch&lt;Env&gt;</code>, <code>recompileMc&lt;Env&gt;</code>, …) still run — each is
+a deprecated alias that warns and delegates to the canonical task.</p>
 <p>Only <code>patches/</code> belongs in git. The generated patched sources and
 the built patch jar are artifacts.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Both source-patch tasks wipe and repopulate their output tree.
+<code>src/&lt;env&gt;/java</code> is the patch set's generated <em>checkout</em> — keep
+hand-written sources out of it, or retarget the overlay:</p>
+</div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">patchBaseCreator</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">patchDir</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">dir</span><span class="p">(</span><span class="s">"mc-patches"</span><span class="p">))</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="n">sourceDir</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">dir</span><span class="p">(</span><span class="s">"fork-src"</span><span class="p">))</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="n">diffContextSize</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="m">5</span><span class="p">)</span><span class="w">      </span><span class="c1">// hunk context lines (default 3)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">        </span><span class="n">trimWhitespace</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w">    </span><span class="c1">// strip leading whitespace (default)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="n">patchFormat</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"bdiff"</span><span class="p">)</span><span class="w">    </span><span class="c1">// or "binpatch" (default)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">patchBaseCreator</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">patchDir</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">dir</span><span class="o">(</span><span class="s2">"mc-patches"</span><span class="o">))</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="n">sourceDir</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">dir</span><span class="o">(</span><span class="s2">"fork-src"</span><span class="o">))</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="n">diffContextSize</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="w">      </span><span class="c1">// hunk context lines (default 3)</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">        </span><span class="n">trimWhitespace</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span><span class="w">    </span><span class="c1">// strip leading whitespace (default)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">        </span><span class="n">patchFormat</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"bdiff"</span><span class="o">)</span><span class="w">    </span><span class="c1">// or "binpatch" (default)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Patch sets bind to a base jar.</strong> <code>.binpatch</code>/<code>.bdiff</code> entries
@@ -1701,6 +1779,8 @@ the built patch jar are artifacts.</p>
 <li>The dev flow mirrors Forge binpatches: the patch jar mutates the
   MC jar, so the loader's classes exist for compile and runtime
   without loader sources or a recompile</li>
+<li>The patch-set version lives in the <code>patchBase("g:a:v")</code> coordinate
+  you declare on the env — there is no bundled default to override</li>
 </ul>
 
 

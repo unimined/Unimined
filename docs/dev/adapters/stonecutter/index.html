@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -926,6 +928,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1774,6 +1804,9 @@ one project.</p>
   adapter module targets 21 too (the rest of Unimined stays at 17)</li>
 <li><code>dev.kikugie.stonecutter</code> must be applied; without it the
   adapter logs a warning and does nothing</li>
+<li>The Stonecutter version is whatever you put in your <code>plugins {}</code>
+  block — the adapter detects it via <code>withPlugin</code>, so bump it there
+  without waiting on Unimined</li>
 </ul>
 
 

@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -114,21 +114,6 @@
               </div>
             </div>
           </div>
-<a data-name="2032056014%2FClasslikes%2F53094205" anchor-label="JstStep" id="2032056014%2FClasslikes%2F53094205" data-filterable-set=":unimined-remap:remapper-jst/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-jst/main" data-filterable-set=":unimined-remap:remapper-jst/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-jst-step/index.html"><span>Jst</span><wbr><span><span>Step</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2032056014%2FClasslikes%2F53094205"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-jst/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jst-step/index.html">JstStep</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-jst-step-spec/index.html">JstStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">jst</code> step on the SOURCES surface — runs <code class="lang-kotlin">net.neoforged.jst.cli.Main</code> in a JVM subprocess. JST handles jar input/output natively (<code class="lang-kotlin">--in-format ARCHIVE --out-format ARCHIVE</code>), so unlike <code class="lang-kotlin">source-remap</code> no unpack/repack is needed. The step declares <a href="-jst-step/needs-classpath.html">needsClasspath</a> — JST resolves symbols against the compile classpath.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="619983059%2FClasslikes%2F53094205" anchor-label="JstStepSpec" id="619983059%2FClasslikes%2F53094205" data-filterable-set=":unimined-remap:remapper-jst/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-jst/main" data-filterable-set=":unimined-remap:remapper-jst/main">
             <div class="main-subrow keyValue ">
@@ -140,6 +125,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-jst/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-jst-step-spec/index.html">JstStepSpec</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/StepSpec///PointingToDeclaration/">StepSpec</span></div><div class="brief "><p class="paragraph">Spec for the <code class="lang-kotlin">jst</code> step — wraps NeoForged's <a href="https://github.com/neoforged/JavaSourceTransformer">JavaSourceTransformer</a> (<code class="lang-kotlin">net.neoforged.jst:jst-cli</code>). JST pipelines its own transforms (parchment mappings, access transformers, interface injection, unpick) internally, so it's a single step rather than separate unimined steps.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1070315060%2FClasslikes%2F53094205" anchor-label="JstStepType" id="1070315060%2FClasslikes%2F53094205" data-filterable-set=":unimined-remap:remapper-jst/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap:remapper-jst/main" data-filterable-set=":unimined-remap:remapper-jst/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jst-step-type/index.html"><span>Jst</span><wbr><span>Step</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1070315060%2FClasslikes%2F53094205"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap:remapper-jst/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jst-step-type/index.html">JstStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-jst-step-spec/index.html">JstStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">jst</code> step on the SOURCES surface — runs <code class="lang-kotlin">net.neoforged.jst.cli.Main</code> in a JVM subprocess. JST handles jar input/output natively (<code class="lang-kotlin">--in-format ARCHIVE --out-format ARCHIVE</code>), so unlike <code class="lang-kotlin">source-remap</code> no unpack/repack is needed. The step declares <a href="-jst-step-type/needs-classpath.html">needsClasspath</a> — JST resolves symbols against the compile classpath.</p></div></div></div>
                 </div>
               </div>
             </div>

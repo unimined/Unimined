@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/latest/adapters/">
       
       
-        <link rel="prev" href="../guide/publishing/">
+        <link rel="prev" href="../guide/fork-dev/">
       
       
         <link rel="next" href="jvmdg/">
@@ -443,6 +443,8 @@
   
     
     
+      
+        
       
         
       
@@ -939,6 +941,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1383,6 +1413,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1477,6 +1526,110 @@ into Unimined. They live in <code>unimined-adapters/</code> and publish as
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined'</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined.adapter-patchbase'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'2.0.0'</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="upstream-versions">Upstream versions<a class="headerlink" href="#upstream-versions" title="Permanent link">&para;</a></h2>
+<p>Adapters couple to their tools in three ways — each has its own
+knob for running a newer upstream release than the one Unimined
+shipped against, so a minor upstream update rarely requires a
+Unimined update:</p>
+<table>
+<thead>
+<tr>
+<th>Coupling</th>
+<th>How it works</th>
+<th>Version knob</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Detected plugin</strong></td>
+<td>adapter hooks <code>withPlugin(id)</code> and reads the upstream extension when you apply it</td>
+<td>bump the version in your own <code>plugins {}</code> block — the adapter detects whatever you resolve</td>
+</tr>
+<tr>
+<td><strong>Resolved artifact</strong></td>
+<td>engine/tool jars resolved from a named configuration at execution</td>
+<td>override the coordinate on <code>uniminedTools</code>, or declare a dependency on the adapter's configuration directly</td>
+</tr>
+<tr>
+<td><strong>In-process engine</strong></td>
+<td>engine classes linked on the adapter's classpath</td>
+<td>Gradle dependency substitution on the plugin classpath — bounded by binary compatibility of the entry points the adapter calls</td>
+</tr>
+</tbody>
+</table>
+<p>Per-adapter defaults and overrides:</p>
+<table>
+<thead>
+<tr>
+<th>Adapter</th>
+<th>Bundled default</th>
+<th>How to override</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="forgix/">Forgix</a></td>
+<td><code>uniminedTools.forgix</code> → <code>io.github.pacifistmc.forgix:Forgix:2.0.0</code></td>
+<td><code>uniminedTools { forgix.set("...:2.1.0") }</code> or a <code>loaderMergeForgix</code> dep — resolved into an isolated classloader, so the override <em>is</em> the merge implementation</td>
+</tr>
+<tr>
+<td><a href="jvmdg/">JvmDowngrader</a></td>
+<td><code>uniminedTools.jvmdowngraderJavaApi</code> → <code>jvmdowngrader-java-api:2.0.1</code></td>
+<td><code>uniminedTools { jvmdowngraderJavaApi.set("...:2.1.0") }</code> for the stub jar; engine bumps via applying <code>xyz.wagyourtail.jvmdowngrader</code> yourself or classpath substitution</td>
+</tr>
+<tr>
+<td><a href="patchbase/">PatchBase</a></td>
+<td>none — patch-set coords are yours</td>
+<td>version lives in the <code>patchBase("g:a:v")</code> declaration</td>
+</tr>
+<tr>
+<td><a href="stonecutter/">Stonecutter</a></td>
+<td>none — adapter detects</td>
+<td><code>plugins { id("dev.kikugie.stonecutter") version "..." }</code></td>
+</tr>
+<tr>
+<td><a href="expectplatform/">ExpectPlatform</a></td>
+<td>none — adapter detects</td>
+<td><code>plugins { id("xyz.wagyourtail.unimined.expect-platform") version "..." }</code></td>
+</tr>
+<tr>
+<td><a href="modpublisher/">ModPublisher</a></td>
+<td>none — adapter detects</td>
+<td><code>plugins { id("com.hypherionmc.modutils.modpublisher") version "..." }</code></td>
+</tr>
+</tbody>
+</table>
+<p>Where an adapter resolves its engine reflectively through an isolated
+classloader (currently just Forgix's <code>mergeLoaders</code>), a bumped
+coordinate is all that's needed — incompatible versions fail the task
+with a clear error naming the missing entry point rather than a
+<code>NoSuchMethodError</code>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code> — overriding a tool coordinate</label><label for="__tabbed_2_2">Groovy <code>build.gradle</code> — overriding a tool coordinate</label><label for="__tabbed_2_3">Kotlin <code>build.gradle.kts</code> — classpath substitution escape hatch</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">forgix</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"io.github.pacifistmc.forgix:Forgix:2.1.0"</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">forgix</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s1">'io.github.pacifistmc.forgix:Forgix:2.1.0'</span><span class="o">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// settings.gradle.kts (or a buildscript block)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">configurations</span><span class="p">.</span><span class="na">classpath</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">resolutionStrategy</span><span class="p">.</span><span class="na">dependencySubstitution</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">substitute</span><span class="p">(</span><span class="n">module</span><span class="p">(</span><span class="s">"io.github.pacifistmc.forgix:Forgix"</span><span class="p">))</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">            </span><span class="p">.</span><span class="na">using</span><span class="p">(</span><span class="n">module</span><span class="p">(</span><span class="s">"io.github.pacifistmc.forgix:Forgix:2.1.0"</span><span class="p">))</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 </div>

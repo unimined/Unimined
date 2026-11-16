@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -878,6 +880,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#launch-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch scripts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listing-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listing runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ide-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1063,6 +1098,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1591,6 +1654,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#launch-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch scripts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listing-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listing runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ide-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1663,6 +1759,12 @@ configurations from <code>genIdeRuns</code>.</p>
 </tr>
 </tbody>
 </table>
+<p>Forge-family loaders (forge, lexforge, neoforge, cleanroom) also
+declare the userdev run types — <code>data</code>, <code>clientData</code>, <code>serverData</code>,
+<code>gameTestServer</code>, <code>junit</code> — which materialize as <code>runData</code>,
+<code>runGameTestServer</code>, … (<code>&lt;env&gt;Data</code> on non-main envs) with no
+<code>runs.create</code> needed. A run type the resolved profile doesn't
+declare launches the plain environment launch.</p>
 <p>The <code>prod*</code> variants launch against <code>minecraftProd</code> — Minecraft in
 the namespace shipped mod jars are remapped to — with your <code>remapJar</code>
 output and <em>direct</em> (un-remapped) mod dependencies: the
@@ -1686,8 +1788,11 @@ runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="n">runs</span><span class="p">.</span><span class="na">configureEach</span><span class="w"> </span><span class="p">{</span><span class="w">        </span><span class="c1">// every run</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="n">environmentVariables</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"MC_DEBUG"</span><span class="p">,</span><span class="w"> </span><span class="s">"1"</span><span class="p">)</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">}</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="n">configFirst</span><span class="p">(</span><span class="s">"client"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">     </span><span class="c1">// applies before other config</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">            </span><span class="n">jvmArgs</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"-Xms1G"</span><span class="p">)</span><span class="w">   </span><span class="c1">// (declare it first)</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1702,12 +1807,21 @@ runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="n">runs</span><span class="o">.</span><span class="na">configureEach</span><span class="w"> </span><span class="o">{</span><span class="w">        </span><span class="c1">// every run</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">            </span><span class="n">environmentVariables</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"MC_DEBUG"</span><span class="o">,</span><span class="w"> </span><span class="s2">"1"</span><span class="o">)</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="o">}</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">configFirst</span><span class="o">(</span><span class="s2">"client"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span><span class="w">     </span><span class="c1">// applies before other config</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">            </span><span class="n">jvmArgs</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s2">"-Xms1G"</span><span class="o">)</span><span class="w">   </span><span class="c1">// (declare it first)</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
 </div>
+<p><code>configFirst</code> applies its action ahead of <code>named</code>/<code>create</code>/
+<code>configureEach</code>/<code>all</code> configuration of the same run — the 1.x hook
+for laying down values later blocks can override (plugins use it for
+defaults). Declare it before other configuration of the run: a
+<code>configFirst</code> issued after the run already configured applies
+immediately — after whatever already ran.</p>
 <p>Tasks are <code>run&lt;Name&gt;</code> — <code>gradle runClient</code>, <code>runProdServer</code>,
 <code>runFabricData</code>, …</p>
 <h2 id="runconfig-fields">RunConfig fields<a class="headerlink" href="#runconfig-fields" title="Permanent link">&para;</a></h2>
@@ -1736,6 +1850,10 @@ runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <td><code>CLIENT</code>/<code>SERVER</code> — defaults from the run name</td>
 </tr>
 <tr>
+<td><code>type</code></td>
+<td>loader run-config key (<code>runs.&lt;type&gt;</code> in forge userdev profiles) — defaults to the run name; set <code>type.set("data")</code> on a renamed run to bind the <code>data</code> launch shape</td>
+</tr>
+<tr>
 <td><code>prod</code></td>
 <td><code>true</code> = production-namespace MC artifact + remapped jar</td>
 </tr>
@@ -1754,6 +1872,22 @@ runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <tr>
 <td><code>environmentVariables</code></td>
 <td>process env</td>
+</tr>
+<tr>
+<td><code>systemProperties</code></td>
+<td><code>-D</code> JVM system properties — typed alternative to raw <code>jvmArgs</code> <code>-D</code> strings; rendered ahead of <code>jvmArgs</code> so an explicit <code>-D</code> there still wins</td>
+</tr>
+<tr>
+<td><code>launchProperties</code> / <code>setProperty(k, v)</code></td>
+<td><code>${key}</code> substitution values applied to args/jvmArgs/env at launch — <code>setProperty("user", "Dev")</code> then <code>programArgs.add("--username=\${user}")</code>. Lazy forms: <code>Provider</code>, <code>() -&gt; String</code>, and a Groovy closure; user keys win over env defaults and loader keys</td>
+</tr>
+<tr>
+<td><code>logLevel</code> / <code>loggingConfigFile</code></td>
+<td>root log level for a generated log4j2 dev config (<code>-Dlog4j.configurationFile</code> is added automatically), or an explicit config file that overrides it</td>
+</tr>
+<tr>
+<td><code>additionalRuntimeClasspath</code></td>
+<td>per-run classpath additions — files appended to this run's launch only; maven coords go on the <code>run&lt;Name&gt;Dependencies</code> configuration</td>
 </tr>
 <tr>
 <td><code>stdin</code></td>
@@ -1779,18 +1913,44 @@ runtime-deobf flags instead of the pre-deobfed artifact.</p>
 <td><code>auth { }</code></td>
 <td>typed session spec — see <a href="../auth/">Auth</a></td>
 </tr>
+<tr>
+<td><code>ideName</code> / <code>ideFolderName</code></td>
+<td>IDE run-configuration display/file name (defaults to the run name) and an optional folder/group label</td>
+</tr>
+<tr>
+<td><code>ideConfigGenerated</code></td>
+<td><code>false</code> suppresses this run's IDE run-configuration emission — <code>genIdeRuns</code> skips it</td>
+</tr>
+<tr>
+<td><code>singleInstance</code></td>
+<td><code>true</code> marks the emitted IntelliJ configuration "single instance only" (<code>singleton="true"</code> — IDEA refuses a second concurrent launch); IDEA emitter only, no effect on <code>run&lt;Name&gt;</code> execution</td>
+</tr>
+<tr>
+<td><code>unitTest</code></td>
+<td>marks the run as a JUnit test run — a Gradle <code>Test</code> task (<code>test&lt;Name&gt;</code>) materializes alongside <code>run&lt;Name&gt;</code>; conventions to <code>true</code> for <code>junit</code>-typed runs on forge-family loaders (<code>gametestJunit</code> capability). The loader's program args ride an args-file in <code>fml.junit.argsfile</code>, jvm args an <code>@argfile</code></td>
+</tr>
+<tr>
+<td><code>unitTestSources</code></td>
+<td>source sets supplying test classes + classpath for a <code>unitTest</code> run — defaults to <code>test</code></td>
+</tr>
+<tr>
+<td><code>loadedMods</code></td>
+<td>which of the environment's <code>mods { "&lt;id&gt;" { } }</code> groups this run loads — <code>loadedMods("a", "b")</code> selects a subset; empty (default) loads all declared groups. Selected groups join the launch classpath and serialize into the loader's mod-grouping channel (<code>fabric.classPathGroups</code> / <code>MOD_CLASSES</code>)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="argument-substitution">Argument substitution<a class="headerlink" href="#argument-substitution" title="Permanent link">&para;</a></h2>
 <p>Loader capability templates and your own args support <code>${...}</code>
 launch-property substitution (game_directory, auth_*, classpath, …)
 plus <code>{modid}</code> — resolved against <code>mod { id }</code> at run time (e.g.
-fabric gametest's <code>-Dfabric.client.gametest.modid={modid}</code>).</p>
+fabric gametest's <code>-Dfabric.client.gametest.modid={modid}</code>). Declare
+your own keys with <code>setProperty</code> — they resolve lazily at launch and
+override the built-in/loader-supplied values for that run.</p>
 <h2 id="dev-time-manifest-attributes">Dev-time manifest attributes<a class="headerlink" href="#dev-time-manifest-attributes" title="Permanent link">&para;</a></h2>
 <p>Dev runs launch <em>exploded</em> output dirs, not a jar — but FML (modern
 <code>SecureJar</code> and legacy <code>CoreModManager</code>) parses <code>META-INF/MANIFEST.MF</code>
 inside classpath <strong>directories</strong>, so manifest attrs still apply.
-<code>generate&lt;Env&gt;ModMetadata</code> writes the emitted manifest body into
+<code>gen&lt;Env&gt;ModMetadata</code> writes the emitted manifest body into
 generated resources (<code>build/generated/unimined/mod/&lt;env&gt;</code>), which the
 source set packs into the resources output — <code>runClient</code>/<code>runServer</code>
 classify the env's output with <code>FMLModType</code>, <code>MixinConfigs</code>, <code>FMLAT</code>,
@@ -1808,6 +1968,32 @@ args, classpath) instead of exec'ing — the quickest way to inspect
 what a run would do:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./gradlew<span class="w"> </span>runClient<span class="w"> </span>-Punimined.run.dryRun
 </code></pre></div>
+<h2 id="launch-scripts">Launch scripts<a class="headerlink" href="#launch-scripts" title="Permanent link">&para;</a></h2>
+<p><code>genLaunchScript&lt;Name&gt;</code> resolves the same launch as <code>run&lt;Name&gt;</code> but
+writes runnable <code>run&lt;Name&gt;.sh</code> / <code>run&lt;Name&gt;.cmd</code> into the run's
+working directory (<code>run/&lt;env&gt;-&lt;name&gt;/</code>) instead of exec'ing — for
+launching outside Gradle, e.g. under a debugger or another terminal.
+<code>genLaunchScripts</code> (plural) emits them for every declared run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>genLaunchScriptClient
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># or everything:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>./gradlew<span class="w"> </span>genLaunchScripts
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>./run/main-client/runClient.sh
+</code></pre></div>
+<p>The scripts <code>cd</code> into their own directory, export the launch
+environment, and exec <code>java</code> with the fully resolved args/classpath —
+the same values <code>run&lt;Name&gt;</code> would use.</p>
+<h2 id="listing-runs">Listing runs<a class="headerlink" href="#listing-runs" title="Permanent link">&para;</a></h2>
+<p><code>uniminedRuns</code> prints one line per declared run config (task, env,
+side, type, prod flag, enabled, main class) — a quick check of what
+<code>runs { }</code> materialized:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>uniminedRuns
+</code></pre></div>
+<h2 id="cache-maintenance">Cache maintenance<a class="headerlink" href="#cache-maintenance" title="Permanent link">&para;</a></h2>
+<p><code>pruneUniminedCache</code> prunes the global unimined cache
+(<code>~/.gradle/caches/unimined</code>), deleting entries idle longer than 30
+days by default — <code>--age-days 0</code> removes everything, <code>--project</code>
+additionally wipes the project's <code>.gradle/unimined</code>, <code>--assets</code>
+includes the shared assets dir.</p>
 <h2 id="ide-integration">IDE integration<a class="headerlink" href="#ide-integration" title="Permanent link">&para;</a></h2>
 <p><code>genIdeRuns</code> emits per-env IntelliJ <code>.idea</code> run XML and Eclipse
 <code>.launch</code> files for every declared run — regenerate after editing

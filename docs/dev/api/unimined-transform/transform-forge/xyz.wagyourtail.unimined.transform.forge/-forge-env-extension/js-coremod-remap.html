@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -94,7 +94,7 @@
   <div class="cover ">
     <h1 class="cover"><span>js</span><wbr><span>Coremod</span><wbr><span><span>Remap</span></span></h1>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="js-coremod-remap.html">jsCoremodRemap</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><p class="paragraph">JS coremod resource remap — default <code class="lang-kotlin">true</code> for FG3-era (userdev) envs: <code class="lang-kotlin">.js</code> coremod resources (the forge universal jar ships its own; mod jars carry them too) get srg-era names rewritten to the dev namespace, since FML's csv naming service has no class-name channel. Set <code class="lang-kotlin">false</code> to opt out — <code class="lang-kotlin">env.forge { jsCoremodRemap = false }</code>.</p></div></div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="js-coremod-remap.html">jsCoremodRemap</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><p class="paragraph">JS coremod resource remap — default <code class="lang-kotlin">true</code> for FG3-era (userdev) envs: <code class="lang-kotlin">.js</code> coremod resources (the forge universal jar ships its own; mod jars carry them too) get srg-era names rewritten to the dev namespace, since FML's csv naming service has no class-name channel. Set <code class="lang-kotlin">false</code> to opt out — <code class="lang-kotlin">env.forge { jsCoremodRemap.set(false) }</code>.</p><p class="paragraph">Property-backed: the value is read when the deferred <code class="lang-kotlin">forge:jsCoremodRemap</code> step contribution materializes, so a <span data-unresolved-link="org.gradle.api.provider/Provider///PointingToDeclaration/">Provider</span> set here resolves at pipeline materialization — never during configuration. Groovy keeps assignment: <code class="lang-kotlin">jsCoremodRemap = false</code>.</p></div></div>
 </div>
     <div class="footer">
         <div class="footer--container">

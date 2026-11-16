@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../index.html">adapter-jvmdg</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.jvmdg</a><span class="delimiter">/</span><span class="current">JvmDgEnvSpec</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Jvm</span><wbr><span>Dg</span><wbr><span>Env</span><wbr><span><span>Spec</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">JvmDgEnvSpec</a></div><p class="paragraph">Per-environment JvmDowngrader settings, contributed by the <code class="lang-kotlin">xyz.wagyourtail.unimined.jvmdg</code> plugin as an extension named <code class="lang-kotlin">jvmdowngrader</code> on each <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a>. <strong>On by default</strong> — applying the plugin is the opt-in, so every environment downgrades unless <code class="lang-kotlin">enabled.set(false)</code> opts it back out.</p><p class="paragraph">When enabled, the env's dev <code class="lang-kotlin">run*</code> tasks launch against JvmDowngrader-processed copies of <code class="lang-kotlin">sourceSet.output.classesDirs</code> instead of the raw compile outputs, so loaders whose bundled ASM cannot read modern class files (FG-era LaunchWrapper/FML reads ≤v52; ≤1.6.4-era reads ≤v51) can run modern-compiled mods.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">JvmDgEnvSpec</a> : <span data-unresolved-link="xyz.wagyourtail.jvmdg.gradle.flags/ShadeFlags///PointingToDeclaration/">ShadeFlags</span></div><p class="paragraph">Per-environment JvmDowngrader settings, contributed by the <code class="lang-kotlin">xyz.wagyourtail.unimined.jvmdg</code> plugin as an extension named <code class="lang-kotlin">jvmdowngrader</code> on each <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a> <strong>and</strong> on the <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-extension/index.html">MinecraftExtension</a> itself — the extension-level spec is the global layer: <code class="lang-kotlin">minecraft { jvmdowngrader { source.set(21) } }</code> sets defaults for every env, per-env specs override it. <strong>Off by default</strong> — applying the plugin only makes the DSL available; envs opt in by configuring their own spec or the global one (<code class="lang-kotlin">enabled</code> set at either scope), or explicitly.</p><p class="paragraph">Value precedence for every flag: an env's own set, then its inherited envs (nearest first), then the global spec, then the built-in default.</p><p class="paragraph">When enabled, the env's dev <code class="lang-kotlin">run*</code> tasks launch against JvmDowngrader-processed copies of <code class="lang-kotlin">sourceSet.output.classesDirs</code> instead of the raw compile outputs, so loaders whose bundled ASM cannot read modern class files (FG-era LaunchWrapper/FML reads ≤v52; ≤1.6.4-era reads ≤v51) can run modern-compiled mods. The same downgrade is contributed to the env's production jar pipeline, so <code class="lang-kotlin">runProd</code>/published artifacts get the emit contract dev runs get.</p><p class="paragraph">The spec implements jvmdg's Gradle-frontend <span data-unresolved-link="xyz.wagyourtail.jvmdg.gradle.flags/ShadeFlags///PointingToDeclaration/">ShadeFlags</span>, so its engine-level knobs (<code class="lang-kotlin">ignoreWarningsIn</code>, <code class="lang-kotlin">logLevel</code>, <code class="lang-kotlin">multiReleaseVersions</code>, …) are settable directly on the <code class="lang-kotlin">jvmdowngrader { }</code> block and flow to both the dev-class and prod-jar downgrades. Prefer <a href="target.html">target</a> over <a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#219726152%2FProperties%2F-1028722198">ShadeFlags.downgradeTo</a> — the conventions chain (<code class="lang-kotlin">target</code> is the era floor as an int, <code class="lang-kotlin">downgradeTo</code> inherits it as a <span data-unresolved-link="org.gradle.api/JavaVersion///PointingToDeclaration/">org.gradle.api.JavaVersion</span>) and a direct <code class="lang-kotlin">downgradeTo</code> set wins over <code class="lang-kotlin">target</code>.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -119,7 +119,142 @@
       </div>
       <div data-togglable="PROPERTY">
         <h2 class="tableheader">Properties</h2>
-        <div class="table"><a data-name="-989294926%2FProperties%2F-1028722198" anchor-label="enabled" id="-989294926%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+        <div class="table"><a data-name="896614145%2FProperties%2F-1028722198" anchor-label="apiJar" id="896614145%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#896614145%2FProperties%2F-1028722198"><span>api</span><wbr><span><span>Jar</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="896614145%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.NONE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.NONE</span></span><wbr><span class="token punctuation">)</span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#896614145%2FProperties%2F-1028722198">apiJar</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/File.html">File</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="516884069%2FProperties%2F-1028722198" anchor-label="debug" id="516884069%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#516884069%2FProperties%2F-1028722198"><span><span>debug</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="516884069%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#516884069%2FProperties%2F-1028722198">debug</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1613821725%2FProperties%2F-1028722198" anchor-label="debugDumpClasses" id="-1613821725%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1613821725%2FProperties%2F-1028722198"><span>debug</span><wbr><span>Dump</span><wbr><span><span>Classes</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1613821725%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1613821725%2FProperties%2F-1028722198">debugDumpClasses</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-87443919%2FProperties%2F-1028722198" anchor-label="debugNoSynthetic" id="-87443919%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-87443919%2FProperties%2F-1028722198"><span>debug</span><wbr><span>No</span><wbr><span><span>Synthetic</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-87443919%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-87443919%2FProperties%2F-1028722198">debugNoSynthetic</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="721378888%2FProperties%2F-1028722198" anchor-label="debugSkipJeps" id="721378888%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#721378888%2FProperties%2F-1028722198"><span>debug</span><wbr><span>Skip</span><wbr><span><span>Jeps</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="721378888%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#721378888%2FProperties%2F-1028722198">debugSkipJeps</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/SetProperty///PointingToDeclaration/">SetProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1170955240%2FProperties%2F-1028722198" anchor-label="debugSkipStub" id="-1170955240%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1170955240%2FProperties%2F-1028722198"><span>debug</span><wbr><span>Skip</span><wbr><span><span>Stub</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1170955240%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1170955240%2FProperties%2F-1028722198">debugSkipStub</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/SetProperty///PointingToDeclaration/">SetProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-373619281%2FProperties%2F-1028722198" anchor-label="debugSkipStubs" id="-373619281%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-373619281%2FProperties%2F-1028722198"><span>debug</span><wbr><span>Skip</span><wbr><span><span>Stubs</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-373619281%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-373619281%2FProperties%2F-1028722198">debugSkipStubs</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/SetProperty///PointingToDeclaration/">SetProperty</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/JavaVersion///PointingToDeclaration/">JavaVersion</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1505819236%2FProperties%2F-1028722198" anchor-label="downgradeFromMultiReleases" id="-1505819236%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1505819236%2FProperties%2F-1028722198"><span>downgrade</span><wbr><span>From</span><wbr><span>Multi</span><wbr><span><span>Releases</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1505819236%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1505819236%2FProperties%2F-1028722198">downgradeFromMultiReleases</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="219726152%2FProperties%2F-1028722198" anchor-label="downgradeTo" id="219726152%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#219726152%2FProperties%2F-1028722198"><span>downgrade</span><wbr><span><span>To</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="219726152%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#219726152%2FProperties%2F-1028722198">downgradeTo</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/JavaVersion///PointingToDeclaration/">JavaVersion</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-989294926%2FProperties%2F-1028722198" anchor-label="enabled" id="-989294926%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -129,7 +264,127 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="enabled.html">enabled</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether dev-run class-file downgrading is active for this environment — <strong>the opt-out flag, default on</strong> when the <code class="lang-kotlin">xyz.wagyourtail.unimined.jvmdg</code> plugin is applied. Set <code class="lang-kotlin">jvmdowngrader { enabled.set(false) }</code> to exempt a single environment.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="enabled.html">enabled</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether class-file downgrading is active for this environment — <strong>off by default</strong>; invoking <code class="lang-kotlin">jvmdowngrader { }</code> or <code class="lang-kotlin">jvmdowngrader(N)</code> opts the env in, <code class="lang-kotlin">enabled.set(false)</code> opts it back out (explicitly — including inside the configuring block).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2101754956%2FProperties%2F-1028722198" anchor-label="ignoreWarningsIn" id="-2101754956%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-2101754956%2FProperties%2F-1028722198"><span>ignore</span><wbr><span>Warnings</span><wbr><span><span>In</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2101754956%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-2101754956%2FProperties%2F-1028722198">ignoreWarningsIn</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-302290623%2FProperties%2F-1028722198" anchor-label="logAnsiColors" id="-302290623%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-302290623%2FProperties%2F-1028722198"><span>log</span><wbr><span>Ansi</span><wbr><span><span>Colors</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-302290623%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-302290623%2FProperties%2F-1028722198">logAnsiColors</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="977434018%2FProperties%2F-1028722198" anchor-label="logLevel" id="977434018%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#977434018%2FProperties%2F-1028722198"><span>log</span><wbr><span><span>Level</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="977434018%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#977434018%2FProperties%2F-1028722198">logLevel</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1550027043%2FProperties%2F-1028722198" anchor-label="multiReleaseOriginal" id="1550027043%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#1550027043%2FProperties%2F-1028722198"><span>multi</span><wbr><span>Release</span><wbr><span><span>Original</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1550027043%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#1550027043%2FProperties%2F-1028722198">multiReleaseOriginal</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1912755303%2FProperties%2F-1028722198" anchor-label="multiReleaseVersions" id="-1912755303%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1912755303%2FProperties%2F-1028722198"><span>multi</span><wbr><span>Release</span><wbr><span><span>Versions</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1912755303%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-1912755303%2FProperties%2F-1028722198">multiReleaseVersions</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/SetProperty///PointingToDeclaration/">SetProperty</span><span class="token operator">&lt;</span><span data-unresolved-link="org.gradle.api/JavaVersion///PointingToDeclaration/">JavaVersion</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-717134428%2FProperties%2F-1028722198" anchor-label="quiet" id="-717134428%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-717134428%2FProperties%2F-1028722198"><span><span>quiet</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-717134428%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-717134428%2FProperties%2F-1028722198">quiet</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-384013811%2FProperties%2F-1028722198" anchor-label="shadeInlining" id="-384013811%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-384013811%2FProperties%2F-1028722198"><span>shade</span><wbr><span><span>Inlining</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-384013811%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="../../xyz.wagyourtail.unimined.jvmdg.task/-downgrade-classes-task/index.html#-384013811%2FProperties%2F-1028722198">shadeInlining</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1276201516%2FProperties%2F-1028722198" anchor-label="source" id="1276201516%2FProperties%2F-1028722198" data-filterable-set=":unimined-adapters:adapter-jvmdg/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-adapters:adapter-jvmdg/main" data-filterable-set=":unimined-adapters:adapter-jvmdg/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="source.html"><span><span>source</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1276201516%2FProperties%2F-1028722198"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-adapters:adapter-jvmdg/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="source.html">source</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The Java level the environment's <code class="lang-kotlin">compile*</code> tasks emit at — feeds <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/compile-java-version.html">MinecraftEnvironment.compileJavaVersion</a> when set, replacing the <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/required-java-version.html">MinecraftEnvironment.requiredJavaVersion</a> default: <code class="lang-kotlin">jvmdowngrader { source.set(21); target.set(8) }</code> on a 1.12-era env compiles sources against Java 21 APIs while the run JVM and emitted bytecode stay at the era floor. Unset, the env compiles at its requirement and the downgrade is a passthrough.</p></div></div></div>
                 </div>
               </div>
             </div>

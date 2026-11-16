@@ -1,0 +1,325 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>DevBundleExportSpec</title>
+<link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.1.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-minecraft:provider-devbundle/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-minecraft:provider-devbundle/main" data-filter=":unimined-minecraft:provider-devbundle/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="provider-devbundle::xyz.wagyourtail.unimined.provider.devbundle/DevBundleExportSpec///PointingToDeclaration//-262905950">
+  <div class="breadcrumbs"><a href="../../index.html">provider-devbundle</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.provider.devbundle</a><span class="delimiter">/</span><span class="current">DevBundleExportSpec</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Dev</span><wbr><span>Bundle</span><wbr><span>Export</span><wbr><span><span>Spec</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">DevBundleExportSpec</a></div><p class="paragraph">Per-environment dev-bundle export settings, contributed by the <code class="lang-kotlin">xyz.wagyourtail.unimined.provider.devbundle</code> plugin as the <code class="lang-kotlin">devBundleExport</code> extension on every <a href="../../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-minecraft-environment/index.html">MinecraftEnvironment</a> — <code class="lang-kotlin">sourceSet("main") { devBundleExport { serverJar.set(...) } }</code>.</p><p class="paragraph">Pure configuration — nothing runs unless the <code class="lang-kotlin">export&lt;Env&gt;DevBundle</code> task is invoked (the task is the opt-in; there is no <code class="lang-kotlin">enabled</code> flag). Defaults make a plain <code class="lang-kotlin">devBundleExport {}</code> usable: the env's production artifact, version, and library/repo lists all convention onto the environment.</p><p class="paragraph">The produced zip is a paperweight dev bundle (data version 6): <code class="lang-kotlin">data/paperclip-mojang.jar</code> carries the prod jar embedded inside a self-contained reproducer — consumers running it get the exact artifact back (no binary patching involved), and unimined's <code class="lang-kotlin">devbundle { file(...) }</code> provider path reads it directly.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="1363595723%2FConstructors%2F-262905950" anchor-label="DevBundleExportSpec" id="1363595723%2FConstructors%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-dev-bundle-export-spec.html"><span>Dev</span><wbr><span>Bundle</span><wbr><span>Export</span><wbr><span><span>Spec</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1363595723%2FConstructors%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-290310712%2FProperties%2F-262905950" anchor-label="apiCoordinates" id="-290310712%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="api-coordinates.html"><span>api</span><wbr><span><span>Coordinates</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-290310712%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="api-coordinates.html">apiCoordinates</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Optional fork api coordinate for the consumer's compile classpath (<code class="lang-kotlin">apiCoordinates</code> — a <code class="lang-kotlin">buildData</code>-era field the reader still honors at any data version).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2113270924%2FProperties%2F-262905950" anchor-label="bundleId" id="2113270924%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="bundle-id.html"><span>bundle</span><wbr><span><span>Id</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2113270924%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="bundle-id.html">bundleId</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The bundler <code class="lang-kotlin">version.json</code>/<code class="lang-kotlin">versions.list</code> id — the embedded jar's file stem too. Conventions to <code class="lang-kotlin">unimined-&lt;env&gt;-&lt;version&gt;</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1827673726%2FProperties%2F-262905950" anchor-label="embeddedLibraries" id="-1827673726%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="embedded-libraries.html"><span>embedded</span><wbr><span><span>Libraries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1827673726%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFiles///PointingToDeclaration/"><span class="token annotation builtin">InputFiles</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="embedded-libraries.html">embeddedLibraries</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Jar files physically embedded into the paperclip (<code class="lang-kotlin">META-INF/libraries/&lt;name&gt;</code>) — conventions to the resolved <code class="lang-kotlin">minecraft&lt;Env&gt;Libraries</code> artifacts (a full, launchable bundle). <code class="lang-kotlin">setFrom()</code> empty for a coords-only slim bundle. Files pair to <a href="library-coordinates.html">libraryCoordinates</a> rows by the maven filename convention.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2120692247%2FProperties%2F-262905950" anchor-label="libraryCoordinates" id="-2120692247%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="library-coordinates.html"><span>library</span><wbr><span><span>Coordinates</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2120692247%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="library-coordinates.html">libraryCoordinates</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">group:name:version</code> coords written to the paperclip's <code class="lang-kotlin">META-INF/libraries.list</code> — the consumer's library channel. Conventions to the env's declared <code class="lang-kotlin">minecraft&lt;Env&gt;Libraries</code> dependencies; add fork-published artifacts on top.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1888338834%2FProperties%2F-262905950" anchor-label="libraryRepositories" id="-1888338834%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="library-repositories.html"><span>library</span><wbr><span><span>Repositories</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1888338834%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="library-repositories.html">libraryRepositories</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Maven repo URLs mirrored into <code class="lang-kotlin">config.json</code> so consumers can resolve <a href="library-coordinates.html">libraryCoordinates</a> — conventions to the project's declared (non-<code class="lang-kotlin">file:</code>) maven repositories, read post-DSL.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2035448974%2FProperties%2F-262905950" anchor-label="mainClass" id="-2035448974%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="main-class.html"><span>main</span><wbr><span><span>Class</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2035448974%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="main-class.html">mainClass</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The server main class written to <code class="lang-kotlin">META-INF/main-class</code> — used when the bundle is launched like a real paperclip.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1098675426%2FProperties%2F-262905950" anchor-label="minecraftVersion" id="-1098675426%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="minecraft-version.html"><span>minecraft</span><wbr><span><span>Version</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1098675426%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="minecraft-version.html">minecraftVersion</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The bundle's <code class="lang-kotlin">minecraftVersion</code> — conventions to the env's <code class="lang-kotlin">version</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1841213078%2FProperties%2F-262905950" anchor-label="mojangApiCoordinates" id="1841213078%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mojang-api-coordinates.html"><span>mojang</span><wbr><span>Api</span><wbr><span><span>Coordinates</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1841213078%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="mojang-api-coordinates.html">mojangApiCoordinates</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Optional mojang-mapped api coordinate (<code class="lang-kotlin">mojangApiCoordinates</code>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1836506993%2FProperties%2F-262905950" anchor-label="outputZip" id="1836506993%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="output-zip.html"><span>output</span><wbr><span><span>Zip</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1836506993%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/OutputFile///PointingToDeclaration/"><span class="token annotation builtin">OutputFile</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="output-zip.html">outputZip</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/RegularFileProperty///PointingToDeclaration/">RegularFileProperty</span></div><div class="brief "><p class="paragraph">The bundle zip — defaults to <code class="lang-kotlin">build/devBundle/&lt;env&gt;-dev-bundle.zip</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="501848688%2FProperties%2F-262905950" anchor-label="reobfMappingsFile" id="501848688%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="reobf-mappings-file.html"><span>reobf</span><wbr><span>Mappings</span><wbr><span><span>File</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="501848688%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFile///PointingToDeclaration/"><span class="token annotation builtin">InputFile</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="reobf-mappings-file.html">reobfMappingsFile</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/RegularFileProperty///PointingToDeclaration/">RegularFileProperty</span></div><div class="brief "><p class="paragraph">Optional mojmap→prod reobf mappings shipped at <code class="lang-kotlin">data/mojang-spigot-reobf.tiny</code> and declared in <code class="lang-kotlin">config.json</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1069709063%2FProperties%2F-262905950" anchor-label="serverJar" id="-1069709063%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="server-jar.html"><span>server</span><wbr><span><span>Jar</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1069709063%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputFile///PointingToDeclaration/"><span class="token annotation builtin">InputFile</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="server-jar.html">serverJar</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/RegularFileProperty///PointingToDeclaration/">RegularFileProperty</span></div><div class="brief "><p class="paragraph">The production server jar the bundle reproduces — defaults to the environment's <code class="lang-kotlin">minecraftProd</code> view (the prod-namespace artifact through the whole JAR pipeline). Must be a server artifact, mojmap-named to keep the bundle's contract honest.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1095988778%2FProperties%2F-262905950" anchor-label="sourcePatches" id="-1095988778%2FProperties%2F-262905950" data-filterable-set=":unimined-minecraft:provider-devbundle/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft:provider-devbundle/main" data-filterable-set=":unimined-minecraft:provider-devbundle/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="source-patches.html"><span>source</span><wbr><span><span>Patches</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1095988778%2FProperties%2F-262905950"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft:provider-devbundle/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/InputDirectory///PointingToDeclaration/"><span class="token annotation builtin">InputDirectory</span></span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/PathSensitive///PointingToDeclaration/"><span class="token annotation builtin">PathSensitive</span></span><span class="token punctuation">(</span><span>value<span class="token operator"> = </span><span data-unresolved-link="org.gradle.api.tasks/PathSensitivity.RELATIVE///PointingToDeclaration/{&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;:{&quot;key&quot;:&quot;org.jetbrains.dokka.links.EnumEntryDRIExtra&quot;}}">PathSensitivity.RELATIVE</span></span><wbr><span class="token punctuation">)</span></div><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Optional///PointingToDeclaration/"><span class="token annotation builtin">Optional</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="source-patches.html">sourcePatches</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/DirectoryProperty///PointingToDeclaration/">DirectoryProperty</span></div><div class="brief "><p class="paragraph">Optional source-patch tree copied verbatim into <code class="lang-kotlin">patches/</code> — e.g. a patchbase-produced <code class="lang-kotlin">*.patch</code> set. Informational for unimined consumers (the embedded jar is already patched), real paperweight consumers apply them for source-level work.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

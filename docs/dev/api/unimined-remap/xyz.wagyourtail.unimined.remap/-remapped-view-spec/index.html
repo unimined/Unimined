@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -175,6 +175,51 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="discriminator.html">discriminator</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Optional suffix appended to the requested <code class="lang-kotlin">unimined.namespace</code> attribute (<code class="lang-kotlin">named-envA</code>), so two views targeting the same namespace with different pipelines/mappings don't collide on one transform registration.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1805111901%2FProperties%2F-584358979" anchor-label="errorContext" id="1805111901%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="error-context.html"><span>error</span><wbr><span><span>Context</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1805111901%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Internal///PointingToDeclaration/"><span class="token annotation builtin">Internal</span></span></div></div><span class="token keyword">var </span><a href="error-context.html">errorContext</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Label identifying this spec in error messages — host wiring sets it to <code class="lang-kotlin">remapped view '&lt;configuration name&gt;'</code> so a rejected <a href="force-remap.html">forceRemap</a> coordinate points back at the view that refused it. The generic default covers specs built outside view wiring.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-141472903%2FProperties%2F-584358979" anchor-label="forceRemapFilters" id="-141472903%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="force-remap-filters.html"><span>force</span><wbr><span>Remap</span><wbr><span><span>Filters</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-141472903%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Internal///PointingToDeclaration/"><span class="token annotation builtin">Internal</span></span></div></div><span class="token keyword">val </span><a href="force-remap-filters.html">forceRemapFilters</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token punctuation">(</span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Per-dependency force-remap filters — the user-side escape of <code class="lang-kotlin">Fabric-Loom-Remap:true</code> for deps too plain to self-describe (e.g. obf-named libraries the <code class="lang-kotlin">refs:</code> scan can't see). Each filter is a <code class="lang-kotlin">(Dependency) -&gt; Boolean</code> evaluated against the source configuration's declared dependencies at resolution time; matching deps' own artifacts (never their transitives) remap unconditionally. Resolved lazily — filters registered after the view is created still apply.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1600781042%2FProperties%2F-584358979" anchor-label="forceRemapJars" id="-1600781042%2FProperties%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="force-remap-jars.html"><span>force</span><wbr><span>Remap</span><wbr><span><span>Jars</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1600781042%2FProperties%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Internal///PointingToDeclaration/"><span class="token annotation builtin">Internal</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="force-remap-jars.html">forceRemapJars</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.file/ConfigurableFileCollection///PointingToDeclaration/">ConfigurableFileCollection</span></div><div class="brief "><p class="paragraph">Resolved artifacts of <a href="force-remap-filters.html">forceRemapFilters</a>-matching dependencies — host wiring fills this collection; the transform reads it as the forced file set. Not user-facing.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -370,6 +415,25 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@get:</span><span data-unresolved-link="org.gradle.api.tasks/Input///PointingToDeclaration/"><span class="token annotation builtin">Input</span></span></div></div><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="target-namespace.html">targetNamespace</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Namespace the view resolves them to.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1873395046%2FFunctions%2F-584358979" anchor-label="forceRemap" id="-1873395046%2FFunctions%2F-584358979" data-filterable-set=":unimined-remap/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-remap/main" data-filterable-set=":unimined-remap/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="force-remap.html"><span>force</span><wbr><span><span>Remap</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1873395046%2FFunctions%2F-584358979"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-remap/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="force-remap.html"><span class="token function">forceRemap</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">filter<span class="token operator">: </span><span data-unresolved-link="groovy.lang/Closure///PointingToDeclaration/">Closure</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Groovy DSL overload — <code class="lang-kotlin">forceRemap { it.group == "com.example" }</code>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="force-remap.html"><span class="token function">forceRemap</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">filter<span class="token operator">: </span><span class="token punctuation">(</span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Force-remap deps matching <a href="force-remap.html">filter</a> — see <a href="force-remap-filters.html">forceRemapFilters</a>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="force-remap.html"><span class="token function">forceRemap</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Force-remap deps by <code class="lang-kotlin">group:name[:version]</code> coordinate — malformed notation fails with an actionable error naming this view (see <a href="../../../unimined-api/xyz.wagyourtail.unimined.api.util/index.html">dependencyNotationPredicate</a>).</p></div></div></div>
                 </div>
               </div>
             </div>

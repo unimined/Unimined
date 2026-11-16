@@ -16,7 +16,7 @@
         <link rel="prev" href="../multi-project/">
       
       
-        <link rel="next" href="../../adapters/">
+        <link rel="next" href="../fork-dev/">
       
       
         
@@ -445,6 +445,8 @@
   
     
     
+      
+        
       
         
       
@@ -999,6 +1001,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Maven">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-build-production-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-build production dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1044,6 +1074,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1517,6 +1575,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Maven">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-build-production-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-build production dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1686,6 +1772,79 @@ on <code>environment("&lt;env&gt;")</code> gate each channel; identity-remap
 environments publish a single artifact. The loader-merge merged
 artifact is intentionally not part of the Maven path — it belongs to
 ModPublisher uploads.</p>
+<h3 id="in-build-production-dependencies">In-build production dependencies<a class="headerlink" href="#in-build-production-dependencies" title="Permanent link">&para;</a></h3>
+<p>Cross-project consumption works the same way inside one build —
+this is the <code>reobfArtifactConfiguration</code> equivalent. A consumer that
+needs a sibling project's <em>production</em> jar (e.g. a buildSrc tool or a
+downstream test module) selects it by attribute on a resolvable
+configuration or the dependency itself:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">configurations</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">"prodTool"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">attributes</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">attribute</span><span class="p">(</span><span class="n">PublishAttributes</span><span class="p">.</span><span class="na">CHANNEL</span><span class="p">,</span><span class="w"> </span><span class="s">"prod"</span><span class="p">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="n">attribute</span><span class="p">(</span><span class="n">PublishAttributes</span><span class="p">.</span><span class="na">ENVIRONMENT</span><span class="p">,</span><span class="w"> </span><span class="s">"fabric"</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="n">prodTool</span><span class="p">(</span><span class="n">project</span><span class="p">(</span><span class="s">":parentmod"</span><span class="p">))</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">configurations</span><span class="o">.</span><span class="na">create</span><span class="o">(</span><span class="s2">"prodTool"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">attributes</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">attribute</span><span class="o">(</span><span class="n">PublishAttributes</span><span class="o">.</span><span class="na">CHANNEL</span><span class="o">,</span><span class="w"> </span><span class="s2">"prod"</span><span class="o">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="n">attribute</span><span class="o">(</span><span class="n">PublishAttributes</span><span class="o">.</span><span class="na">ENVIRONMENT</span><span class="o">,</span><span class="w"> </span><span class="s2">"fabric"</span><span class="o">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="o">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="n">prodTool</span><span class="w"> </span><span class="n">project</span><span class="o">(</span><span class="s2">":parentmod"</span><span class="o">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Plain <code>java-api</code>/<code>java-runtime</code> usage already resolves to the prod
+variant, so <code>CHANNEL = "prod"</code> is explicit documentation of intent;
+<code>ENVIRONMENT</code> (and <code>NAMESPACE</code>) disambiguate multi-env producers. The
+consumable producer configurations are named
+<code>&lt;sourceSet&gt;Prod{Api,Runtime,Sources}Elements</code> — exposed as
+<code>PublishConfigurations.prod*ElementsName(sourceSet)</code> for the
+<code>project(path = ..., configuration = ...)</code> escape hatch. Same-project
+consumption is just <code>tasks.named("remap&lt;Jar&gt;")</code>.</p>
+<h3 id="access-documents">Access documents<a class="headerlink" href="#access-documents" title="Permanent link">&para;</a></h3>
+<p>Each environment also gets an <code>accesstransformer</code>-category variant
+pair (NeoGradle <code>accessTransformer</code> / ModDevGradle data-file parity):
+the environment's generated canonical access doc plus every
+<code>access { from(path) { } }</code>/<code>accessFile(path) { }</code> declaration is
+published as <code>unimined&lt;Env&gt;AccessTransformerElements</code> artifacts
+(classified <code>access-transformer[-N]</code>). Dependents pull them by module
+coordinate instead of scanning the jar:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">uniminedFabricAccessTransformer</span><span class="p">(</span><span class="s">"com.example:parentmod:1.0"</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">uniminedFabricAccessTransformer</span><span class="w"> </span><span class="s2">"com.example:parentmod:1.0"</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Resolved documents join the environment's dependency access channel —
+they apply like dep-jar access documents (producer-namespace binding,
+no <code>transitive-</code> filter, never validated against your mappings) and are
+not re-shipped inside your own jar. A producer that declares no access
+documents publishes no variant; when a producer ships several
+environments' docs, disambiguate with
+<code>attribute(unimined.environment, "&lt;env&gt;")</code> on the dependency.</p>
 <h2 id="modpublisher">ModPublisher<a class="headerlink" href="#modpublisher" title="Permanent link">&para;</a></h2>
 <p><code>xyz.wagyourtail.unimined.publish-modpublisher</code> feeds artifacts and
 release metadata into
@@ -1694,32 +1853,32 @@ release metadata into
 stays <code>compileOnly</code> — no ModPublisher classes load unless you apply
 it). There is no adapter DSL — <code>publisher { }</code> is the single surface
 for what can't be inferred, and anything you set there wins:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_6_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">publisher</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">apiKeys</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">curseforge</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">environmentVariable</span><span class="p">(</span><span class="s">"CURSE_TOKEN"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="n">modrinth</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">environmentVariable</span><span class="p">(</span><span class="s">"MODRINTH_TOKEN"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="n">curseID</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"1234"</span><span class="p">)</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="n">modrinthID</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"abc"</span><span class="p">)</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="n">versionType</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"release"</span><span class="p">)</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="n">debug</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w">   </span><span class="c1">// dry-run: builds the upload plan, uploads nothing</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">publisher</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">apiKeys</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="n">curseforge</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">environmentVariable</span><span class="p">(</span><span class="s">"CURSE_TOKEN"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="n">modrinth</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">environmentVariable</span><span class="p">(</span><span class="s">"MODRINTH_TOKEN"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="n">curseID</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"1234"</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="n">modrinthID</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"abc"</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="n">versionType</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"release"</span><span class="p">)</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="n">debug</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w">   </span><span class="c1">// dry-run: builds the upload plan, uploads nothing</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">publisher</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">apiKeys</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">curseforge</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">environmentVariable</span><span class="o">(</span><span class="s2">"CURSE_TOKEN"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="n">modrinth</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">environmentVariable</span><span class="o">(</span><span class="s2">"MODRINTH_TOKEN"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="n">curseID</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"1234"</span><span class="o">)</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="n">modrinthID</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"abc"</span><span class="o">)</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="n">versionType</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"release"</span><span class="o">)</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="n">debug</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span><span class="w">   </span><span class="c1">// dry-run: builds the upload plan, uploads nothing</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">publisher</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">apiKeys</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="n">curseforge</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">environmentVariable</span><span class="o">(</span><span class="s2">"CURSE_TOKEN"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">        </span><span class="n">modrinth</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">environmentVariable</span><span class="o">(</span><span class="s2">"MODRINTH_TOKEN"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">curseID</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"1234"</span><span class="o">)</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="n">modrinthID</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"abc"</span><span class="o">)</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="n">versionType</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"release"</span><span class="o">)</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="n">debug</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span><span class="w">   </span><span class="c1">// dry-run: builds the upload plan, uploads nothing</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -1749,18 +1908,18 @@ release still needs a human pass:</p>
 <p>The <code>adapter-forgix</code> adapter (plugin id
 <code>xyz.wagyourtail.unimined.adapter-forgix</code>) merges per-loader
 production jars with Forgix's engine:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_7_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">id</span><span class="p">(</span><span class="s">"xyz.wagyourtail.unimined.adapter-forgix"</span><span class="p">)</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s">"..."</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">id</span><span class="p">(</span><span class="s">"xyz.wagyourtail.unimined.adapter-forgix"</span><span class="p">)</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s">"..."</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined.adapter-forgix'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'...'</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'xyz.wagyourtail.unimined.adapter-forgix'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'...'</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>

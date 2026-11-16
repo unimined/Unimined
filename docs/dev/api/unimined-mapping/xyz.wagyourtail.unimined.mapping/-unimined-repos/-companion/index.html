@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -126,6 +126,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="invoke.html"><span class="token function">invoke</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">handler<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../index.html">UniminedRepos</a></div><div class="brief "><p class="paragraph">A catalog bound to an arbitrary <span data-unresolved-link="org.gradle.api.artifacts.dsl/RepositoryHandler///PointingToDeclaration/">RepositoryHandler</span>.</p></div><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.jvm/-synchronized/index.html"><span class="token annotation builtin">Synchronized</span></a></div></div><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="invoke.html"><span class="token function">invoke</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.plugins/PluginAware///PointingToDeclaration/">PluginAware</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../index.html">UniminedRepos</a></div><div class="brief "><p class="paragraph">The bound catalog for <a href="invoke.html">target</a> — reuses the <code class="lang-kotlin">uniminedRepos</code> extension when present (the mapping plugin registers one); otherwise creates, registers it, and returns it.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1509106640%2FFunctions%2F956863234" anchor-label="validate" id="-1509106640%2FFunctions%2F956863234" data-filterable-set=":unimined-mapping/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-mapping/main" data-filterable-set=":unimined-mapping/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="validate.html"><span><span>validate</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1509106640%2FFunctions%2F956863234"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-mapping/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="validate.html"><span class="token function">validate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">logger<span class="token operator">: </span><span data-unresolved-link="org.gradle.api.logging/Logger///PointingToDeclaration/">Logger</span><span class="token punctuation">, </span></span><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">FG7 <code class="lang-kotlin">checkRepos</code> parity — post-DSL diagnostic: every repo a unimined <code class="lang-kotlin">ensure</code> registered on <a href="validate.html">project</a>'s repositories is still present, and <code class="lang-kotlin">MavenRepo</code> precedes <code class="lang-kotlin">Mojang Libraries</code> (central-first keeps central-only classifiers reachable — Gradle pins a module's artifacts to the repo that served its metadata). Warns via <a href="../../../../unimined-api/xyz.wagyourtail.unimined.api.util/-unimined-problems/index.html">UniminedProblems</a>; never fails.</p></div></div></div>
                 </div>
               </div>
             </div>

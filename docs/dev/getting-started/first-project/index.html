@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/getting-started/first-project/">
+        <link rel="canonical" href="https://wagyourtail.github.io/unimined/docs/latest/getting-started/first-project/">
       
       
         <link rel="prev" href="../installation/">
@@ -455,6 +455,8 @@
   
     
     
+      
+        
       
         
       
@@ -938,6 +940,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1482,7 +1512,7 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">).</span><span class="na">get</span><span class="p">()</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="n">version</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"minecraft_version"</span><span class="p">))</span>
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="n">loader</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">,</span><span class="w"> </span><span class="n">providers</span><span class="p">.</span><span class="na">gradleProperty</span><span class="p">(</span><span class="s">"fabric_version"</span><span class="p">).</span><span class="na">get</span><span class="p">())</span>
 <a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="p">{</span>
@@ -1515,7 +1545,7 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
 <a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="n">version</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"minecraft_version"</span><span class="o">))</span>
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
 <a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="n">loader</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">,</span><span class="w"> </span><span class="n">providers</span><span class="o">.</span><span class="na">gradleProperty</span><span class="o">(</span><span class="s2">"fabric_version"</span><span class="o">).</span><span class="na">get</span><span class="o">())</span>
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">        </span><span class="n">mappings</span><span class="w"> </span><span class="o">{</span>
@@ -1540,7 +1570,7 @@ files: <code>settings.gradle.kts</code> (plugin + dependency repos — see
 <div class="tabbed-set tabbed-alternate" data-tabs="3:1"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1"><code>gradle.properties</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="na">org.gradle.jvmargs</span><span class="o">=</span><span class="s">-Xmx2G</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="na">org.gradle.jvmargs</span><span class="o">=</span><span class="s">-Xmx4G</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Unimined 2.0 is configuration-cache-ready — faster reconfigures.</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="na">org.gradle.configuration-cache</span><span class="o">=</span><span class="s">true</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>

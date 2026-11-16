@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -939,6 +941,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1204,6 +1234,17 @@
     <span class="md-ellipsis">
       
         Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#engine-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engine version
       
     </span>
   </a>
@@ -1514,6 +1555,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#engine-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engine version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#consumers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1650,6 +1702,58 @@ use it. The adapter drives the layout-agnostic engine directly from
 <p>Inputs may be <code>File</code>s, task references, or providers — task-output
 providers carry their producer, so inputs always build before the
 merge runs.</p>
+<h2 id="engine-version">Engine version<a class="headerlink" href="#engine-version" title="Permanent link">&para;</a></h2>
+<p>The adapter does <strong>not</strong> link Forgix from its own classpath —
+<code>mergeLoaderJars</code> resolves it from the <code>loaderMergeForgix</code>
+configuration and invokes <code>Forgix.mergeLoaders</code> through an isolated
+classloader, so the coordinate you set is literally the merge
+implementation that runs.</p>
+<ul>
+<li><strong>Bundled default:</strong> <code>io.github.pacifistmc.forgix:Forgix:2.0.0</code>
+  (the version the release was tested against)</li>
+<li><strong>Override — coordinate:</strong> set <code>uniminedTools.forgix</code>:</li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">forgix</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"io.github.pacifistmc.forgix:Forgix:2.1.0"</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">forgix</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s1">'io.github.pacifistmc.forgix:Forgix:2.1.0'</span><span class="o">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<ul>
+<li><strong>Override — direct dependency</strong> (useful for forks, local jars, or
+  a different repository artifact): declaring anything on
+  <code>loaderMergeForgix</code> replaces the default entirely:</li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">loaderMergeForgix</span><span class="p">(</span><span class="s">"io.github.pacifistmc.forgix:Forgix:2.1.0"</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="c1">// or loaderMergeForgix(files("libs/Forgix-custom.jar"))</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">loaderMergeForgix</span><span class="w"> </span><span class="s1">'io.github.pacifistmc.forgix:Forgix:2.1.0'</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The only contract is <code>Forgix.mergeLoaders(Map, File)</code> — an
+incompatible version fails the task with an explicit "does not expose
+mergeLoaders" error rather than a <code>NoSuchMethodError</code>.</p>
 <h2 id="consumers">Consumers<a class="headerlink" href="#consumers" title="Permanent link">&para;</a></h2>
 <p><code>adapter-modpublisher</code> prefers the <code>mergedElements</code> artifact as the
 upload artifact automatically — and suppresses the per-loader jars —

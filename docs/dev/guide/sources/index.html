@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -653,6 +655,28 @@
     <span class="md-ellipsis">
       
         Mod sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-sources-attach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency -sources attach
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decompiler-cleanup-on-mod-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decompiler cleanup on mod sources
       
     </span>
   </a>
@@ -1019,6 +1043,34 @@
     
   
     Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fork-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fork Development
   
 
     
@@ -1524,6 +1576,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dependency-sources-attach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency -sources attach
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decompiler-cleanup-on-mod-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decompiler cleanup on mod sources
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1625,9 +1699,73 @@ arguments after the <code>-key=value</code> engine options.</p>
 userdev's mcpconfig chain), the decompile step is skipped entirely —
 the supplied sources remap straight to the dev namespace.</p>
 <h2 id="mod-sources">Mod sources<a class="headerlink" href="#mod-sources" title="Permanent link">&para;</a></h2>
-<p><code>genModSources</code> / <code>gen&lt;Env&gt;ModSources</code> remaps the mod's own sources
-jar through the same <code>SOURCES</code> surface so published <code>-sources</code>
-classifiers carry the production namespace.</p>
+<p>Three distinct "mod sources" flows exist — they answer different
+questions:</p>
+<ul>
+<li><strong>Your own sources for publishing</strong> — the env's <code>remap&lt;SourcesJar&gt;</code>
+  output rides the <code>*ProdSourcesElements</code> variant of the
+  <code>unimined&lt;Env&gt;</code> component, so a published <code>-sources</code> classifier
+  carries the production namespace (see
+  <a href="../publishing/">Publishing</a>).</li>
+<li><strong>Dependencies' published <code>-sources</code> jars</strong> — the
+  <code>&lt;bucket&gt;SourcesRemapped</code> views below remap each dep's shipped
+  sources artifact into the dev namespace for IDE attach.</li>
+<li><strong>Dependencies without shipped sources</strong> — <code>genModSources</code> /
+  <code>gen&lt;Env&gt;ModSources</code> <em>decompiles</em> the env's <code>modImplementation</code> /
+  <code>modRuntimeOnly</code> dependencies (already remapped to the dev
+  namespace) through the same engine + <code>RemapSurface.SOURCES</code>
+  pipeline as <code>genSources</code>, then publishes each result under the
+  dep's own coordinates in the env's generated local repo. The dep
+  set is resolution-time and unbounded, so the decompile runs as an
+  artifact transform chained off the remapped mod views — the task
+  just resolves the views and writes the repo entries.</li>
+</ul>
+<h2 id="dependency-sources-attach">Dependency <code>-sources</code> attach<a class="headerlink" href="#dependency-sources-attach" title="Permanent link">&para;</a></h2>
+<p>Every bound environment also gets per-bucket views over the mod
+dependencies' <em>published</em> sources jars, complementing <code>genModSources</code>
+for deps that ship <code>-sources</code> at all (no decompile, no repo
+publish — the remapped file materializes at resolution like any
+transform output):</p>
+<ul>
+<li><code>&lt;bucket&gt;SourcesRemapped</code> requests each dep's docs variant
+  (<code>category=documentation</code>, <code>docsType=sources</code> — maven's
+  <code>-sources.jar</code> or a <code>withSourcesJar</code>-style <code>sourcesElements</code>
+  variant) and runs it through the environment's
+  <code>RemapSurface.SOURCES</code> pipeline, mod source namespace → dev
+  namespace, so IDE-attached sources carry dev names.</li>
+<li><code>&lt;bucket&gt;SourcesDirect</code> is the identity-environment pass-through
+  twin; consumers pick by <code>isIdentityRemap</code> exactly like the
+  <code>*Direct</code>/<code>*Remapped</code> jar views.</li>
+</ul>
+<p>The active remapped views are registered on
+<code>MinecraftExtension.modDevSourcesViewConfigurations</code> under
+<code>"&lt;environmentId&gt;:&lt;bucket&gt;"</code> keys (the sources counterpart of
+<code>modDevViewConfigurations</code>). Because the dep source namespace is
+the declared one — <code>modSourceNamespaces</code>, like the jar views — a
+sources jar published in another namespace remaps wrongly.</p>
+<p>Consumers resolve leniently and filtered to module/project
+component ids: deps that ship no <code>-sources</code> artifact contribute
+nothing, and file deps must be excluded or they would contribute
+their own jar as "sources".</p>
+<h2 id="decompiler-cleanup-on-mod-sources">Decompiler cleanup on mod sources<a class="headerlink" href="#decompiler-cleanup-on-mod-sources" title="Permanent link">&para;</a></h2>
+<p>Fernflower-era decompilers emit raw numeric arguments for OpenGL
+calls — <code>GL11.glBegin(7)</code> instead of <code>GL11.glBegin(GL11.GL_QUADS)</code>.
+Each bound environment gets an opt-in <code>cleanupSources</code> /
+<code>cleanup&lt;Env&gt;Sources</code> task that rewrites those literals to the named
+<code>GLxx</code>/<code>ARB*</code> constants using the same <code>gl_constants.json</code> dataset
+RetroFuturaGradle ships (<code>applyDecompilerCleanupToMain</code> parity):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>cleanupSources<span class="w">        </span><span class="c1"># main environment's source set</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>./gradlew<span class="w"> </span>cleanupServerSources<span class="w">  </span><span class="c1"># the 'server' environment</span>
+</code></pre></div>
+<p>The task walks the environment's bound source set's <code>java.srcDirs</code>
+and <strong>modifies matching <code>.java</code> files in place</strong> — run it once after
+pasting decompiled code into your mod, not as part of the normal
+build. Only files importing <code>org.lwjgl.opengl.</code> are touched, only
+changed files are written (atomically), and constant-owning classes
+the rewrite references (e.g. <code>ARBVertexBufferObject</code>) get their
+imports inserted automatically. Generated/patched source dirs the
+environment injects under <code>build/</code> are excluded — the task is for
+your checked-in sources.</p>
 
 
 

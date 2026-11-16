@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.3
+        <div class="library-version" id="library-version">2.1.0
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -126,36 +126,6 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-bundled-library-strip-step-type/index.html">BundledLibraryStripStepType</a> : <span data-unresolved-link="xyz.wagyourtail.unimined.remap.spi/RemapStepType///PointingToDeclaration/">RemapStepType</span><span class="token operator">&lt;</span><a href="-bundled-library-strip-step-spec/index.html">BundledLibraryStripStepSpec</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">unimined:strip-bundled-libraries</code> — applies <span data-unresolved-link="xyz.wagyourtail.unimined.minecraft.merge/BundledLibraryStrip///PointingToDeclaration/">BundledLibraryStrip</span> to the environment artifact. Namespace-agnostic (entry-name membership, not class content), so it needs no mappings, classpath, or access model.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1345237654%2FClasslikes%2F-1569051040" anchor-label="CustomTransformer" id="1345237654%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-custom-transformer/index.html"><span>Custom</span><wbr><span><span>Transformer</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1345237654%2FClasslikes%2F-1569051040"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-custom-transformer/index.html">CustomTransformer</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../xyz.wagyourtail.unimined.transform.spi/-transformer-claim/-transformer-env-context/index.html">TransformerClaim.TransformerEnvContext</a></span></span><span class="token punctuation">)</span> : <a href="../xyz.wagyourtail.unimined.transform.spi/-minecraft-transformer/index.html">MinecraftTransformer</a></div><div class="brief "><p class="paragraph"><code class="lang-kotlin">custom</code> — the declared-capabilities fallback transform. Claims an environment only when no bundled transform claims its loader <code class="lang-kotlin">family</code> (CustomTransformerClaim.fallbackClaim); its own task is a passthrough — all real work is the env's declared <code class="lang-kotlin">pipeline { }</code> steps (which ride the jar-processors channel) and <code class="lang-kotlin">features { }</code> bindings resolved through the env's FeatureRegistry.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="269261612%2FClasslikes%2F-1569051040" anchor-label="FeaturesSpec" id="269261612%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-features-spec/index.html"><span>Features</span><wbr><span><span>Spec</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="269261612%2FClasslikes%2F-1569051040"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-features-spec/index.html">FeaturesSpec</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>registry<span class="token operator">: </span><a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">FeatureRegistry</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Declared capability bindings for an environment — <code class="lang-kotlin">features { }</code>. Typed values, not bare flags: <code class="lang-kotlin">nestedJars("jarjar")</code>, <code class="lang-kotlin">modDiscovery("dli")</code>, <code class="lang-kotlin">mixin</code> resolve through <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">FeatureRegistry</a>; unresolvable keys fail at selection, not silently.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -250,21 +220,6 @@
               </div>
             </div>
           </div>
-<a data-name="1437166087%2FClasslikes%2F-1569051040" anchor-label="PassthroughTransformTask" id="1437166087%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-passthrough-transform-task/index.html"><span>Passthrough</span><wbr><span>Transform</span><wbr><span><span>Task</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1437166087%2FClasslikes%2F-1569051040"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><span data-unresolved-link="org.gradle.work/DisableCachingByDefault///PointingToDeclaration/"><span class="token annotation builtin">DisableCachingByDefault</span></span><span class="token punctuation">(</span><span>because<span class="token operator"> = </span><span class="breakable-word"><span class="token string">"delegates to the transform pipeline"</span></span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-passthrough-transform-task/index.html">PassthroughTransformTask</a> : <a href="../xyz.wagyourtail.unimined.transform.task/-transform-minecraft-task/index.html">TransformMinecraftTask</a></div><div class="brief "><p class="paragraph">Passthrough transform task — the declared steps' work lives in the jar-processors artifact step; this task only carries the input to the emitted dev output so the pipeline has a <code class="lang-kotlin">jar</code> edge.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="1079947267%2FClasslikes%2F-1569051040" anchor-label="PipelinePreset" id="1079947267%2FClasslikes%2F-1569051040" data-filterable-set=":unimined-transform/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-transform/main" data-filterable-set=":unimined-transform/main">
             <div class="main-subrow keyValue ">
@@ -290,7 +245,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-pipeline-preset-registry/index.html">PipelinePresetRegistry</a></div><div class="brief "><p class="paragraph">Registry of pipeline presets — ServiceLoader builtins plus manual registration (mirrors <a href="../../unimined-transform/xyz.wagyourtail.unimined.transform.feature/-feature-registry/index.html">xyz.wagyourtail.unimined.transform.feature.FeatureRegistry</a>). Unknown preset names fail at <code class="lang-kotlin">era("name")</code> declaration time.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-pipeline-preset-registry/index.html">PipelinePresetRegistry</a></div><div class="brief "><p class="paragraph">Registry of pipeline presets — ServiceLoader builtins plus manual registration (mirrors <span data-unresolved-link="xyz.wagyourtail.unimined.transform.feature/FeatureRegistry///PointingToDeclaration/">xyz.wagyourtail.unimined.transform.feature.FeatureRegistry</span>). Unknown preset names fail at <code class="lang-kotlin">era("name")</code> declaration time.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -350,7 +305,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-transform-extension/index.html">TransformExtension</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span> : <a href="../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft/-transform-extension-facade/index.html">TransformExtensionFacade</a></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">transform { }</code> DSL + pipeline host.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-transform-extension/index.html">TransformExtension</a>&nbsp;<span><span class="token annotation builtin">@</span><span data-unresolved-link="javax.inject/Inject///PointingToDeclaration/"><span class="token annotation builtin">Inject</span></span>&nbsp;</span><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">project<span class="token operator">: </span><span data-unresolved-link="org.gradle.api/Project///PointingToDeclaration/">Project</span></span></span><span class="token punctuation">)</span> : <a href="../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-transform-extension-facade/index.html">TransformExtensionFacade</a></div><div class="brief "><p class="paragraph">The <code class="lang-kotlin">transform { }</code> DSL + pipeline host.</p></div></div></div>
                 </div>
               </div>
             </div>
