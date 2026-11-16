@@ -1,13 +1,188 @@
-Reusing configuration cache.
-> Task :compileJava UP-TO-DATE
-> Task :generateModMetadata UP-TO-DATE
-> Task :processResources NO-SOURCE
-> Task :classes UP-TO-DATE
+Calculating task graph as configuration cache cannot be reused because the file system entry '.gradle/unimined/local-repo/org/jetbrains/annotations/24.0.1/.annotations-24.0.1.pom-11565005692194138823.tmp' has been removed.
+> Task :unimined:unimined-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-api:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-api:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-api:processCoreResources NO-SOURCE
+> Task :unimined:unimined-api:coreClasses UP-TO-DATE
+> Task :unimined:unimined-api:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-api:compileJava NO-SOURCE
+> Task :unimined:unimined-frontend:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-frontend:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-frontend:compileCoreJava NO-SOURCE
+> Task :unimined:mc-launcher:kmpPartiallyResolvedDependenciesChecker
+> Task :unimined:mc-launcher:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:mc-launcher:compileKotlinJvm UP-TO-DATE
+> Task :unimined:mc-launcher:compileJvmMainJava NO-SOURCE
+> Task :unimined:mc-launcher:jvmProcessResources NO-SOURCE
+> Task :unimined:mc-launcher:processJvmMainResources SKIPPED
+> Task :unimined:mc-launcher:jvmMainClasses UP-TO-DATE
+> Task :unimined:mc-launcher:jvmJar UP-TO-DATE
+> Task :unimined:unimined-frontend:processCoreResources NO-SOURCE
+> Task :unimined:unimined-frontend:coreClasses UP-TO-DATE
+> Task :unimined:unimined-ide:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-ide:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-ide:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-ide:processCoreResources NO-SOURCE
+> Task :unimined:unimined-ide:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mapping:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-mapping:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-mapping:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-mapping:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-mapping:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mapping:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-mapping:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-remap:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:compileJava NO-SOURCE
+> Task :unimined:unimined-runs:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-runs:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-runs:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-runs:processCoreResources NO-SOURCE
+> Task :unimined:unimined-runs:coreClasses UP-TO-DATE
+> Task :unimined:unimined-transform:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-transform:processCoreResources NO-SOURCE
+> Task :unimined:unimined-transform:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-access:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-access:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-access:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-access:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-transform:compileJava NO-SOURCE
+> Task :unimined:unimined-runs:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-runs:compileJava NO-SOURCE
+> Task :unimined:unimined-ide:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-ide:compileJava NO-SOURCE
+> Task :unimined:unimined-migrate:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-migrate:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-migrate:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-migrate:processCoreResources NO-SOURCE
+> Task :unimined:unimined-migrate:coreClasses UP-TO-DATE
+> Task :unimined:unimined-migrate:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-migrate:compileJava NO-SOURCE
+> Task :unimined:unimined-mod:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-mod:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-mod:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-mod:processCoreResources NO-SOURCE
+> Task :unimined:unimined-mod:coreClasses UP-TO-DATE
+> Task :unimined:unimined-mod:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-mod:compileJava NO-SOURCE
+> Task :unimined:unimined-source:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-source:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-source:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-source:processCoreResources UP-TO-DATE
+> Task :unimined:unimined-source:coreClasses UP-TO-DATE
+> Task :unimined:unimined-source:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-source:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-buildtools:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-native:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-native:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-native:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-buildtools:compileJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-minecraft:provider-conversion:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:processCoreResources NO-SOURCE
+> Task :unimined:unimined-minecraft:provider-conversion:coreClasses UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-minecraft:provider-conversion:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-tiny:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-tiny:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-tiny:compileJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-remap:remapper-uml:compileCoreKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:processCoreResources NO-SOURCE
+> Task :unimined:unimined-remap:remapper-uml:coreClasses UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-remap:remapper-uml:compileJava NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-source:decompiler-vineflower:compileCoreKotlin NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:compileCoreJava NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:processCoreResources NO-SOURCE
+> Task :unimined:unimined-source:decompiler-vineflower:coreClasses UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:compileKotlin UP-TO-DATE
+> Task :unimined:unimined-source:decompiler-vineflower:compileJava NO-SOURCE
+> Task :unimined:unimined-transform:transform-bukkit:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :unimined:unimined-transform:transform-bukkit:compileCoreKotlin FAILED
 
-> Task :resolveDevClasspath
-compileClasspath: 96 files
-runtimeClasspath: 99 files
+[Incubating] Problems report is available at: file:///run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/neoforge/build/reports/problems/problems-report.html
 
-BUILD SUCCESSFUL in 2s
-3 actionable tasks: 1 executed, 2 up-to-date
-Configuration cache entry reused.
+FAILURE: Build completed with 3 failures.
+
+1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':unimined:unimined-transform:transform-bukkit:compileCoreKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
+> Could not resolve all dependencies for configuration ':unimined:unimined-transform:transform-bukkit:detachedConfiguration3'.
+   > java.io.IOException: No space left on device
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Failed to stop service 'org.jetbrains.kotlin.gradle.plugin.statistics.BuildFinishBuildService_900997629'.
+> /run/media/william/m2shared/Projects/unimined-org/unimined/.kotlin/errors/errors-b7bea300-82aa-4af8-ad5a-23c101af5b94-1794759667877.log (No space left on device)
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+3: Task failed with an exception.
+-----------
+* What went wrong:
+java.lang.IllegalArgumentException: Could not create configuration-cache-report directory '/run/media/william/m2shared/Projects/unimined-org/unimined/testing/perf/neoforge/build/reports/configuration-cache/at3w53stoox0wyzj3fi4v0kyh/93ewuxcz7bt1k30j666mur1v8'
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.9.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 30s
+39 actionable tasks: 2 executed, 37 up-to-date
+Configuration cache entry stored.

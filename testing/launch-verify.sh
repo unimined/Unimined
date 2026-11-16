@@ -20,6 +20,9 @@
 
 FIXTURE="$1"; TASK="$2"; TIMEOUT="${3:-240}"; SUCCESS_RE="$4"; FAIL_RE="$5"
 cd "$FIXTURE" || { echo "FAIL: no fixture dir $FIXTURE"; exit 2; }
+# resolve to absolute — LOGROOT is built from $FIXTURE below and a
+# relative arg would point inside the fixture after the cd
+FIXTURE="$PWD"
 
 LOGROOT="$FIXTURE/run"
 BASELINE=$(mktemp)
@@ -94,4 +97,6 @@ echo "[$verdict] $FIXTURE $TASK"
 echo "  evidence: $evidence"
 [ "${verdict#VERIFIED}" = "$verdict" ] && { echo "  --- gradle tail ---"; tail -8 $GOUT; }
 rm -f "$BASELINE"
-[ "${verdict#VERIFIED}" = "$verdict" ]
+# exit 0 iff the verdict is VERIFIED* — the strip test is true when the
+# verdict does NOT start with VERIFIED, so negate it for the code
+! [ "${verdict#VERIFIED}" = "$verdict" ]
