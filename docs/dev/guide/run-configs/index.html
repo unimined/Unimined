@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -880,6 +880,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#verifying-a-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying a launch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#launch-scripts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1654,6 +1665,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#verifying-a-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying a launch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#launch-scripts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1769,6 +1791,11 @@ declare launches the plain environment launch.</p>
 the namespace shipped mod jars are remapped to — with your <code>remapJar</code>
 output and <em>direct</em> (un-remapped) mod dependencies: the
 shipped-runtime check (1.x <code>runObfClient</code>/<code>runObfServer</code> parity).
+Loader-runtime content rides the env's <code>minecraftLibraries</code> channel
+onto both dev and prod classpaths — the fabric-family loader jar, its
+embedded libraries, dep-declared installer libraries, and the
+relabeled <code>mappings/mappings.tiny</code> jar the loader's
+<code>MappingConfiguration</code> resolves the runtime namespace through.
 FG2-era forge is the exception: real production launches the shipped
 obf jar and lets <code>FMLDeobfTweaker</code> remap obf→searge at runtime, so
 <code>prodClient</code>/<code>prodServer</code> there resolve <code>minecraftRaw</code> plus the
@@ -1968,16 +1995,28 @@ args, classpath) instead of exec'ing — the quickest way to inspect
 what a run would do:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./gradlew<span class="w"> </span>runClient<span class="w"> </span>-Punimined.run.dryRun
 </code></pre></div>
+<h2 id="verifying-a-launch">Verifying a launch<a class="headerlink" href="#verifying-a-launch" title="Permanent link">&para;</a></h2>
+<p><code>-Punimined.run.verify</code> audits the assembled launch plan without
+starting a JVM and fails the task on violations a real launch would
+hit at class-load:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>runFabricProdClient<span class="w"> </span>-Punimined.run.verify
+</code></pre></div>
+<p>Checks: every classpath entry exists on disk, the resolved main class
+is present on the classpath, loader-required resources are present
+(<code>mappings/mappings.tiny</code> when <code>fabric.gameMappingNamespace</code> is set —
+the fabric-family prod-namespace flag), javaagent jars exist, and the
+asset index is on disk. An empty plan prints an <code>OK</code> line; violations
+list as <code>FAIL</code> entries and fail the task, so it doubles as a CI gate.</p>
 <h2 id="launch-scripts">Launch scripts<a class="headerlink" href="#launch-scripts" title="Permanent link">&para;</a></h2>
 <p><code>genLaunchScript&lt;Name&gt;</code> resolves the same launch as <code>run&lt;Name&gt;</code> but
 writes runnable <code>run&lt;Name&gt;.sh</code> / <code>run&lt;Name&gt;.cmd</code> into the run's
 working directory (<code>run/&lt;env&gt;-&lt;name&gt;/</code>) instead of exec'ing — for
 launching outside Gradle, e.g. under a debugger or another terminal.
 <code>genLaunchScripts</code> (plural) emits them for every declared run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>genLaunchScriptClient
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># or everything:</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>./gradlew<span class="w"> </span>genLaunchScripts
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>./run/main-client/runClient.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>genLaunchScriptClient
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># or everything:</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>./gradlew<span class="w"> </span>genLaunchScripts
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>./run/main-client/runClient.sh
 </code></pre></div>
 <p>The scripts <code>cd</code> into their own directory, export the launch
 environment, and exec <code>java</code> with the fully resolved args/classpath —
@@ -1986,7 +2025,7 @@ the same values <code>run&lt;Name&gt;</code> would use.</p>
 <p><code>uniminedRuns</code> prints one line per declared run config (task, env,
 side, type, prod flag, enabled, main class) — a quick check of what
 <code>runs { }</code> materialized:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>uniminedRuns
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./gradlew<span class="w"> </span>uniminedRuns
 </code></pre></div>
 <h2 id="cache-maintenance">Cache maintenance<a class="headerlink" href="#cache-maintenance" title="Permanent link">&para;</a></h2>
 <p><code>pruneUniminedCache</code> prunes the global unimined cache
