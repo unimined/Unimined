@@ -564,6 +564,55 @@ class FabricEnvironmentWiringTest {
             "jar-only group must serialize as the jar's lone path")
     }
 
+    /**
+     * Prod runs bypass `sourceSet.runtimeClasspath` — the loader jar,
+     * its embedded installer libraries, dep installer libraries, and
+     * the relabeled `mappings/mappings.tiny` jar must reach the prod
+     * launch classpath via `minecraftLibraries` (the channel prod
+     * runs consume; 1.x `minecraftLibraries.extendsFrom(fabric)`
+     * parity). Without this `runFabricProdClient` dies on
+     * `ClassNotFoundException: KnotClient`.
+     */
+    @Test
+    fun `loader and loader mappings reach minecraftLibraries for prod runs`() {
+        val project = project().also {
+            it.plugins.apply("xyz.wagyourtail.unimined.runs")
+        }
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val env = fabricEnv(project, ext)
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val libraries = project.configurations.getByName(
+            env.minecraftLibrariesConfigurationName)
+        val inherited = libraries.extendsFrom.map { it.name }.toSet()
+        assertTrue("fabricLoaderFabric" in inherited,
+            "loader jar conf must extend minecraftLibraries: $inherited")
+        assertTrue("fabricLoaderLibrariesFabric" in inherited,
+            "loader libs conf must extend minecraftLibraries: $inherited")
+        assertTrue("fabricDepInstallerLibrariesFabric" in inherited,
+            "dep installer libs must extend minecraftLibraries: $inherited")
+        // the relabeled mappings jar rides as a self-resolving file
+        // dep — neither a module nor a project dependency
+        assertTrue(
+            libraries.dependencies.any {
+                it !is org.gradle.api.artifacts.ModuleDependency &&
+                        it !is org.gradle.api.artifacts.ProjectDependency
+            },
+            "loader mappings jar must be a file dep on minecraftLibraries")
+        // and the conf is actually sourced onto the prod run classpath
+        val prodClient = project.tasks.getByName("runFabricProdClient")
+            as xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+        assertTrue(
+            prodClient.runtimeClasspath.from.any { src ->
+                (src as? org.gradle.api.provider.Provider<*>)
+                    ?.orNull === libraries
+            },
+            "prod run classpath must source minecraftLibraries")
+    }
+
     /** `modImplementation` deps resolve through `fabricModAnalysis*`
      *  unchanged — the view reads the real jar's `fabric.mod.json`
      *  (`modId`), which is what feeds dep-AW/classTweaker extraction. */

@@ -393,6 +393,15 @@ internal object FabricDependencyContributions {
                 conf.extendsFrom(loader, loaderLibraries, depInstallerLibraries)
             }
         }
+        // prod runs bypass `sourceSet.runtimeClasspath` — the env
+        // libraries channel is the one extended onto every launch
+        // classpath (dev compile+runtime, prod run, remap analysis).
+        // 1.x `provider.minecraftLibraries.extendsFrom(fabric)` parity
+        project.configurations.named(
+            environment.minecraftLibrariesConfigurationName
+        ) { conf ->
+            conf.extendsFrom(loader, loaderLibraries, depInstallerLibraries)
+        }
         // merged secondaries' libs are compile-only — the env runs
         // under the primary loader
         project.configurations.named(sourceSet.compileClasspathConfigurationName) {
@@ -412,7 +421,7 @@ internal object FabricDependencyContributions {
         val mappingsTree = minecraft
             .artifacts(environment.environmentId).flatMap { it.mappings }
         val devNs = minecraft.devNamespace(environment.environmentId)
-        sourceSet.runtimeClasspath += project.files(project.provider {
+        val loaderMappings = project.provider {
             val spec = loaderSpec.orNull
             val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
                 ?.takeIf { it.family == "fabric" }
@@ -429,6 +438,18 @@ internal object FabricDependencyContributions {
                     ).toFile()
                 )
             }
-        })
+        }
+        // file dep, not a sourceSet append: prod runs bypass
+        // `sourceSet.runtimeClasspath` but still need
+        // `mappings/mappings.tiny` — the TINY_JAR container is a real
+        // jar, safe for every minecraftLibraries consumer (launch
+        // classpaths, remap analysis, tool `-e=` rows)
+        project.configurations.named(
+            environment.minecraftLibrariesConfigurationName
+        ) { conf ->
+            conf.dependencies.add(
+                project.dependencies.create(project.files(loaderMappings))
+            )
+        }
     }
 }
