@@ -24,6 +24,11 @@ The `prod*` variants launch against `minecraftProd` — Minecraft in
 the namespace shipped mod jars are remapped to — with your `remapJar`
 output and *direct* (un-remapped) mod dependencies: the
 shipped-runtime check (1.x `runObfClient`/`runObfServer` parity).
+Loader-runtime content rides the env's `minecraftLibraries` channel
+onto both dev and prod classpaths — the fabric-family loader jar, its
+embedded libraries, dep-declared installer libraries, and the
+relabeled `mappings/mappings.tiny` jar the loader's
+`MappingConfiguration` resolves the runtime namespace through.
 FG2-era forge is the exception: real production launches the shipped
 obf jar and lets `FMLDeobfTweaker` remap obf→searge at runtime, so
 `prodClient`/`prodServer` there resolve `minecraftRaw` plus the
@@ -149,6 +154,23 @@ what a run would do:
 ```bash
 ./gradlew runClient -Punimined.run.dryRun
 ```
+
+## Verifying a launch
+
+`-Punimined.run.verify` audits the assembled launch plan without
+starting a JVM and fails the task on violations a real launch would
+hit at class-load:
+
+```bash
+./gradlew runFabricProdClient -Punimined.run.verify
+```
+
+Checks: every classpath entry exists on disk, the resolved main class
+is present on the classpath, loader-required resources are present
+(`mappings/mappings.tiny` when `fabric.gameMappingNamespace` is set —
+the fabric-family prod-namespace flag), javaagent jars exist, and the
+asset index is on disk. An empty plan prints an `OK` line; violations
+list as `FAIL` entries and fail the task, so it doubles as a CI gate.
 
 ## Launch scripts
 

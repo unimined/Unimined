@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
 import xyz.wagyourtail.unimined.runs.AuthSpec
 import xyz.wagyourtail.unimined.runs.RunConfig
 import xyz.wagyourtail.unimined.runs.RunSide
+import xyz.wagyourtail.unimined.runs.internal.LaunchVerifier
 import javax.inject.Inject
 
 /**
@@ -223,6 +224,16 @@ abstract class MinecraftRunTask @Inject constructor(
     abstract val dryRun: Property<Boolean>
 
     /**
+     * `-Punimined.run.verify` — audit the assembled launch plan
+     * (classpath entries exist, resolved main class is on the
+     * classpath, loader-required resources present, agents/asset
+     * index on disk) and return without exec'ing. Fails the task on
+     * violations a real launch would hit at class-load.
+     */
+    @get:Input
+    abstract val verify: Property<Boolean>
+
+    /**
      * Emit runnable `<base>.sh`/`.cmd` launch scripts into the run
      * directory instead of exec'ing — the `genLaunchScript<Name>`
      * tasks (MDG `createLaunchScripts` parity). The same resolved
@@ -275,6 +286,7 @@ abstract class MinecraftRunTask @Inject constructor(
         downloadAssets.convention(true)
         offline.convention(false)
         dryRun.convention(false)
+        verify.convention(false)
         emitScripts.convention(false)
         useToolchains.convention(true)
     }
@@ -409,6 +421,32 @@ abstract class MinecraftRunTask @Inject constructor(
                 subst.resolveLaunchArgs(
                     mutatedEnvironment.get() + environmentVariables.get()
                 )
+
+        if (verify.get()) {
+            val findings = LaunchVerifier.verify(
+                mainClass = resolvedMainClass,
+                classpath = dedupedClasspath,
+                jvmArgs = allJvmArgs,
+                javaagents = javaagents.files.toList(),
+                assetIndex = assetIndexFile.orNull?.asFile,
+            )
+            if (findings.isEmpty()) {
+                println("[unimined:verify] $path OK — " +
+                        "mainClass=$resolvedMainClass, " +
+                        "${dedupedClasspath.size} classpath entries")
+            } else {
+                findings.forEach { f ->
+                    println("[unimined:verify] " +
+                            (if (f.error) "FAIL" else "WARN") +
+                            " ${f.message}")
+                }
+                findings.firstOrNull { it.error }?.let {
+                    error("launch verification failed for $path " +
+                            "(${findings.count { f -> f.error }} errors)")
+                }
+            }
+            return
+        }
 
         if (emitScripts.get()) {
             val dir = runDirectory.get().asFile

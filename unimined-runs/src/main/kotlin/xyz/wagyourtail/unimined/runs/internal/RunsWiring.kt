@@ -521,6 +521,14 @@ internal object RunsWiring {
                     .gradleProperty("unimined.run.dryRun")
                     .map { it.toBoolean() }
                     .orElse(false))
+            // `-Punimined.run.verify` audits the assembled plan
+            // (main class + required resources on the classpath,
+            // entry/agent/asset-index existence) without exec'ing
+            task.verify.set(
+                project.providers
+                    .gradleProperty("unimined.run.verify")
+                    .map { it.toBoolean() }
+                    .orElse(false))
             task.requiredJavaVersion.set(environment.requiredJavaVersion)
             task.useToolchains.set(environment.useToolchains)
             // resolved at execution — toolchain resolution (and any
