@@ -3,13 +3,20 @@ package xyz.wagyourtail.unimined.transform.forge
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.mcpConfigCacheKey
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.sideCacheKey
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.withToolOverride
 import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredSubpipeline
 import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredTool
+import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
 import xyz.wagyourtail.unimined.transform.step.subpipeline.SubStep
+import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
 import java.nio.file.Path
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
+import kotlin.io.path.outputStream
 
 /** The subpipeline work-dir key must be keyed on descriptor *content*
  *  — the `exists()` substep cache would otherwise serve outputs
@@ -102,5 +109,91 @@ class McpConfigTransformTest {
         assertEquals(pipeline.steps, out.steps)
         // absent function (non-mcpconfig descriptor shapes) → no-op
         assertSame(pipeline, pipeline.withToolOverride("nope", "g:a:1"))
+    }
+
+    /**
+     * Spec ≥6 (26.x neoform) descriptors decorate the steps we replace
+     * with in-process bindings — `downloadJson`,
+     * `downloadClient`/`downloadServer`, `listLibraries` — with
+     * `json: {xOutput}` args the bound functions never read. Eager
+     * arg interpolation still resolves those refs against the noop'd
+     * `downloadManifest`/`downloadJson` outputs, which are unrecorded
+     * (null) — previously dying with
+     * `No output from step 'downloadManifest'` on `neoform:26.3-1`.
+     * Args on descriptor-replaced steps are decorative; the parser
+     * must drop them.
+     */
+    @Test
+    fun `spec6 noop-chained args on bound steps do not break interpolation`(
+        @TempDir dir: Path
+    ) {
+        val descriptor = dir.resolve("neoform-26.3-1.zip").toFile()
+        JarOutputStream(descriptor.outputStream()).use { jar ->
+            jar.putNextEntry(JarEntry("config.json"))
+            jar.write(
+                """
+                {
+                  "spec": 6, "version": "26.3",
+                  "data": { "patches": "patches/" },
+                  "steps": { "joined": [
+                    { "type": "downloadManifest" },
+                    { "type": "downloadJson",
+                      "json": "{downloadManifestOutput}" },
+                    { "type": "downloadClient",
+                      "json": "{downloadJsonOutput}" },
+                    { "type": "downloadServer",
+                      "json": "{downloadJsonOutput}" },
+                    { "type": "listLibraries",
+                      "json": "{downloadJsonOutput}" },
+                    { "type": "merge",
+                      "client": "{downloadClientOutput}",
+                      "server": "{downloadServerOutput}" }
+                  ]},
+                  "functions": {
+                    "merge": { "version": "g:a:1", "args": [] }
+                  },
+                  "libraries": []
+                }
+                """.trimIndent().toByteArray())
+            jar.closeEntry()
+        }
+
+        val pipeline = McpConfigDescriptorFormat().parse(
+            descriptor,
+            object : FormatContext {
+                override val side = "joined"
+                override val bindingNames = setOf("client", "server")
+            }
+        )
+        // the noop'd steps record no output — bound-step args must not
+        // retain {xOutput} refs into them
+        val boundSteps = pipeline.steps.filter {
+            it.function.startsWith("mcpconfig:")
+        }
+        assertTrue(boundSteps.isNotEmpty())
+        for (step in boundSteps) {
+            assertTrue(
+                step.args.values.none { "{download" in it },
+                "bound step '${step.name}' retains an unresolved " +
+                        "reference: ${step.args}")
+        }
+
+        // execution must reach the bound steps — previously it died
+        // interpolating downloadJson's json arg before any function ran
+        val clientJar = dir.resolve("client.jar").toFile()
+            .apply { writeText("client") }
+        val serverJar = dir.resolve("server.jar").toFile()
+            .apply { writeText("server") }
+        val out = SubpipelineExecutor(
+            pipeline,
+            McpConfigDescriptorFormat(),
+            McpConfigFunctionSource().functions().associateBy { it.name },
+            bindings = mapOf("client" to { clientJar },
+                "server" to { serverJar }),
+            toolResolver = { emptyList() },
+        ).execute(descriptor, "joined", null,
+            dir.resolve("work"), untilStep = "listLibraries")
+        assertNotNull(out, "listLibraries must produce its -e= list")
+        assertTrue(out!!.toFile().isFile)
     }
 }

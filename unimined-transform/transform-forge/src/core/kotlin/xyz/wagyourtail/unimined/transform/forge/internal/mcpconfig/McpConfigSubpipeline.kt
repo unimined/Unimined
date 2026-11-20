@@ -75,16 +75,22 @@ internal class McpConfigDescriptorFormat : PipelineDescriptorFormat {
                     .associate { (k, v) -> k to v.jsonPrimitive.content }
                     .toMutableMap()
                 when (type) {
+                    // steps we substitute with in-process bindings
+                    // carry no meaningful args — spec ≥6 decorates
+                    // them with `json: {xOutput}` refs the bound
+                    // functions never read, but eager interpolation
+                    // still resolves them against the noop chain's
+                    // unrecorded outputs ("No output from step …")
                     "downloadManifest", "downloadJson" ->
-                        SubStep(name, "mcpconfig:noop", args)
-                    "downloadClient" -> SubStep(name, "mcpconfig:clientJar", args)
-                    "downloadServer" -> SubStep(name, "mcpconfig:serverJar", args)
+                        SubStep(name, "mcpconfig:noop")
+                    "downloadClient" -> SubStep(name, "mcpconfig:clientJar")
+                    "downloadServer" -> SubStep(name, "mcpconfig:serverJar")
                     "downloadClientMappings" ->
-                        SubStep(name, "mcpconfig:clientMappings", args)
+                        SubStep(name, "mcpconfig:clientMappings")
                     "downloadServerMappings" ->
-                        SubStep(name, "mcpconfig:serverMappings", args)
+                        SubStep(name, "mcpconfig:serverMappings")
                     "bundleExtractJar" -> SubStep(name, "mcpconfig:inputPath", args)
-                    "listLibraries" -> SubStep(name, "mcpconfig:listLibraries", args)
+                    "listLibraries" -> SubStep(name, "mcpconfig:listLibraries")
                     "strip" -> {
                         args["mappings"] = "{mappings}"
                         SubStep(name, "mcpconfig:strip", args)
