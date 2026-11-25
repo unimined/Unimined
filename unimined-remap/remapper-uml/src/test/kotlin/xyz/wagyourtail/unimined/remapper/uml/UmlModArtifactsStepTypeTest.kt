@@ -66,18 +66,32 @@ class UmlModArtifactsStepTypeTest {
     // ---------- gates ----------
 
     @Test
-    fun `empty jar gets only the metadata + ldc passes`() {
+    fun `empty jar gets only the metadata pass by default`() {
         val exts = extensions(jar("empty.jar"), ModArtifactsStepSpec())
-        // kotlin.Metadata + ldc-constant class names — both unconditional
-        assertEquals(2, exts.size)
-        assertTrue(exts[0] is KotlinMetadataExtension)
-        assertTrue(exts[1] is ClassNameLdcExtension)
+        // the ldc string pass is opt-in — universal string surgery is unsafe
+        assertEquals(1, exts.size)
+        assertTrue(exts.single() is KotlinMetadataExtension)
     }
 
     @Test
-    fun `disableClassNameLdcRemap drops only the ldc pass`() {
+    fun `enableClassNameLdcRemap adds the scoped ldc pass`() {
         val exts = extensions(jar("empty.jar"),
-            ModArtifactsStepSpec().apply { disableClassNameLdcRemap() })
+            ModArtifactsStepSpec().apply {
+                enableClassNameLdcRemap("com/example/Transformer")
+            })
+        assertEquals(2, exts.size)
+        assertTrue(exts[0] is KotlinMetadataExtension)
+        val ldc = exts.filterIsInstance<ClassNameLdcExtension>().single()
+        assertEquals(setOf("com/example/Transformer"), ldc.field("classes"))
+    }
+
+    @Test
+    fun `disableClassNameLdcRemap clears the ldc opt-in`() {
+        val exts = extensions(jar("empty.jar"),
+            ModArtifactsStepSpec().apply {
+                enableClassNameLdcRemap("com/example/Transformer")
+                disableClassNameLdcRemap()
+            })
         assertEquals(1, exts.size)
         assertTrue(exts.single() is KotlinMetadataExtension)
     }
@@ -85,7 +99,7 @@ class UmlModArtifactsStepTypeTest {
     @Test
     fun `mixin config in the jar adds the mixin extension`() {
         val exts = extensions(mixinJar(), ModArtifactsStepSpec())
-        assertEquals(4, exts.size)
+        assertEquals(3, exts.size)
         val mixinIndex = exts.indexOfFirst { it is MixinExtension }
         val legacyIndex = exts.indexOfFirst {
             it is LegacyRefmapClassTargetExtension
@@ -93,10 +107,6 @@ class UmlModArtifactsStepTypeTest {
         assertTrue(legacyIndex >= 0, "legacy refmap bridge missing")
         assertTrue(legacyIndex < mixinIndex,
             "the exact legacy-refmap rewrite must run before the general mixin table")
-        // class-name LDCs are instruction constants, not annotation values —
-        // its position relative to the annotation passes is immaterial, but
-        // it must be present exactly once
-        assertEquals(1, exts.filterIsInstance<ClassNameLdcExtension>().size)
         val mixin = exts.filterIsInstance<MixinExtension>().single()
         // auto-detect: every table, refmap emission on, no suppressions
         assertSame(MixinTables.ALL, mixin.field("table"))
@@ -124,8 +134,8 @@ class UmlModArtifactsStepTypeTest {
             manifest)
         val exts = extensions(input,
             ModArtifactsStepSpec().apply { off() })
-        // kotlin.Metadata + ldc pass aren't mixin-scoped — they stay
-        assertEquals(2, exts.size)
+        // kotlin.Metadata isn't mixin-scoped — it stays
+        assertEquals(1, exts.size)
         assertTrue(exts.any { it is KotlinMetadataExtension })
     }
 

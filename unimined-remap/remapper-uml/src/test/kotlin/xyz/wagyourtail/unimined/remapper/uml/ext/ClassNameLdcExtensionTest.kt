@@ -20,7 +20,8 @@ class ClassNameLdcExtensionTest {
             tree.cls("c/Obf\$Inner", "pkg/Target\$Inner")
         }
         val ext = ClassNameLdcExtension(
-            ExtensionContext(tree, Fixtures.obf, Fixtures.named))
+            ExtensionContext(tree, Fixtures.obf, Fixtures.named),
+            setOf("test/Holder"))
         val output = ClassNode().apply {
             name = "test/Holder"
             methods.add(MethodNode(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
@@ -29,7 +30,7 @@ class ClassNameLdcExtensionTest {
                 instructions.add(InsnNode(Opcodes.RETURN))
             })
         }
-        ext.postApply(ClassNode(), output, null)
+        ext.postApply(ClassNode().apply { name = "test/Holder" }, output, null)
         return output.methods.single { it.name == "strings" }.instructions
             .toArray().filterIsInstance<LdcInsnNode>().map { it.cst }
     }
@@ -83,5 +84,24 @@ class ClassNameLdcExtensionTest {
             "(foo)bar",
             42,
         )))
+    }
+    @Test
+    fun `classes outside the opt-in scope keep every literal verbatim`() {
+        val tree = Fixtures.treeOf()
+        with(Fixtures) { tree.cls("a/Obf", "pkg/Target") }
+        val ext = ClassNameLdcExtension(
+            ExtensionContext(tree, Fixtures.obf, Fixtures.named),
+            setOf("other/Transformer"))
+        val output = ClassNode().apply {
+            name = "test/Holder"
+            methods.add(MethodNode(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+                "strings", "()V", null, null).apply {
+                instructions.add(LdcInsnNode("a/Obf"))
+                instructions.add(InsnNode(Opcodes.RETURN))
+            })
+        }
+        ext.postApply(ClassNode().apply { name = "test/Holder" }, output, null)
+        assertEquals("a/Obf", output.methods.single { it.name == "strings" }
+            .instructions.toArray().filterIsInstance<LdcInsnNode>().single().cst)
     }
 }

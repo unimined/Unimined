@@ -29,16 +29,21 @@ class ModArtifactsStepSpec(
     @get:Input
     var mixinRemapOff: Boolean = false
 
-    /** Rewrite `ldc` string constants carrying class names/descs into
-     *  the target namespace. Defaults on — coremod transformers
-     *  hardcode such literals for runtime-injected calls. NilLoader
-     *  mods must NOT get it: their string refs resolve through
-     *  `META-INF/nil/mappings.json` at runtime, keyed in the compile
-     *  namespace, and rewriting owner/desc literals to the target
-     *  namespace breaks the member lookups (`remapField`/`remapMethod`
-     *  fall back to the compile-time member name — wrong at runtime). */
+    /** Source-namespace internal names of classes whose `ldc` string
+     *  constants may be rewritten as class names/descs. Default empty —
+     *  this pass is opt-in and class-scoped, matching 1.x's forge-only
+     *  string remapper. Universal string surgery is unsafe for protocols
+     *  such as NilLoader's runtime remap table, whose inputs must remain
+     *  in the compile namespace. */
     @get:Input
-    var remapClassNameLdcs: Boolean = true
+    var classNameLdcClasses: Set<String> = emptySet()
+
+    /** Whether class-name/desc `ldc` rewriting is active. Derived from
+     *  [classNameLdcClasses]; retained as the boolean input companion to
+     *  the explicit opt-in list. */
+    @get:Input
+    val remapClassNameLdcs: Boolean
+        get() = classNameLdcClasses.isNotEmpty()
 
     /** Refmap JSON emission — [disableRefmap] flips it off for every
      *  config (1.x `disableRefmap()` covering all readers). */
@@ -66,10 +71,22 @@ class ModArtifactsStepSpec(
         mixinRemapOff = true
     }
 
-    /** Opt out of `ldc` class-name/desc string rewriting — see
-     *  [remapClassNameLdcs]. NilLoader wiring contributes this. */
+    /** Opt in to `ldc` class-name/desc string rewriting for the named
+     *  source-namespace internal classes (slash form, e.g.
+     *  `com/example/MyTransformer`). Only those classes are scanned. */
+    fun enableClassNameLdcRemap(vararg classes: String) {
+        classNameLdcClasses += classes
+    }
+
+    /** Groovy DSL twin of [enableClassNameLdcRemap]. */
+    fun enableClassNameLdcRemap(classes: Set<String>) {
+        classNameLdcClasses += classes
+    }
+
+    /** Clear the class-name/desc `ldc` opt-in list. NilLoader wiring can
+     *  contribute this defensively; the empty default already means off. */
     fun disableClassNameLdcRemap() {
-        remapClassNameLdcs = false
+        classNameLdcClasses = emptySet()
     }
 
     /** 1.x `mixinRemap { disableRefmap() }` — no refmap emission. */

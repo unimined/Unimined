@@ -96,6 +96,21 @@ class ModArtifactsStepSpecTest {
                 .forceMixinTables)
     }
 
+
+    @Test
+    fun `class name ldc remap is opt-in and scoped`() {
+        val spec = ModArtifactsStepSpec()
+        assertFalse(spec.remapClassNameLdcs)
+        spec.enableClassNameLdcRemap("com/example/Transformer")
+        spec.enableClassNameLdcRemap(setOf("com/example/OtherTransformer"))
+        assertTrue(spec.remapClassNameLdcs)
+        assertEquals(setOf("com/example/Transformer", "com/example/OtherTransformer"),
+            spec.classNameLdcClasses)
+        spec.disableClassNameLdcRemap()
+        assertFalse(spec.remapClassNameLdcs)
+        assertEquals(emptySet<String>(), spec.classNameLdcClasses)
+    }
+
     // ---------- serialization ----------
 
     private fun roundTrip(spec: ModArtifactsStepSpec): ModArtifactsStepSpec {
@@ -117,6 +132,7 @@ class ModArtifactsStepSpecTest {
             disableRefmap("a.mixins.json", "b.mixins.json")
             enableBaseMixin()
             enableJarModAgent()
+            enableClassNameLdcRemap("com/example/Transformer")
         }
         val copy = roundTrip(spec)
         assertEquals("uml", copy.engine)
@@ -124,6 +140,8 @@ class ModArtifactsStepSpecTest {
         assertEquals(spec.emitRefmap, copy.emitRefmap)
         assertEquals(spec.noRefmapConfigs, copy.noRefmapConfigs)
         assertEquals(spec.forceMixinTables, copy.forceMixinTables)
+        assertEquals(spec.classNameLdcClasses, copy.classNameLdcClasses)
+        assertEquals(spec.remapClassNameLdcs, copy.remapClassNameLdcs)
     }
 
     @Test
@@ -134,6 +152,8 @@ class ModArtifactsStepSpecTest {
         assertTrue(copy.emitRefmap)
         assertEquals(emptySet<String>(), copy.noRefmapConfigs)
         assertEquals(emptySet<String>(), copy.forceMixinTables)
+        assertEquals(emptySet<String>(), copy.classNameLdcClasses)
+        assertFalse(copy.remapClassNameLdcs)
     }
 
     // ---------- DSL registration ----------

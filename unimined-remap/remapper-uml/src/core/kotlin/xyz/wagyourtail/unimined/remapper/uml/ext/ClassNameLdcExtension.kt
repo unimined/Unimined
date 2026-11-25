@@ -28,7 +28,9 @@ import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension
  * survive verbatim.
  */
 class ClassNameLdcExtension(
-    private val ctx: ExtensionContext
+    private val ctx: ExtensionContext,
+    /** source-namespace internal class names this pass is scoped to */
+    private val classes: Set<String>
 ) : AsmExtension {
 
     companion object {
@@ -45,6 +47,7 @@ class ClassNameLdcExtension(
         output: ClassNode,
         cls: ClassMapping?
     ) {
+        if (input.name !in classes) return
         for (m in output.methods) {
             for (insn in m.instructions) {
                 if (insn is LdcInsnNode && insn.cst is String) {

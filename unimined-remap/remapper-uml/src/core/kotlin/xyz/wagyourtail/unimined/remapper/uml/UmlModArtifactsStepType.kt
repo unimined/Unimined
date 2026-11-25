@@ -213,14 +213,13 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
     ): List<AsmExtensionFactory> {
         val exts = mutableListOf<AsmExtensionFactory>()
         exts += AsmExtensionFactory { c -> KotlinMetadataExtension(c) }
-        // `ldc` string constants carrying class names/descs — coremod
-        // transformers hardcode these to construct injected calls at
-        // runtime (unimixins crash-report hook, JarModAgent-era
-        // helpers); the type-ref pass can't see them, so they remap
-        // here. Rewrites are gated on the source→target map actually
-        // changing the literal — no blind string surgery
-        if (spec.remapClassNameLdcs) {
-            exts += AsmExtensionFactory { c -> ClassNameLdcExtension(c) }
+        // `ldc` string constants carrying class names/descs are opt-in
+        // and class-scoped. 1.x applied this only to forge's artifact
+        // ObjectHolderRegistry classes; blindly scanning every mod class
+        // corrupts string-based runtime protocols such as NilLoader's.
+        if (spec.classNameLdcClasses.isNotEmpty()) {
+            val ldcClasses = spec.classNameLdcClasses
+            exts += AsmExtensionFactory { c -> ClassNameLdcExtension(c, ldcClasses) }
         }
         // `modArtifacts { off() }` — 1.x mixinRemap.off parity: the
         // mixin/JMA/liteloader annotation machinery drops entirely
