@@ -64,3 +64,17 @@ interface StepContext {
         get() = logger
 
 }
+
+/**
+ * A [StepContext] whose mapping data can be replaced while a pipeline
+ * executes. The pipeline runner implements this so steps that derive
+ * invocation-local mapping rows can publish a private overlay to later
+ * steps without mutating the daemon-shared resolved [MappingData].
+ *
+ * Step implementations must treat the replacement as append-only pipeline
+ * state: swapping in unrelated or narrower data breaks later steps' view
+ * of the same remap request.
+ */
+interface MutableStepContext : StepContext {
+    override var mappings: MappingData?
+}

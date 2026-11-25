@@ -25,9 +25,13 @@ import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.element.InnerType
+import xyz.wagyourtail.unimined.mapping.element.metadata.InnerClassElement
+import xyz.wagyourtail.unimined.remap.spi.MutableStepContext
 import xyz.wagyourtail.unimined.remap.spi.PipelineState
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
+import xyz.wagyourtail.unimined.remap.spi.addExtraInnerClassMappings
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepSpec
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackStepType
@@ -69,7 +73,7 @@ class ForgeStepTypesTest {
     private fun ctx(
         tree: MutableMappingTree? = null,
         classpath: List<Path> = emptyList()
-    ): StepContext = object : StepContext {
+    ): StepContext = object : MutableStepContext {
         override val surface = RemapSurface.JAR
         override val state: PipelineState by lazy {
             PipelineState(spec.sourceNamespace, null)
@@ -79,7 +83,7 @@ class ForgeStepTypesTest {
             override val targetNamespace = "named"
             override val classpath: List<Path> = emptyList()
         }
-        override val mappings: MappingData? =
+        override var mappings: MappingData? =
             tree?.let { ViewMapMappingData(mapOf(MappingTree::class to it)) }
         override val classpath = classpath
         // string-classnames uses createTempDirectory(workDir) —
@@ -298,9 +302,9 @@ class ForgeStepTypesTest {
      *  client modify patch (`nz` orig→patched) and one client add
      *  patch (`added/New`). */
     private fun universalJar(): Path {
-        val modRec = packRecord("nz patch", "nz", "nz",
+        val modRec = packRecord("nz", "nz", "nz",
             exists = true, checksum = adler(orig), patch = gdiff(orig, patched))
-        val addRec = packRecord("new patch", "added/New", "added/New",
+        val addRec = packRecord("added/New", "added/New", "added/New",
             exists = false, checksum = 0,
             patch = gdiff(ByteArray(0), "added-body".toByteArray()))
         return jar("universal.jar", mapOf(
@@ -337,25 +341,145 @@ class ForgeStepTypesTest {
     }
 
     @Test
-    fun `binpatches-pack added inner classes get mapping rows`() {
-        val inner = "added/New\$Inner".toByteArray()
-        val innerRec = packRecord("inner", "added/New\$Inner",
+    fun `binpatches-pack added inner classes get overlay mapping rows`() {
+        val inner = writeClass(shellClass("added/New\$Inner"))
+        val nested = writeClass(shellClass("added/New\$Inner\$Nested"))
+        val innerRec = packRecord("added/New\$Inner", "added/New\$Inner",
             "added/New\$Inner", exists = false, checksum = 0,
+            patch = gdiff(ByteArray(0), inner))
+        val nestedRec = packRecord("added/New\$Inner\$Nested",
+            "added/New\$Inner\$Nested", "added/New\$Inner\$Nested",
+            exists = false, checksum = 0,
+            patch = gdiff(ByteArray(0), nested))
+        val universal = jar("universal.jar", mapOf(
+            "binpatches.pack.lzma" to packLzma(mapOf(
+                "binpatch/client/inner.binpatch" to innerRec,
+                "binpatch/client/nested.binpatch" to nestedRec))))
+        val input = jar("mc.jar", mapOf("nz.class" to orig))
+        // outer class maps so renest can derive the inner's named name;
+        // a pre-existing inner row makes leaked renest metadata writes
+        // observable in the shared-tree snapshot
+        val tree = tree(
+            "added/New" to "com/example/Added",
+            "added/Existing" to "com/example/Existing",
+            "added/Existing\$Inner" to "com/example/Existing\$Inner")
+        val baseSnapshot = tree.classes.map {
+            it.names.toMap() to it.metadata.toList().size
+        }
+        val c = ctx(tree)
+        BinpatchesPackStepType()
+            .create(packSpec(universal), c).apply(input, c)
+
+        // the shared tree is never mutated: rows are visible only through
+        // the invocation-local overlay swapped onto the step context
+        assertNull(tree.getClass(official,
+            InternalName.unchecked("added/New\$Inner")),
+            "shared base tree mutated by patched-in inner row")
+        assertNull(tree.getClass(official,
+            InternalName.unchecked("added/New\$Inner\$Nested")),
+            "shared base tree mutated by patched-in nested row")
+        assertEquals(baseSnapshot, tree.classes.map {
+            it.names.toMap() to it.metadata.toList().size
+        }, "renest must not write names or InnerClass metadata into the shared base tree")
+        val overlaid = c.mappings!!.view(MappingTree::class.java)!!
+        val row = overlaid.getClass(official,
+            InternalName.unchecked("added/New\$Inner"))
+        assertNotNull(row, "patched-in inner class must be renested in the overlay")
+        assertEquals("com/example/Added\$Inner",
+            row!!.names[named]?.value)
+        val innerMeta = row.metadata.filterIsInstance<InnerClassElement>().single()
+        assertEquals(InnerType.INNER, innerMeta.type)
+        assertEquals("Inner", innerMeta.names[named]?.first)
+        assertEquals("Lcom/example/Added;",
+            innerMeta.names[named]?.second?.owner?.value)
+
+        // nested rows recurse through the newly-renested parent rather than
+        // stopping at the first unmapped `$` segment
+        val nestedRow = overlaid.getClass(official,
+            InternalName.unchecked("added/New\$Inner\$Nested"))
+        assertNotNull(nestedRow,
+            "patched-in nested inner class must renest through its patched-in parent")
+        assertEquals("com/example/Added\$Inner\$Nested",
+            nestedRow!!.names[named]?.value)
+        val nestedMeta = nestedRow.metadata
+            .filterIsInstance<InnerClassElement>().single()
+        assertEquals("Nested", nestedMeta.names[named]?.first)
+        assertEquals("Lcom/example/Added\$Inner;",
+            nestedMeta.names[named]?.second?.owner?.value)
+    }
+
+    @Test
+    fun `binpatches-pack added inner rows key off this class not entry path`() {
+        // FG2 pitfall: the patch record emits the srg-path entry
+        // `net/minecraft/item/Item$22.class`, while the classfile inside
+        // still declares obf `ain$22` as this_class. The mapping row must
+        // key off the bytecode name because that is what references probe.
+        val entryPath = "net/minecraft/item/Item\$22"
+        val obfInner = "ain\$22"
+        val inner = writeClass(shellClass(obfInner))
+        val innerRec = packRecord(entryPath, entryPath, entryPath,
+            exists = false, checksum = 0,
             patch = gdiff(ByteArray(0), inner))
         val universal = jar("universal.jar", mapOf(
             "binpatches.pack.lzma" to packLzma(mapOf(
                 "binpatch/client/inner.binpatch" to innerRec))))
         val input = jar("mc.jar", mapOf("nz.class" to orig))
-        // outer class maps so renest can derive the inner's named name
-        val tree = tree("added/New" to "com/example/Added")
+        val tree = tree("ain" to "net/minecraft/item/Item")
         val c = ctx(tree)
-        BinpatchesPackStepType()
+        val out = BinpatchesPackStepType()
             .create(packSpec(universal), c).apply(input, c)
-        val row = tree.getClass(official,
-            InternalName.unchecked("added/New\$Inner"))
-        assertNotNull(row, "patched-in inner class must be renested")
-        assertEquals("com/example/Added\$Inner",
-            row!!.names[named]?.value)
+        assertTrue(entries(out).containsKey("$entryPath.class"),
+            "fixture must preserve the deliberate entry-path/this_class mismatch")
+
+        val overlaid = c.mappings!!.view(MappingTree::class.java)!!
+        val row = overlaid.getClass(official, InternalName.unchecked(obfInner))
+        assertNotNull(row,
+            "row must key off classfile this_class ($obfInner), not zip path ($entryPath)")
+        assertEquals("net/minecraft/item/Item\$22", row!!.names[named]?.value)
+        assertNull(overlaid.getClass(official, InternalName.unchecked(entryPath)),
+            "the zip entry path must not become an official-namespace row")
+        assertNull(tree.getClass(official, InternalName.unchecked(obfInner)),
+            "shared base tree mutated by this_class keyed row")
+    }
+
+    @Test
+    fun `extra inner overlays are isolated per parallel invocation`() {
+        val pre = jar("pre.jar", mapOf(
+            "nz.class" to writeClass(shellClass("nz"))))
+        val postA = jar("post-a.jar", mapOf(
+            "a/Added\$Inner.class" to writeClass(shellClass("a/Added\$Inner"))))
+        val postB = jar("post-b.jar", mapOf(
+            "b/Added\$Inner.class" to writeClass(shellClass("b/Added\$Inner"))))
+        val tree = tree(
+            "a/Added" to "target/A",
+            "b/Added" to "target/B")
+        val ctxA = ctx(tree)
+        val ctxB = ctx(tree)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            pool.invokeAll(listOf(
+                java.util.concurrent.Callable {
+                    addExtraInnerClassMappings(pre, postA, ctxA)
+                },
+                java.util.concurrent.Callable {
+                    addExtraInnerClassMappings(pre, postB, ctxB)
+                }
+            )).forEach { it.get() }
+        } finally {
+            pool.shutdown()
+        }
+
+        fun row(c: StepContext, name: String) =
+            c.mappings!!.view(MappingTree::class.java)!!
+                .getClass(official, InternalName.unchecked(name))
+        assertNotNull(row(ctxA, "a/Added\$Inner"))
+        assertNull(row(ctxA, "b/Added\$Inner"),
+            "sibling invocation's row leaked into this overlay")
+        assertNotNull(row(ctxB, "b/Added\$Inner"))
+        assertNull(row(ctxB, "a/Added\$Inner"),
+            "sibling invocation's row leaked into this overlay")
+        assertNull(tree.getClass(official, InternalName.unchecked("a/Added\$Inner")))
+        assertNull(tree.getClass(official, InternalName.unchecked("b/Added\$Inner")))
     }
 
     @Test
