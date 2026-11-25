@@ -73,7 +73,7 @@ class UmlModArtifactsStepTypeTest {
     @Test
     fun `mixin config in the jar adds the mixin extension`() {
         val exts = extensions(mixinJar(), ModArtifactsStepSpec())
-        assertEquals(2, exts.size)
+        assertEquals(3, exts.size)
         val mixin = exts.filterIsInstance<MixinExtension>().single()
         // auto-detect: every table, refmap emission on, no suppressions
         assertSame(MixinTables.ALL, mixin.field("table"))

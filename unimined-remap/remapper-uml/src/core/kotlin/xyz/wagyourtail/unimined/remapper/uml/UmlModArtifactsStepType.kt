@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform.ClassTransformExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExtension
+import xyz.wagyourtail.unimined.remapper.uml.ext.LegacyRefmapClassTargetExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.LiteloaderObfTableExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinTables
@@ -229,6 +230,13 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
                     "mixinextras" in force -> MixinTables.EXTRAS
                     "mixin" in force -> MixinTables.STANDARD
                     else -> MixinTables.ALL
+                }
+                // Legacy reobfuscated artifacts (Rift) carry compile-space
+                // target strings bridged only by their shipped refmap;
+                // patch those exact strings before the general annotation
+                // pass so it can't preserve the stale names as-is.
+                exts += AsmExtensionFactory { c ->
+                    LegacyRefmapClassTargetExtension(c)
                 }
                 exts += AsmExtensionFactory { c ->
                     MixinExtension(
