@@ -67,8 +67,33 @@ class AccessWideningProcessor : JarProcessor {
             }
 
             // pass 2 — find members accessed from a different package
-            // while protected/package-private on the owner
-            val widen = mutableSetOf<Pair<String, String>>() // owner -> memberKey
+            // while protected/package-private on the owner. References are
+            // often made through a subclass (`invokevirtual Sub.m` for a
+            // member declared on Base), so resolve the actual declarer by
+            // walking the hierarchy before judging the access. Protected
+            // members remain accessible to subclasses across packages
+            // (`super.m()` is the common shape); package-private members do
+            // not — only the subclass exemption keeps protected access legal.
+            val supers = classes.mapValues { it.value.superName }
+            fun isSubclassOf(accessor: String, owner: String): Boolean {
+                var cur: String? = accessor
+                var hops = 0
+                while (cur != null && cur != owner && hops++ < 64) {
+                    cur = supers[cur]
+                }
+                return cur == owner
+            }
+            fun declaringMember(owner: String, key: String): Pair<String, Int>? {
+                var cur: String? = owner
+                var hops = 0
+                while (cur != null && hops++ < 64) {
+                    memberAccess[cur]?.get(key)?.let { return cur to it }
+                    cur = supers[cur]
+                }
+                return null
+            }
+
+            val widen = mutableSetOf<Pair<String, String>>() // declarer -> memberKey
             for (cn in classes.values) {
                 val callerPkg = pkg(cn.name)
                 for (m in cn.methods) {
@@ -80,48 +105,57 @@ class AccessWideningProcessor : JarProcessor {
                                 "${insn.name}:${insn.desc}"
                             else -> continue
                         }
-                        val ownerAccess = memberAccess[owner] ?: continue
-                        val access = ownerAccess[key] ?: continue
+                        if (owner == cn.name) continue
+                        val (declarer, access) = declaringMember(owner, key)
+                            ?: continue
                         // private is always scoped; public is fine —
                         // only protected/package-private can break
+                        val isProtected = access and Opcodes.ACC_PROTECTED != 0
                         val isProtectedOrPkg =
                             access and (Opcodes.ACC_PROTECTED or
                                 Opcodes.ACC_PUBLIC or
-                                Opcodes.ACC_PRIVATE) == 0 ||
-                                access and Opcodes.ACC_PROTECTED != 0
+                                Opcodes.ACC_PRIVATE) == 0 || isProtected
                         if (!isProtectedOrPkg) continue
-                        if (pkg(owner) != callerPkg) widen += owner to key
+                        if (pkg(declarer) == callerPkg) continue
+                        if (isProtected && isSubclassOf(cn.name, declarer)) continue
+                        widen += declarer to key
                     }
                 }
             }
 
             if (widen.isEmpty()) return
-            // pass 3 — widen the flagged members and write the jar back
+            // pass 3 — widen the flagged members and write the jar back.
+            // Widening the declaration alone would make every existing
+            // protected/package-private override an illegal visibility
+            // reduction, so the promotion propagates down the override
+            // hierarchy inside this jar as one consistent visibility change.
             val widenByOwner = widen.groupBy({ it.first }, { it.second })
             for ((owner, keys) in widenByOwner) {
-                val cn = classes[owner] ?: continue
-                var touched = false
-                cn.methods.forEach {
-                    if ("${it.name}${it.desc}" in keys) {
-                        it.access = it.access and
-                            (Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv() or
-                            Opcodes.ACC_PUBLIC
-                        touched = true
+                for (cn in classes.values) {
+                    if (cn.name != owner && !isSubclassOf(cn.name, owner)) continue
+                    var touched = false
+                    cn.methods.forEach {
+                        if ("${it.name}${it.desc}" in keys) {
+                            it.access = it.access and
+                                (Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv() or
+                                Opcodes.ACC_PUBLIC
+                            touched = true
+                        }
                     }
-                }
-                cn.fields.forEach {
-                    if ("${it.name}:${it.desc}" in keys) {
-                        it.access = it.access and
-                            (Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv() or
-                            Opcodes.ACC_PUBLIC
-                        touched = true
+                    cn.fields.forEach {
+                        if ("${it.name}:${it.desc}" in keys) {
+                            it.access = it.access and
+                                (Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv() or
+                                Opcodes.ACC_PUBLIC
+                            touched = true
+                        }
                     }
-                }
-                if (touched) {
-                    val w = ClassWriter(0)
-                    cn.accept(w)
-                    java.nio.file.Files.write(
-                        fs.getPath("/${cn.name}.class"), w.toByteArray())
+                    if (touched) {
+                        val w = ClassWriter(0)
+                        cn.accept(w)
+                        java.nio.file.Files.write(
+                            fs.getPath("/${cn.name}.class"), w.toByteArray())
+                    }
                 }
             }
             context.logger.lifecycle(

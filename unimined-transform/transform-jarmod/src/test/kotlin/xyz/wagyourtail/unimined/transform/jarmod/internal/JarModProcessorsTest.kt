@@ -159,6 +159,58 @@ class JarModProcessorsTest {
         assertTrue(p.access and Opcodes.ACC_PUBLIC != 0)
     }
 
+    /** Subclass fixture for protected-access cases — optionally carrying a
+     *  protected override of `m()`, plus a method that calls the superclass
+     *  implementation. */
+    private fun subclassClass(name: String = "other/Sub", overrideM: Boolean = false): ByteArray {
+        val cn = shellClass(name)
+        cn.superName = "pkg/a/Base"
+        if (overrideM) {
+            cn.methods.add(MethodNode(Opcodes.ACC_PROTECTED, "m",
+                "()V", null, null).apply {
+                instructions.add(InsnNode(Opcodes.RETURN)) })
+        }
+        cn.methods.add(MethodNode(Opcodes.ACC_PUBLIC, "callSuper",
+            "()V", null, null).apply {
+            instructions.add(MethodInsnNode(Opcodes.INVOKESPECIAL,
+                "pkg/a/Base", "m", "()V"))
+            instructions.add(InsnNode(Opcodes.RETURN))
+        })
+        return writeClass(cn)
+    }
+
+    @Test
+    fun `access-widening leaves protected superclass access from subclasses alone`() {
+        val target = jar("mc.jar", mapOf(
+            "pkg/a/Base.class" to baseClass(),
+            "other/Sub.class" to subclassClass()))
+        AccessWideningProcessor().processJar(
+            target, AccessWideningProcessor.Spec(), ctx)
+        val m = classNode(target, "pkg/a/Base").methods.single { it.name == "m" }
+        assertTrue(m.access and Opcodes.ACC_PROTECTED != 0,
+            "protected super call is legal across packages: access=${m.access}")
+        assertEquals(0, m.access and Opcodes.ACC_PUBLIC,
+            "subclass access must not trigger widening")
+    }
+
+    @Test
+    fun `access-widening propagates promoted visibility to overrides`() {
+        val target = jar("mc.jar", mapOf(
+            "pkg/a/Base.class" to baseClass(),
+            "other/Sub.class" to subclassClass(overrideM = true),
+            "other/Caller.class" to callerClass("other/Caller",
+                MethodInsnNode(Opcodes.INVOKEVIRTUAL, "pkg/a/Base",
+                    "m", "()V"))))
+        AccessWideningProcessor().processJar(
+            target, AccessWideningProcessor.Spec(), ctx)
+        val baseM = classNode(target, "pkg/a/Base").methods.single { it.name == "m" }
+        val subM = classNode(target, "other/Sub").methods.single { it.name == "m" }
+        assertTrue(baseM.access and Opcodes.ACC_PUBLIC != 0,
+            "unrelated cross-package caller widens the declaration")
+        assertTrue(subM.access and Opcodes.ACC_PUBLIC != 0,
+            "override must be widened with the declaration: access=${subM.access}")
+    }
+
     @Test
     fun `access-widening no-ops without class entries`() {
         val target = jar("mc.jar",
