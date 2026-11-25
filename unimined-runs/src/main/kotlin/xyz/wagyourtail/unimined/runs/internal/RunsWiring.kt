@@ -357,7 +357,12 @@ internal object RunsWiring {
             project.tasks.register(
                 "pre${taskName.replaceFirstChar { it.uppercase() }}$i",
                 org.gradle.api.DefaultTask::class.java
-            ) { t -> action.execute(t) }
+            ) { t ->
+                // execution-time — the hook contract is "before the run
+                // launches": fixtures stage files and validate build
+                // outputs here, none of which exist at creation time
+                t.doLast { action.execute(t) }
+            }
         }
 
         // shared between `run<Name>` and `genLaunchScript<Name>` — the
