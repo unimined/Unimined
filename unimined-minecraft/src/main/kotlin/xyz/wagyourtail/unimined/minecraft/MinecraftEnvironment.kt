@@ -115,7 +115,12 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         it.name == name && it.parameterCount == argArray.size
     }.firstOrNull { m ->
         argArray.indices.all { i ->
-            argArray[i] == null || m.parameterTypes[i].isInstance(argArray[i])
+            argArray[i] == null || m.parameterTypes[i].let { t ->
+                // `boolean.class.isInstance(x)` is always false — box
+                // primitives or no Groovy call can ever match a
+                // primitive-typed verb param (`deleteMetaInf(false)`)
+                if (t.isPrimitive) t.kotlin.javaObjectType else t
+            }.isInstance(argArray[i])
         }
     }
 
