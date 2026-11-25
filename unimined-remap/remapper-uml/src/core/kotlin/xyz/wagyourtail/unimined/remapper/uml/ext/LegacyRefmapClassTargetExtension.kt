@@ -84,22 +84,25 @@ class LegacyRefmapClassTargetExtension(
             val key = values[i]
             val v = values[i + 1]
             values[i + 1] = when {
-                key == "targets" && ann.desc == MIXIN_DESC -> rewriteValue(v) {
+                key == "targets" && ann.desc == MIXIN_DESC -> rewriteValue(v, entries) {
                     remapTarget(it, entries)
                 }
-                else -> rewriteValue(v) { remapMember(it, entries) }
+                else -> rewriteValue(v, entries) { remapMember(it, entries) }
             }
             i += 2
         }
     }
 
-    private fun rewriteValue(value: Any?, remap: (String) -> String): Any? = when (value) {
+    private fun rewriteValue(value: Any?, entries: Map<String, String>, remap: (String) -> String): Any? = when (value) {
         is String -> remap(value)
-        is AnnotationNode -> value.also { rewriteAnnotation(it, emptyMap()) }
+        // nested annotations carry the injection-point selectors — rift's
+        // hooks shape is `@Redirect(at = @At(target = …))`; dropping the
+        // refmap entries here leaves every nested member selector unbridged
+        is AnnotationNode -> value.also { rewriteAnnotation(it, entries) }
         is List<*> -> value.map {
             when (it) {
                 is String -> remap(it)
-                is AnnotationNode -> it.also { nested -> rewriteAnnotation(nested, emptyMap()) }
+                is AnnotationNode -> it.also { nested -> rewriteAnnotation(nested, entries) }
                 else -> it
             }
         }
