@@ -38,7 +38,13 @@ internal object FusedJarRun {
             .resolve(input.fileName.toString())
         ZipFile(input.toFile()).use { zip ->
             JarOutputStream(Files.newOutputStream(output)).use { out ->
+                // first-wins dedupe — real-world artifacts ship duplicate
+                // entries (mojang's realms jars); zip readers resolve the
+                // first central-directory match, so that copy wins and the
+                // output never carries a name twice
+                val seen = mutableSetOf<String>()
                 for (e in zip.entries()) {
+                    if (!seen.add(e.name)) continue
                     if (e.isDirectory) {
                         val dir = FusedJarEntry(e.name, ByteArray(0), e.time)
                         if (steps.all { it.visitDirectory(dir, ctx) }) {

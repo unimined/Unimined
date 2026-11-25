@@ -257,7 +257,12 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
 
         JarFile(input.toFile()).use { jar ->
             JarOutputStream(Files.newOutputStream(output)).use { out ->
+                // first-wins dedupe — real-world artifacts ship duplicate
+                // entries (mojang's realms jars); zip readers resolve the
+                // first match, so that copy is the one worth keeping
+                val seen = mutableSetOf<String>()
                 for (entry in jar.entries()) {
+                    if (!seen.add(entry.name)) continue
                     val next = JarEntry(entry.name)
                     next.time = entry.time
                     out.putNextEntry(next)
