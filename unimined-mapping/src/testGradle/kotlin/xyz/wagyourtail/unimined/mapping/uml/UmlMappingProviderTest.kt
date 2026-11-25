@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.api.mapping.*
+import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.element.metadata.SignatureElement
@@ -197,6 +198,45 @@ class UmlMappingProviderTest {
             listOf("official", "named", "extra"),
             data.view<MappingTree>()!!.namespaces.map { it.name }
         )
+    }
+
+    @Test
+    fun `bundle task collapses side-qualified namespaces for sided envs`() {
+        val project = ProjectBuilder.builder().withProjectDir(dir.toFile()).build()
+        val task = project.tasks.register(
+            "bundle",
+            ProduceMappingBundleTask::class.java
+        ).get()
+        val output = dir.resolve("bundle-sided.json")
+        val file = tinyFile(
+            """
+            tiny	2	0	official	official:client	mcp	mcp:client
+            c	a/A	b/B	c/C	d/D
+            	m	()V	joinedOfficial	clientOfficial	joinedMcp	clientMcp
+            """.trimIndent() + "\n"
+        )
+
+        task.environmentId.set("main")
+        task.environmentSide.set(Side.CLIENT)
+        task.mappingFiles.from(file)
+        task.sourcesManifest.set("""[{"files":["$file"]}]""")
+        task.sourceNamespace.set("mcp")
+        task.targetNamespace.set("official")
+        task.bundleFile.set(output.toFile())
+        task.produce()
+
+        val tree = SerializedMappingData.readEither(output).view<MappingTree>()!!
+        assertEquals(
+            listOf("official", "mcp"),
+            tree.namespaces.map { it.name }
+        )
+        val official = tree.namespaces.first { it.name == "official" }
+        val mcp = tree.namespaces.first { it.name == "mcp" }
+        val cls = tree.getClass(official, InternalName.unchecked("b/B"))!!
+        assertEquals("d/D", cls.names[mcp]?.value)
+        val method = cls.methods.single()
+        assertEquals("clientOfficial", method.entries[official]?.name?.value)
+        assertEquals("clientMcp", method.entries[mcp]?.name?.value)
     }
 
 }

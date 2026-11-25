@@ -9,6 +9,7 @@ import org.gradle.api.tasks.*
 import xyz.wagyourtail.unimined.api.mapping.MappingBundle
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
+import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import kotlinx.serialization.json.jsonArray
@@ -27,6 +28,14 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
     /** The environment this bundle serves — drives provider context. */
     @get:Input
     abstract val environmentId: Property<String>
+
+    /** Environment distribution side — sided envs must compose the
+     *  `ns:<side>` columns into their base namespace before the bundle
+     *  is serialized. Without this, mcp_legacy-era production remaps
+     *  see sparse/empty member rows and emit identity bytecode. */
+    @get:Optional
+    @get:Input
+    abstract val environmentSide: Property<Side>
 
     /** Resolved mapping source files (wiring resolves `maven()` sources). */
     @get:InputFiles
@@ -62,7 +71,10 @@ abstract class ProduceMappingBundleTask : DefaultTask() {
         }
         val data = MappingResolver.readMaterialized(
             mats,
-            MappingResolver.standaloneContext(environmentId.get(), uniminedLogger(logger))
+            MappingResolver.standaloneContext(
+                environmentId.get(), uniminedLogger(logger),
+                envSide = environmentSide.orNull
+            )
         )
         val path = bundleFile.get().asFile.toPath()
         val written = SerializedMappingData.write(data, path)

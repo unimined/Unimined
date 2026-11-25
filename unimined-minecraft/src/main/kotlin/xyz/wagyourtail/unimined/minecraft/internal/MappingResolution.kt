@@ -626,6 +626,7 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
+            t.environmentSide.set(environment.side)
             val mats = providers.provider {
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
@@ -673,6 +674,7 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             ProduceMappingBundleTask::class.java
         ) { t ->
             t.environmentId.set(environmentId)
+            t.environmentSide.set(environment.side)
             val mats = providers.provider {
                 mappingExtension.materializeSources(
                     environment.mappingsSpec,
