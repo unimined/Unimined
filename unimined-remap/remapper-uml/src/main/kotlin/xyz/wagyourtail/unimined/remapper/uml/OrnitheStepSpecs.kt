@@ -53,20 +53,22 @@ abstract class RavenStepSpec : FeatherMetadataStepSpec()
 abstract class SparrowStepSpec : FeatherMetadataStepSpec()
 
 /**
- * Spec for `condor` — Ornithe's local-variable-table generator. Methods
- * lacking a `LocalVariableTable` get one synthesized from frame analysis,
- * giving decompilers and Mixin `@Local` captures real variable slots.
+ * Spec for `condor` — Ornithe's local-variable-table generator
+ * (`net.ornithemc.condor.Condor`, consumed upstream exactly as Ploceus
+ * wires it). Methods whose `LocalVariableTable` is missing or incomplete
+ * (no `this` entry, or entries not covering `maxLocals`) get one
+ * synthesized from classpath-aware frame analysis, with type-derived
+ * names, `MethodParameters` name propagation, and ProGuard slot-reuse
+ * entries stripped — giving decompilers and Mixin `@Local` captures
+ * real variable slots. There is deliberately no `force` knob: upstream
+ * always regenerates incomplete tables and never touches complete ones,
+ * so neither `force` value had an upstream meaning.
  */
 abstract class CondorStepSpec : StepSpec {
     @get:Input
     @get:Optional
     override val engine: String?
         get() = null
-
-    /** Regenerate even when a (partial) table is present. Default off:
-     *  existing debug info is kept. */
-    @get:Input
-    abstract val force: Property<Boolean>
 }
 
 /**
@@ -102,9 +104,7 @@ fun RemapSurfaceSpec.sparrow(
 
 fun RemapSurfaceSpec.condor(
     action: Action<CondorStepSpec> = Action {}
-): CondorStepSpec = step(CondorStepSpec::class.java) {
-    it.force.set(false); action.execute(it)
-}
+): CondorStepSpec = step(CondorStepSpec::class.java, action)
 
 fun RemapSurfaceSpec.preen(
     action: Action<PreenStepSpec> = Action {}

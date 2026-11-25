@@ -25,8 +25,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Ornithe auto-contributions (Ploceus default-on parity): the
- * `condor` local-variable-table pass, the `preen` bridge-method
- * pass, and the `nests` enricher source on the environment's
+ * `condor` local-variable-table pass, the `preen` merged-bridge
+ * access-fixup pass, and the `nests` enricher source on the environment's
  * mapping spec (Ploceus's always-appended `NestsMappingSpec` —
  * the `FillingMappingSpec` tree-fill half is already covered by
  * the composer's `fillMissingNames`).
@@ -122,9 +122,7 @@ internal object OrnitheAutoWiring {
             ) {
                 environmentSpec.contributeStep(
                     RemapSurface.JAR,
-                    objects.newInstance(DevCondorStepSpec::class.java).apply {
-                        force.set(false)
-                    },
+                    objects.newInstance(DevCondorStepSpec::class.java),
                     StepScope.ENVIRONMENT_ARTIFACT
                 )
             }
@@ -264,7 +262,7 @@ internal object OrnitheAutoWiring {
 internal abstract class DevCondorStepSpec : CondorStepSpec(),
     DevArtifactOnlyStepSpec
 
-/** [DevCondorStepSpec] for `preen` — bridge-method repair is an
+/** [DevCondorStepSpec] for `preen` — merged-bridge access repair is an
  *  MC-artifact patch, never something a production mod jar wants. */
 internal abstract class DevPreenStepSpec : PreenStepSpec(),
     DevArtifactOnlyStepSpec

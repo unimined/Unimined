@@ -143,7 +143,6 @@ class OrnitheAutoWiringTest {
         // ploceus processor order: LVT before preen
         assertTrue(steps[0] is CondorStepSpec)
         assertTrue(steps[1] is PreenStepSpec)
-        assertEquals(false, (steps[0] as CondorStepSpec).force.get())
         // ploceus processors only see MC jars — the specs mark
         // DevArtifactOnly so remapJar/dep pipelines skip them
         assertTrue(steps[0] is DevArtifactOnlyStepSpec)
