@@ -1,1 +1,6 @@
 xyz.wagyourtail.unimined.transform.processor.TestJarProcessor
+xyz.wagyourtail.unimined.transform.processor.CapablePreRemapProcessor
+xyz.wagyourtail.unimined.transform.processor.SecondCapablePreRemapProcessor
+xyz.wagyourtail.unimined.transform.processor.NonContributingPreRemapProcessor
+xyz.wagyourtail.unimined.transform.processor.CapablePostRemapProcessor
+xyz.wagyourtail.unimined.transform.processor.RelocationStyleProcessor

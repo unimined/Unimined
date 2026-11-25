@@ -8,6 +8,7 @@ import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
+import xyz.wagyourtail.unimined.remap.spi.addExtraInnerClassMappings
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
 import xyz.wagyourtail.unimined.transform.processor.JarProcessorRegistry
 import java.nio.file.FileSystems
@@ -69,11 +70,37 @@ class JarProcessorsStepType : RemapStepType<JarProcessorsStepSpec> {
                 context.log.debug { "jar processor '$name' already applied — skipping" }
                 continue
             }
+            // patch-producing pre-remap processors (jar merges, binary
+            // patchers) can add classes the composed mappings carry no
+            // row for: snapshot the class entries immediately around the
+            // in-place mutation and feed the additions to the inner-class
+            // augmentation, so the downstream remap step renames them
+            // through rows renested from their mapped outer (1.x
+            // `addExtraInnerClassMappings` parity). Per-processor
+            // snapshots keep one processor's additions out of the next
+            // processor's diff. Post-remap processors never hook — their
+            // additions are already dev-namespace, and source-namespace
+            // stub rows for them would be wrong.
+            val preSnapshot =
+                if (processor.preRemap && processor.contributesPatchAddedClasses) {
+                    classEntryNames(output)
+                } else null
             processor.processJar(output, processor.deserializeSpec(payload), context)
+            if (preSnapshot != null) {
+                addExtraInnerClassMappings(preSnapshot, output, c)
+            }
             markApplied(output, name)
         }
         output
     }
+
+    private fun classEntryNames(jar: Path): Set<String> =
+        ZipFile(jar.toFile()).use { z ->
+            z.entries().asSequence()
+                .filter { !it.isDirectory && it.name.endsWith(".class") }
+                .map { it.name.removeSuffix(".class") }
+                .toSet()
+        }
 
     private fun markerPath(name: String) = "META-INF/unimined-processor/$name"
 

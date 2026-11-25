@@ -34,6 +34,11 @@ internal class PaperPatchProcessor(
 
     override val name = "paper-patch"
     override val preRemap = true
+    // the binary patch adds classes (inners of patched server classes)
+    // the composed mappings carry no row for — same shape as forge's
+    // binpatch steps, so the jar-processors step diffs additions for
+    // the inner-class augmentation
+    override val contributesPatchAddedClasses = true
 
     private val patchPatterns = listOf(
         Pattern.compile("META-INF/.*/server-.*\\.patch"),

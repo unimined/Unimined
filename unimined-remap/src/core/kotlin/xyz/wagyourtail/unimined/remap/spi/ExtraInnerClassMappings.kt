@@ -107,3 +107,65 @@ private fun thisClass(b: ByteArray): String? {
     }
     return (cp[u2(i + 2)] as? Int)?.let { cp[it] as? String }
 }
+
+// ── BEGIN additive region: jar-processor capability hook overload (GAP B) ──
+// Added for the `jar-processors` step's `contributesPatchAddedClasses`
+// hook (Docs/progress-2.0-completion.md, GAP B addendum). This region is
+// intentionally self-contained — it duplicates the row-insertion logic
+// above rather than refactoring the binpatch-stream function, so the two
+// uncommitted streams stay merge-isolated. Post-commit cleanup can fold
+// both bodies into one shared private implementation.
+
+/**
+ * Overload of [addExtraInnerClassMappings] for in-place patchers:
+ * jar-processor-style steps mutate one jar path in place, so there is
+ * no pre-patch jar file to diff against — the host snapshots the jar's
+ * class entry names into [prePatchedClassEntries] immediately before
+ * the mutation and passes them here. Semantics otherwise match the
+ * two-path overload exactly: entries in [postPatched] absent from the
+ * snapshot are keyed by their `this_class` internal name (never the
+ * zip entry path), filtered to `$` inners, inserted as source-namespace
+ * stubs into a per-pipeline [DeltaMappingTree] overlay (the shared tree
+ * is never mutated), and renested from their mapped outer class.
+ */
+fun addExtraInnerClassMappings(prePatchedClassEntries: Set<String>, postPatched: Path, ctx: StepContext) {
+    val data = ctx.mappings ?: return
+    val view = data.view(MappingTree::class.java) ?: return
+    val srcNs = Namespace(ctx.spec.sourceNamespace)
+    JarFile(postPatched.toFile()).use { jar ->
+        val added = jar.entries().asSequence()
+            .filter { !it.isDirectory && it.name.endsWith(".class") }
+            .map { it.name.removeSuffix(".class") }
+            .filter { it !in prePatchedClassEntries }
+            .mapNotNull { entry ->
+                jar.getJarEntry("$entry.class")
+                    ?.let { jar.getInputStream(it).use { s -> s.readBytes() } }
+                    ?.let(::thisClass)
+            }
+            .filter { "$" in it }
+            .sorted().toList()
+        if (added.isEmpty()) return
+        // see the two-path overload for why the overlay matters —
+        // the pipeline's MappingData is daemon-shared across parallel
+        // transforms; writes must stay private to this pipeline.
+        val tree = view as? DeltaMappingTree ?: DeltaMappingTree(view).also { delta ->
+            (ctx as? MutableStepContext)?.mappings = ViewMapMappingData(
+                data.viewTypes.associateWith { k ->
+                    if (k == MappingTree::class) delta as Any else data.view(k.java)!!
+                },
+                data.properties
+            )
+        }
+        for (name in added) {
+            val iname = InternalName.unchecked(name)
+            if (tree.getClass(srcNs, iname) != null) continue
+            tree.clazz(mapOf(srcNs to iname))
+        }
+        tree.renest(srcNs, tree.namespaces.toSet() - srcNs)
+        ctx.log.lifecycle(
+            "renested ${added.size} added inner classes: $added"
+        )
+    }
+}
+
+// ── END additive region: jar-processor capability hook overload (GAP B) ──

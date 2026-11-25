@@ -28,6 +28,10 @@ internal class JarModMergeProcessor(
 
     override val name = "jarmod-merge"
     override val preRemap = true
+    // merged-in content can carry inner classes of patch-target classes
+    // the composed mappings have no row for — diff the merge for the
+    // inner-class augmentation (1.x ran the same hook over its merged jar)
+    override val contributesPatchAddedClasses = true
 
     private data class Spec(
         val jars: List<Entry>,

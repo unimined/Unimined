@@ -40,6 +40,23 @@ interface JarProcessor {
     val preRemap: Boolean get() = false
 
     /**
+     * `true` when this processor's patch can ADD classes that have no
+     * mapping row of their own — binary patchers and jar merges whose
+     * additions the remap step must carry. For pre-remap processors
+     * with this capability, the `jar-processors` step snapshots class
+     * entries immediately around [processJar] and feeds the additions
+     * to `addExtraInnerClassMappings`, so patched-in inner classes get
+     * source-namespace stub rows renested from their mapped outer
+     * before the remap step consumes the tree.
+     *
+     * Relocation-only, metadata-only, and access/resource processors
+     * must keep the default `false`: every added `$`-class gets a stub
+     * row unconditionally, so a processor that merely moves or rewrites
+     * existing classes would flood the tree with false-positive rows.
+     */
+    val contributesPatchAddedClasses: Boolean get() = false
+
+    /**
      * Build this processor's deterministic spec over [context], or
      * `null` when it has nothing to do (empty spec set = step no-ops).
      */
