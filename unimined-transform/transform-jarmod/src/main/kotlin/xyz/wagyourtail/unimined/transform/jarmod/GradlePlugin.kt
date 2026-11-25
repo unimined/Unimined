@@ -25,6 +25,11 @@ class GradlePlugin : Plugin<Project> {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             // jarmod mods run in the vanilla jar's own namespace
             minecraft.loaderModSourceNamespaces["jarmod"] = listOf("official")
+            // LiteLoader artifacts are srg/searge-named binaries. Without
+            // this, the no-loader-default falls back to the tree's
+            // `official` column and searge member rows (`func_*`/`field_*`)
+            // never resolve during dev dep remaps.
+            minecraft.loaderModSourceNamespaces["liteloader"] = listOf("searge")
             // family repos from the descriptors — includes
             // liteloader's artifact-only + legacy ivy feeds
             LoaderRegistry().family("jarmod").flatMap { it.repos }.toSet()

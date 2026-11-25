@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.transform.jarmod
 
 import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -19,6 +20,22 @@ import java.nio.file.Files
  * throwaway gradle user home so no network is involved.
  */
 class LiteLoaderWiringTest {
+
+    /** LiteLoader's published artifacts carry searge member names; the
+     *  loader default must not fall through to the tree's official column
+     *  (whose obfuscated member rows can't resolve `func_*`/`field_*`). */
+    @Test
+    fun `liteloader mod dependencies default to the searge namespace`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply(
+            xyz.wagyourtail.unimined.minecraft.GradlePlugin::class.java)
+        project.plugins.apply(GradlePlugin::class.java)
+        assertEquals(
+            listOf("searge"),
+            project.extensions.getByType(MinecraftExtension::class.java)
+                .loaderModSourceNamespaces["liteloader"]
+        )
+    }
 
     @Test
     fun `explicit server side is still rejected`() {
