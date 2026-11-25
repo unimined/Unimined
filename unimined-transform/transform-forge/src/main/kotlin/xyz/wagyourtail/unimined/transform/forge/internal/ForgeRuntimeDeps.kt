@@ -11,6 +11,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
@@ -32,6 +33,7 @@ import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeP
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
@@ -135,6 +137,71 @@ internal fun contributeSrgToMcp(
     project.configurations.named(environment.minecraftLibrariesConfigurationName) { conf ->
         conf.dependencies.add(
             project.dependencies.create(project.files(srg2mcpJar))
+        )
+    }
+}
+
+/**
+ * `dev-manifest-<env>.jar` — a manifest-only jar carrying the env's
+ * `MixinConfigs`/`TweakClass` + `manifestAttributes` DSL attributes
+ * onto the dev classpath for FG2-era (LaunchWrapper) launches. That
+ * era's sponge services register mixin configs from jar manifests
+ * alone (`manifestMixinJars`) and FML cascades `TweakClass`/
+ * `FMLCorePlugin` off coremod-candidate manifests — exploded
+ * classpath dirs are invisible to both, and `mixin.configs` only
+ * reaches `Launch.blackboard` through `CommandLineOptions` (the
+ * `Blackboard` service has no sysprop fallback). This mirrors what
+ * the mod's prod jar manifest does in a real mods-dir scan.
+ * Inert on later eras: ModLauncher services read the
+ * `mixin.configs` sysprop instead.
+ */
+internal fun contributeDevManifestJar(
+    project: Project,
+    environment: MinecraftEnvironment,
+    resolved: Provider<ResolvedForge>
+) {
+    val cacheDir = project.layout.projectDirectory
+        .dir(".gradle/unimined/forge").asFile.toPath()
+
+    val markerJar = project.provider {
+        val r = resolved.orNull ?: return@provider emptyList()
+        if (!r.profile.isFmlRuntimeDeobfEra()) return@provider emptyList()
+        val configs = environment.mixinConfigs.get()
+        val attrs = environment.manifestAttributes.get()
+        if (configs.isEmpty() && attrs.isEmpty()) {
+            return@provider emptyList()
+        }
+        val out = cacheDir.resolve(
+            "dev-manifest-${environment.environmentId}.jar")
+        out.writeAtomically { tmp ->
+            val manifest = java.util.jar.Manifest()
+            manifest.mainAttributes.putValue("Manifest-Version", "1.0")
+            if (configs.isNotEmpty()) {
+                manifest.mainAttributes.putValue(
+                    "MixinConfigs", configs.joinToString(","))
+                manifest.mainAttributes.putValue(
+                    "TweakClass",
+                    "org.spongepowered.asm.launch.MixinTweaker")
+            }
+            attrs.forEach { (k, v) ->
+                manifest.mainAttributes.putValue(k, v)
+            }
+            java.util.jar.JarOutputStream(
+                Files.newOutputStream(tmp)).use { jos ->
+                jos.putNextEntry(java.util.jar.JarEntry("META-INF/"))
+                jos.closeEntry()
+                jos.putNextEntry(
+                    java.util.jar.JarEntry("META-INF/MANIFEST.MF"))
+                manifest.write(jos)
+                jos.closeEntry()
+            }
+        }
+        listOf(out.toFile())
+    }
+
+    project.configurations.named(environment.minecraftLibrariesConfigurationName) { conf ->
+        conf.dependencies.add(
+            project.dependencies.create(project.files(markerJar))
         )
     }
 }

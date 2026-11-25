@@ -284,6 +284,7 @@ internal object ForgeEnvironmentWiring {
         contributeUserdevLibraries(project, environment, resolved)
         contributeClientExtra(project, environment, resolved)
         contributeSrgToMcp(project, environment, resolved)
+        contributeDevManifestJar(project, environment, resolved)
         contributeMappingHop(project, environment, resolved)
         // binpatch leads the pre-remap steps: it substitutes the
         // patched clean jar wholesale, so byte-mutating merges

@@ -450,6 +450,19 @@ internal object RunsWiring {
             task.mainClass.set(mutated.map { it.mainClass ?: run.mainClass.orNull })
             task.javaagents.from(run.javaagents)
             task.jvmArgs.set(run.jvmArgs)
+            // sponge-mixin `mixin.configs` global property — read via
+            // System.getProperty on ModLauncher-era services (FG3+/
+            // modern forge). LaunchWrapper-era services read it from
+            // `Launch.blackboard` instead, where sysprops never land —
+            // that era registers configs via the `MixinConfigs` +
+            // `TweakClass` manifest attributes emitted by
+            // GenerateModMetadataTask into exploded dev resources.
+            // Inert where no sponge-mixin runtime is on the classpath.
+            task.jvmArgs.addAll(project.provider {
+                val configs = environment.mixinConfigs.get()
+                if (configs.isEmpty()) emptyList()
+                else listOf("-Dmixin.configs=" + configs.joinToString(","))
+            })
             task.programArgs.set(run.programArgs)
             task.mutatedJavaagents.set(
                 mutated.map { spec -> spec.javaagents.map { it.toString() } })

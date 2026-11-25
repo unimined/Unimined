@@ -940,6 +940,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val discoverGametestEntrypoints: Property<Boolean> =
         objects.property(Boolean::class.java).convention(true)
 
+    /**
+     * Resolved mixin config resource paths for this env — `mixins {}`
+     * file names + loader-section `mixinConfig(...)` refs + (when
+     * [discoverMixinConfigs]) `*.mixins.json` found in the env's and
+     * combined envs' resources. Populated by the `unimined.mod`
+     * plugin; the runs wiring forwards them to LaunchWrapper-era
+     * mixin engines as `-Dmixin.configs`, since their jar-manifest
+     * `MixinConfigs` scan can't see exploded classpath dirs.
+     */
+    val mixinConfigs: ListProperty<String> =
+        objects.listProperty(String::class.java).convention(emptyList())
+
     /** Access-spec instances this env inherits rules from — parent env
      *  specs contributed by `combineWith`, unioned lazily at
      *  materialization so declarations made later in the parent's DSL
