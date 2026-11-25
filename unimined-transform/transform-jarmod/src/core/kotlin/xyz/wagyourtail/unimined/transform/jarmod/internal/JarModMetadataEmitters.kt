@@ -80,9 +80,13 @@ class LiteLoaderModMetadataEmitter : ModMetadataEmitter {
 
 /**
  * `loader("rift")` — `riftmod.json`: Rift's own manifest (dimdev's
- * 1.13-era loader). `id` is required; `entrypoints`/`mixins`/
- * `listeners` are the keys RiftLoader scans — emitted empty so a
- * bare project jar still reads as a valid riftmod.
+ * 1.13-era loader). `id` is required; `entrypoints`/`listeners` are
+ * the keys RiftLoader scans — emitted empty so a bare project jar
+ * still reads as a valid riftmod. Rift has NO mixin-config key:
+ * RiftLoader boots the sponge subsystem from its own
+ * InitializationListener and never reads mod mixin configs — they
+ * register through sponge's `MixinConfigs`/`TweakClass` jar-manifest
+ * scan (or `--mixin` program args in dev), so those attrs emit here.
  */
 class RiftModMetadataEmitter : ModMetadataEmitter {
     override val loader = "rift"
@@ -92,6 +96,35 @@ class RiftModMetadataEmitter : ModMetadataEmitter {
      *  inert on Rift's runtime but kept in canonical AT shape. */
     override val accessFormat = "at"
     override val accessPath = "META-INF/accesstransformer.cfg"
+
+    /**
+     * Manifest attrs — `MixinConfigs` is rift's only mixin-config
+     * channel: sponge's LaunchWrapper-era container scan registers a
+     * jar (or, on mixin 0.8+, an exploded classpath dir) as a mixin
+     * container only when its manifest declares the `TweakClass`
+     * marker, then reads `MixinConfigs` off it. Rift is always
+     * LaunchWrapper-era, so both attrs emit unconditionally whenever
+     * configs exist. Env facts + discovered files only —
+     * `metadata.id` may be null (manual-metadata projects still need
+     * `MixinConfigs`).
+     */
+    override fun emitManifest(context: ModMetadataEmitter.EmitContext): ByteArray? {
+        val section = context.metadata.sections[loader]
+        val mixinRefs = (context.mixinFiles + context.discoveredMixinConfigs +
+                section?.mixinConfigs.orEmpty()).distinct()
+        val attrs = linkedMapOf<String, String>()
+        if (mixinRefs.isNotEmpty()) {
+            attrs["MixinConfigs"] = mixinRefs.joinToString(",")
+            attrs["TweakClass"] = "org.spongepowered.asm.launch.MixinTweaker"
+        }
+        attrs.putAll(context.manifestAttributes)
+        if (attrs.isEmpty()) return null
+        val mf = java.util.jar.Manifest()
+        mf.mainAttributes[java.util.jar.Attributes.Name.MANIFEST_VERSION] = "1.0"
+        attrs.forEach { (k, v) -> mf.mainAttributes.putValue(k, v) }
+        return java.io.ByteArrayOutputStream()
+            .also { mf.write(it) }.toByteArray()
+    }
 
     override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
         val meta = context.metadata

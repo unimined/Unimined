@@ -159,3 +159,51 @@ The manual equivalent of `unimined-cli new --loader <name>=<ver>`:
 Generating fresh instead? `unimined-cli new mymod --loader quilt=0.26.0`
 emits the same shape — `--modules` for the per-loader subproject
 layout.
+
+## Rift mixins (ModernMixins)
+
+`rift(v)` environments ship with **ModernMixins** on the runtime
+classpath by default — RiftEnthusiasts' rift mod bundling mixin
+**0.8.6** + **MixinExtras 0.3.6** (`maven.modrinth:modernmixins`,
+resolved from the modrinth maven, which the rift loader descriptor
+ensures). At launch it strips dimdev's mixin-0.7.11/asm-6.2 jars off
+the classpath and parent-loads its shaded mixin 0.8.6, so rift mods
+can use modern mixin features; the stock trio stays declared because
+its conflict detection keys off those jars.
+
+Mixin config registration on rift is unimined-wired (RiftLoader
+itself has no `mixins` key):
+
+- **dev runs** — `--mixin <config>` program args register every env
+  mixin config (read off `sun.java.command` by both mixin 0.7.x and
+  0.8.x), and the generated `META-INF/MANIFEST.MF` in the exploded
+  resources dir carries `MixinConfigs`/`TweakClass` attrs that mixin
+  0.8's classpath scan picks up.
+- **production jars** — the same `MixinConfigs`/`TweakClass`
+  manifest attrs merge into the jar manifest, which sponge's
+  container scan reads off mod jars in `mods/`.
+
+Opt out of ModernMixins (stock mixin 0.7.11 runtime — dev configs
+then register only through the `--mixin` args):
+
+=== "Kotlin `build.gradle.kts`"
+
+    ```kotlin
+    minecraft {
+        sourceSet("main") {
+            rift("1.13.2")
+            modernMixins(false)
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+
+    ```groovy
+    minecraft {
+        sourceSet("main") {
+            rift("1.13.2")
+            modernMixins(false)
+        }
+    }
+    ```

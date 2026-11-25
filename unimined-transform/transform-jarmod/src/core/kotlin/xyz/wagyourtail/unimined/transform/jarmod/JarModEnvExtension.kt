@@ -53,6 +53,18 @@ class JarModEnvExtension(private val env: MinecraftEnvironment) {
         JarModEnvState.deleteMetaInf(env.environmentId, disable)
     }
 
+    /** Rift-only: toggle the ModernMixins runtime mixin provider
+     *  (mixin 0.8.6 + MixinExtras 0.3.6, `maven.modrinth:modernmixins`
+     *  on `minecraftLibraries`) — default `true`. ModernMixins
+     *  replaces dimdev's mixin 0.7.11 fork at launch, giving rift mods
+     *  modern mixin features and — because mixin 0.8 scans exploded
+     *  classpath dirs for `MixinConfigs` manifests — working mixin
+     *  config registration in dev runs. Pass `false` to keep the
+     *  stock 0.7.11 runtime. */
+    fun modernMixins(enabled: Boolean = true) {
+        JarModEnvState.modernMixins(env.environmentId, enabled)
+    }
+
     /** Register a refmap resource (`jma.refmaps`) — a classpath-resource
      *  name like `examplemod.refmap.json`; the agent merges all listed
      *  refmaps per transformer. */

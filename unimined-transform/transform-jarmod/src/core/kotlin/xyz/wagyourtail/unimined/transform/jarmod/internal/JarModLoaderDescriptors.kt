@@ -131,7 +131,12 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
                 // org.spongepowered artifacts users may layer on
                 // (1.x added sponge maven for mixin; the dimdev
                 // fork resolves from the mirror above)
-                LoaderRepo.Maven("https://repo.spongepowered.org/maven/")
+                LoaderRepo.Maven("https://repo.spongepowered.org/maven/"),
+                // ModernMixins (the runtime mixin provider) is
+                // modrinth-only — group-scoped so it can't shadow
+                LoaderRepo.Maven(
+                    "https://api.modrinth.com/maven",
+                    includeGroupRegex = "maven\\.modrinth")
             ),
             // rift versions are MC-keyed (org.dimdev:rift:1.13.2) —
             // an empty declared version means the env's MC version

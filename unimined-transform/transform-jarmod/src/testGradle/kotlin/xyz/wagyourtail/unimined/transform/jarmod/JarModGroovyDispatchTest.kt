@@ -28,4 +28,20 @@ class JarModGroovyDispatchTest {
         assertEquals("jarmod", env.loaderSpec.get().name)
     }
 
+    @Test
+    fun `env jarmod modernMixins opt-out dispatches from groovy`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply(
+            xyz.wagyourtail.unimined.minecraft.GradlePlugin::class.java)
+        project.plugins.apply(GradlePlugin::class.java)
+        val env = project.extensions
+            .getByType(MinecraftExtension::class.java)
+            .environments.maybeCreate("main")
+        GroovyShell().also { it.setVariable("env", env) }
+            .evaluate("env.modernMixins(false)")
+        assertEquals(false,
+            xyz.wagyourtail.unimined.transform.jarmod.internal
+                .JarModEnvState.modernMixins(env.environmentId))
+    }
+
 }

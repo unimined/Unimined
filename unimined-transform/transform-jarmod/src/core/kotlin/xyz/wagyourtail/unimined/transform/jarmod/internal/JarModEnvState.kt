@@ -87,6 +87,20 @@ internal object JarModEnvState {
         debug[envId] = value
     }
 
+    private val modernMixins = mutableMapOf<String, Boolean>()
+
+    /** Rift-only: whether the ModernMixins artifact (mixin 0.8.6 +
+     *  MixinExtras 0.3.6) rides the env's `minecraftLibraries` as the
+     *  runtime mixin provider — default `true`. ModernMixins surgically
+     *  replaces dimdev's mixin 0.7.11 fork at launch; opting out keeps
+     *  the stock 0.7.11 runtime (dev mixin configs then register only
+     *  through `--mixin` program args — 0.7.x can't scan exploded-dir
+     *  manifests). */
+    fun modernMixins(envId: String): Boolean = modernMixins[envId] ?: true
+    fun modernMixins(envId: String, value: Boolean) {
+        modernMixins[envId] = value
+    }
+
     private val compiletimeTransforms = mutableMapOf<String, Boolean>()
 
     /** 1.x `JarModAgentPatcher.compiletimeTransforms` — run the env's

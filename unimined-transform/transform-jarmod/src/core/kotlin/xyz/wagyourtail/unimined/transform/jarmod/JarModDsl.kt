@@ -47,6 +47,14 @@ fun MinecraftEnvironment.customSearge() = jarmodExt().customSearge()
  */
 fun MinecraftEnvironment.useAsm52() = jarmodExt().useAsm52()
 
+/**
+ * Rift-only: toggle the ModernMixins runtime mixin provider (mixin
+ * 0.8.6 + MixinExtras 0.3.6) — default `true`. Pass `false` to keep
+ * the stock dimdev mixin 0.7.11 runtime.
+ */
+fun MinecraftEnvironment.modernMixins(enabled: Boolean = true) =
+    jarmodExt().modernMixins(enabled)
+
 /** Register a JarModAgent transformer class (applied at run time and,
  *  when compile-time transforms land, during remap). */
 fun MinecraftEnvironment.jarmodTransformer(transform: String) =
