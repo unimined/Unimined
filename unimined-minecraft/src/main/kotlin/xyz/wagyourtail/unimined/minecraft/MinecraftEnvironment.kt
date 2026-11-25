@@ -781,18 +781,19 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     fun disableLvtPatch() = patchLvts.set(false)
 
     /**
-     * Ornithe bridge-method repair (Ploceus applies `preen`
+     * Ornithe bridge-method access repair (Ploceus applies `preen`
      * unconditionally; default `true`) — when the loader is `ornithe`,
-     * a `preen` step splits ProGuard-merged bridge methods on the
-     * environment artifact back into `ACC_BRIDGE` delegates so the
-     * bytecode shape matches javac output. Ignored by non-ornithe
-     * loaders. Disable via [disablePreen].
+     * a `preen` step detects ProGuard-merged bridge/implementation
+     * hybrids already present on the environment artifact and clears
+     * their `ACC_FINAL`, `ACC_SYNTHETIC` and `ACC_BRIDGE` bits. It does
+     * not split or synthesize methods. Ignored by non-ornithe loaders.
+     * Disable via [disablePreen].
      */
     val applyPreen: Property<Boolean> =
         objects.property(Boolean::class.java).convention(true)
 
-    /** Opt out of the auto-applied `preen` bridge-method pass. Only
-     *  meaningful on `ornithe` environments. */
+    /** Opt out of the auto-applied `preen` merged-bridge access pass.
+     *  Only meaningful on `ornithe` environments. */
     fun disablePreen() = applyPreen.set(false)
 
     /**

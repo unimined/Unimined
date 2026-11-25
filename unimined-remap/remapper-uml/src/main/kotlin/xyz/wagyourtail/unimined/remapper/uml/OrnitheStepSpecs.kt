@@ -70,11 +70,10 @@ abstract class CondorStepSpec : StepSpec {
 }
 
 /**
- * Spec for `preen` — Ornithe's obscure-obfuscation undoer. Splits
- * ProGuard-merged bridge methods back out: when call sites invoke
- * `name(desc)` but only `name(otherDesc)` is declared, a synthetic
- * `ACC_BRIDGE` delegate is synthesized so the bytecode shape matches
- * what javac would have emitted.
+ * Spec for `preen` — Ornithe's obscure-obfuscation undoer, matching the
+ * entry point Ploceus uses. Existing methods recognized as ProGuard-
+ * merged bridge/implementation hybrids have `ACC_FINAL`, `ACC_SYNTHETIC`
+ * and `ACC_BRIDGE` cleared; no methods are split or synthesized.
  */
 abstract class PreenStepSpec : StepSpec {
     @get:Input

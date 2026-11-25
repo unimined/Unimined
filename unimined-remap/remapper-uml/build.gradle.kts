@@ -10,6 +10,8 @@ dependencies {
     api(project(":unimined-remap"))
     api(libs.unimined.mapping.library)
     api(libs.unimined.mapping.remapper)
+    implementation(libs.preen)
+    implementation(libs.condor)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

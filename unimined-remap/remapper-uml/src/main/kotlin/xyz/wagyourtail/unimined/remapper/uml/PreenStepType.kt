@@ -1,44 +1,28 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
-import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.InsnList
-import org.objectweb.asm.tree.InsnNode
-import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.MethodNode
-import org.objectweb.asm.tree.VarInsnNode
+import net.ornithemc.preen.Preen
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.remap.spi.ArtifactStep
 import xyz.wagyourtail.unimined.remap.spi.RemapStepType
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepContext
 import java.nio.file.Files
-import java.util.jar.JarEntry
-import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
+import java.nio.file.StandardCopyOption
 
 /**
  * `preen` — Ornithe's obscure-obfuscation undoer
- * (`net.ornithemc.preen.Preen`): splits ProGuard-merged bridge methods.
+ * (`net.ornithemc.preen.Preen`), as wired by Ploceus.
  *
- * ProGuard-era jars fold a javac bridge into its target: call sites
- * still invoke `name(callDesc)` while the class only declares
- * `name(realDesc)`. Clean bytecode would carry a synthetic
- * `ACC_BRIDGE` delegate; the obfuscated jar relies on the merged
- * method's dual role. This step restores the javac shape — for every
- * virtual call-site descriptor with no declared method of the same
- * name+descriptor, a bridge is synthesized on the declaring class:
- * load `this`, load args per the call descriptor, `INVOKEVIRTUAL` the
- * real method, return.
+ * Ploceus's processor is exactly `Preen.modifyMergedBridgeMethodsAccess`:
+ * detect methods already marked `ACC_BRIDGE` whose bytecode shape shows
+ * that ProGuard merged the specialized implementation into the bridge,
+ * then clear `ACC_FINAL`, `ACC_SYNTHETIC`, and `ACC_BRIDGE` on those
+ * existing methods. It does **not** split methods, synthesize missing
+ * bridges, or repair dangling call sites.
  *
- * Only same-arity descriptor pairs are bridged (a javac bridge widens
- * parameter/return types, never arity). Call-site owners that are
- * interfaces or that declare no candidate are skipped — the
- * synthesized bridge lives on the class that declares the real
- * method, mirroring javac's placement.
+ * Upstream preen rewrites the jar in place, while [ArtifactStep] must not
+ * mutate its input — so this step first copies the artifact and applies
+ * preen to the copy.
  */
 class PreenStepType : RemapStepType<PreenStepSpec> {
 
@@ -53,111 +37,8 @@ class PreenStepType : RemapStepType<PreenStepSpec> {
         val out = sctx.workDir.resolve(
             input.fileName.toString().removeSuffix(".jar") + "-preen.jar"
         )
-
-        // owner -> method name -> declared descriptors (virtual methods only)
-        val declared = HashMap<String, MutableMap<String, MutableSet<String>>>()
-        // owner -> method name -> call-site descriptors
-        val calls = HashMap<String, MutableMap<String, MutableSet<String>>>()
-        val classes = LinkedHashMap<String, ClassNode>()
-        val others = LinkedHashMap<String, ByteArray>()
-
-        JarFile(input.toFile()).use { jar ->
-            for (entry in jar.entries()) {
-                if (entry.isDirectory) continue
-                val bytes = jar.getInputStream(entry).readBytes()
-                if (!entry.name.endsWith(".class")) {
-                    others[entry.name] = bytes
-                    continue
-                }
-                val node = ClassNode()
-                ClassReader(bytes).accept(node, 0)
-                classes[node.name] = node
-                for (method in node.methods) {
-                    if (method.access and (Opcodes.ACC_STATIC or Opcodes.ACC_PRIVATE) != 0) continue
-                    declared.getOrPut(node.name, ::HashMap)
-                        .getOrPut(method.name, ::HashSet)
-                        .add(method.desc)
-                    var insn = method.instructions.first
-                    while (insn != null) {
-                        if (insn is MethodInsnNode &&
-                            (insn.opcode == Opcodes.INVOKEVIRTUAL || insn.opcode == Opcodes.INVOKEINTERFACE)
-                        ) {
-                            calls.getOrPut(insn.owner, ::HashMap)
-                                .getOrPut(insn.name, ::HashSet)
-                                .add(insn.desc)
-                        }
-                        insn = insn.next
-                    }
-                }
-            }
-        }
-
-        JarOutputStream(Files.newOutputStream(out)).use { os ->
-            for ((name, node) in classes) {
-                val entry = JarEntry("$name.class")
-                os.putNextEntry(entry)
-                os.write(
-                    if (node.access and Opcodes.ACC_INTERFACE == 0) split(node, declared, calls)
-                    else node.toBytes()
-                )
-                os.closeEntry()
-            }
-            for ((name, bytes) in others) {
-                os.putNextEntry(JarEntry(name))
-                os.write(bytes)
-                os.closeEntry()
-            }
-        }
+        Files.copy(input, out, StandardCopyOption.REPLACE_EXISTING)
+        Preen.modifyMergedBridgeMethodsAccess(out)
         out
-    }
-
-    private fun split(
-        node: ClassNode,
-        declared: Map<String, Map<String, Set<String>>>,
-        calls: Map<String, Map<String, Set<String>>>,
-    ): ByteArray {
-        val missing = calls[node.name] ?: return node.toBytes()
-        var changed = false
-        for ((mName, callDescs) in missing) {
-            val declaredDescs = declared[node.name]?.get(mName) ?: continue
-            for (callDesc in callDescs) {
-                if (callDesc in declaredDescs) continue
-                val target = declaredDescs.firstOrNull {
-                    Type.getArgumentTypes(it).size ==
-                            Type.getArgumentTypes(callDesc).size
-                } ?: continue
-                node.methods.add(bridge(node.name, mName, callDesc, target))
-                changed = true
-            }
-        }
-        return if (changed) node.toBytes() else node.toBytes()
-    }
-
-    private fun ClassNode.toBytes(): ByteArray {
-        val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
-        accept(writer)
-        return writer.toByteArray()
-    }
-
-    private fun bridge(
-        owner: String, name: String, callDesc: String, targetDesc: String
-    ): MethodNode {
-        val method = MethodNode(
-            Opcodes.ASM9,
-            Opcodes.ACC_PUBLIC or Opcodes.ACC_BRIDGE or Opcodes.ACC_SYNTHETIC,
-            name, callDesc, null, null
-        )
-        val list = InsnList()
-        list.add(VarInsnNode(Opcodes.ALOAD, 0))
-        var slot = 1
-        for (t in Type.getArgumentTypes(callDesc)) {
-            list.add(VarInsnNode(t.getOpcode(Opcodes.ILOAD), slot))
-            slot += t.size
-        }
-        list.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, owner, name, targetDesc, false))
-        list.add(InsnNode(Type.getReturnType(targetDesc).getOpcode(Opcodes.IRETURN)))
-        method.instructions = list
-        method.visitMaxs(-1, -1)
-        return method
     }
 }

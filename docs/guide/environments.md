@@ -150,8 +150,9 @@ Everything below lives inside an env block (`minecraft { … }` or
   artifact (versions before 1.8.2 — every alpha/beta build plus
   releases and snapshots up to `1.8.2-pre*`; infdev and older stay
   out) so decompilers and Mixin `@Local` captures see real variable
-  slots, and `preen` splits ProGuard-merged bridge methods back into
-  `ACC_BRIDGE` delegates on every Ornithe version. The newest
+  slots, and `preen` clears `ACC_FINAL`/`ACC_SYNTHETIC`/`ACC_BRIDGE`
+  on existing ProGuard-merged bridge/implementation hybrids on every
+  Ornithe version (without synthesizing methods). The newest
   `net.ornithemc:nests` build published for the env's version + side
   also joins the mapping chain automatically (see
   [Mappings](mappings.md#ornithe-enrichers)). Each pass opts out
@@ -164,7 +165,7 @@ Everything below lives inside an env block (`minecraft { … }` or
             version = "b1.7.3"
             ornithe("0.19.5")
             disableLvtPatch()   // skip the condor LVT pass
-            disablePreen()      // skip the bridge-method pass
+            disablePreen()      // skip the merged-bridge access pass
             disableNests()      // skip the auto nests source
         }
     }
