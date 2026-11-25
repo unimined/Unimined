@@ -298,6 +298,109 @@ internal object EnvironmentClasspathWiring {
             }
         }
 
+        // Obfuscated aux artifacts (Realms & friends — issue #27) ride
+        // their own artifactType so the product pipeline never claims
+        // them: env-artifact-scoped steps (userdevExec merge, jarmod
+        // patching, the jar-processor spec) stamp merged MC content
+        // over any jar fed through them. The aux channel is the
+        // dependency pipeline: `dependencyPipelineSteps` drops
+        // environment-artifact contributions, keeping the namespace
+        // remap + shared contributions (access transforms). aux->raw
+        // passes bytes through for raw-view consumers.
+        //
+        // The raw MC artifact rides every aux remap as a scan alias,
+        // exactly like the mod views below: aux classes are absent
+        // from the mapping tree (feather & co. carry no rows for
+        // them), so tree-only propagation can never resolve their
+        // inherited members — callsites into game-jar declarations
+        // keep their source names while the game jar's declarations
+        // rename, a cross-jar linkage break. The alias folds the game
+        // jar's scan into the batch inheritance graph (same-namespace
+        // envs index it directly, relocated ones read it
+        // name-translated), so member resolution can climb the chain
+        // from an aux class into its game-jar ancestors.
+        project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
+            t.from.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.auxArtifactType(environmentId)
+            )
+            t.to.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.devArtifactType(environmentId)
+            )
+            t.parameters { p ->
+                p.label.set("$environmentId/aux-dev")
+                p.surface.set(RemapSurface.JAR)
+                p.sourceNamespace.set(devSrcNamespace)
+                p.targetNamespace.set(devNamespace)
+                p.envSide.set(environment.side.map { it.name })
+                p.mappingFile.set(mcBundleFile)
+                p.classpath.from(libraries)
+                p.scanAliasJars.from(
+                    minecraft.rawView(environmentId)
+                        ?: project.failProblem("env/raw-view",
+                            "unimined: no raw MC view registered for " +
+                                "environment '$environmentId'")
+                )
+                p.scanAliasFromNs.set(minecraft.sourceNamespace(environmentId))
+                p.scanAliasMappingFile.set(mcBundleFile)
+                p.stepSpecs.set(
+                    remap.dependencyPipelineSteps(
+                        environmentId, RemapSurface.JAR))
+            }
+        }
+
+        project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
+            t.from.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.auxArtifactType(environmentId)
+            )
+            t.to.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.prodArtifactType(environmentId)
+            )
+            t.parameters { p ->
+                p.label.set("$environmentId/aux-prod")
+                p.surface.set(RemapSurface.JAR)
+                p.sourceNamespace.set(devSrcNamespace)
+                p.envSide.set(environment.side.map { it.name })
+                p.targetNamespace.set(
+                    prodNamespace(project, minecraft, environment))
+                p.mappingFile.set(mcBundleFile)
+                p.classpath.from(libraries)
+                p.scanAliasJars.from(
+                    minecraft.rawView(environmentId)
+                        ?: project.failProblem("env/raw-view",
+                            "unimined: no raw MC view registered for " +
+                                "environment '$environmentId'")
+                )
+                p.scanAliasFromNs.set(minecraft.sourceNamespace(environmentId))
+                p.scanAliasMappingFile.set(mcBundleFile)
+                p.stepSpecs.set(
+                    remap.dependencyPipelineSteps(
+                        environmentId, RemapSurface.JAR))
+            }
+        }
+
+        project.dependencies.registerTransform(RemapDependencyTransform::class.java) { t ->
+            t.from.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.auxArtifactType(environmentId)
+            )
+            t.to.attribute(
+                ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                minecraft.rawArtifactType(environmentId)
+            )
+            t.parameters { p ->
+                p.label.set("$environmentId/aux-raw")
+                p.surface.set(RemapSurface.JAR)
+                p.sourceNamespace.set(devSrcNamespace)
+                p.targetNamespace.set(devSrcNamespace)
+                p.envSide.set(environment.side.map { it.name })
+                p.stepSpecs.set(emptyList())
+            }
+        }
+
         val modImplementationView = remappedModView(
             project, minecraft, remap, environment,
             environment.modImplementationConfigurationName, modsBundleFile,

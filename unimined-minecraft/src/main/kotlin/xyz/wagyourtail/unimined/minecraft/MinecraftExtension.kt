@@ -317,6 +317,17 @@ abstract class MinecraftExtension @Inject constructor(
      *  the searge-named jar for FG2-era forge. */
     fun prodArtifactType(environmentId: String): String = "unimined-mc-prod-$environmentId"
 
+    /** `artifactType` obfuscated aux artifacts (Realms & friends —
+     *  issue #27) enter the env's artifact views as. Distinct from the
+     *  product types so the env's product pipeline never claims them:
+     *  `jar` inputs fall to [ProductArtifactTransform] (which produces
+     *  the MC product for ANY jar), and `raw` inputs take the full
+     *  `raw→dev` pipeline whose jar processors are product-scoped
+     *  (userdev merge stamps merged MC content over any input). Aux
+     *  artifacts get a remap-only channel into dev/prod and a
+     *  pass-through into raw. */
+    fun auxArtifactType(environmentId: String): String = "unimined-mc-aux-$environmentId"
+
     /** The resolvable raw-artifact view for [environmentId], if bound. */
     fun rawView(environmentId: String): Configuration? = rawViewConfigurations[environmentId]
 

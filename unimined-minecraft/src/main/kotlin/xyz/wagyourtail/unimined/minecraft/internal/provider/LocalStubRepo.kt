@@ -42,6 +42,32 @@ internal class LocalStubRepo(private val project: Project) {
         return "$STUB_GROUP:$artifactId:$version"
     }
 
+    /**
+     * Publish an obfuscated aux artifact (e.g. the Realms jar — issue
+     * #27) as a real file-carrying stub module and return its `g:a:v`
+     * notation. It must ride Gradle's artifact pipeline as a typed
+     * artifact — file deps can't carry an `artifactType`, and a plain
+     * `jar`-typed artifact in the raw view is claimed by
+     * `ProductArtifactTransform` (which produces the MC product for ANY
+     * jar input, discarding the file's own content). A stub module
+     * dependency declared with `artifact { type = <rawType> }` keeps
+     * the jar's bytes while passing the raw view unchanged, then
+     * remaps through `RemapDependencyTransform` into dev/prod views.
+     */
+    fun auxDependencyNotation(
+        environment: MinecraftEnvironment,
+        index: Int,
+        file: java.nio.file.Path
+    ): String {
+        val artifactId = "minecraft-${environment.environmentId}-aux-$index"
+        val version = environment.version.get()
+        LocalMavenPublisher.publish(
+            localRepoDir, STUB_GROUP, artifactId, version,
+            mapOf("" to file)
+        )
+        return "$STUB_GROUP:$artifactId:$version"
+    }
+
     fun ensure() {
         if (localRepoRegistered) return
         localRepoRegistered = true

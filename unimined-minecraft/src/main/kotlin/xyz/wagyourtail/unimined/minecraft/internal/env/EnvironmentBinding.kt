@@ -120,19 +120,28 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
         minecraftBucket.withDependencies { deps ->
             deps.add(project.dependencies.create(ext.stubRepo.stubDependencyNotation(environment)))
             // obfuscated aux artifacts (e.g. the Realms jar — issue #27)
-            // ride the same raw->dev view so they remap with the MC jar
-            deps.add(
-                project.dependencies.create(
-                    project.files(project.provider {
-                        // unobf'd products ship no aux artifacts — the
-                        // provider is absent, and an empty get() inside
-                        // a provider-backed file collection fails the
-                        // whole classpath at transform isolation
-                        ext.artifacts(environmentId).get()
-                            .obfuscatedAuxArtifacts.orNull ?: emptyList()
-                    })
-                )
-            )
+            // remap into the same views as the MC jar. They must enter
+            // as typed artifacts — a plain `jar`-typed file dep would
+            // be claimed by ProductArtifactTransform (which produces
+            // the MC product for any jar input) and the env's raw type
+            // would pull the product-scoped jar processors. The
+            // dedicated aux artifactType takes a remap-only channel:
+            // aux->raw passes through, aux->dev/prod remap names only.
+            ext.artifacts(environmentId).get()
+                .obfuscatedAuxArtifacts.orNull.orEmpty()
+                .forEachIndexed { i, file ->
+                    val notation = ext.stubRepo.auxDependencyNotation(
+                        environment, i, file.get().asFile.toPath()
+                    )
+                    val dep = project.dependencies.create(notation)
+                        as org.gradle.api.artifacts.ExternalModuleDependency
+                    dep.artifact { a ->
+                        a.name = notation.split(':')[1]
+                        a.type = ext.auxArtifactType(environmentId)
+                        a.extension = "jar"
+                    }
+                    deps.add(dep)
+                }
         }
 
         val librariesBucket = project.configurations.maybeCreate(
