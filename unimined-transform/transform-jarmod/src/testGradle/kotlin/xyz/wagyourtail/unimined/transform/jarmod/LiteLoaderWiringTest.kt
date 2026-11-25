@@ -37,6 +37,61 @@ class LiteLoaderWiringTest {
         )
     }
 
+    /** Dependency artifacts and the environment's own production output
+     *  intentionally use different namespaces: LiteLoader's published
+     *  loader/mods are searge binaries, but the runtime litemod must be
+     *  official/notch. The dependency-source default must therefore not
+     *  become the prod remap target. */
+    @Test
+    fun `liteloader production jar targets official while dependencies stay searge`() {
+        val guh = Files.createTempDirectory("liteloader-guh").toFile()
+        val versions = guh.toPath()
+            .resolve("caches/unimined/liteloader/versions.json")
+        Files.createDirectories(versions.parent)
+        Files.writeString(versions, """
+            {"versions":{"1.7.10":{"snapshots":{
+                "libraries":[],
+                "com.mumfrey:liteloader":{"entry":{"version":"1.7.10-SNAPSHOT",
+                    "tweakClass":"com.mumfrey.liteloader.launch.LiteLoaderTweaker",
+                    "libraries":[]}}}}}}
+            """.trimIndent())
+        val project = ProjectBuilder.builder()
+            .withGradleUserHomeDir(guh).build()
+        project.pluginManager.apply("java")
+        project.plugins.apply(
+            xyz.wagyourtail.unimined.remap.GradlePlugin::class.java)
+        project.plugins.apply(
+            xyz.wagyourtail.unimined.minecraft.GradlePlugin::class.java)
+        project.plugins.apply(
+            xyz.wagyourtail.unimined.transform.GradlePlugin::class.java)
+        project.plugins.apply(GradlePlugin::class.java)
+        project.gradle.startParameter.isOffline = true
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("lite") { e ->
+            e.inheritParent.set(false)
+            e.version.set("1.7.10")
+            e.devNamespace.set("mcp")
+            e.loader("liteloader", "1.7.10-SNAPSHOT")
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("lite")
+
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val remapJar = project.tasks.getByName("remapLiteJar")
+                as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+        assertEquals("official", remapJar.targetNamespace.get())
+        assertEquals("mcp", remapJar.sourceNamespace.get())
+        // Dependency-source resolution itself is covered by the loader
+        // default test above; resolving it here would require MC metadata.
+        assertEquals(
+            listOf("searge"),
+            ext.loaderModSourceNamespaces["liteloader"]
+        )
+        assertEquals(Side.CLIENT, env.side.get())
+    }
+
     @Test
     fun `explicit server side is still rejected`() {
         val project = ProjectBuilder.builder().build()

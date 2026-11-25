@@ -353,31 +353,48 @@ internal object ProductionJarWiring {
 
 }
 
-/** The environment's production namespace — the single entry of
- *  [MinecraftExtension.modSourceNamespaces], or for multi-source envs
- *  (bukkit: "spigot" + "spigotProd") the loader's declared
- *  `prodNamespace` when it's one of the env's mod sources (1.x
- *  `defaultProdNamespace`); anything else stays ambiguous. Shared by
- *  the prod jar remap and the `minecraftProd` MC view so both agree on
- *  what "prod" means for the environment. */
+/** The environment's production namespace — the single entry of the
+ *  env's own `modSourceNamespaces` when a loader family or build script
+ *  populated it, or for multi-source envs (bukkit: "spigot" +
+ *  "spigotProd") the loader's declared `prodNamespace` when it is one
+ *  of those sources (1.x `defaultProdNamespace`). When the env property
+ *  is empty, the descriptor's `prodNamespace` is authoritative: the
+ *  `loaderModSourceNamespaces` fallback intentionally describes where
+ *  dependency artifacts start, not where this env's own output must end
+ *  (LiteLoader deps are searge binaries while the runtime litemod is
+ *  official/notch). Loaderless envs fall back to the mapping-derived
+ *  source list. Shared by the prod jar remap and the `minecraftProd`
+ *  MC view so both agree on what "prod" means for the environment. */
 internal fun prodNamespace(
     project: Project,
     minecraft: MinecraftExtension,
     environment: MinecraftEnvironment,
 ): Provider<String> {
     val environmentId = environment.environmentId
-    return minecraft.modSourceNamespaces(environmentId).map { namespaces ->
-        if (namespaces.size == 1) namespaces.single() else {
-            environment.loaderSpec.orNull
-                ?.let { LoaderRegistry.resolveBuiltin(it.name)?.prodNamespace }
-                ?.takeIf { it in namespaces }
-                ?: project.failProblem(
-                    "env/mod-source-namespaces",
-                    "unimined: environment '$environmentId' declares " +
-                            "${namespaces.size} mod source namespaces",
-                    "default production namespace needs exactly one; " +
-                            "use remap.remappedViews(...) for mixed inputs"
-                )
+    return project.provider {
+        val descriptor = environment.loaderSpec.orNull
+            ?.let { LoaderRegistry.resolveBuiltin(it.name) }
+        fun select(namespaces: List<String>): String =
+            if (namespaces.size == 1) namespaces.single() else {
+                descriptor?.prodNamespace
+                    ?.takeIf { it in namespaces }
+                    ?: project.failProblem(
+                        "env/mod-source-namespaces",
+                        "unimined: environment '$environmentId' declares " +
+                                "${namespaces.size} mod source namespaces",
+                        "default production namespace needs exactly one; " +
+                                "use remap.remappedViews(...) for mixed inputs"
+                    )
+            }
+        val declared = environment.modSourceNamespaces.getOrElse(emptyList())
+        when {
+            declared.isNotEmpty() -> select(declared)
+            // A known loader's runtime contract is authoritative; checking
+            // the MC metadata first would force a manifest lookup even for
+            // loaders whose prod namespace is version-independent.
+            descriptor != null -> descriptor.prodNamespace
+            !environment.obfuscated.get() -> "mojmap"
+            else -> select(minecraft.modSourceNamespaces(environmentId).get())
         }
     }
 }
