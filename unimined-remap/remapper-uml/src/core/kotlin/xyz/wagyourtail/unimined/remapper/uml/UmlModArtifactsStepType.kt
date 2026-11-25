@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmRemapper
 import xyz.wagyourtail.unimined.mapping.remapper.asm.Options
 import xyz.wagyourtail.unimined.mapping.remapper.ext.classtransform.ClassTransformExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExtension
+import xyz.wagyourtail.unimined.remapper.uml.ext.ClassNameLdcExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.LegacyRefmapClassTargetExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.LiteloaderObfTableExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
@@ -212,6 +213,15 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
     ): List<AsmExtensionFactory> {
         val exts = mutableListOf<AsmExtensionFactory>()
         exts += AsmExtensionFactory { c -> KotlinMetadataExtension(c) }
+        // `ldc` string constants carrying class names/descs — coremod
+        // transformers hardcode these to construct injected calls at
+        // runtime (unimixins crash-report hook, JarModAgent-era
+        // helpers); the type-ref pass can't see them, so they remap
+        // here. Rewrites are gated on the source→target map actually
+        // changing the literal — no blind string surgery
+        if (spec.remapClassNameLdcs) {
+            exts += AsmExtensionFactory { c -> ClassNameLdcExtension(c) }
+        }
         // `modArtifacts { off() }` — 1.x mixinRemap.off parity: the
         // mixin/JMA/liteloader annotation machinery drops entirely
         // (kotlin.Metadata stays — it isn't mixin-scoped)
@@ -223,11 +233,15 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
                     MixinExtension.isMixinConfigPath(it.name)
                 }) {
                 // empty force = auto table (ALL — both standard and
-                // extras); a force names the explicit table set
+                // extras); a force names the explicit table set.
+                // `mixinextras` forces ALL, never EXTRAS alone — extras
+                // member refs resolve through the sponge table's
+                // `@Mixin` markers, so an EXTRAS-only table leaves every
+                // annotation ref (and shadow rename) unresolved.
+                // (1.x parity: `enableMixinExtra` was additive on top of
+                // `enableBaseMixin`, not a replacement.)
                 val table = when {
-                    "mixin" in force && "mixinextras" in force ->
-                        MixinTables.ALL
-                    "mixinextras" in force -> MixinTables.EXTRAS
+                    "mixinextras" in force -> MixinTables.ALL
                     "mixin" in force -> MixinTables.STANDARD
                     else -> MixinTables.ALL
                 }

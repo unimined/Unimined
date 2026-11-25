@@ -15,7 +15,9 @@ import xyz.wagyourtail.unimined.mapping.remapper.ext.metadata.KotlinMetadataExte
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.mixin.MixinTables
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
+import xyz.wagyourtail.unimined.remapper.uml.ext.ClassNameLdcExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.Fixtures
+import xyz.wagyourtail.unimined.remapper.uml.ext.LegacyRefmapClassTargetExtension
 import xyz.wagyourtail.unimined.remapper.uml.ext.LiteloaderObfTableExtension
 import java.nio.file.Path
 import java.util.jar.Manifest
@@ -64,8 +66,18 @@ class UmlModArtifactsStepTypeTest {
     // ---------- gates ----------
 
     @Test
-    fun `empty jar gets only the kotlin metadata pass`() {
+    fun `empty jar gets only the metadata + ldc passes`() {
         val exts = extensions(jar("empty.jar"), ModArtifactsStepSpec())
+        // kotlin.Metadata + ldc-constant class names — both unconditional
+        assertEquals(2, exts.size)
+        assertTrue(exts[0] is KotlinMetadataExtension)
+        assertTrue(exts[1] is ClassNameLdcExtension)
+    }
+
+    @Test
+    fun `disableClassNameLdcRemap drops only the ldc pass`() {
+        val exts = extensions(jar("empty.jar"),
+            ModArtifactsStepSpec().apply { disableClassNameLdcRemap() })
         assertEquals(1, exts.size)
         assertTrue(exts.single() is KotlinMetadataExtension)
     }
@@ -73,7 +85,18 @@ class UmlModArtifactsStepTypeTest {
     @Test
     fun `mixin config in the jar adds the mixin extension`() {
         val exts = extensions(mixinJar(), ModArtifactsStepSpec())
-        assertEquals(3, exts.size)
+        assertEquals(4, exts.size)
+        val mixinIndex = exts.indexOfFirst { it is MixinExtension }
+        val legacyIndex = exts.indexOfFirst {
+            it is LegacyRefmapClassTargetExtension
+        }
+        assertTrue(legacyIndex >= 0, "legacy refmap bridge missing")
+        assertTrue(legacyIndex < mixinIndex,
+            "the exact legacy-refmap rewrite must run before the general mixin table")
+        // class-name LDCs are instruction constants, not annotation values —
+        // its position relative to the annotation passes is immaterial, but
+        // it must be present exactly once
+        assertEquals(1, exts.filterIsInstance<ClassNameLdcExtension>().size)
         val mixin = exts.filterIsInstance<MixinExtension>().single()
         // auto-detect: every table, refmap emission on, no suppressions
         assertSame(MixinTables.ALL, mixin.field("table"))
@@ -101,9 +124,9 @@ class UmlModArtifactsStepTypeTest {
             manifest)
         val exts = extensions(input,
             ModArtifactsStepSpec().apply { off() })
-        // kotlin.Metadata isn't mixin-scoped — it stays
-        assertEquals(1, exts.size)
-        assertTrue(exts.single() is KotlinMetadataExtension)
+        // kotlin.Metadata + ldc pass aren't mixin-scoped — they stay
+        assertEquals(2, exts.size)
+        assertTrue(exts.any { it is KotlinMetadataExtension })
     }
 
     // ---------- refmap options ----------
@@ -131,10 +154,13 @@ class UmlModArtifactsStepTypeTest {
             .filterIsInstance<MixinExtension>().single()
         assertSame(MixinTables.STANDARD, base.field("table"))
 
+        // forcing extras still pulls the full table — extras' member
+        // refs resolve through the sponge `@Mixin` markers, so an
+        // EXTRAS-only table resolves nothing (1.x parity: additive)
         val extras = extensions(empty,
             ModArtifactsStepSpec().apply { enableMixinExtra() })
             .filterIsInstance<MixinExtension>().single()
-        assertSame(MixinTables.EXTRAS, extras.field("table"))
+        assertSame(MixinTables.ALL, extras.field("table"))
 
         val both = extensions(empty,
             ModArtifactsStepSpec().apply {

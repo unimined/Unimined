@@ -29,6 +29,17 @@ class ModArtifactsStepSpec(
     @get:Input
     var mixinRemapOff: Boolean = false
 
+    /** Rewrite `ldc` string constants carrying class names/descs into
+     *  the target namespace. Defaults on — coremod transformers
+     *  hardcode such literals for runtime-injected calls. NilLoader
+     *  mods must NOT get it: their string refs resolve through
+     *  `META-INF/nil/mappings.json` at runtime, keyed in the compile
+     *  namespace, and rewriting owner/desc literals to the target
+     *  namespace breaks the member lookups (`remapField`/`remapMethod`
+     *  fall back to the compile-time member name — wrong at runtime). */
+    @get:Input
+    var remapClassNameLdcs: Boolean = true
+
     /** Refmap JSON emission — [disableRefmap] flips it off for every
      *  config (1.x `disableRefmap()` covering all readers). */
     @get:Input
@@ -53,6 +64,12 @@ class ModArtifactsStepSpec(
     /** 1.x `mixinRemap { off() }`. */
     fun off() {
         mixinRemapOff = true
+    }
+
+    /** Opt out of `ldc` class-name/desc string rewriting — see
+     *  [remapClassNameLdcs]. NilLoader wiring contributes this. */
+    fun disableClassNameLdcRemap() {
+        remapClassNameLdcs = false
     }
 
     /** 1.x `mixinRemap { disableRefmap() }` — no refmap emission. */

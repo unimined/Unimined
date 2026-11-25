@@ -38,6 +38,9 @@ run a `modArtifacts` step that rewrites mod-jar metadata the base
 remap leaves untouched:
 
 - `kotlin.Metadata` internal names (any Kotlin mod jar)
+- string `ldc` constants carrying class names or descriptors (default-on
+  for coremod transformers; `disableClassNameLdcRemap()` opts out when
+  those literals are not binary class references)
 - mixin configs and refmap emission for jars carrying `*.mixins.json`
 - JarModAgent/ClassTransform refmaps for jars whose manifest declares
   `JarModAgent-Refmaps`
