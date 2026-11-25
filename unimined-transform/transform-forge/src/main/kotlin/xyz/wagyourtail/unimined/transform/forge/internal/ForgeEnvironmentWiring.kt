@@ -205,13 +205,25 @@ internal object ForgeEnvironmentWiring {
             resolved.map { r ->
                 // unobf'd products (26.x) dev == prod == mojmap —
                 // identity remap. Otherwise the era-correct obf
-                // namespace: searge for userdev-era, mojmap for
-                // neoform-family — read from the profile, not the
-                // static descriptor (version ranges differ)
+                // namespace: searge for mcp_config-era userdev and the
+                // binpatch eras, mojmap for neoform-family and modern
+                // LexForge (MC >= 1.20.6 / Forge 50.x). `obfNamespace`
+                // is the patch input side — `official` on notchObf and
+                // `searge` even on neoform userdev — never the
+                // production column.
                 if (!environment.obfuscated.get()) listOf("mojmap")
                 else listOf(
-                    (r.profile as? ForgeProfile.Userdev)?.config?.obfNamespace
-                        ?: r.descriptor.prodNamespace
+                    when (val profile = r.profile) {
+                        is ForgeProfile.Userdev -> when {
+                            profile.config.mcp.contains("neoform") -> "mojmap"
+                            xyz.wagyourtail.unimined.mapping.internal
+                                .MinecraftVersions.compare(
+                                    environment.version.get(), "1.20.6"
+                                ) >= 0 -> "mojmap"
+                            else -> "searge"
+                        }
+                        else -> r.descriptor.prodNamespace
+                    }
                 )
             }
         )

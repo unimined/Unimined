@@ -88,6 +88,32 @@ class ForgeEnvironmentWiringTest {
         pinLocalRepo(g)
     }
 
+    /** Serve the FG2-on-userdev3 shape (`1.12.2/14.23.x`): universal
+     *  carries `binpatches.pack.lzma`; `userdev3` carries the FG3-style
+     *  config. */
+    private fun serveUserdev3(coords: String, configJson: String) {
+        val repo = dir.resolve("repo").toFile()
+        val (g, a, v) = coords.split(":")
+        val jarDir = repo.resolve("${g.replace('.', '/')}/$a/$v")
+        jarDir.mkdirs()
+        jarDir.resolve("$a-$v.pom").writeText(
+            """<project xmlns="http://maven.apache.org/POM/4.0.0">""" +
+                    "<modelVersion>4.0.0</modelVersion>" +
+                    "<groupId>$g</groupId><artifactId>$a</artifactId>" +
+                    "<version>$v</version></project>")
+        JarOutputStream(jarDir.resolve("$a-$v-universal.jar").outputStream()).use { out ->
+            out.putNextEntry(JarEntry("binpatches.pack.lzma"))
+            out.write("x".toByteArray())
+            out.closeEntry()
+        }
+        JarOutputStream(jarDir.resolve("$a-$v-userdev3.jar").outputStream()).use { out ->
+            out.putNextEntry(JarEntry("config.json"))
+            out.write(configJson.toByteArray())
+            out.closeEntry()
+        }
+        pinLocalRepo(g)
+    }
+
     /** Serve a probe-valid FG1-era `universal` zip for [coords]
      *  (`g:a:v`) — a `net/minecraft/` class entry is all
      *  `ForgeInstallerProbe` needs for `ZipPatches`. */
@@ -148,14 +174,15 @@ class ForgeEnvironmentWiringTest {
         ext: MinecraftExtension,
         product: String,
         mc: String,
-        loaderVer: String
-    ) = ext.sourceSet(product) { env ->
+        loaderVer: String,
+        envId: String = product
+    ) = ext.sourceSet(envId) { env ->
         env.version.set(mc)
         env.loader(product, loaderVer)
     }.also {
         project.extensions.getByType(
             org.gradle.api.tasks.SourceSetContainer::class.java
-        ).maybeCreate(product)
+        ).maybeCreate(envId)
     }
 
     @Test
@@ -237,6 +264,31 @@ class ForgeEnvironmentWiringTest {
                 "${p.id} modSourceNamespaces"
             )
         }
+    }
+
+    @Test
+    fun `userdev production namespace follows runtime era rather than obf input`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        serveUserdev("net.minecraftforge:forge:1.21.1-52.0.0")
+        serveUserdev3(
+            "net.minecraftforge:forge:1.12.2-14.23.5.2860",
+            """{"mcp":"de.oceanlabs.mcp:mcp_config:1.12.2@zip","notchObf":true}"""
+        )
+
+        forgeEnv(ext, "lexforge", "1.21.1", "52.0.0", "lexforgeModern")
+        forgeEnv(ext, "lexforge", "1.12.2", "14.23.5.2860", "lexforge12userdev3")
+
+        // Modern LexForge runs mojmap at production runtime even though
+        // its userdev still names mcp_config rather than neoform.
+        assertEquals(
+            listOf("mojmap"), ext.modSourceNamespaces("lexforgeModern").get())
+        // userdev3-on-FG2 marks the notch obf *input* (`official`), but
+        // FML runtime-deobfs production mods at the searge boundary.
+        assertEquals(
+            listOf("searge"), ext.modSourceNamespaces("lexforge12userdev3").get())
     }
 
     /** Cleanroom swaps vanilla 1.12.2's platform libs for modern forks
