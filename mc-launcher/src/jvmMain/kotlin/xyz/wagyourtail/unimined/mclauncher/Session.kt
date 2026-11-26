@@ -38,7 +38,11 @@ class OfflineAuth(private val username: String) : AuthProvider {
         uuid = UUID.nameUUIDFromBytes("OfflinePlayer:$username".toByteArray(Charsets.UTF_8))
             .toString().replace("-", ""),
         accessToken = "0",
-        userType = "legacy"
+        // "msa" not "legacy": 1.16.5+ Minecraft#allowsMultiplayer()
+        // disables the Multiplayer/Realms buttons and chat for LEGACY
+        // sessions — offline dev still needs them for LAN and
+        // offline-mode server/mod testing (matches 1.x's user_type)
+        userType = "msa"
     )
 
 }
