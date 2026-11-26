@@ -1724,7 +1724,10 @@ dependency configurations.</p>
 <li><code>sourceSet(name)</code> binds the env to a source set (default <code>main</code>);
   sibling envs are independent — <code>combineWith("other")</code> (optionally
   with <code>EnvironmentSection</code>s) composes one into another, and nested
-  envs (<code>datagen()</code>/<code>gametest()</code>) inherit their parent implicitly.</li>
+  envs (<code>datagen()</code>/<code>gametest()</code>) inherit their parent implicitly.
+  Copies/combinations propagate <code>DEPENDENCIES</code> (the env's dependency
+  buckets) by default — see
+  <a href="../multi-project/#section-propagation-dependencies-included">section propagation</a>.</li>
 <li><code>side</code> selects <code>Side.CLIENT</code>/<code>SERVER</code>/<code>MERGED</code>
   (<a href="../../generated/side-server.gradle.kts">example</a> / <a href="../../generated/side-server.gradle">groovy</a>);
   <code>Side.COMMON</code> is applied by <code>splitEnvironmentSourceSets()</code>

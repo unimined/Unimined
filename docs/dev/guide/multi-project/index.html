@@ -1008,6 +1008,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#section-propagation-dependencies-included" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section propagation: dependencies included
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#packaging-modes-what-ships-in-the-artifact" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1605,6 +1616,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#section-propagation-dependencies-included" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section propagation: dependencies included
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#packaging-modes-what-ships-in-the-artifact" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1745,6 +1767,28 @@ configuration and classpath:</p>
 </ul>
 <p>Sibling <code>sourceSet</code> envs at <code>minecraft {}</code> top level don't share —
 <code>combineWith("main")</code> is the way to layer the main env's config in.</p>
+<h4 id="section-propagation-dependencies-included">Section propagation: dependencies included<a class="headerlink" href="#section-propagation-dependencies-included" title="Permanent link">&para;</a></h4>
+<p><code>copyFrom</code>/<code>combineWith</code> copy <code>DEPENDENCIES</code> by default — a combined
+env extends the source's dependency buckets (all six <code>mod*</code> buckets
+and the plain <code>implementation</code>/<code>api</code>/<code>compileOnly</code>/<code>runtimeOnly</code>
+source-set buckets), so shared compile/runtime surfaces don't need
+redeclaration. Consequences:</p>
+<ul>
+<li>the aux-env (<code>datagen</code>/<code>gametest</code>) explicit addition of
+  <code>DEPENDENCIES</code> is harmless duplication — the wiring dedupes;</li>
+<li><code>include</code> is deliberately <strong>not</strong> part of the section — embedded
+  jars never propagate (each env's packaging stands alone);</li>
+<li>opt out per edge by selecting sections explicitly —
+  <code>combineWith("main") { sections(EnvironmentSection.MAPPINGS) }</code>
+  takes only mappings, <code>inheritParent.set(false)</code> drops the whole
+  implicit-parent edge;</li>
+<li>across a project boundary (<code>combineWith(":common:main")</code>) the
+  section is a documented no-op: configurations cannot extend each
+  other cross-project, so dependency sharing there rides ordinary
+  project dependencies (<code>implementation(project(":common"))</code>) and
+  the source env's published variants. <em>Explicitly</em> requesting
+  <code>DEPENDENCIES</code> cross-project still hard-fails with that explanation.</li>
+</ul>
 <h4 id="packaging-modes-what-ships-in-the-artifact">Packaging modes: what ships in the artifact<a class="headerlink" href="#packaging-modes-what-ships-in-the-artifact" title="Permanent link">&para;</a></h4>
 <p><code>combineWith</code> always composes the source env's output onto the
 compile and runtime classpaths — the packaging mode controls whether
