@@ -71,6 +71,27 @@ internal object ModPackagingWiring {
             val mod = project.extensions.getByType(ModExtension::class.java)
             val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
 
+            // env-facing resolved mixin-config list — the runs wiring
+            // feeds it to LaunchWrapper-era mixin engines as
+            // `-Dmixin.configs` (their jar-manifest `MixinConfigs`
+            // scan can't see exploded classpath dirs). Populated here
+            // because unimined-runs can't see the mod extension;
+            // independent of `emitLoaderMetadata`.
+            environment.mixinConfigs.addAll(project.provider {
+                val snap = mod.snapshot()
+                val declared = snap.sections[environment.loaderSpec
+                    .orNull?.name]?.mixinConfigs.orEmpty() +
+                    mod.mixins.map { it.snapshot().fileName }
+                val discovered = if (environment.discoverMixinConfigs.get()) {
+                    ModMetadataScan.discoverMixinConfigs(
+                        (sourceSet.resources.srcDirs - outDir.get().asFile) +
+                            environment.combinedSourceDirs.files,
+                        exclude = declared.toSet()
+                    ).map { it.first }
+                } else emptyList()
+                (declared + discovered).distinct()
+            })
+
             t.metadata.set(project.provider { mod.snapshot() })
             t.mixinConfigs.set(
                 project.provider { mod.mixins.map { it.snapshot() } }

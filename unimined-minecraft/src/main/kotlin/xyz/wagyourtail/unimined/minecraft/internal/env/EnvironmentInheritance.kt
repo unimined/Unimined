@@ -104,6 +104,9 @@ internal class EnvironmentInheritance(private val env: MinecraftEnvironment) {
         project.dependencies.add(target.runtimeOnlyConfigurationName, output)
         env.combinedOutputs.from(output)
         env.combinedSources.from(project.provider { sourceSet(source).allSource })
+        env.combinedSourceDirs.from(project.provider {
+            sourceSet(source).allSource.srcDirs
+        })
     }
 
     private fun sourceSet(source: EnvironmentReference): SourceSet {

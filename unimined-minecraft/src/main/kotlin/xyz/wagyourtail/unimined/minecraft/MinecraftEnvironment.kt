@@ -1216,6 +1216,14 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val combinedSources: ConfigurableFileCollection = objects.fileCollection()
 
     /**
+     * Source *root* directories from [combineWith] envs' `allSource` —
+     * for resource-dir scanners (mixin-config discovery, manual
+     * manifest merging) that relativize file paths against a root
+     * rather than consuming the files themselves.
+     */
+    val combinedSourceDirs: ConfigurableFileCollection = objects.fileCollection()
+
+    /**
      * Transform-contributed dev-sources override — when present
      * (e.g. a forge-userdev mcpconfig chain that produces sources
      * directly), `genSources` consumes this jar instead of running the
