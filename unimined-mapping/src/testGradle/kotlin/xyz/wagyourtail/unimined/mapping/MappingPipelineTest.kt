@@ -310,6 +310,65 @@ class MappingPipelineTest {
     }
 
     @Test
+    fun `dollarInnerClasses normalizes marker columns at read time`() {
+        // feather-style `Outer__Inner` cells become JVM `Outer$Inner`
+        // in the composed tree — exports/caches carry binary names and
+        // renest can't join `outer$Outer__Inner` doubles
+        val src = tinyFile(
+            "featherish.tiny",
+            "tiny\t2\t0\tofficial\tnamed\n" +
+                    "c\ta/A\tn/Outer\n" +
+                    "c\ta/A\$b\tn/Outer__Inner\n" +
+                    "c\ta/C\tn/Free__Bird\n"
+        )
+        val spec = MappingsSpecImpl(objects())
+        spec.file(src) { dollarInnerClasses("named") }
+
+        val data = MappingResolver.resolve(spec, ctx)
+        val tree = data.view<MappingTree>()!!
+        val off = tree.namespaces.first { it.name == "official" }
+        val named = tree.namespaces.first { it.name == "named" }
+        assertEquals(
+            "n/Outer\$Inner",
+            tree.getClass(off, InternalName.unchecked("a/A\$b"))
+                ?.names?.get(named)?.value
+        )
+        // marker cells normalize even without a renest trigger
+        assertEquals(
+            "n/Free\$Bird",
+            tree.getClass(off, InternalName.unchecked("a/C"))
+                ?.names?.get(named)?.value
+        )
+        // the official column is untouched
+        assertEquals(
+            "a/A\$b",
+            tree.getClass(off, InternalName.unchecked("a/A\$b"))
+                ?.names?.get(off)?.value
+        )
+    }
+
+    @Test
+    fun `undeclared dollarInnerClasses leaves __ cells verbatim`() {
+        val src = tinyFile(
+            "verbatim.tiny",
+            "tiny\t2\t0\tofficial\tnamed\n" +
+                    "c\ta/C\tn/Free__Bird\n"
+        )
+        val spec = MappingsSpecImpl(objects())
+        spec.file(src)
+
+        val data = MappingResolver.resolve(spec, ctx)
+        val tree = data.view<MappingTree>()!!
+        val off = tree.namespaces.first { it.name == "official" }
+        val named = tree.namespaces.first { it.name == "named" }
+        assertEquals(
+            "n/Free__Bird",
+            tree.getClass(off, InternalName.unchecked("a/C"))
+                ?.names?.get(named)?.value
+        )
+    }
+
+    @Test
     fun `stubs layer inline rows through the source pipeline`() {
         val base = tinyFile(
             "base.tiny",

@@ -69,12 +69,16 @@ class MappingChannelVerbsTest {
             Arguments.of(MavenCase(
                 "yarn int build",
                 { yarn(10) },
-                listOf("net.fabricmc:yarn:1.20.1+build.10:v2")
+                listOf("net.fabricmc:yarn:1.20.1+build.10:v2"),
+                mapOf("named" to "yarn"),
+                setOf("yarn")
             )),
             Arguments.of(MavenCase(
                 "yarn string build",
                 { yarn("latest") },
-                listOf("net.fabricmc:yarn:1.20.1+build.latest:v2")
+                listOf("net.fabricmc:yarn:1.20.1+build.latest:v2"),
+                mapOf("named" to "yarn"),
+                setOf("yarn")
             )),
             Arguments.of(MavenCase(
                 "mcp",
@@ -108,7 +112,7 @@ class MappingChannelVerbsTest {
             )),
             Arguments.of(MavenCase(
                 "feather int build gen2",
-                { feather(4) },
+                { feather(4, gen = 2) },
                 listOf("net.ornithemc:feather-gen2:1.20.1+build.4:v2"),
                 mapOf(
                     "intermediary" to "calamusGen2",
@@ -119,7 +123,12 @@ class MappingChannelVerbsTest {
             Arguments.of(MavenCase(
                 "feather string build",
                 { feather("custom") },
-                listOf("net.ornithemc:feather:1.20.1+build.custom:v2")
+                listOf("net.ornithemc:feather:1.20.1+build.custom:v2"),
+                mapOf(
+                    "intermediary" to "calamus",
+                    "named" to "feather"
+                ),
+                setOf("feather")
             )),
             Arguments.of(MavenCase(
                 "sparrow enricher",
@@ -136,39 +145,63 @@ class MappingChannelVerbsTest {
             Arguments.of(MavenCase(
                 "legacyYarn gen1",
                 { legacyYarn(510, gen = 1) },
-                listOf("net.legacyfabric:yarn:1.20.1+build.510:v2")
+                listOf("net.legacyfabric:yarn:1.20.1+build.510:v2"),
+                mapOf(
+                    "intermediary" to "legacyIntermediary",
+                    "named" to "legacyYarn"
+                ),
+                setOf("legacyYarn")
             )),
             Arguments.of(MavenCase(
                 "legacyYarn gen2",
                 { legacyYarn(510, gen = 2) },
                 listOf("net.legacyfabric.v2:yarn:1.20.1+build.510:v2"),
-                mapOf("named" to "legacyYarnGen2")
+                mapOf(
+                    "intermediary" to "legacyIntermediaryGen2",
+                    "named" to "legacyYarnGen2"
+                ),
+                setOf("legacyYarnGen2")
             )),
             Arguments.of(MavenCase(
                 "barn",
                 { barn(17) },
-                listOf("babric:barn:1.20.1+build.17:v2")
+                listOf("babric:barn:1.20.1+build.17:v2"),
+                mapOf(
+                    "intermediary" to "babricIntermediary",
+                    "named" to "barn"
+                ),
+                setOf("barn")
             )),
             Arguments.of(MavenCase(
                 "nostalgia int build",
                 { nostalgia(3) },
                 listOf("me.alphamode:nostalgia:1.20.1+build.3:v2"),
-                mapOf("intermediary" to "babricIntermediary")
+                mapOf(
+                    "intermediary" to "babricIntermediary",
+                    "named" to "nostalgia"
+                ),
+                setOf("nostalgia")
             )),
             Arguments.of(MavenCase(
                 "nostalgia string build",
                 { nostalgia("latest") },
                 listOf("me.alphamode:nostalgia:1.20.1+build.latest:v2"),
-                mapOf("intermediary" to "babricIntermediary")
+                mapOf(
+                    "intermediary" to "babricIntermediary",
+                    "named" to "nostalgia"
+                ),
+                setOf("nostalgia")
             )),
             Arguments.of(MavenCase(
                 "quilt",
                 { quilt(12) },
-                listOf("org.quiltmc:quilt-mappings:1.20.1+build.12:intermediary-v2")
+                listOf("org.quiltmc:quilt-mappings:1.20.1+build.12:intermediary-v2"),
+                mapOf("named" to "quilt"),
+                setOf("quilt")
             )),
             Arguments.of(MavenCase(
                 "calamus gen2",
-                { calamus() },
+                { calamus(2) },
                 listOf("net.ornithemc:calamus-intermediary-gen2:1.20.1:v2"),
                 // merged non-split: one official space = the client col
                 mapOf(

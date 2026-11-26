@@ -11,9 +11,6 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import xyz.wagyourtail.unimined.api.mapping.*
 import xyz.wagyourtail.unimined.api.spec.MappingsSpec
 import xyz.wagyourtail.unimined.api.spec.Side
@@ -108,7 +105,7 @@ class MappingsSpecImpl(
      * separate `calamusGen<N>`/`featherGen<N>` namespace so both gens
      * can be imported at once (per-call `gen` params override this).
      */
-    var ornitheGenVersion: Int = 2
+    var ornitheGenVersion: Int = 1
 
     /**
      * Suppress loader-contributed intermediary mapping sources — set
@@ -339,11 +336,14 @@ class MappingsSpecImpl(
             splitOfficialNamespaces = listOf("official:client", "official:server")
         }
         return when {
-            s == Side.CLIENT -> listOf(const("-client") to "official")
-            s == Side.SERVER -> listOf(const("-server") to "official")
-            // non-split merged versions ship one merged artifact
-            (s == Side.MERGED || s == Side.COMMON) && !splitEra ->
-                listOf(const("") to "official")
+            // side-suffixed artifacts exist only for the split-obf
+            // era — post-1.3 calamus/feather ship a single unsuffixed
+            // series regardless of the env's side
+            splitEra && s == Side.CLIENT -> listOf(const("-client") to "official")
+            splitEra && s == Side.SERVER -> listOf(const("-server") to "official")
+            !splitEra -> listOf(const("") to "official")
+            // split-era merged env needs both side docs, each feeding
+            // its own official column
             else -> listOf(
                 const("-client") to "official:client",
                 const("-server") to "official:server"
@@ -372,7 +372,9 @@ class MappingsSpecImpl(
         requireNotNull(mcVersion) {
             "yarn(build) requires the environment's Minecraft version to be set"
         }.map { "net.fabricmc:yarn:$it+build.$build:v2" }
-    )
+    ) {
+        yarnConfig("yarn")
+    }
 
     /**
      * Declare Tiny v1 Yarn — `net.fabricmc:yarn:<mc>+build.<N>` (no
@@ -463,6 +465,15 @@ class MappingsSpecImpl(
         }
     }
 
+    private fun Source.yarnConfig(named: String) {
+        // relabel yarn's `named` column so it composes alongside other
+        // named-source docs without colliding on the shared label
+        mapNamespace("named" to named)
+        // the `named`-column convention only catches the literal name —
+        // flag the relabeled target so it wins dev-namespace selection
+        named(named)
+    }
+
     private fun Source.featherConfig(gen: Int) {
         // the file's src column is labeled `intermediary` in every gen;
         // relabel to the gen-keyed calamus namespace so the hop stitches
@@ -473,7 +484,25 @@ class MappingsSpecImpl(
         // the `named`-column convention only catches the literal name —
         // flag the relabeled target so it wins dev-namespace selection
         named(if (gen < 2) "feather" else "featherGen$gen")
+        // feather names nested classes `Outer__Inner` — normalize to
+        // JVM `$` names at read so the tree, exports and caches carry
+        // binary names (1.x's insertInto delegator parity)
+        dollarInnerClasses(if (gen < 2) "feather" else "featherGen$gen")
     }
+
+
+    private fun Source.legacyYarnConfig(gen: Int) {
+        // the file's src column is labeled `intermediary` in every gen;
+        // relabel to the gen-keyed calamus namespace so the hop stitches
+        mapNamespace(
+            "intermediary" to if (gen < 2) "legacyIntermediary" else "legacyIntermediaryGen$gen",
+            "named" to if (gen < 2) "legacyYarn" else "legacyYarnGen$gen"
+        )
+        // the `named`-column convention only catches the literal name —
+        // flag the relabeled target so it wins dev-namespace selection
+        named(if (gen < 2) "legacyYarn" else "legacyYarnGen$gen")
+    }
+
 
     /**
      * Ornithe enricher source — `nests`/`sparrow`/`raven` artifacts
@@ -568,7 +597,7 @@ class MappingsSpecImpl(
             "$group:yarn:$it+build.$build:v2"
         }
     ) {
-        if (gen >= 2) mapNamespace("named" to "legacyYarnGen$gen")
+        legacyYarnConfig(gen)
     }
 
     /**
@@ -578,7 +607,9 @@ class MappingsSpecImpl(
      */
     fun barn(build: Int) = maven(
         requireMcVersion("barn").map { "babric:barn:$it+build.$build:v2" }
-    )
+    ) {
+        babricConfig("barn")
+    }
 
     /**
      * Declare Nostalgia mappings — `nostalgia(<build>)` ⇢
@@ -589,14 +620,24 @@ class MappingsSpecImpl(
     fun nostalgia(build: Int) = maven(
         requireMcVersion("nostalgia").map { "me.alphamode:nostalgia:$it+build.$build:v2" }
     ) {
-        mapNamespace("intermediary" to "babricIntermediary")
+        babricConfig("nostalgia")
     }
 
     /** [String]-build overload of [nostalgia]. */
     fun nostalgia(build: String) = maven(
         requireMcVersion("nostalgia").map { "me.alphamode:nostalgia:$it+build.$build:v2" }
     ) {
-        mapNamespace("intermediary" to "babricIntermediary")
+        babricConfig("nostalgia")
+    }
+
+    private fun Source.babricConfig(named: String) {
+        mapNamespace(
+            "intermediary" to "babricIntermediary",
+            "named" to named
+        )
+        // the `named`-column convention only catches the literal name —
+        // flag the relabeled target so it wins dev-namespace selection
+        named(named)
     }
 
     /**
@@ -621,6 +662,7 @@ class MappingsSpecImpl(
             "tsrg2" -> mapNamespace("obf" to "official", "srg" to "unknownThingy")
             else -> mapNamespace("source" to "official", "target" to "unknownThingy")
         }
+        named("unknownThingy")
     }
 
     /**
@@ -630,7 +672,10 @@ class MappingsSpecImpl(
      */
     fun quilt(build: Int) = maven(
         requireMcVersion("quilt").map { "org.quiltmc:quilt-mappings:$it+build.$build:intermediary-v2" }
-    )
+    ) {
+        mapNamespace("named" to "quilt")
+        named("quilt")
+    }
 
     /**
      * Declare Ornithe Calamus intermediary —
@@ -720,6 +765,9 @@ class MappingsSpecImpl(
             "$group:intermediary:$it:v2"
         }
     ) {
+        // intermediary-only doc (no `named` column) — just the src
+        // relabel onto the gen-keyed legacyIntermediary column, same
+        // as legacyYarn's src so their rows unify
         mapNamespace("intermediary" to
             if (gen < 2) "legacyIntermediary" else "legacyIntermediaryGen$gen")
     }
@@ -742,29 +790,55 @@ class MappingsSpecImpl(
      */
     fun biny(commitName: String) = maven(
         requireMcVersion("biny").map { "net.glasslauncher:biny:$it+$commitName:v2" }
-    )
+    ) {
+        babricConfig("biny")
+    }
 
     /** String-build overloads — build numbers accept non-numeric
      *  forms (e.g. `"latest"` resolved by the maven side). */
     fun yarn(build: String) = maven(
         requireMcVersion("yarn").map { "net.fabricmc:yarn:$it+build.$build:v2" }
-    )
+    ) {
+        yarnConfig("yarn")
+    }
     /** [String]-build overload of [feather]. */
-    fun feather(build: String) = maven(
-        requireMcVersion("feather").map { "net.ornithemc:feather:$it+build.$build:v2" }
-    )
+    @JvmOverloads
+    fun feather(build: String, gen: Int = ornitheGenVersion) {
+        for ((sfx, _) in ornitheSideSuffixes("feather", gen)) {
+            maven(
+                requireMcVersion("feather").zip(sfx) { mc, s ->
+                    val artifact = if (gen < 2) "feather" else "feather-gen$gen"
+                    "net.ornithemc:$artifact:$mc$s+build.$build:v2"
+                }
+            ) {
+                featherConfig(gen)
+            }
+        }
+    }
     /** [String]-build overload of [legacyYarn]. */
-    fun legacyYarn(build: String) = maven(
-        requireMcVersion("legacyYarn").map { "net.legacyfabric:yarn:$it+build.$build:v2" }
-    )
+    @JvmOverloads
+    fun legacyYarn(build: String, gen: Int = legacyFabricGenVersion) = maven(
+        requireMcVersion("legacyYarn").map {
+            val group = if (gen < 2) "net.legacyfabric" else "net.legacyfabric.v$gen"
+            "$group:yarn:$it+build.$build:v2"
+        }
+    ) {
+        legacyYarnConfig(gen)
+    }
+
     /** [String]-build overload of [barn]. */
     fun barn(build: String) = maven(
         requireMcVersion("barn").map { "babric:barn:$it+build.$build:v2" }
-    )
+    ) {
+        babricConfig("barn")
+    }
+
     /** [String]-build overload of [quilt]. */
     fun quilt(build: String) = maven(
         requireMcVersion("quilt").map { "org.quiltmc:quilt-mappings:$it+build.$build:intermediary-v2" }
-    )
+    ) {
+        yarnConfig("quilt")
+    }
 
     /** Declare RetroMCP at the environment's Minecraft version. */
     fun retroMCP() = maven(
@@ -975,6 +1049,27 @@ class MappingsSpecImpl(
          *  whose named column isn't labeled `"named"`. */
         fun named(vararg namespaces: String) {
             namedNamespaces += namespaces
+        }
+
+        override val dollarInnerClassNamespaces: MutableSet<String> =
+            mutableSetOf()
+
+        /**
+         * Flag emitted chain namespaces whose class cells use `__` as
+         * the inner-class separator — feather/enigma-style
+         * Java-identifier markers for nested classes. Cells normalize
+         * to JVM `$` names while the source's part is read, so the
+         * composed tree, remap views, exports and caches all carry real
+         * binary names (1.x's feather `insertInto` delegator parity).
+         * With no arguments, flags this source's [named] namespaces —
+         * declare [named] first.
+         */
+        fun dollarInnerClasses(vararg namespaces: String) {
+            if (namespaces.isEmpty()) {
+                dollarInnerClassNamespaces += namedNamespaces + "named"
+            } else {
+                dollarInnerClassNamespaces += namespaces.toSet()
+            }
         }
 
         /** A local mapping file collection resolved lazily. */
