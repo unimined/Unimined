@@ -48,6 +48,63 @@ mappings — fails loud if the provider can't supply the archive),
 zips), and `yarnv1(build)` — Tiny-v1 Yarn for legacy Fabric envs,
 with stitch `proposeFieldNames` filled from the client jar.
 
+## Generation-aware fabric-family channels
+
+Ornithe's `calamus()`/`feather()` channels default to generation 1.
+Set `ornitheGenVersion` to opt the environment into a newer generated
+series, or pass `gen` on an individual declaration; gen2 uses the
+`calamusGen2`/`featherGen2` namespaces and artifacts. Legacy Fabric's
+`legacyIntermediary()`/`legacyYarn()` follow the same pattern through
+`legacyFabricGenVersion`:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    mappings {
+        ornitheGenVersion = 2
+        calamus()
+        feather(4)
+        // per-declaration override: feather(4, gen = 1)
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    mappings {
+        ornitheGenVersion = 2
+        calamus()
+        feather(4)
+        // per-declaration override: feather(4, 1)
+    }
+    ```
+
+The channel verbs relabel their documents' literal `named` column onto
+the loader-specific namespace (`yarn`, `legacyYarn`, `barn`, `biny`,
+`quilt`, and generation-suffixed variants) so several named sources can
+compose without colliding. Feather nested-class names use the
+`Outer__Inner` marker convention and are normalized to JVM
+`Outer$Inner` names automatically while reading. Custom sources with
+the same convention can opt in per source:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    mappings {
+        maven("example:mappings:1.0") {
+            named("exampleNamed")
+            dollarInnerClasses() // or dollarInnerClasses("exampleNamed")
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    mappings {
+        maven("example:mappings:1.0") {
+            named("exampleNamed")
+            dollarInnerClasses() // or dollarInnerClasses("exampleNamed")
+        }
+    }
+    ```
+
 ## Ornithe enrichers
 
 `nests(build)` (inner-class attributes), `sparrow(build)` (generic
