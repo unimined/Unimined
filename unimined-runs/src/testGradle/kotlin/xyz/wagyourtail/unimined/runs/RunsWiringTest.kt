@@ -288,6 +288,29 @@ class RunsWiringTest {
     }
 
     @Test
+    fun `default dev runs of a named environment bind the client and server types`() {
+        // forge-family run wiring keys the userdev `runs.<type>` profile —
+        // `neoforgeClient` as a type matches none
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .create("neoforge")
+        ext.sourceSet("neoforge") { env ->
+            env.version.set("1.20.1")
+        }
+        val runs = project.extensions.getByType(RunsExtension::class.java)
+        runs.named("neoforgeServer") { it.type.set("custom") }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        assertEquals("client", runs.runs.getByName("neoforgeClient").type.get())
+        // an explicit type still wins over the default
+        assertEquals("custom", runs.runs.getByName("neoforgeServer").type.get())
+        // prod variants keep the name-derived type
+        assertEquals("neoforgeProdClient", runs.runs.getByName("neoforgeProdClient").type.get())
+    }
+
+    @Test
     fun `launch script tasks materialize per run plus aggregate`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

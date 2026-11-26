@@ -88,11 +88,18 @@ internal object RunsWiring {
         val serverName = if (environmentId == "main") "server" else "${environmentId}Server"
         if (extension.runs.findByName(clientName) == null) {
             extension.runEnvironments[clientName] = environmentId
-            extension.runs.register(clientName) { it.environment.convention(environmentId) }
+            extension.runs.register(clientName) {
+                it.environment.convention(environmentId)
+                // the name-derived type only matches `main`'s runs
+                it.type.convention("client")
+            }
         }
         if (extension.runs.findByName(serverName) == null) {
             extension.runEnvironments[serverName] = environmentId
-            extension.runs.register(serverName) { it.environment.convention(environmentId) }
+            extension.runs.register(serverName) {
+                it.environment.convention(environmentId)
+                it.type.convention("server")
+            }
         }
         // prod-namespace variants — runProdClient/runProdServer launch
         // the compiled/remapped mod jar against the raw (production-

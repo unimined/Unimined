@@ -94,7 +94,7 @@ Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 | `enabled` | `false` = the `run<Name>` task exists but fails with a "disabled" message — gate runs on env/CI conditions |
 | `beforeRun(task)` / `beforeRun { }` | task deps/actions wired ahead of launch (e.g. build a datapack first) |
 | `side` | `CLIENT`/`SERVER` — defaults from the run name |
-| `type` | loader run-config key (`runs.<type>` in forge userdev profiles) — defaults to the run name; set `type.set("data")` on a renamed run to bind the `data` launch shape |
+| `type` | loader run-config key (`runs.<type>` in forge userdev profiles) — every environment's default dev runs (`client`/`server`, `<env>Client`/`<env>Server`) bind `client`/`server` and loader-declared runs bind their declared type; other runs, the prod variants included, default to their name; set `type.set("data")` on a renamed run to bind the `data` launch shape |
 | `prod` | `true` = production-namespace MC artifact + remapped jar |
 | `mainClass` | launch main class (loader-provided by default) |
 | `jvmArgs` / `programArgs` | launch arguments |

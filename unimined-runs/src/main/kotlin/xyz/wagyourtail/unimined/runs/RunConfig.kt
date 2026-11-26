@@ -45,9 +45,11 @@ abstract class RunConfig @Inject constructor(
      * Loader run-config key this run resolves against — the
      * `runs.<type>` entry in forge userdev-style profiles
      * (`client`, `server`, `data`, `junit`, `gameTestServer`...).
-     * Defaults to the run's name; set it to bind a differently-named
-     * run to a declared loader run shape:
-     * `runs.named("myDatagen") { type.set("data") }`.
+     * Every environment's default dev client/server runs bind
+     * `client`/`server` and loader-declared runs bind their declared
+     * type; other runs, the prod variants included, default to their
+     * name. Set it to bind a differently-named run to a declared loader
+     * run shape: `runs.named("myDatagen") { type.set("data") }`.
      */
     abstract val type: Property<String>
 
