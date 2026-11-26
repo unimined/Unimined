@@ -308,7 +308,12 @@ class UniminedRepos private constructor(
     val arcseekers by Maven("Arcseekers",
         "https://maven.arcseekers.com/releases",
         servedGroups = setOf("com.cleanroommc"))
+    // cdn.fox2code 522s on HEAD requests for paths that don't exist,
+    // so unscoped artifact probes are fatal — scope content to the
+    // com.fox2code.* groups (includeGroup is exact-match; subgroups
+    // need the regex)
     val fox2Code by Maven("Fox2Code", "https://cdn.fox2code.com/maven",
+        includeGroupRegex = "com\\.fox2code(\\..*)?",
         servedGroups = setOf("com.fox2code", "com.fox2code.FoxLoader"))
     val modrinth by Maven("Modrinth", "https://api.modrinth.com/maven",
         servedGroups = setOf("maven.modrinth"))

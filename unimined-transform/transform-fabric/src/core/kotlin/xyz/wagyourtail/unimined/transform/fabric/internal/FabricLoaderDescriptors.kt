@@ -117,7 +117,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             id = "legacyfabric",
             family = "fabric",
             transformPlugin = "xyz.wagyourtail.unimined.transform.fabric",
-            repos = listOf(LoaderRepo.Maven("https://maven.legacyfabric.net")),
+            repos = listOf(LoaderRepo.Maven("https://repo.legacyfabric.net/legacyfabric")),
             // legacyfabric publishes under the upstream GAV on their own maven
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             prodNamespace = "legacyIntermediary",
@@ -151,7 +151,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 LoaderRepo.Maven("https://maven.glass-launcher.net/babric/"),
                 // `replaceLwjgl` GAV (`org.lwjgl.lwjgl:lwjgl:2.9.4+
                 // legacyfabric.8`) is published on legacyfabric's maven
-                LoaderRepo.Maven("https://maven.legacyfabric.net")
+                LoaderRepo.Maven("https://repo.legacyfabric.net/legacyfabric")
             ),
             // 1.x BabricMinecraftTransformer: babric publishes its
             // loader fork under the `babric` group, not `net.fabricmc`
@@ -193,7 +193,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // ornithe reuses legacyfabric's patched lwjgl GAV
                 // (org.lwjgl:* -> 2.9.4+legacyfabric.8), which ornithe's
                 // own maven does not host
-                LoaderRepo.Maven("https://maven.legacyfabric.net"),
+                LoaderRepo.Maven("https://repo.legacyfabric.net/legacyfabric"),
             ),
             // 1.x OrnitheFabricMinecraftTransformer inherits legacyfabric's
             // loader() — upstream fabric-loader, not an ornithe artifact
