@@ -820,10 +820,11 @@ class ForgeEnvironmentWiringTest {
             "separate-universal eras must not shade the loader into Minecraft: $payloads")
     }
 
-    /** #228 — family claims carry production-relevant feature bindings
-     *  (`nestedJars("jarjar")` feeds `include` repacking). Environment
-     *  binding must evaluate the claim layer itself; the legacy
-     *  transformer pipeline is not the only consumer. */
+    /** #228 — family claims carry production-relevant feature bindings.
+     *  Environment binding must evaluate the claim layer itself; the legacy
+     *  transformer pipeline is not the only consumer. `nestedJars` is
+     *  deliberately absent here: its format is version-gated loader
+     *  metadata, not a family-wide claim binding. */
     @Test
     fun `forge environment binding materializes claim feature bindings`() {
         project = project()
@@ -838,8 +839,8 @@ class ForgeEnvironmentWiringTest {
         val bindings = project.extensions.getByType(
             xyz.wagyourtail.unimined.transform.TransformExtension::class.java
         ).sourceSet("neoforge").features.bindings
-        assertEquals("jarjar", bindings["nestedJars"],
-            "the forge claim's nested-jar format must be visible to production wiring")
+        assertFalse(bindings.containsKey("nestedJars"),
+            "nested-jar format must come from version-gated loader metadata")
         assertEquals("modClasses", bindings["modDiscovery"])
     }
 
@@ -868,6 +869,26 @@ class ForgeEnvironmentWiringTest {
                     .userdevBinpatchesKey(profile, side),
                 "combined patches must not become data/${side.name.lowercase()}.lzma")
         }
+    }
+
+    /** NeoForge's combined patch bundles are always read against the
+     *  base type the userdev binpatcher declares (`JOINED` on 26.x),
+     *  even when the consuming environment is client/server. */
+    @Test
+    fun `patch bundle base type follows the userdev binpatcher args`() {
+        val config = xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig(
+            kotlinx.serialization.json.Json.parseToJsonElement(
+                """{"binpatcher":{"version":"net.neoforged.installertools:binarypatcher:4.0.17:fatjar","args":["--patch","--base","{clean}","--base-type","JOINED","--output","{output}","--patches","{patch}"]}}"""
+            ).jsonObject
+        )
+        val profile = xyz.wagyourtail.unimined.transform.forge.internal
+            .ForgeProfile.Userdev(config)
+        assertEquals(
+            xyz.wagyourtail.unimined.transform.forge.internal.binpatch
+                .BinpatchesPackPatcher.PatchBase.JOINED,
+            xyz.wagyourtail.unimined.transform.forge.internal.binpatch
+                .userdevBinpatchBaseType(profile)
+        )
     }
 
     /** #227 era gate — mirrors MDG: manifest-carrying in-jar NeoForge

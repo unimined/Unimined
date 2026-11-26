@@ -113,8 +113,8 @@ object NestedJarsAppender {
             "include declares ${jars.size} jar(s) " +
                     "(${jars.joinToString { it.path.fileName.toString() }}), but " +
                     "this environment's loader has no jar-in-jar format at " +
-                    "its version — drop the include or set " +
-                    "nestedJars { format.set(\"fabric\"|\"jarjar\") }"
+                    "its version — drop the include or set an explicit " +
+                    "nestedJars format (\"fabric\" or \"jarjar\")"
         }
         require(format == "fabric" || format == "jarjar") {
             "nestedJars format '$format' is not one of: fabric, jarjar"

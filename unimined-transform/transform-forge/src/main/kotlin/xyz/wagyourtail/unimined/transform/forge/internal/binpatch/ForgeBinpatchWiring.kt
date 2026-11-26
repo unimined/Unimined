@@ -90,6 +90,23 @@ internal fun userdevBinpatchesKey(
     else -> profile.config.binpatches
 }
 
+/** Patch-bundle base distribution declared by the userdev `binpatcher`
+ *  tool args (`--base-type JOINED` on NeoForge's combined packs). The
+ *  environment side is deliberately not consulted: split-side dev envs
+ *  on joined-only 26.x chains still consume the joined base jar and
+ *  joined patch distribution. */
+internal fun userdevBinpatchBaseType(
+    profile: ForgeProfile.Userdev
+): BinpatchesPackPatcher.PatchBase? {
+    val args = profile.config.binpatcher?.args ?: return null
+    val index = args.indexOf("--base-type")
+    val value = if (index >= 0) args.getOrNull(index + 1)
+    else args.firstOrNull { it.startsWith("--base-type=") }
+        ?.substringAfter('=')
+    if (value == null) return null
+    return BinpatchesPackPatcher.PatchBase.valueOf(value.uppercase())
+}
+
 /**
  * The installer-chain `rename` tool coordinate for split-side envs —
  * consumed by `mcpconfigCleanJar`'s
@@ -147,14 +164,11 @@ internal fun contributeBinpatchStep(
         userdevBinpatchesKey(p, environment.side.get())
     })
     // in-process patcher — the userdev `binpatcher` tool spec
-    // (binarypatcher JVM + args) is not run; `baseType` stands in for
-    // its `--base-type` (userdev passes JOINED for the joined chain)
-    spec.baseType.set(environment.side.map {
-        when (it) {
-            Side.MERGED, Side.COMMON -> BinpatchesPackPatcher.PatchBase.JOINED
-            Side.CLIENT -> BinpatchesPackPatcher.PatchBase.CLIENT
-            Side.SERVER -> BinpatchesPackPatcher.PatchBase.SERVER
-        }
+    // (binarypatcher JVM + args) is not run; `baseType` follows its
+    // declared `--base-type` rather than the environment side.
+    spec.baseType.set(resolved.map {
+        val p = it.profile as? ForgeProfile.Userdev ?: return@map null
+        userdevBinpatchBaseType(p)
     })
 
     // post-remap: FG's binpatches index the srg-renamed clean jar
