@@ -1862,8 +1862,9 @@ e.g. <code>configurations { include extendsFrom(embedThese) }</code> embeds
 everything declared on a custom bucket. Inherited deps still produce
 <code>version.range</code> metadata entries, so platform-include-style grouping
 needs no extra DSL.</p>
-<p>Two formats, chosen per environment — normally by the loader claim
-(fabric-family → <code>fabric</code>, forge → <code>jarjar</code>) or explicitly:</p>
+<p>Two formats, chosen per environment — normally by the environment's
+loader at its version (fabric-family → <code>fabric</code>; neoforge, and Forge
+since 1.18.2-40.1.60 / 1.19-41.0.34 → <code>jarjar</code>) or explicitly:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1888,6 +1889,9 @@ needs no extra DSL.</p>
 </div>
 </div>
 </div>
+<p>On a loader without a jar-in-jar format (earlier Forge, Cleanroom, the
+other loader families) an <code>include</code> that resolves any artifact fails
+the build instead of packaging the jar without them.</p>
 <p>The transform knobs can also sit directly on the loader declaration —
 <code>loader(name, version) { }</code> receives the same environment's transform
 spec (<code>nestedJars { }</code> plus <code>binding(key, value)</code> for feature
