@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.runs.AuthSpec
 import xyz.wagyourtail.unimined.runs.RunConfig
 import xyz.wagyourtail.unimined.runs.RunSide
 import xyz.wagyourtail.unimined.runs.internal.LaunchVerifier
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -349,9 +350,32 @@ abstract class MinecraftRunTask @Inject constructor(
         // on loader-managed classpaths (fabric knot rejects duplicate
         // ASM packages); drop it when a modern `asm-<v>.jar` is
         // present OR the loader is fabric (its jar already bundles
-        // org.objectweb.asm) — launchwrapper-only envs keep theirs
-        val runtimeFiles = runtimeClasspath.files.toList()
-        val loaderAsm = runtimeFiles.any {
+        // org.objectweb.asm) — launchwrapper-only envs keep theirs.
+        // LaunchWrapper-era launches are exempt: FML's deobf tweaker
+        // needs asm-debug-all's RemappingClassAdapter while runtime
+        // deps may still drag in modular asm — LaunchWrapper
+        // tolerates split packages (first-wins), so keep both.
+        var runtimeFiles = runtimeClasspath.files.toList()
+        val launchwrapperEra = (mainClass.orNull ?: document.mainClass)
+            ?.startsWith("net.minecraft.launchwrapper.") == true
+        // forge-family `modGroupsEnv` (MOD_CLASSES `id%%dir` pairs) is
+        // the ModLauncher-era mod-discovery channel — a dir it names
+        // must not also sit on java.class.path: ClasspathLocator scans
+        // -cp, finds the same mods.toml dir, and registers the mod a
+        // second time (LoadingModList duplicate-key crash). Strip
+        // matching dirs by path. LaunchWrapper-era runs exempt — FML's
+        // own dev layout puts mod classes on -cp there.
+        val modClassesDirs = (mutatedEnvironment.get() +
+                environmentVariables.get()).values.flatMap { v ->
+            v.split(File.pathSeparatorChar)
+                .filter { "%%" in it }
+                .map { it.substringAfter("%%") }
+        }.toSet()
+        if (!launchwrapperEra && modClassesDirs.isNotEmpty())
+            runtimeFiles = runtimeFiles.filterNot {
+                it.absolutePath in modClassesDirs
+            }
+        val loaderAsm = !launchwrapperEra && runtimeFiles.any {
             it.name.matches(Regex("""asm-\d.*\.jar""")) ||
                 it.name.startsWith("fabric-loader-")
         }
