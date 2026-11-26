@@ -174,6 +174,25 @@ internal class EnvironmentInheritance(private val env: MinecraftEnvironment) {
             sourceSet(source).allSource.srcDirs
         })
 
+        // Access declarations share the combine edge independently of
+        // output packaging. These are live collection links: the source
+        // env's resource auto-discovery runs post-DSL, and transitive
+        // edges resolve through the source collection as it is populated.
+        // Generated docs deliberately do not ride this channel — semantic
+        // `access { }` rules are re-emitted by each child in its own
+        // consumed format (see effectiveAccessSpecs), so forwarding the
+        // parent's generated file would duplicate them.
+        val extension = project.extensions.getByType(MinecraftExtension::class.java)
+        env.accessWideners.from(project.provider {
+            extension.environment(source).accessWideners
+        })
+        env.accessTransformers.from(project.provider {
+            extension.environment(source).accessTransformers
+        })
+        env.consumedAccessDocs.from(project.provider {
+            extension.environment(source).consumedAccessDocs
+        })
+
         // packaged-artifact view — parallel to the classpath
         // composition above but gated on the edge's packaging mode:
         // shadow edges contribute the source's own output plus the

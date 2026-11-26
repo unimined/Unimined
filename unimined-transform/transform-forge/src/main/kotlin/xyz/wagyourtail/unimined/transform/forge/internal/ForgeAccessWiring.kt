@@ -218,7 +218,7 @@ internal fun contributeAccessSteps(
     // `access { validate = true }` — user-declared docs only; the
     // extracted userdev/loader docs (extractedSpec) never validate
     userSpec.validate.set(project.provider {
-        (environment.inheritedAccessSpecs + environment.accessDsl)
+        environment.effectiveAccessSpecs()
             .any { it.validate }
     })
 

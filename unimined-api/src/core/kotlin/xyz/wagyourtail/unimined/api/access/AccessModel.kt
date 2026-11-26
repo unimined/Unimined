@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.api.access
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.NamespaceRemapper
 import xyz.wagyourtail.unimined.mapping.jvms.ext.FieldOrMethodDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
@@ -65,7 +66,57 @@ class AccessModel(
 
     /** `acc' = (acc & ~clear) | set`. */
     class Change(val set: Int, val clear: Int) {
-        operator fun plus(other: Change) = Change(set or other.set, clear or other.clear)
+        /**
+         * Combine two rules. Non-visibility flags are additive bitmasks;
+         * visibility is instead the most permissive requested level.
+         * The latter matters once exact and wildcard AT rules combine —
+         * a bitwise union of PUBLIC|PROTECTED is not a valid visibility,
+         * and FML access transformation never narrows a member.
+         */
+        operator fun plus(other: Change): Change {
+            val left = visibilityTarget()
+            val right = other.visibilityTarget()
+            if (left == null && right == null) {
+                return Change(set or other.set, clear or other.clear)
+            }
+            val target = listOfNotNull(left, right)
+                .maxBy { visibilityRank(it) }
+            val mask = AccessFlag.visibilityMask
+            return Change(
+                ((set or other.set) and mask.inv()) or highestVisibility(target),
+                ((clear or other.clear) and mask.inv()) or mask
+            )
+        }
+
+        /** Requested visibility bits, or null when this change does not
+         *  alter visibility. A full visibility clear with no set bit is
+         *  package-private/default (bitset zero). */
+        private fun visibilityTarget(): Int? {
+            val mask = AccessFlag.visibilityMask
+            // Only canonical visibility replacements participate in
+            // most-permissive merging. Partial visibility clears are
+            // legacy raw-mask uses (and are preserved as such).
+            if (clear and mask != mask) return null
+            val bits = set and mask
+            return highestVisibility(bits)
+        }
+
+        companion object {
+            fun visibilityRank(bits: Int): Int = when {
+                bits and AccessFlag.PUBLIC.access != 0 -> 3
+                bits and AccessFlag.PROTECTED.access != 0 -> 2
+                bits and AccessFlag.PRIVATE.access != 0 -> 0
+                else -> 1 // package-private/default
+            }
+
+            /** The single bit encoding the highest visibility in [bits]. */
+            fun highestVisibility(bits: Int): Int = when (visibilityRank(bits)) {
+                3 -> AccessFlag.PUBLIC.access
+                2 -> AccessFlag.PROTECTED.access
+                0 -> AccessFlag.PRIVATE.access
+                else -> 0
+            }
+        }
     }
 
     /** Whether the model carries any rules at all. */
@@ -114,10 +165,25 @@ class AccessModel(
 
         private fun lookup(
             table: Map<Member, Change>, owner: String, name: String, desc: String
-        ): Change? = table[Member(owner, name, desc)]
-            ?: table.entries.firstOrNull {
-                it.key.owner == owner && it.key.name == name
-            }?.value
+        ): Change? {
+            // Preserve the member rule channel's legacy fallback exactly:
+            // when the precise owner/name/desc key is absent, a same-name
+            // row is the desc-agnostic member rule. Wildcards are different:
+            // they are additive with the member rule rather than a fallback.
+            var result = table[Member(owner, name, desc)]
+                ?: table.entries.firstOrNull {
+                    it.key.owner == owner && it.key.name == name
+                }?.value
+            for ((key, change) in table) {
+                if (key.owner == owner && key.name == "*" &&
+                    (key.desc.isNullOrEmpty() || key.desc == desc)
+                ) {
+                    result = result?.plus(change) ?: change
+                }
+            }
+            return result
+        }
+
 
     }
 
@@ -162,7 +228,9 @@ class AccessModel(
             kind,
             remapper.mapClass(owner).value,
             name?.let {
-                when (kind) {
+                // `*` is access-rule syntax, not a mapping-tree member —
+                // wildcard rows rebase owner/descriptor types unchanged
+                if (it == "*") it else when (kind) {
                     Kind.METHOD -> remapper.mapMethod(
                         owner,
                         UnqualifiedName.unchecked(it),

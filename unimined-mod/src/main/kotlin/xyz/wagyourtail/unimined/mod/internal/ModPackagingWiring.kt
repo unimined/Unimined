@@ -151,7 +151,7 @@ internal object ModPackagingWiring {
             // env `access { }` / `interfaceInjection(...)` declarations —
             // the loom-style metadata key carries them on every loader
             t.declaredInterfaceInjections.set(project.provider {
-                (environment.inheritedAccessSpecs + environment.accessDsl)
+                environment.effectiveAccessSpecs()
                     .flatMap { it.rules }
                     .filterIsInstance<AccessDslSpec.Rule.InjectInterface>()
                     // loom keys are dependents-facing — non-transitive

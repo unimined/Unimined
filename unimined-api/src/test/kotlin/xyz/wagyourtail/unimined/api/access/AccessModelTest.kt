@@ -132,4 +132,67 @@ class AccessModelTest {
         assertEquals(3, change.clear)
     }
 
+
+    @Test
+    fun `wildcard rules apply additively with exact member rules`() {
+        val model = AccessModel(
+            listOf(
+                AccessModel.Section(
+                    "named",
+                    listOf(
+                        AccessModel.Entry(
+                            AccessModel.Kind.METHOD, "a/A", "m", "()V",
+                            AccessModel.Change(0x0001, 7)
+                        ),
+                        AccessModel.Entry(
+                            AccessModel.Kind.METHOD, "a/A", "*", "",
+                            AccessModel.Change(0x0010, 0x0010)
+                        ),
+                        AccessModel.Entry(
+                            AccessModel.Kind.METHOD, "a/A", "*", "()V",
+                            AccessModel.Change(0x0004, 7)
+                        )
+                    )
+                )
+            )
+        )
+        val rules = model.rules("named")
+        val exact = rules.methodChange("a/A", "m", "()V")!!
+        assertEquals(0x0001 or 0x0010, exact.set)
+        assertEquals(7 or 0x0010, exact.clear)
+        val other = rules.methodChange("a/A", "x", "(I)V")!!
+        assertEquals(0x0010, other.set)
+    }
+
+    @Test
+    fun `wildcard rows rebase owners without mapping the wildcard as a member`() {
+        val tree = mappingTree("official", "named") {
+            clazz("z/Z", "a/A") {
+                method("x;()V", "m")
+            }
+        }
+        val model = AccessModel(
+            listOf(
+                AccessModel.Section(
+                    "official",
+                    listOf(
+                        AccessModel.Entry(
+                            AccessModel.Kind.METHOD, "z/Z", "*", "()V",
+                            AccessModel.Change(0x0001, 7)
+                        )
+                    )
+                )
+            )
+        )
+        val entries = model.entries("named", tree)
+        assertEquals(1, entries.size)
+        assertEquals("a/A", entries.single().owner)
+        assertEquals("*", entries.single().name)
+        assertEquals(0x0001, model.rules("named", tree)
+            .methodChange("a/A", "anything", "()V")?.set)
+        assertNull(model.rules("named", tree)
+            .methodChange("a/A", "anything", "(I)V"))
+    }
+
+
 }

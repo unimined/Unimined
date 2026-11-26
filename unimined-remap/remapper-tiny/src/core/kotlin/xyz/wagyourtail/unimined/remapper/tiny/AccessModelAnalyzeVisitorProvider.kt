@@ -53,8 +53,31 @@ internal class AccessModelAnalyzeVisitorProvider(
 
     private companion object {
 
-        fun adjust(access: Int, change: AccessModel.Change?): Int =
-            change?.let { (access and it.clear.inv()) or it.set } ?: access
+        private const val VISIBILITY_MASK =
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
+
+        private fun visibilityRank(bits: Int): Int = when {
+            bits and Opcodes.ACC_PUBLIC != 0 -> 3
+            bits and Opcodes.ACC_PROTECTED != 0 -> 2
+            bits and Opcodes.ACC_PRIVATE != 0 -> 0
+            else -> 1
+        }
+
+        /**
+         * Apply non-visibility masks directly, but treat visibility as a
+         * widening floor. Access transformation never narrows; wildcard
+         * rules in particular meet members of mixed original visibility.
+         */
+        fun adjust(access: Int, change: AccessModel.Change?): Int {
+            if (change == null) return access
+            val naive = (access and change.clear.inv()) or change.set
+            val currentVisibility = access and VISIBILITY_MASK
+            val targetVisibility = naive and VISIBILITY_MASK
+            val visibility = if (
+                visibilityRank(targetVisibility) > visibilityRank(currentVisibility)
+            ) targetVisibility else currentVisibility
+            return (naive and VISIBILITY_MASK.inv()) or visibility
+        }
 
     }
 

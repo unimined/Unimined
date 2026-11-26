@@ -67,12 +67,20 @@ internal object JarModEnvironmentWiring {
     }
 
     private fun wireLoader(project: Project, environment: MinecraftEnvironment) {
+        // The umbrella frontend applies every transform plugin eagerly.
+        // This wiring is exclusively the jarmod loader family — fabric,
+        // forge, and loaderless envs must not gain its merge/access
+        // widening processors merely because the plugin is on the
+        // classpath. Family (not loader id) keeps fg1/modloader and
+        // custom jarmod-family variants covered.
+        val descriptor = environment.loaderSpec.orNull
+            ?.let { LoaderRegistry().resolve(it.name) }
+        if (descriptor?.family != "jarmod") return
         // variant products (liteloader, rift) don't ride the jarMod
         // merge/agent — their artifact is a library dep +
         // versions.json wiring, dispatched via the descriptor's
         // wiringVariant rather than a loader-name check
-        val variant = environment.loaderSpec.orNull
-            ?.let { LoaderRegistry().resolve(it.name) }?.wiringVariant
+        val variant = descriptor.wiringVariant
         when (variant) {
             "liteloader" -> {
                 LiteLoaderWiring.wire(project, environment)
@@ -88,27 +96,6 @@ internal object JarModEnvironmentWiring {
         // hook gets its turn; it is maybeCreate-based/idempotent
         createConfigurations(project, environment)
         val envId = environment.environmentId
-        // 1.x `yarn()` `requires("intermediary")`: jarmod-family prod
-        // namespace is `official`, so a yarn-family mapping chain needs
-        // the `official -> intermediary` hop to produce the prod
-        // artifact (remapJar/remapSourcesJar). Contribute it lazily —
-        // only when a yarn source is declared without an explicit
-        // intermediary, matching fabric's implicit upstream hop.
-        environment.mappingsSpec.deferredDefaultSources += {
-            val declared = sources
-            val hasYarn = declared.any {
-                it is xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
-                    .Source.Maven && ":yarn:" in it.notation
-            }
-            val hasIntermediary = declared.any {
-                it is xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
-                    .Source.Maven &&
-                    it.notation.startsWith("net.fabricmc:intermediary")
-            }
-            if (hasYarn && !hasIntermediary && environment.obfuscated.get())
-                collectDeclared { intermediary() }
-            else emptyList()
-        }
         val jarMod = project.configurations.getByName(
             if (envId == "main") "jarMod" else
                 "jarMod${envId.replaceFirstChar { it.uppercaseChar() }}"

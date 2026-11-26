@@ -79,7 +79,7 @@ internal object PublishAccessDocWiring {
         // unioned and deduped by canonical path
         val declared = buildList {
             environment.accessFileOverrides.get().forEach { add(it.path) }
-            (environment.inheritedAccessSpecs + environment.accessDsl)
+            environment.effectiveAccessSpecs()
                 .flatMap { it.namedFiles }
                 .mapNotNullTo(this) {
                     project.files(it.path).files.singleOrNull()?.absolutePath

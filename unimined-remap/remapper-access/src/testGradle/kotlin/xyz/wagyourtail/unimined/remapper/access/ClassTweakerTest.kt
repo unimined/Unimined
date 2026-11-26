@@ -286,6 +286,104 @@ class ClassTweakerTest {
     }
 
     @Test
+    fun `at wildcard rules apply to every class member`() {
+        val bytes = writeClass(
+            Opcodes.ACC_SUPER, privateMethod = true,
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE or Opcodes.ACC_FINAL))
+        )
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "public a/b/C *\npublic-f a/b/C *()\n",
+            mapOf("source" to "named")
+        )
+        assertTrue(at.methodChanges("a/b/C", "hidden", "()V").isNotEmpty())
+        assertTrue(at.fieldChanges("a/b/C", "state", "I").isNotEmpty())
+        val out = apply(bytes, own = listOf(at))
+        val seen = mutableMapOf<String, Int>()
+        ClassReader(out).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitMethod(
+                access: Int, name: String, descriptor: String,
+                signature: String?, exceptions: Array<out String>?
+            ): org.objectweb.asm.MethodVisitor? {
+                seen["m:$name"] = access; return null
+            }
+            override fun visitField(
+                access: Int, name: String, descriptor: String,
+                signature: String?, value: Any?
+            ): org.objectweb.asm.FieldVisitor? {
+                seen["f:$name"] = access; return null
+            }
+        }, 0)
+        assertEquals(Opcodes.ACC_PUBLIC, seen.getValue("m:hidden") and Opcodes.ACC_PUBLIC)
+        assertEquals(0, seen.getValue("m:hidden") and Opcodes.ACC_FINAL)
+        assertEquals(Opcodes.ACC_PUBLIC, seen.getValue("f:state") and Opcodes.ACC_PUBLIC)
+    }
+
+    @Test
+    fun `at wildcard visibility never narrows public members`() {
+        val writer = ClassWriter(0)
+        writer.visit(Opcodes.V17, Opcodes.ACC_SUPER, "a/b/C", null, "java/lang/Object", null)
+        for ((name, acc) in listOf("open" to Opcodes.ACC_PUBLIC, "closed" to Opcodes.ACC_PRIVATE)) {
+            val m = writer.visitMethod(acc, name, "()V", null, null)
+            m.visitCode(); m.visitInsn(Opcodes.RETURN); m.visitMaxs(0, 0); m.visitEnd()
+        }
+        writer.visitEnd()
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "protected a/b/C *()\n",
+            mapOf("source" to "named")
+        )
+        val out = apply(writer.toByteArray(), own = listOf(at))
+        val access = mutableMapOf<String, Int>()
+        ClassReader(out).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitMethod(
+                acc: Int, name: String, descriptor: String,
+                signature: String?, exceptions: Array<out String>?
+            ): org.objectweb.asm.MethodVisitor? {
+                access[name] = acc; return null
+            }
+        }, 0)
+        assertEquals(Opcodes.ACC_PUBLIC, access.getValue("open") and Opcodes.ACC_PUBLIC,
+            "protected wildcard must not demote an already-public method")
+        assertEquals(Opcodes.ACC_PROTECTED, access.getValue("closed") and Opcodes.ACC_PROTECTED,
+            "protected wildcard must still widen a private method")
+    }
+
+    @Test
+    fun `wildcard rules reach the access model as wildcard entries`() {
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "public a/b/C *\npublic-f a/b/C *()\n",
+            mapOf("source" to "named")
+        )
+        val section = at.toAccessModelSection("mc_at.cfg")
+        val fieldWildcard = section.entries.single {
+            it.kind == xyz.wagyourtail.unimined.api.access.AccessModel.Kind.FIELD
+        }
+        val methodWildcard = section.entries.single {
+            it.kind == xyz.wagyourtail.unimined.api.access.AccessModel.Kind.METHOD
+        }
+        assertEquals("*", fieldWildcard.name)
+        assertEquals("*", methodWildcard.name)
+        assertEquals("mc_at.cfg", methodWildcard.source)
+        assertTrue(methodWildcard.change.clear and Opcodes.ACC_FINAL != 0)
+    }
+
+    @Test
+    fun `validate matches wildcard targets against any class member`() {
+        val bytes = writeClass(
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true,
+            fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
+        )
+        val unmatched = validateDocsCore(
+            bytes,
+            "accesstransformer.cfg" to "public a/b/C *\npublic a/b/C *()\n",
+            headerlessNamespace = "named"
+        )
+        assertTrue(unmatched.isEmpty(), "wildcards matched the class members: $unmatched")
+    }
+
+    @Test
     fun `hasTransitiveRules reflects transitive directive presence`() {
         val withTransitive = ClassTweaker.parse(
             "mod.accesswidener",

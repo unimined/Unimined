@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.NamespaceRemapper
 import xyz.wagyourtail.unimined.mapping.element.AddRemove
+import xyz.wagyourtail.unimined.mapping.element.WildcardType
 import xyz.wagyourtail.unimined.mapping.element.metadata.AccessElement
 import xyz.wagyourtail.unimined.mapping.element.metadata.EnumExtensionElement
 import xyz.wagyourtail.unimined.mapping.element.metadata.InterfaceElement
@@ -16,6 +17,7 @@ import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
 import xyz.wagyourtail.unimined.mapping.formats.ct.CTReader
+import xyz.wagyourtail.unimined.mapping.jvms.ext.condition.AccessConditions
 import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
@@ -57,6 +59,14 @@ class ClassTweaker private constructor(
     data class MethodTarget(override val owner: String, val name: String, val desc: String) : Target
     data class FieldTarget(override val owner: String, val name: String, val desc: String) : Target
 
+    /**
+     * AT wildcard targets — `<class> *()` / `<class> *`. [desc] is empty
+     * for the usual all-descriptors form; UML also represents the
+     * descriptor-restricted `*(desc)` spelling.
+     */
+    data class MethodWildcardTarget(override val owner: String, val desc: String) : Target
+    data class FieldWildcardTarget(override val owner: String, val desc: String) : Target
+
     /** An `inject-interface`/`transitive-inject-interface` directive. */
     data class InterfaceInjection(val owner: String, val signature: String)
 
@@ -89,11 +99,34 @@ class ClassTweaker private constructor(
 
     fun methodChanges(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
-    ): List<AccessElement> = lookup(MethodTarget(owner, name, desc), transitiveOnly)
+    ): List<AccessElement> {
+        val exact = lookup(MethodTarget(owner, name, desc), transitiveOnly)
+        return exact + wildcardChanges(owner, desc, true, transitiveOnly)
+    }
 
     fun fieldChanges(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
-    ): List<AccessElement> = lookup(FieldTarget(owner, name, desc), transitiveOnly)
+    ): List<AccessElement> {
+        val exact = lookup(FieldTarget(owner, name, desc), transitiveOnly)
+        return exact + wildcardChanges(owner, desc, false, transitiveOnly)
+    }
+
+    /** Wildcard rules whose descriptor constraint (if any) matches [desc]. */
+    private fun wildcardChanges(
+        owner: String, desc: String, method: Boolean, transitiveOnly: Boolean
+    ): List<AccessElement> {
+        val table = if (transitiveOnly) transitiveAccess else access
+        return table.entries.flatMap { (target, elements) ->
+            val matches = when (target) {
+                is MethodWildcardTarget -> method && target.owner == owner &&
+                        (target.desc.isEmpty() || target.desc == desc)
+                is FieldWildcardTarget -> !method && target.owner == owner &&
+                        (target.desc.isEmpty() || target.desc == desc)
+                else -> false
+            }
+            if (matches) elements else emptyList()
+        }
+    }
 
     private fun lookup(target: Target, transitiveOnly: Boolean): List<AccessElement> =
     // `access` already contains every directive (transitive ones included);
@@ -147,6 +180,19 @@ class ClassTweaker private constructor(
                 if (desc.isEmpty()) desc
                 else remapper.map(FieldDescriptor.unchecked(desc)).toString()
             )
+
+            // wildcards are not mapping-tree member rows — rebase the
+            // owner and descriptor types, but keep the `*` semantics
+            is MethodWildcardTarget -> MethodWildcardTarget(
+                cls(owner),
+                if (desc.isEmpty()) desc
+                else remapper.map(MethodDescriptor.unchecked(desc)).toString()
+            )
+            is FieldWildcardTarget -> FieldWildcardTarget(
+                cls(owner),
+                if (desc.isEmpty()) desc
+                else remapper.map(FieldDescriptor.unchecked(desc)).toString()
+            )
         }
         for ((target, elements) in access) out.access
             .getOrPut(target.rebased()) { mutableListOf() } += elements
@@ -192,7 +238,7 @@ class ClassTweaker private constructor(
                     // flat set/clear needs the mask cleared explicitly
                     AddRemove.ADD -> {
                         set = set or el.value.access
-                        if (el.value.access and AccessFlag.visibilityMask != 0) {
+                        if (el.value in AccessFlag.visibility) {
                             clear = clear or AccessFlag.visibilityMask
                         }
                         if (el.value.access and AccessFlag.contentMask != 0) {
@@ -205,19 +251,22 @@ class ClassTweaker private constructor(
             }
             val kind = when (target) {
                 is ClassTarget -> AccessModel.Kind.CLASS
-                is MethodTarget -> AccessModel.Kind.METHOD
-                is FieldTarget -> AccessModel.Kind.FIELD
+                is MethodTarget, is MethodWildcardTarget -> AccessModel.Kind.METHOD
+                is FieldTarget, is FieldWildcardTarget -> AccessModel.Kind.FIELD
             }
             entries += AccessModel.Entry(
                 kind, target.owner,
                 when (target) {
                     is MethodTarget -> target.name
                     is FieldTarget -> target.name
+                    is MethodWildcardTarget, is FieldWildcardTarget -> "*"
                     else -> null
                 },
                 when (target) {
                     is MethodTarget -> target.desc
                     is FieldTarget -> target.desc
+                    is MethodWildcardTarget -> target.desc
+                    is FieldWildcardTarget -> target.desc
                     else -> null
                 },
                 AccessModel.Change(set, clear),
@@ -314,6 +363,29 @@ class ClassTweaker private constructor(
             return tweaker
         }
 
+        /**
+         * FML wildcard visibility is a floor, never a demotion: upstream's
+         * `Modifier.mergeWith` keeps the more permissive of the current and
+         * requested visibilities. Encode that in the conditional access
+         * model — `protected` skips public members, `default` skips public
+         * and protected members, and `private` can never widen anything
+         * (its final-state companion, if any, still applies).
+         */
+        private fun wildcardAccessElement(element: AccessElement): AccessElement? {
+            if (element.type != AddRemove.ADD) return element
+            val exclusion = when (element.value) {
+                AccessFlag.PUBLIC -> return element
+                AccessFlag.PROTECTED -> "-${AccessFlag.PUBLIC}"
+                AccessFlag.DEFAULT -> "-${AccessFlag.PUBLIC}-${AccessFlag.PROTECTED}"
+                AccessFlag.PRIVATE -> return null
+                else -> return element
+            }
+            return AccessElement(
+                element.type, element.value,
+                element.condition + AccessConditions.unchecked(exclusion.lowercase())
+            )
+        }
+
         private class Walked(
             var namespace: String?,
             val access: MutableMap<Target, MutableList<AccessElement>>,
@@ -342,6 +414,20 @@ class ClassTweaker private constructor(
                     )
 
                     else -> {}
+                }
+                for (wildcard in cls.wildcards) {
+                    val desc = with(tree) { wildcard.getDescriptor(ns) }?.toString() ?: ""
+                    val target = when (wildcard.type) {
+                        WildcardType.METHOD -> MethodWildcardTarget(owner, desc)
+                        WildcardType.FIELD -> FieldWildcardTarget(owner, desc)
+                    }
+                    for (meta in wildcard.metadata) {
+                        if (meta is AccessElement) {
+                            wildcardAccessElement(meta)?.let { element ->
+                                out.access.getOrPut(target) { mutableListOf() } += element
+                            }
+                        }
+                    }
                 }
                 for (method in cls.methods) {
                     val entry = method.entries[ns] ?: continue

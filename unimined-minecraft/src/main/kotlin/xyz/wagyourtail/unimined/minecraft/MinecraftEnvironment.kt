@@ -979,6 +979,32 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val inheritedAccessSpecs = mutableListOf<AccessDslSpec>()
 
     /**
+     * Every access spec visible to this env, parent chain first and this
+     * env last. Unlike [inheritedAccessSpecs] — a plumbing list populated
+     * for legacy/aux paths — this walks live `combineWith` edges at read
+     * time, so indirect parents and declarations made after the edge was
+     * declared are both seen. Specs dedupe by identity; `lastOrNull`
+     * consumers therefore resolve chain options in child-wins order.
+     */
+    fun effectiveAccessSpecs(): List<AccessDslSpec> {
+        applyImplicitParent()
+        val ordered = linkedSetOf<AccessDslSpec>()
+        val visiting = mutableSetOf<EnvironmentReference>()
+        fun visit(env: MinecraftEnvironment) {
+            val ref = EnvironmentReference(env.project.path, env.environmentId)
+            if (!visiting.add(ref)) return
+            val extension = env.project.extensions.getByType(MinecraftExtension::class.java)
+            for (source in env.inheritance.references) {
+                visit(extension.environment(source))
+            }
+            ordered += env.inheritedAccessSpecs
+            ordered += env.accessDsl
+        }
+        visit(this)
+        return ordered.toList()
+    }
+
+    /**
      * Access-transformer files applied to this environment's dev
      * Minecraft artifact (Forge/FML-family `accesstransformer.cfg` /
      * `*_at.cfg` files) — populated directly or by loader transforms.

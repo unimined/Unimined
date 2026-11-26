@@ -218,7 +218,7 @@ internal object FabricEnvironmentWiring {
         // `access { validate = true }` — own declarations only; the
         // dep channel (dependencyClassTweakerFiles) never validates
         applySpec.validate.set(project.provider {
-            (environment.inheritedAccessSpecs + environment.accessDsl)
+            environment.effectiveAccessSpecs()
                 .any { it.validate }
         })
         // dep-declared classTweakers use the loader family's generic

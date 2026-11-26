@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.minecraft.AccessDslSpec
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.transform.internal.DepAccessScan
@@ -78,6 +79,13 @@ internal object EnvironmentClasspathWiring {
         // in the env's resources — registered below `modBatch` (the
         // dep-declared access scan needs the raw dep jars); still
         // executes post-DSL once the env's loader + DSL are settled
+
+        // Yarn's documented 1.x `requires("intermediary")` chain is a
+        // mapping-source fact, not a jarmod behavior. Contribute it in
+        // the loader-neutral wiring so gating jarmod processors to the
+        // jarmod family cannot silently remove it from loaderless or
+        // non-fabric environments.
+        contributeYarnIntermediary(environment)
 
         // the loader-declared java floor (cleanroom→21, ornithe→17, …)
         // raises the environment's effective java version — a
@@ -739,6 +747,33 @@ internal object EnvironmentClasspathWiring {
         }
 
     /**
+     * Supply the `official -> intermediary` hop required by yarn-family
+     * mapping documents when the user has not declared one. Fabric-family
+     * wiring owns this hop itself (including its loader-specific upstream
+     * channels and namespace relabeling), so it is excluded here.
+     */
+    private fun contributeYarnIntermediary(environment: MinecraftEnvironment) {
+        environment.mappingsSpec.deferredDefaultSources += {
+            val declared = sources
+            val hasYarn = declared.any {
+                it is MappingsSpecImpl.Source.Maven && ":yarn:" in it.notation
+            }
+            val hasIntermediary = declared.any {
+                it is MappingsSpecImpl.Source.Maven &&
+                        it.notation.startsWith("net.fabricmc:intermediary")
+            }
+            val loaderFamily = environment.loaderSpec.orNull?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }?.family
+            if (loaderFamily != "fabric" && hasYarn && !hasIntermediary &&
+                !environment.mappingsSpec.customIntermediaries.get() &&
+                environment.obfuscated.get()
+            ) collectDeclared { intermediary() }
+            else emptyList()
+        }
+    }
+
+
+    /**
      * Materialize access declarations into the env's declared file
      * collections so they apply to the dev Minecraft artifact (and ride
      * the packaging/remap channels like any declared file):
@@ -776,7 +811,7 @@ internal object EnvironmentClasspathWiring {
                 it == AccessDiscovery.FMLAT_MANIFEST
         }
 
-        val specs = environment.inheritedAccessSpecs + environment.accessDsl
+        val specs = environment.effectiveAccessSpecs()
 
         // `access { format = "..." }` — last declaration across the
         // combine chain wins; must agree with a direct
@@ -973,7 +1008,7 @@ internal object EnvironmentClasspathWiring {
             // `access { validate = true }` — own declarations only;
             // dep-declared docs (depSpec below) are never validated
             ownSpec.validate.set(project.provider {
-                (environment.inheritedAccessSpecs + environment.accessDsl)
+                environment.effectiveAccessSpecs()
                     .any { it.validate }
             })
 

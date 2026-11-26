@@ -205,6 +205,28 @@ class TinyRemapStepTypeTest {
         assertTrue("renamed" in methodNames(out, "a/Sub.class"))
     }
 
+
+    @Test
+    fun `wildcard access model entries propagate widened member mappings`() {
+        val (baseJar, subJar) = propagationJars()
+        val model = AccessModel(
+            listOf(
+                AccessModel.Section(
+                    "official",
+                    listOf(
+                        AccessModel.Entry(
+                            AccessModel.Kind.METHOD, "a/Base", "*", "",
+                            AccessModel.Change(0x0004, 7)
+                        )
+                    )
+                )
+            )
+        )
+        val ctx = propagationCtx(baseJar, model)
+        val out = TinyRemapStepType().create(RemapStepSpec(), ctx).apply(subJar, ctx)
+        assertTrue("renamed" in methodNames(out, "a/Sub.class"))
+    }
+
     @Test
     fun `without the overlay propagation misses the private super member`() {
         val (baseJar, subJar) = propagationJars()

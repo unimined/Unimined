@@ -202,6 +202,16 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 "${t.owner}\u0000${t.name}\u0000${t.desc}" in fieldsByDesc ||
                         (t.desc.isEmpty() &&
                                 "${t.owner}\u0000${t.name}" in fieldsByName)
+            is ClassTweaker.MethodWildcardTarget ->
+                methodsByDesc.any { key ->
+                    key.startsWith("${t.owner}\u0000") &&
+                            (t.desc.isEmpty() || key.endsWith("\u0000${t.desc}"))
+                }
+            is ClassTweaker.FieldWildcardTarget ->
+                fieldsByDesc.any { key ->
+                    key.startsWith("${t.owner}\u0000") &&
+                            (t.desc.isEmpty() || key.endsWith("\u0000${t.desc}"))
+                }
         }
     }
 

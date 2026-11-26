@@ -327,6 +327,46 @@ class UmlRemapStepTypeTest {
         assertTrue("renamed" in methodNames(out, "a/Sub.class"))
     }
 
+
+    @Test
+    fun `wildcard access model rows propagate widened member mappings`() {
+        val (baseJar, subJar) = propagationJars()
+        val propagationTree = runBlocking {
+            TinyV2Reader.read(
+                "tiny\t2\t0\tofficial\tnamed\n" +
+                        "c\ta/Base\tb/Base\n" +
+                        "\tm\t()V\tm\trenamed\n"
+            )
+        }
+        val mappings: MappingData = UmlMappingData(propagationTree)
+        val model = xyz.wagyourtail.unimined.api.access.AccessModel(
+            listOf(
+                xyz.wagyourtail.unimined.api.access.AccessModel.Section(
+                    "official",
+                    listOf(
+                        xyz.wagyourtail.unimined.api.access.AccessModel.Entry(
+                            xyz.wagyourtail.unimined.api.access.AccessModel.Kind.METHOD,
+                            "a/Base", "*", "",
+                            xyz.wagyourtail.unimined.api.access.AccessModel.Change(0x0004, 7)
+                        )
+                    )
+                )
+            )
+        )
+        val ctx = object : StepContext {
+        override val surface = RemapSurface.JAR
+     override val state: PipelineState by lazy { PipelineState(spec.sourceNamespace, null) }
+            override val spec = this@UmlRemapStepTypeTest.spec
+            override val mappings = mappings
+            override val classpath = listOf(baseJar)
+            override val accessModel = model
+            override val workDir = dir
+            override val logger: Logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(UmlRemapStepTypeTest::class.java))
+        }
+        val out = UmlRemapStepType().create(RemapStepSpec(), ctx).apply(subJar, ctx)
+        assertTrue("renamed" in methodNames(out, "a/Sub.class"))
+    }
+
     private fun ByteArray.containsAscii(value: String): Boolean {
         val needle = value.encodeToByteArray()
         if (needle.isEmpty() || size < needle.size) return false

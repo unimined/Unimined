@@ -1,11 +1,25 @@
 package xyz.wagyourtail.unimined.transform
 
+import org.gradle.api.Project
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Provider
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.api.spec.ProductSpec
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
+import xyz.wagyourtail.unimined.minecraft.spi.AssetIndex
+import xyz.wagyourtail.unimined.minecraft.spi.EnvironmentCapabilities
+import xyz.wagyourtail.unimined.minecraft.spi.LaunchMetadata
+import xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode
+import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
+import xyz.wagyourtail.unimined.minecraft.spi.ProductProvider
+import xyz.wagyourtail.unimined.minecraft.spi.ProviderContext
 import java.nio.file.Path
 
 /**
@@ -259,6 +273,104 @@ class EnvironmentClasspathWiringTest {
             .startsWith("classTweaker\tv1\tnamed"))
         assertTrue(gen.path.replace('\\', '/')
             .contains("unimined/access/main/jar/"))
+    }
+
+
+    @Test
+    fun `combine propagates auto-discovered resource access docs into child apply spec`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val resources = dir.resolve("src/main/resources")
+        java.nio.file.Files.createDirectories(resources)
+        val discovered = resources.resolve("emotes.classtweaker").toFile()
+        discovered.writeText(
+            "classTweaker\tv1\tnamed\n" +
+                    "accessible\tclass\ta/B\n"
+        )
+        ext.sourceSet("main") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+        }
+        ext.sourceSet("fabric") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+        }
+        ext.sourceSet("fabric").combineWith("main")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val parent = ext.sourceSet("main")
+        val child = ext.sourceSet("fabric")
+        assertTrue(parent.accessWideners.files.contains(discovered),
+            "the parent's own post-DSL scan must discover the resource doc")
+        assertTrue(child.accessWideners.files.contains(discovered),
+            "the combine edge must carry the parent's lazily-discovered doc")
+
+        val remap = project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+        val applySpecs = remap.sourceSet("fabric")
+            .contributedSteps(xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR)
+            .filterIsInstance<xyz.wagyourtail.unimined.remapper.access
+                    .ApplyClassTweakerStepSpec>()
+        val ownSpec = applySpecs.single { spec ->
+            spec.classTweakerFiles.from.containsAll(
+                listOf(child.accessWideners, child.accessTransformers,
+                    child.generatedAccessFiles))
+        }
+        assertTrue(ownSpec.classTweakerFiles.files.contains(discovered),
+            "the child's dev-artifact apply step must see the inherited scan result")
+        assertTrue(child.generatedAccessFiles.files.none {
+            it.name.startsWith("main-access")
+        }, "generated parent docs must not double-propagate as files")
+    }
+
+
+    @Test
+    fun `combine chain inherits access dsl recursively after later edge declarations`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.devNamespace.set("named")
+        ext.main.access { it.accessible("a/B") }
+        ext.sourceSet("common") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+        }
+        ext.sourceSet("fabric") {
+            it.version.set("1.20.1")
+            it.devNamespace.set("named")
+        }
+        // declare the child edge before the intermediate edge — the
+        // semantic chain must resolve at post-DSL materialization,
+        // not by snapshotting the intermediate env at call time
+        ext.sourceSet("fabric").combineWith("common")
+        ext.sourceSet("common").combineWith("main")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val generated = ext.sourceSet("fabric").generatedAccessFiles.files.single()
+        assertTrue(generated.readText().contains("accessible\tclass\ta/B"))
+    }
+
+
+    @Test
+    fun `loaderless yarn declarations gain the intermediary hop outside jarmod wiring`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.registry.register(YarnIntermediaryFakeProvider(project))
+        val env = ext.main
+        env.version.set("1.20.1")
+        env.provider.set("fake")
+        env.mappings {
+            it.yarn(1)
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val mavenSources = env.mappingsSpec.effectiveSources()
+            .filterIsInstance<xyz.wagyourtail.unimined.mapping.MappingsSpecImpl.Source.Maven>()
+            .map { it.notation }
+        assertTrue(mavenSources.any {
+            it.startsWith("net.fabricmc:intermediary:1.20.1")
+        }, "yarn needs its upstream intermediary hop: $mavenSources")
+        assertTrue(mavenSources.any { ":yarn:" in it })
     }
 
     @Test
@@ -543,4 +655,30 @@ class EnvironmentClasspathWiringTest {
         assertTrue(remapJar.archiveFile.get().asFile.name.endsWith("-shadow.jar"))
     }
 
+
+
+private class YarnIntermediaryFakeArtifacts(private val project: Project) : ProductArtifacts {
+    override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
+    override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
+        project.provider { emptyList() }
+    override val obfuscated: Provider<Boolean> = project.provider { true }
+    override val mappings: Provider<MappingTree> = project.provider { null }
+    override val namespaceMode: Provider<NamespaceMode> =
+        project.provider { NamespaceMode.REMAPPABLE }
+    override val capabilities = project.provider {
+        EnvironmentCapabilities(minecraftVersion = "1.20.1")
+    }
+    override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
+    override val extraDependencies = project.objects.fileCollection()
+    override val extraCompileSources = project.objects.fileCollection()
+    override val assets: Provider<AssetIndex> = project.provider { null }
+    override val launch: LaunchMetadata? = null
+}
+
+private class YarnIntermediaryFakeProvider(private val project: Project) : ProductProvider {
+    override val name = "fake"
+    override fun supports(spec: ProductSpec) = spec.version.version == "1.20.1"
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts =
+        YarnIntermediaryFakeArtifacts(project)
+}
 }
