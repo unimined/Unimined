@@ -40,6 +40,9 @@ dependency configurations.
   sibling envs are independent — `combineWith("other")` (optionally
   with `EnvironmentSection`s) composes one into another, and nested
   envs (`datagen()`/`gametest()`) inherit their parent implicitly.
+  Copies/combinations propagate `DEPENDENCIES` (the env's dependency
+  buckets) by default — see
+  [section propagation](../guide/multi-project.md#section-propagation-dependencies-included).
 - `side` selects `Side.CLIENT`/`SERVER`/`MERGED`
   ([example](../generated/side-server.gradle.kts) / [groovy](../generated/side-server.gradle));
   `Side.COMMON` is applied by `splitEnvironmentSourceSets()`

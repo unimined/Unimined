@@ -48,10 +48,19 @@ enum class EnvironmentSection {
          * Sections copied by `copyFrom(...)`/`from(...)` when no explicit
          * selection is supplied. Future optional sections deliberately are not
          * included until their owning plugin exists.
+         *
+         * [DEPENDENCIES] propagates by default: a copied/combined
+         * environment shares the source's dependency buckets (mod buckets
+         * and plain source-set buckets alike) since combined envs compile
+         * against the same dependency surface. Opt out by selecting
+         * sections explicitly. Across a project boundary the section is a
+         * documented no-op unless explicitly requested — configurations
+         * cannot extend each other cross-project, so dependency sharing
+         * there rides ordinary project dependencies.
          */
         @JvmField
         val COPY_DEFAULT: Set<EnvironmentSection> = setOf(
-            VERSION, SIDE, PROVIDER, LOADER, MAPPINGS, REMAP, TRANSFORMS
+            VERSION, SIDE, PROVIDER, LOADER, MAPPINGS, DEPENDENCIES, REMAP, TRANSFORMS
         )
 
         /**

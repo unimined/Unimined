@@ -60,7 +60,8 @@ internal class EnvironmentInheritance(private val env: MinecraftEnvironment) {
             EnvironmentCopyRequest(
                 source = source,
                 target = EnvironmentReference(project.path, env.environmentId),
-                sections = sections
+                sections = sections,
+                explicitSections = requireHandlers
             ),
             requireHandlers
         )

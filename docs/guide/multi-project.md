@@ -61,6 +61,29 @@ configuration and classpath:
 Sibling `sourceSet` envs at `minecraft {}` top level don't share —
 `combineWith("main")` is the way to layer the main env's config in.
 
+#### Section propagation: dependencies included
+
+`copyFrom`/`combineWith` copy `DEPENDENCIES` by default — a combined
+env extends the source's dependency buckets (all six `mod*` buckets
+and the plain `implementation`/`api`/`compileOnly`/`runtimeOnly`
+source-set buckets), so shared compile/runtime surfaces don't need
+redeclaration. Consequences:
+
+- the aux-env (`datagen`/`gametest`) explicit addition of
+  `DEPENDENCIES` is harmless duplication — the wiring dedupes;
+- `include` is deliberately **not** part of the section — embedded
+  jars never propagate (each env's packaging stands alone);
+- opt out per edge by selecting sections explicitly —
+  `combineWith("main") { sections(EnvironmentSection.MAPPINGS) }`
+  takes only mappings, `inheritParent.set(false)` drops the whole
+  implicit-parent edge;
+- across a project boundary (`combineWith(":common:main")`) the
+  section is a documented no-op: configurations cannot extend each
+  other cross-project, so dependency sharing there rides ordinary
+  project dependencies (`implementation(project(":common"))`) and
+  the source env's published variants. *Explicitly* requesting
+  `DEPENDENCIES` cross-project still hard-fails with that explanation.
+
 #### Packaging modes: what ships in the artifact
 
 `combineWith` always composes the source env's output onto the

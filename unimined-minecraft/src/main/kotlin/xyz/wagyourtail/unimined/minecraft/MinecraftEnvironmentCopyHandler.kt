@@ -70,6 +70,17 @@ internal class MinecraftEnvironmentCopyHandler(
         target: MinecraftEnvironment
     ) {
         if (request.source.projectPath != request.target.projectPath) {
+            if (!request.explicitSections) {
+                // DEPENDENCIES rode the default copy/combine section
+                // set across a project boundary — a documented no-op:
+                // configurations cannot extend each other across
+                // projects, so cross-project dependency sharing rides
+                // ordinary project dependencies instead. Only an
+                // *explicit* section selection is a user error worth
+                // failing (below) — failing the default would break
+                // every cross-project combine.
+                return
+            }
             extension.project.failProblem(
                 "env/cross-project-copy",
                 "Cannot copy dependency buckets across projects for " +
@@ -81,35 +92,30 @@ internal class MinecraftEnvironmentCopyHandler(
         }
         val source = extension.environment(request.source)
         extension.ensureModConfigurations(source)
-        val sourceImplementation = extension.project.configurations.getByName(
-            source.modImplementationConfigurationName
-        )
-        val sourceCompileOnly = extension.project.configurations.getByName(
-            source.modCompileOnlyConfigurationName
-        )
-        val sourceRuntime = extension.project.configurations.getByName(
-            source.modRuntimeOnlyConfigurationName
+        val sourceModBuckets = listOf(
+            source.modApiConfigurationName,
+            source.modImplementationConfigurationName,
+            source.modCompileOnlyConfigurationName,
+            source.modCompileOnlyApiConfigurationName,
+            source.modRuntimeOnlyConfigurationName,
+            source.modLocalRuntimeConfigurationName
+        ).map { extension.project.configurations.getByName(it) }
+        val targetModBucketNames = listOf(
+            target.modApiConfigurationName,
+            target.modImplementationConfigurationName,
+            target.modCompileOnlyConfigurationName,
+            target.modCompileOnlyApiConfigurationName,
+            target.modRuntimeOnlyConfigurationName,
+            target.modLocalRuntimeConfigurationName
         )
 
-        extension.project.configurations.matching {
-            it.name == target.modImplementationConfigurationName
-        }.all { targetConfiguration ->
-            if (sourceImplementation !in targetConfiguration.extendsFrom) {
-                targetConfiguration.extendsFrom(sourceImplementation)
-            }
-        }
-        extension.project.configurations.matching {
-            it.name == target.modCompileOnlyConfigurationName
-        }.all { targetConfiguration ->
-            if (sourceCompileOnly !in targetConfiguration.extendsFrom) {
-                targetConfiguration.extendsFrom(sourceCompileOnly)
-            }
-        }
-        extension.project.configurations.matching {
-            it.name == target.modRuntimeOnlyConfigurationName
-        }.all { targetConfiguration ->
-            if (sourceRuntime !in targetConfiguration.extendsFrom) {
-                targetConfiguration.extendsFrom(sourceRuntime)
+        sourceModBuckets.zip(targetModBucketNames).forEach { (sourceBucket, targetName) ->
+            extension.project.configurations.matching {
+                it.name == targetName
+            }.all { targetConfiguration ->
+                if (sourceBucket !in targetConfiguration.extendsFrom) {
+                    targetConfiguration.extendsFrom(sourceBucket)
+                }
             }
         }
 

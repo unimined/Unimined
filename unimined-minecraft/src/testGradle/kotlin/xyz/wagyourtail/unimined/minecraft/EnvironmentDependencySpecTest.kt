@@ -323,4 +323,143 @@ class EnvironmentDependencySpecTest {
         assertEquals(listOf("com.example:gmodlocal:1.0"), depCoords(project, "modLocalRuntime"))
     }
 
+    @Test
+    fun `copyFrom default sections propagate dependency buckets`() {
+        // DEPENDENCIES is in COPY_DEFAULT — a bare copyFrom shares the
+        // source's mod buckets with no explicit section selection
+        val project = project()
+        val ext = minecraft(project)
+        ext.main.version.set("1.0")
+        ext.sourceSet("child") {
+            it.inheritParent.set(false)
+            it.copyFrom("main")
+        }
+
+        evaluate(project)
+
+        for ((source, target) in listOf(
+            "modApi" to "childModApi",
+            "modImplementation" to "childModImplementation",
+            "modCompileOnly" to "childModCompileOnly",
+            "modCompileOnlyApi" to "childModCompileOnlyApi",
+            "modRuntimeOnly" to "childModRuntimeOnly",
+            "modLocalRuntime" to "childModLocalRuntime"
+        )) {
+            assertTrue(
+                project.configurations.getByName(source) in
+                        project.configurations.getByName(target).extendsFrom,
+                "$target should extend $source through the default copy")
+        }
+        // include is never propagated — not a classpath bucket
+        val childInclude = project.configurations.getByName("childInclude")
+        assertFalse(
+            project.configurations.getByName("include") in childInclude.extendsFrom,
+            "include must stay non-propagating")
+    }
+
+    @Test
+    fun `explicit section selection opts out of dependency propagation`() {
+        val project = project()
+        val ext = minecraft(project)
+        ext.main.version.set("1.0")
+        ext.sourceSet("child") {
+            it.inheritParent.set(false)
+            it.copyFrom("main", EnvironmentSection.MAPPINGS)
+        }
+
+        evaluate(project)
+
+        assertFalse(
+            project.configurations.getByName("modImplementation") in
+                    project.configurations.getByName("childModImplementation").extendsFrom,
+            "an explicit section selection without DEPENDENCIES must not " +
+                    "propagate the mod buckets")
+    }
+
+    @Test
+    fun `cross-project default copy skips dependency buckets without failing`() {
+        val root = ProjectBuilder.builder()
+            .withProjectDir(dir.resolve("root").toFile())
+            .withName("root")
+            .build()
+        val common = ProjectBuilder.builder()
+            .withParent(root)
+            .withName("common")
+            .withProjectDir(dir.resolve("common").toFile())
+            .build()
+        val consumer = ProjectBuilder.builder()
+            .withParent(root)
+            .withName("consumer")
+            .withProjectDir(dir.resolve("consumer").toFile())
+            .build()
+        common.plugins.apply("java")
+        consumer.plugins.apply("java")
+        common.plugins.apply(GradlePlugin::class.java)
+        consumer.plugins.apply(GradlePlugin::class.java)
+        consumer.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("fabric")
+
+        common.extensions.getByType(MinecraftExtension::class.java)
+            .main.version.set("1.0")
+        val consumerMinecraft = consumer.extensions.getByType(MinecraftExtension::class.java)
+        val fabric = consumerMinecraft.sourceSet("fabric") {
+            it.inheritParent.set(false)
+        }
+        fabric.combineWith(":common:main")
+
+        evaluate(consumer)
+
+        // configurations cannot extend each other across projects —
+        // the default-inherited section is a documented no-op rather
+        // than a hard failure
+        assertTrue(
+            consumer.configurations.getByName("fabricModImplementation")
+                .extendsFrom.none { it.name == "modImplementation" },
+            "cross-project default copies must not wire bucket inheritance")
+    }
+
+    @Test
+    fun `cross-project explicit DEPENDENCIES copy still fails`() {
+        val root = ProjectBuilder.builder()
+            .withProjectDir(dir.resolve("root").toFile())
+            .withName("root")
+            .build()
+        val common = ProjectBuilder.builder()
+            .withParent(root)
+            .withName("common")
+            .withProjectDir(dir.resolve("common").toFile())
+            .build()
+        val consumer = ProjectBuilder.builder()
+            .withParent(root)
+            .withName("consumer")
+            .withProjectDir(dir.resolve("consumer").toFile())
+            .build()
+        common.plugins.apply("java")
+        consumer.plugins.apply("java")
+        common.plugins.apply(GradlePlugin::class.java)
+        consumer.plugins.apply(GradlePlugin::class.java)
+        consumer.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("fabric")
+
+        common.extensions.getByType(MinecraftExtension::class.java)
+            .main.version.set("1.0")
+        val consumerMinecraft = consumer.extensions.getByType(MinecraftExtension::class.java)
+        val fabric = consumerMinecraft.sourceSet("fabric") {
+            it.inheritParent.set(false)
+        }
+
+        val failure = org.junit.jupiter.api.assertThrows<Exception> {
+            fabric.combineWith(":common:main", EnvironmentSection.DEPENDENCIES)
+            evaluate(consumer)
+        }
+        val chain = generateSequence<Throwable>(failure) { it.cause }
+            .mapNotNull { it.message }.joinToString("\n")
+        assertTrue(
+            "dependency buckets across projects" in chain,
+            "explicit cross-project DEPENDENCIES copies must fail with " +
+                    "the actionable error, got: $chain")
+    }
+
 }
