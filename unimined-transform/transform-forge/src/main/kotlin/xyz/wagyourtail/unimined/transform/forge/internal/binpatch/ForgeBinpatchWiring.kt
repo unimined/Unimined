@@ -147,7 +147,15 @@ internal fun contributeBinpatchStep(
         userdevBinpatchesKey(p, environment.side.get())
     })
     // in-process patcher — the userdev `binpatcher` tool spec
-    // (binarypatcher JVM + args) is not consulted
+    // (binarypatcher JVM + args) is not run; `baseType` stands in for
+    // its `--base-type` (userdev passes JOINED for the joined chain)
+    spec.baseType.set(environment.side.map {
+        when (it) {
+            Side.MERGED, Side.COMMON -> BinpatchesPackPatcher.PatchBase.JOINED
+            Side.CLIENT -> BinpatchesPackPatcher.PatchBase.CLIENT
+            Side.SERVER -> BinpatchesPackPatcher.PatchBase.SERVER
+        }
+    })
 
     // post-remap: FG's binpatches index the srg-renamed clean jar
     // (`net.minecraft:joined:<ver>:srg` — FG6 MinecraftUserRepo) —

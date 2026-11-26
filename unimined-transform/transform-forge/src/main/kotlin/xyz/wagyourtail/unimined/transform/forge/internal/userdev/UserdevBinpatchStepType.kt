@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
+import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
@@ -15,9 +16,9 @@ import org.gradle.api.tasks.Optional
 
 /**
  * `forge-binpatch` JAR-surface step — applies the userdev `binpatches`
- * archive (`joined.lzma`-format: lzma → flat zip of `.binpatch`
- * records) to the dev-Minecraft jar **in process** via
- * [BinpatchesPackPatcher] — no tool JVM spawn (the external
+ * archive (lzma → flat zip of `.binpatch` records, or a NeoForge
+ * `NFPATCHBUNDLE001` bundle) to the dev-Minecraft jar **in process**
+ * via [BinpatchesPackPatcher] — no tool JVM spawn (the external
  * `binarypatcher` exec dominated the cold dev transform).
  *
  * Patches verify checksums against [cleanJar] — FG builds them
@@ -45,6 +46,13 @@ abstract class UserdevBinpatchStepSpec : DevArtifactOnlyStepSpec {
     @get:Input
     @get:Optional
     abstract val binpatchesKey: Property<String>
+
+    /** The base jar the patches target — selects a NeoForge patch
+     *  bundle's entries, as binarypatcher's `--base-type` does. The
+     *  zip-record archives carry no base. */
+    @get:Input
+    @get:Optional
+    abstract val baseType: Property<BinpatchesPackPatcher.PatchBase>
 
     /**
      * The "clean" jar binpatches verify their checksums against —
@@ -82,13 +90,14 @@ class UserdevBinpatchStepType : RemapStepType<UserdevBinpatchStepSpec> {
         // `net.minecraft:joined:<ver>:srg`)
         val clean = spec.cleanJar.orNull?.asFile?.toPath() ?: input
         if (!Files.exists(output)) {
-            val patches = java.util.jar.JarFile(spec.installerJar.get().asFile).use { jar ->
-                val lzma = Files.createDirectories(c.workDir.resolve("forge-binpatch/in"))
-                    .resolve("binpatches.lzma")
-                val entry = jar.getJarEntry(spec.binpatchesKey.get())
-                    ?: throw org.gradle.api.GradleException(
-                        "no binpatches entry ${spec.binpatchesKey.get()} in " +
-                                "${spec.installerJar.get().asFile.name} — " +
+            val key = spec.binpatchesKey.get()
+            val archive = spec.installerJar.get().asFile
+            val lzma = Files.createDirectories(c.workDir.resolve("forge-binpatch/in"))
+                .resolve("binpatches.lzma")
+            java.util.jar.JarFile(archive).use { jar ->
+                val entry = jar.getJarEntry(key)
+                    ?: throw GradleException(
+                        "no binpatches entry $key in ${archive.name} — " +
                                 "split-side binpatching is not supported by " +
                                 "this loader's packaging"
                     )
@@ -99,23 +108,39 @@ class UserdevBinpatchStepType : RemapStepType<UserdevBinpatchStepSpec> {
                             java.nio.file.StandardCopyOption.REPLACE_EXISTING
                         )
                     }
-                BinpatchesPackPatcher.readZipPatches(lzma)
             }
             val slog = c.log.subLogger("forge-binpatch")
-            slog.info("read ${patches.size} joined binpatches")
             val total = AtomicLong()
             val gate = ProgressGate { elapsed, done ->
                 slog.info {
                     "binpatching ${clean.fileName}: $done/${total.get()} entries in ${elapsed}ms"
                 }
             }
-            BinpatchesPackPatcher.apply(
-                clean,
-                listOf(BinpatchesPackPatcher.SidePatchInput("joined", null, patches)),
-                output,
-                log = { slog.info(it) },
-                onProgress = { d, t -> total.set(t.toLong()); gate.tickTo(d.toLong()) }
-            )
+            val onProgress = { d: Int, t: Int -> total.set(t.toLong()); gate.tickTo(d.toLong()) }
+            if (BinpatchesPackPatcher.isPatchBundle(lzma)) {
+                val base = spec.baseType.orNull
+                    ?: throw GradleException(
+                        "binpatches entry $key in ${archive.name} is a patch bundle, " +
+                                "but the step has no base type to select its entries"
+                    )
+                val patches = BinpatchesPackPatcher.readPatchBundle(lzma, base)
+                slog.info("read ${patches.size} $base patches from $key")
+                BinpatchesPackPatcher.applyPatchBundle(
+                    clean, patches, output,
+                    log = { slog.info(it) },
+                    onProgress = onProgress
+                )
+            } else {
+                val patches = BinpatchesPackPatcher.readZipPatches(lzma)
+                slog.info("read ${patches.size} binpatches from $key")
+                BinpatchesPackPatcher.apply(
+                    clean,
+                    listOf(BinpatchesPackPatcher.SidePatchInput("joined", null, patches)),
+                    output,
+                    log = { slog.info(it) },
+                    onProgress = onProgress
+                )
+            }
         }
         addExtraInnerClassMappings(clean, output, c)
         output

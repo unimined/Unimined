@@ -5,11 +5,14 @@ import org.apache.commons.compress.compressors.lzma.LZMACompressorOutputStream
 import org.apache.commons.compress.harmony.pack200.Pack200PackerAdapter
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher.BundlePatch
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher.ClassPatch
+import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher.PatchBase
 import xyz.wagyourtail.unimined.transform.forge.internal.binpatch.BinpatchesPackPatcher.SidePatchInput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -257,6 +260,172 @@ class BinpatchesPackPatcherTest {
         assertEquals(0, entries(out)["META-INF/TEST.SF"]!!.size,
             "signature entries are emptied, not dropped")
         assertEquals("a", entries(out)["a/A.class"]!!.decodeToString())
+    }
+
+    @Test
+    fun `readZipPatches rejects an archive without binpatch records`() {
+        val notZip = lzma("not-zip.lzma", "NFPATCHBUNDLE001".toByteArray())
+        assertThrows(java.io.IOException::class.java) {
+            BinpatchesPackPatcher.readZipPatches(notZip)
+        }
+    }
+
+    // ---------- NeoForge patch bundles ----------
+
+    private val create = BundlePatch.Operation.CREATE.bits
+    private val modify = BundlePatch.Operation.MODIFY.bits
+    private val remove = BundlePatch.Operation.REMOVE.bits
+    private val client = PatchBase.CLIENT.mask
+    private val server = PatchBase.SERVER.mask
+    private val joined = PatchBase.JOINED.mask
+
+    /** One InstallerTools `PatchBundleWriter` entry: flags (operation |
+     *  bases), u2 path, checksum (MODIFY only), length, data. */
+    private class Entry(
+        val flags: Int, val path: String,
+        val checksum: Int = 0, val data: ByteArray = ByteArray(0)
+    )
+
+    private fun bundleBytes(bases: Int, vararg entries: Entry): ByteArray =
+        ByteArrayOutputStream().also { bos ->
+            DataOutputStream(bos).use { w ->
+                w.write("NFPATCHBUNDLE001".toByteArray())
+                w.writeInt(entries.size)
+                w.writeByte(bases)
+                for (e in entries) {
+                    w.writeByte(e.flags)
+                    w.writeShort(e.path.length); w.write(e.path.toByteArray())
+                    if (e.flags and 0x18 == modify) w.writeInt(e.checksum)
+                    w.writeInt(e.data.size); w.write(e.data)
+                }
+            }
+        }.toByteArray()
+
+    private var bundles = 0
+
+    private fun bundle(bases: Int, vararg entries: Entry): Path =
+        lzma("patches-${bundles++}.lzma", bundleBytes(bases, *entries))
+
+    @Test
+    fun `isPatchBundle tells bundles from zip archives`() {
+        assertTrue(BinpatchesPackPatcher.isPatchBundle(bundle(joined)))
+        val zip = lzma("joined.lzma", zipBytes(mapOf(
+            "nz.binpatch" to zipRecord("nz", "nz", false, 0, byteArrayOf(1)))))
+        assertFalse(BinpatchesPackPatcher.isPatchBundle(zip))
+    }
+
+    @Test
+    fun `readPatchBundle keeps the entries of the requested base`() {
+        val archive = bundle(client or server or joined,
+            Entry(modify or client or joined, "a/A.class", 7, byteArrayOf(1)),
+            Entry(modify or server, "a/A.class", 8, byteArrayOf(2)),
+            Entry(create or joined, "META-INF/neoforge.mods.toml", data = byteArrayOf(3)),
+            Entry(remove or client, "gone.txt"))
+        val joinedPatches = BinpatchesPackPatcher.readPatchBundle(archive, PatchBase.JOINED)
+        assertEquals(setOf("a/A.class", "META-INF/neoforge.mods.toml"), joinedPatches.keys)
+        val a = joinedPatches.getValue("a/A.class")
+        assertEquals(BundlePatch.Operation.MODIFY, a.operation)
+        assertEquals(7, a.baseChecksum)
+        assertArrayEquals(byteArrayOf(1), a.data)
+        val serverPatches = BinpatchesPackPatcher.readPatchBundle(archive, PatchBase.SERVER)
+        assertEquals(setOf("a/A.class"), serverPatches.keys)
+        assertEquals(8, serverPatches.getValue("a/A.class").baseChecksum)
+    }
+
+    @Test
+    fun `readPatchBundle rejects a bundle that does not declare the base`() {
+        val archive = bundle(client, Entry(create or client, "a.txt"))
+        assertThrows(IllegalArgumentException::class.java) {
+            BinpatchesPackPatcher.readPatchBundle(archive, PatchBase.JOINED)
+        }
+    }
+
+    @Test
+    fun `readPatchBundle rejects malformed bundles like PatchBundleReader`() {
+        val malformed = mapOf(
+            "signature" to lzma("sig.lzma", "NFPATCHBUNDLE002".toByteArray() + ByteArray(5)),
+            "entry count" to lzma("count.lzma", bundleBytes(joined).also {
+                // entry count field follows the 16-byte signature
+                it[16] = 0xFF.toByte()
+            }),
+            "entry type" to bundle(joined, Entry(0x18 or joined, "a.txt")),
+            "undeclared entry base" to bundle(joined, Entry(create or server, "a.txt")),
+            "REMOVE with data" to bundle(joined,
+                Entry(remove or joined, "a.txt", data = byteArrayOf(1))),
+            "path character" to bundle(joined, Entry(create or joined, "a\u0001.txt")),
+        )
+        for ((check, archive) in malformed) {
+            assertThrows(java.io.IOException::class.java, {
+                BinpatchesPackPatcher.readPatchBundle(archive, PatchBase.JOINED)
+            }, check)
+        }
+    }
+
+    @Test
+    fun `readPatchBundle rejects a second entry for a path in the base`() {
+        val archive = bundle(client or joined,
+            Entry(create or client or joined, "a.txt", data = byteArrayOf(1)),
+            Entry(create or joined, "a.txt", data = byteArrayOf(2)))
+        val e = assertThrows(java.io.IOException::class.java) {
+            BinpatchesPackPatcher.readPatchBundle(archive, PatchBase.JOINED)
+        }
+        assertTrue(e.message!!.contains("a.txt"), e.message)
+    }
+
+    @Test
+    fun `applyPatchBundle modifies creates and removes entries`() {
+        val a = "orig-bytes".toByteArray()
+        val aPatched = "patched-bytes!!".toByteArray()
+        val manifest = "Manifest-Version: 1.0\n".toByteArray()
+        val input = jar("in.jar", mapOf(
+            "META-INF/MANIFEST.MF" to manifest,
+            "a/A.class" to a,
+            "b/B.class" to "old-b".toByteArray(),
+            "gone.txt" to "gone".toByteArray(),
+            "keep.txt" to "keep".toByteArray()))
+        val patches = BinpatchesPackPatcher.readPatchBundle(bundle(joined,
+            Entry(modify or joined, "a/A.class", adler(a), gdiff(a, aPatched)),
+            Entry(create or joined, "b/B.class", data = "new-b".toByteArray()),
+            Entry(remove or joined, "gone.txt"),
+            Entry(create or joined, "META-INF/neoforge.mods.toml",
+                data = "modLoader=\"minecraft\"".toByteArray())),
+            PatchBase.JOINED)
+        val out = dir.resolve("out.jar")
+        BinpatchesPackPatcher.applyPatchBundle(input, patches, out)
+        val e = entries(out)
+        assertArrayEquals(aPatched, e["a/A.class"])
+        assertEquals("new-b", e["b/B.class"]!!.decodeToString())
+        assertTrue("gone.txt" !in e, "REMOVE drops the entry")
+        assertEquals("keep", e["keep.txt"]!!.decodeToString())
+        assertArrayEquals(manifest, e["META-INF/MANIFEST.MF"], "META-INF stays verbatim")
+        assertEquals("modLoader=\"minecraft\"",
+            e["META-INF/neoforge.mods.toml"]!!.decodeToString())
+    }
+
+    @Test
+    fun `applyPatchBundle checksum mismatch throws`() {
+        val input = jar("in.jar", mapOf("a/A.class" to "x".toByteArray()))
+        val patches = BinpatchesPackPatcher.readPatchBundle(bundle(joined,
+            Entry(modify or joined, "a/A.class", 0xDEAD, byteArrayOf(1))),
+            PatchBase.JOINED)
+        val e = assertThrows(java.io.IOException::class.java) {
+            BinpatchesPackPatcher.applyPatchBundle(input, patches, dir.resolve("out.jar"))
+        }
+        assertTrue(e.message!!.contains("a/A.class"), e.message)
+    }
+
+    @Test
+    fun `applyPatchBundle fails on a MODIFY or REMOVE target the base lacks`() {
+        val input = jar("in.jar", mapOf("keep.txt" to "keep".toByteArray()))
+        for (entry in listOf(
+            Entry(modify or joined, "a/A.class", 1, byteArrayOf(1)),
+            Entry(remove or joined, "gone.txt"))) {
+            val patches = BinpatchesPackPatcher.readPatchBundle(
+                bundle(joined, entry), PatchBase.JOINED)
+            assertThrows(IllegalStateException::class.java) {
+                BinpatchesPackPatcher.applyPatchBundle(input, patches, dir.resolve("out.jar"))
+            }
+        }
     }
 
     @Test
