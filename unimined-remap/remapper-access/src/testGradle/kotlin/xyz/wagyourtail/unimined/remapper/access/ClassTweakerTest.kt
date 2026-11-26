@@ -121,6 +121,27 @@ class ClassTweakerTest {
         assertTrue(at.fieldChanges("a/b/C", "state", "").isNotEmpty())
     }
 
+    /**
+     * NeoGradle's platform plugin writes raw script-declared AT entries
+     * to `_script_<project>.cfg` in userdev `ats/`; when no entries are
+     * declared the shipped file is empty (NeoForge 21.1.125). Both forms
+     * are AT documents despite not matching `*_at.cfg`.
+     */
+    @Test
+    fun `neogradle script at files parse as access transformers`() {
+        val empty = ClassTweaker.parse("_script_neoforge.cfg", "")
+        assertEquals("at", empty.format)
+        assertTrue(empty.accessTargets.isEmpty())
+
+        val withEntries = ClassTweaker.parse(
+            "_script_neoforge.cfg",
+            "public a/b/C\npublic a/b/C doIt()V\n"
+        )
+        assertEquals("at", withEntries.format)
+        assertTrue(withEntries.classChanges("a/b/C").isNotEmpty())
+        assertTrue(withEntries.methodChanges("a/b/C", "doIt", "()V").isNotEmpty())
+    }
+
     @Test
     fun `accessible class and method become public`() {
         val bytes = writeClass(access = Opcodes.ACC_PRIVATE or 0x200 /*super*/, privateMethod = true)

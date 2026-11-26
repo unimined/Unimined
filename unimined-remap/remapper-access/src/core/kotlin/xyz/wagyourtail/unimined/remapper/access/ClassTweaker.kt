@@ -313,21 +313,39 @@ class ClassTweaker private constructor(
             }
         }
 
+        /** FML-era `cls.member(desc)` joining vs modern
+         *  whitespace-separated syntax — content sniff, same dispatch as
+         *  `remap-access`'s autodetect. */
+        private fun atReader(text: String): FormatReader =
+            if (ATFormat.detect(text) == ATFormat.Kind.LEGACY)
+                LegacyATReader else ATReader
+
+        /**
+         * NeoGradle's platform packaging writes raw script-declared AT
+         * entries to `_script_<project>.cfg` beneath the userdev `ats/`
+         * prefix (NeoForge 21.1.x ships `_script_neoforge.cfg`). The
+         * name deliberately does not match the normal `*_at.cfg` /
+         * `accesstransformer` patterns, but the userdev spec makes every
+         * file under that prefix AT content — including the empty file
+         * emitted when the script declares no entries.
+         */
+        private fun isNeoGradleScriptAt(fileName: String): Boolean {
+            val baseName = fileName.substringAfterLast('/')
+            return baseName.startsWith("_script_") && baseName.endsWith(".cfg")
+        }
+
         /** Detect the directive format from the header and file name. */
         private fun detect(fileName: String, text: String): FormatReader {
             val buffer = Buffer().writeUtf8(text)
             return when {
                 CTReader.isFormat(fileName, buffer) -> CTReader
                 AWReader.isFormat(fileName, buffer) -> AWReader
-                ATReader.isFormat(fileName, buffer) ->
-                    // FML-era `cls.member(desc)` joining vs modern
-                    // whitespace-separated syntax — content sniff,
-                    // same dispatch as `remap-access`'s autodetect
-                    if (ATFormat.detect(text) == ATFormat.Kind.LEGACY)
-                        LegacyATReader else ATReader
+                ATReader.isFormat(fileName, buffer) ||
+                        isNeoGradleScriptAt(fileName) -> atReader(text)
                 else -> throw IllegalArgumentException(
                     "unrecognized access-file format in '$fileName' " +
-                            "(expected an accessWidener/classTweaker header or *_at.cfg name)"
+                            "(expected an accessWidener/classTweaker header, " +
+                            "an AT file name, or a NeoGradle _script_*.cfg file)"
                 )
             }
         }

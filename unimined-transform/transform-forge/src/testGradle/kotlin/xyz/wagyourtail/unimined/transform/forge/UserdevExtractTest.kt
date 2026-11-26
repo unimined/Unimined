@@ -1,13 +1,19 @@
 package xyz.wagyourtail.unimined.transform.forge
 
 import kotlinx.serialization.json.Json
+import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
+import xyz.wagyourtail.unimined.transform.forge.internal.installer.ForgeInstallerProbe
+import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevExtract
+import xyz.wagyourtail.unimined.transform.forge.internal.userdevAts
+import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -55,6 +61,50 @@ class UserdevExtractTest {
         assertEquals(
             "public-f c d",
             dir.resolve("cache/ats/forge_at.cfg").readText()
+        )
+    }
+
+    /**
+     * NeoForge 21.1.125 ships `ats/_script_neoforge.cfg` as a zero-byte
+     * file. NeoGradle generates that name for raw script-declared AT
+     * entries, so the userdev `ats/` sweep must be able to consume it as
+     * AT content even when the placeholder carries no entries.
+     */
+    @Test
+    fun `userdevAts script cfg files parse as access transformers`() {
+        val jar = jar(
+            "neoforge-userdev.jar", mapOf(
+                "config.json" to """{"mcp":"net.neoforged:neoform:1.21.1-x@zip","ats":"ats/"}""",
+                "ats/_script_neoforge.cfg" to "",
+                "ats/accesstransformer.cfg" to "public a/b/C"
+            )
+        )
+        val descriptor = LoaderRegistry.resolveBuiltin("neoforge")!!
+        val profile = ForgeInstallerProbe.inspect(jar)
+        val resolved = ResolvedForge(
+            descriptor, profile,
+            "net.neoforged:neoforge:21.1.125:userdev", jar
+        )
+        val project = ProjectBuilder.builder()
+            .withProjectDir(dir.resolve("project").toFile())
+            .build()
+
+        val extracted = userdevAts(
+            project, project.provider { resolved }, dir.resolve("cache")
+        ).get()
+        assertEquals(
+            setOf("_script_neoforge.cfg", "accesstransformer.cfg"),
+            extracted.map { it.fileName.toString() }.toSet()
+        )
+        val parsed = extracted.associate {
+            it.fileName.toString() to ClassTweaker.parse(
+                it.fileName.toString(), it.readText(), mapOf("source" to "mojmap")
+            )
+        }
+        assertTrue(parsed.getValue("_script_neoforge.cfg").accessTargets.isEmpty())
+        assertTrue(
+            parsed.getValue("accesstransformer.cfg")
+                .classChanges("a/b/C").isNotEmpty()
         )
     }
 
