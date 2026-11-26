@@ -133,23 +133,26 @@ internal object FabricDependencyContributions {
         // upstreamMappingChannel route through the env's own
         // mapping DSL, captured as defaultSources
         environment.mappingsSpec.deferredDefaultSources += {
+            // loader/channel guards first — `obfuscated` resolves the
+            // env spec and fails outright on loaderless versionless
+            // envs (e.g. a `main` shared-code env) that only inherit
+            // this source through combineWith
+            val spec = environment.loaderSpec.orNull
+            val descriptor = spec?.name
+                ?.let { LoaderRegistry.resolveBuiltin(it) }
+                ?.takeIf { it.family == "fabric" }
+            val channel = descriptor?.upstreamMappingChannel
             // unobfuscated mc (26.x) has no obfuscation hop to map —
             // dev namespace is official, skip the whole intermediary hop
-            if (!environment.obfuscated.get() ||
+            if (channel == null ||
+                !environment.obfuscated.get() ||
                 environment.mappingsSpec.customIntermediaries.get()
             ) emptyList()
-            else {
-                val spec = environment.loaderSpec.orNull
-                val descriptor = spec?.name
-                    ?.let { LoaderRegistry.resolveBuiltin(it) }
-                    ?.takeIf { it.family == "fabric" }
-                when (val channel = descriptor?.upstreamMappingChannel) {
-                    null -> emptyList()
-                    "calamus" -> collectDeclared { calamus() }
-                    else -> throw org.gradle.api.GradleException(
-                        "unknown upstreamMappingChannel '$channel'"
-                    )
-                }
+            else when (channel) {
+                "calamus" -> collectDeclared { calamus() }
+                else -> throw org.gradle.api.GradleException(
+                    "unknown upstreamMappingChannel '$channel'"
+                )
             }
         }
         val intermediary = project.configurations.create(
@@ -158,17 +161,19 @@ internal object FabricDependencyContributions {
             conf.isCanBeConsumed = false
             conf.isCanBeResolved = true
             conf.withDependencies { deps ->
-                if (!environment.obfuscated.get() ||
-                    environment.mappingsSpec.customIntermediaries.get()
-                ) return@withDependencies
+                // family check before `obfuscated` — reading it forces
+                // spec() on loaderless versionless envs
                 val descriptor = loaderSpec.orNull?.name
                     ?.let { LoaderRegistry.resolveBuiltin(it) }
                     ?.takeIf { it.family == "fabric" }
-                if (descriptor?.upstreamMappingChannel == null) {
-                    val coord = descriptor?.intermediaryCoords?.invoke(version.get())
-                    if (coord != null) {
-                        deps.add(dependencies.create(coord))
-                    }
+                if (descriptor == null ||
+                    descriptor.upstreamMappingChannel != null ||
+                    !environment.obfuscated.get() ||
+                    environment.mappingsSpec.customIntermediaries.get()
+                ) return@withDependencies
+                val coord = descriptor.intermediaryCoords?.invoke(version.get())
+                if (coord != null) {
+                    deps.add(dependencies.create(coord))
                 }
             }
         }
@@ -177,13 +182,15 @@ internal object FabricDependencyContributions {
         val files = project.files(project.provider {
             val spec = loaderSpec.orNull
             val descriptor = spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }
-            // unobfuscated mc needs no intermediary jar at all
-            if (!environment.obfuscated.get() ||
-                environment.mappingsSpec.customIntermediaries.get() ||
-                descriptor?.family != "fabric" ||
-                descriptor.upstreamMappingChannel != null) {
-                // upstreamMappingChannel rows contribute Maven sources via
-                // defaultSources instead — no coord jar to resolve here
+            // family/channel guards first — `obfuscated` resolves the
+            // env spec and fails on loaderless versionless envs
+            if (descriptor?.family != "fabric" ||
+                descriptor.upstreamMappingChannel != null ||
+                !environment.obfuscated.get() ||
+                environment.mappingsSpec.customIntermediaries.get()) {
+                // unobfuscated mc needs no intermediary jar at all;
+                // upstreamMappingChannel rows contribute Maven sources
+                // via defaultSources instead — no coord jar here
                 emptyList()
             } else {
                 listOf(intermediaryJar.singleFile)

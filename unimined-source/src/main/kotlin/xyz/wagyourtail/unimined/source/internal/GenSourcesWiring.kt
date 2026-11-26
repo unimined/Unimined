@@ -79,6 +79,11 @@ internal object GenSourcesWiring {
         val source = project.extensions.getByType(SourceExtension::class.java)
         val environmentId = environment.environmentId
 
+        // versionless envs are inert — a shared-code source set that was
+        // never a Minecraft environment in 1.x (e.g. Omnilook's `main`)
+        // has no artifact to decompile, so no gen task is wired
+        if (!environment.version.isPresent) return
+
         val devView = project.configurations.getByName(
             environment.minecraftDevViewName
         )

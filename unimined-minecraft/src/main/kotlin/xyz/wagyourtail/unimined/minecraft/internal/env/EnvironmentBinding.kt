@@ -142,6 +142,9 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
         // added lazily — the coordinate needs the script-final spec and
         // the marker stub is (re)written alongside the dependency
         minecraftBucket.withDependencies { deps ->
+            // versionless envs (shared-code `main`) are inert — no
+            // product, no stub jar
+            if (!environment.version.isPresent) return@withDependencies
             deps.add(project.dependencies.create(ext.stubRepo.stubDependencyNotation(environment)))
             // obfuscated aux artifacts (e.g. the Realms jar — issue #27)
             // remap into the same views as the MC jar. They must enter
@@ -177,6 +180,7 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             isCanBeResolved = true
         }
         librariesBucket.withDependencies { deps ->
+            if (!environment.version.isPresent) return@withDependencies
             deps.addAll(
                 ext.artifacts(environmentId).get().libraries.get()
                     .filter { dep -> environment.libraryFilters.all { it(dep) } }
@@ -208,6 +212,7 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             conf.isCanBeResolved = true
         }
         declaredLibraries.withDependencies { deps ->
+            if (!environment.version.isPresent) return@withDependencies
             deps.addAll(
                 ext.artifacts(environmentId).get().libraries.get()
                     .filter { dep -> environment.libraryFilters.all { it(dep) } }

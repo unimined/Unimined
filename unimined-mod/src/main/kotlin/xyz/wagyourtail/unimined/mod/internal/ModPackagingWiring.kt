@@ -32,6 +32,15 @@ internal object ModPackagingWiring {
         // verb<Env>Noun + `gen` abbreviation (repo-wide convention) —
         // `gen<Fabric>ModMetadata`; the pre-convention
         // `generate<Env>ModMetadata` names stay as deprecated aliases
+
+        // versionless envs are inert — a shared-code source set that was
+        // never a Minecraft environment in 1.x (e.g. Omnilook's `main`)
+        // emits no mod metadata; its consumers pull classes, not the
+        // jar. The check lives inside the task action (like auxEnv):
+        // `version` is set in the DSL *after* `environments.all` fires
+        // this binding, so it's never present at wire time even for
+        // real envs — and a skipped task would leave the `.mf` input
+        // below unmaterialized, breaking the jar's input snapshot.
         val envCap = environmentId.cap()
         val taskName = if (environmentId == "main") {
             "genModMetadata"
@@ -109,9 +118,16 @@ internal object ModPackagingWiring {
             t.resourceDirs.from(project.provider {
                 sourceSet.resources.srcDirs - outDir.get().asFile
             })
-            // own classes + declared gametest envs' classes — resolved
-            // lazily since `gametest {}` may be configured after this
-            // env's wiring runs
+            // combineWith envs' source dirs too — a shared-code env
+            // (e.g. Omnilook's `main`) holds the mod's mixin configs /
+            // manual manifest while discovery belongs to the composed
+            // env; versionless parents emit no metadata of their own.
+            // `combinedSourceDirs`, not `combinedSources` — the scan
+            // relativizes files against directory roots
+            t.resourceDirs.from(environment.combinedSourceDirs)
+            // own classes + declared gametest envs' classes + combineWith
+            // envs' outputs — the mod's compiled entrypoints can live in
+            // a shared-code parent the same way resources can
             t.classesDirs.from(project.provider {
                 val dirs = LinkedHashSet(sourceSet.output.classesDirs.files)
                 val sourceSets = project.extensions
@@ -122,6 +138,7 @@ internal object ModPackagingWiring {
                 }
                 dirs
             })
+            t.classesDirs.from(environment.combinedOutputs)
             // the dirs above are compileJava outputs — Gradle can't
             // infer the producer through the provider, so declare it
             // (implicit-input usage is a hard failure on Gradle 9).

@@ -216,6 +216,53 @@ class EnvironmentClasspathWiringTest {
     }
 
     @Test
+    fun `modCompileOnly reaches compileClasspath-transformed-view but not runtimeClasspath`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // versionless env — inert product artifacts: the MC views
+        // resolve empty and the env is an identity remap, so mod views
+        // pass file deps through untransformed (the same pick the
+        // classpath composition makes)
+        val env = ext.main
+        env.devNamespace.set("official")
+        env.modSourceNamespaces.set(listOf("official"))
+
+        fun stubJar(name: String): java.io.File {
+            val jar = dir.resolve(name).toFile()
+            jar.writeBytes(byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18)))
+            return jar
+        }
+        val compileJar = stubJar("compile-mod.jar")
+        val implJar = stubJar("impl-mod.jar")
+        val runtimeJar = stubJar("runtime-mod.jar")
+        env.dependencies {
+            it.modCompileOnly(project.files(compileJar))
+            it.modImplementation(project.files(implJar))
+            it.modRuntimeOnly(project.files(runtimeJar))
+        }
+
+        val sourceSets = project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java)
+        val main = sourceSets.getByName("main")
+        val compileFiles = main.compileClasspath.files
+        val runtimeFiles = main.runtimeClasspath.files
+
+        assertTrue(compileJar in compileFiles,
+            "modCompileOnly must land on the compile classpath")
+        assertTrue(implJar in compileFiles,
+            "modImplementation must land on the compile classpath")
+        assertFalse(runtimeJar in compileFiles,
+            "modRuntimeOnly must stay off the compile classpath")
+
+        assertFalse(compileJar in runtimeFiles,
+            "modCompileOnly must NEVER land on the runtime classpath")
+        assertTrue(implJar in runtimeFiles,
+            "modImplementation must land on the runtime classpath")
+        assertTrue(runtimeJar in runtimeFiles,
+            "modRuntimeOnly must land on the runtime classpath")
+    }
+
+    @Test
     fun `direct sources view resolves a dep's published -sources jar`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val module = dir.resolve("repo/com/example/mod/1.0").toFile()

@@ -1344,13 +1344,14 @@ internal object EnvironmentClasspathWiring {
         // remap. `check` only depends on it when the env declares
         // access docs — resolving the dev MC view materializes the
         // whole pipeline, so an unconditional dep would cost every
-        // `check` a Minecraft build for nothing
-        val hasOwnAccessDecls = specs.any {
+        // `check` a Minecraft build for nothing. A versionless env
+        // has no dev artifact at all — nothing to validate against
+        val hasOwnAccessDecls = environment.version.isPresent && (specs.any {
             it.rules.isNotEmpty() || it.namedFiles.isNotEmpty() ||
                     it.files.isNotEmpty()
         } || environment.accessFileOverrides.get().isNotEmpty() ||
                 environment.accessWideners.from.isNotEmpty() ||
-                environment.accessTransformers.from.isNotEmpty()
+                environment.accessTransformers.from.isNotEmpty())
         if (hasOwnAccessDecls) {
             val devView = project.configurations.getByName(
                 environment.minecraftDevViewName)

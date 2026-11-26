@@ -112,7 +112,10 @@ abstract class GenerateModMetadataTask
     @get:Input
     abstract val auxEnv: Property<Boolean>
 
+    /** Absent on versionless (shared-code) envs — [generate] writes
+     *  the empty outputs and returns before reading it. */
     @get:Input
+    @get:Optional
     abstract val minecraftVersion: Property<String>
 
     @get:Input
@@ -259,9 +262,13 @@ abstract class GenerateModMetadataTask
         val outputRoot = outputDir.get().asFile
         check(outputRoot.deleteRecursively()) { "unimined: could not clear $outputRoot" }
         Files.createDirectories(outputRoot.toPath())
-        if (auxEnv.get()) {
-            // still produce the file outputs — the jar manifest merge
-            // and processResources exclusion read them unconditionally
+        if (!minecraftVersion.isPresent || auxEnv.get()) {
+            // inert envs — versionless shared-code sets (Omnilook's
+            // `main`) and aux (datagen/gametest) envs emit nothing,
+            // but still produce the file outputs: the jar manifest
+            // merge and processResources exclusion read them
+            // unconditionally. Version is checked at execution — the
+            // DSL sets it after the env binding fires.
             Files.createDirectories(manifestFile.get().asFile.toPath().parent)
             Files.write(
                 manifestFile.get().asFile.toPath(),

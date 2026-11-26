@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.minecraft.spi.ArtifactKey
 import xyz.wagyourtail.unimined.minecraft.spi.ProductArtifacts
 import xyz.wagyourtail.unimined.minecraft.internal.RuntimeProductSpec
+import xyz.wagyourtail.unimined.minecraft.internal.env.InertProductArtifacts
 import xyz.wagyourtail.unimined.mapping.MappingExtension
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.mapping.processors.BytecodeFillPostProcessor
@@ -129,6 +130,16 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
     internal fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
         synchronized(resolvedEnvironments) {
             resolvedEnvironments.getOrPut(environment.environmentId) {
+                if (!environment.version.isPresent) {
+                    // versionless env — a source set that was never
+                    // configured as a minecraft env (shared code pulled
+                    // into real envs via combineWith, e.g. Omnilook's
+                    // `main`). spec() would fail on the missing version,
+                    // and there is no product to probe anyway — resolve
+                    // inertly so the env behaves like the plain source
+                    // set 1.x left it as.
+                    return@getOrPut InertProductArtifacts(project)
+                }
                 val spec = environment.spec()
                 // loader-aware providers (buildtools claims
                 // craftbukkit/spigot server artifacts) negotiate on the
