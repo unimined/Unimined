@@ -307,20 +307,27 @@ internal object ForgeEnvironmentWiring {
         contributeMinecraftModuleName(project, environment, resolved)
         contributeDevSources(project, environment, resolved)
         contributeRunMutators(project, environment, resolved)
+        val remapExt = project.extensions.getByType(RemapExtension::class.java)
+        // LaunchWrapper-era forge coremods implement IClassTransformer
+        // and hardcode descriptors they later hand to ASM — without the
+        // transformer-scoped ldc rewrite those artifacts boot-crash, so
+        // this is a correctness pre-seed: it applies even when the user
+        // declared `modArtifacts {}` for unrelated reasons, but a
+        // deliberate `disableLaunchwrapperTransformerLdcRemap()` opt-out
+        // is respected. Arbitrary mod strings stay untouched
+        // (NilLoader's runtime protocol hazard).
+        remapExt.sourceSet(environment.environmentId)
+            .modArtifactsCorrectnessConventions += org.gradle.api.Action { spec ->
+                spec.preseedLaunchwrapperTransformerLdcRemap()
+            }
         // neoforge >1.20.1 (real neoforge): prod runs at mojmap — the
         // searge-era refmap is dead weight. 1.x forced
         // `disableRefmap()` on the remap task; here it lands as a
-        // convention on the auto-appended ModArtifactsStepSpec — an
-        // explicit `modArtifacts {}` declaration overrides it
-        project.extensions.getByType(RemapExtension::class.java)
-            .sourceSet(environment.environmentId)
+        // convenience convention on the auto-appended
+        // ModArtifactsStepSpec — an explicit `modArtifacts {}`
+        // declaration takes full control of it
+        remapExt.sourceSet(environment.environmentId)
             .modArtifactsConventions += org.gradle.api.Action { spec ->
-                // LaunchWrapper-era forge coremods implement IClassTransformer
-                // and hardcode descriptors they later hand to ASM. Scope the
-                // ldc pass to that binary contract; arbitrary mod strings stay
-                // untouched (NilLoader's runtime protocol hazard).
-                spec.enableLaunchwrapperTransformerLdcRemap()
-
                 val r = resolved.orNull ?: return@Action
                 if (r.descriptor.id == "neoforge" &&
                     environment.version.get() != "1.20.1") {

@@ -125,6 +125,91 @@ class ModArtifactsStepSpecTest {
         assertFalse(spec.remapClassNameLdcs)
     }
 
+    // ---------- correctness-flag tri-state ----------
+
+    private val ldcFlag = ModArtifactsStepSpec.CorrectnessFlag.LAUNCHWRAPPER_TRANSFORMER_LDCS
+
+    @Test
+    fun `correctness flag starts never-mentioned and preseed applies`() {
+        val spec = ModArtifactsStepSpec()
+        assertEquals(emptySet<ModArtifactsStepSpec.CorrectnessFlag>(),
+            spec.explicitlyConfiguredCorrectnessFlags,
+            "an untouched spec carries no explicit correctness configuration")
+        spec.preseedLaunchwrapperTransformerLdcRemap()
+        assertTrue(spec.remapLaunchwrapperTransformerLdcs,
+            "pre-seed must apply when the user never mentioned the flag")
+        assertEquals(emptySet<ModArtifactsStepSpec.CorrectnessFlag>(),
+            spec.explicitlyConfiguredCorrectnessFlags,
+            "a pre-seed write must not masquerade as a user configuration")
+    }
+
+    @Test
+    fun `explicit enable is recorded and preseed stays convergent`() {
+        val spec = ModArtifactsStepSpec()
+        spec.enableLaunchwrapperTransformerLdcRemap()
+        assertTrue(ldcFlag in spec.explicitlyConfiguredCorrectnessFlags,
+            "the enable verb is a user-strength write")
+        spec.preseedLaunchwrapperTransformerLdcRemap()
+        assertTrue(spec.remapLaunchwrapperTransformerLdcs,
+            "pre-seed on an explicitly-enabled flag is a convergent no-op")
+    }
+
+    @Test
+    fun `explicit disable is recorded and preseed is a no-op`() {
+        val spec = ModArtifactsStepSpec()
+        spec.disableLaunchwrapperTransformerLdcRemap()
+        assertTrue(ldcFlag in spec.explicitlyConfiguredCorrectnessFlags,
+            "the disable verb is a user-strength write")
+        spec.preseedLaunchwrapperTransformerLdcRemap()
+        assertFalse(spec.remapLaunchwrapperTransformerLdcs,
+            "a deliberate user opt-out must survive loader correctness pre-seeds")
+    }
+
+    @Test
+    fun `direct property assignment is a user-strength write`() {
+        val explicitOn = ModArtifactsStepSpec()
+        explicitOn.remapLaunchwrapperTransformerLdcs = true
+        assertTrue(ldcFlag in explicitOn.explicitlyConfiguredCorrectnessFlags)
+
+        val explicitOff = ModArtifactsStepSpec()
+        explicitOff.remapLaunchwrapperTransformerLdcs = false
+        assertTrue(ldcFlag in explicitOff.explicitlyConfiguredCorrectnessFlags,
+            "even a redundant-value assignment is an explicit user choice")
+        explicitOff.preseedLaunchwrapperTransformerLdcRemap()
+        assertFalse(explicitOff.remapLaunchwrapperTransformerLdcs,
+            "explicit false assignment opts out of the pre-seed")
+    }
+
+    @Test
+    fun `preseed is idempotent across repeated materializations`() {
+        val spec = ModArtifactsStepSpec()
+        spec.preseedLaunchwrapperTransformerLdcRemap()
+        spec.preseedLaunchwrapperTransformerLdcRemap()
+        assertTrue(spec.remapLaunchwrapperTransformerLdcs)
+        assertEquals(emptySet<ModArtifactsStepSpec.CorrectnessFlag>(),
+            spec.explicitlyConfiguredCorrectnessFlags,
+            "repeated pipeline materialization must not corrupt explicitness tracking")
+    }
+
+    @Test
+    fun `correctness explicitness survives java serialization`() {
+        val disabled = ModArtifactsStepSpec()
+        disabled.disableLaunchwrapperTransformerLdcRemap()
+        val copy = roundTrip(disabled)
+        assertTrue(ldcFlag in copy.explicitlyConfiguredCorrectnessFlags,
+            "explicitness state must ride the serialized pipeline snapshot — " +
+            "config-cache reuse must not reopen the door to pre-seeds")
+        copy.preseedLaunchwrapperTransformerLdcRemap()
+        assertFalse(copy.remapLaunchwrapperTransformerLdcs,
+            "a deserialized explicit opt-out still blocks the pre-seed")
+
+        val untouched = roundTrip(ModArtifactsStepSpec())
+        assertEquals(emptySet<ModArtifactsStepSpec.CorrectnessFlag>(),
+            untouched.explicitlyConfiguredCorrectnessFlags)
+        untouched.preseedLaunchwrapperTransformerLdcRemap()
+        assertTrue(untouched.remapLaunchwrapperTransformerLdcs)
+    }
+
     // ---------- serialization ----------
 
     private fun roundTrip(spec: ModArtifactsStepSpec): ModArtifactsStepSpec {

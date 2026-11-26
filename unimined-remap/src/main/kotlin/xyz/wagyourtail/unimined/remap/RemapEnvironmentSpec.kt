@@ -34,12 +34,37 @@ class RemapEnvironmentSpec internal constructor(
 
     private val surfaces = mutableMapOf<RemapSurface, RemapSurfaceSpec>()
 
-    /** Transform-contributed conventions applied to the auto-appended
-     *  [ModArtifactsStepSpec] default (e.g. neoforge >1.20.1 forcing
-     *  `emitRefmap = false` — 1.x `NeoForgedMinecraftTransformer.
-     *  configureRemapJar`). Explicit `modArtifacts {}` declarations
-     *  take full control — conventions never rewrite them. */
+    /** Transform-contributed *convenience* conventions applied only to
+     *  the auto-appended [ModArtifactsStepSpec] default (e.g. neoforge
+     *  >1.20.1 forcing `emitRefmap = false` — 1.x
+     *  `NeoForgedMinecraftTransformer.configureRemapJar`). Explicit
+     *  `modArtifacts {}` declarations take full control of convenience
+     *  knobs — these conventions never touch a user-declared spec.
+     *  Loader-critical correctness flags belong in
+     *  [modArtifactsCorrectnessConventions] instead. */
     val modArtifactsConventions: MutableList<Action<ModArtifactsStepSpec>> =
+        mutableListOf()
+
+    /** Transform-contributed *correctness* conventions for
+     *  [ModArtifactsStepSpec] correctness flags
+     *  ([ModArtifactsStepSpec.CorrectnessFlag] — e.g. legacy forge's
+     *  LaunchWrapper-transformer `ldc` rewrite, without which coremod
+     *  artifacts boot-crash). Unlike [modArtifactsConventions], these
+     *  have true convention semantics: they are applied to the
+     *  auto-appended default AND pre-seed explicit user `modArtifacts
+     *  {}` declarations — declaring the step for unrelated reasons must
+     *  not silently drop a boot-critical rewrite.
+     *
+     *  Users keep the final word per flag: actions in this list must
+     *  write through the spec's `preseed*` methods (e.g.
+     *  [ModArtifactsStepSpec.preseedLaunchwrapperTransformerLdcRemap]),
+     *  which are no-ops once the user explicitly enabled or disabled
+     *  the flag — never through the user-strength `enable*` verbs or
+     *  direct property assignment, which would clobber deliberate
+     *  opt-outs. Pre-seeds must also be convergent: the same spec
+     *  object materializes through several pipeline projections, so
+     *  each pre-seed is idempotent by contract. */
+    val modArtifactsCorrectnessConventions: MutableList<Action<ModArtifactsStepSpec>> =
         mutableListOf()
 
     /** Plugin-registered DSL verb factories — populated by

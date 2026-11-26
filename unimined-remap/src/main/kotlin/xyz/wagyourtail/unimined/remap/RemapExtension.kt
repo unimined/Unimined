@@ -356,20 +356,37 @@ abstract class RemapExtension @Inject constructor(
      * configs + refmaps, JMA refmaps) when [steps] remaps namespaces on
      * the JAR surface — engine-agnostic, so a `remap("tiny")` override
      * or remapped dependency view gets the same treatment. No-op when
-     * the user declared the step explicitly or the pipeline carries no
-     * namespace remap (identity views stay untouched).
+     * the pipeline carries no namespace remap (identity views stay
+     * untouched).
+     *
+     * When the user declared the step explicitly, no second step is
+     * appended and convenience conventions stay off it — explicit
+     * means full control for those — but loader-critical correctness
+     * conventions still pre-seed the declared spec in place: their
+     * `preseed*` writes are no-ops wherever the user explicitly
+     * configured the flag, and convergent/idempotent where they do
+     * apply, so re-materializing the pipeline is stable (see
+     * [RemapEnvironmentSpec.modArtifactsCorrectnessConventions]).
      */
     private fun withModArtifactsStep(
         environment: RemapEnvironmentSpec,
         steps: List<StepSpec>, surface: RemapSurface
-    ): List<StepSpec> =
-        if (surface == RemapSurface.JAR &&
-            steps.any { it is RemapStepSpec } &&
-            steps.none { it is ModArtifactsStepSpec }
-        ) listOf(ModArtifactsStepSpec().also { spec ->
+    ): List<StepSpec> {
+        if (surface != RemapSurface.JAR || steps.none { it is RemapStepSpec }) {
+            return emptyList()
+        }
+        val declared = steps.filterIsInstance<ModArtifactsStepSpec>()
+        if (declared.isNotEmpty()) {
+            declared.forEach { spec ->
+                environment.modArtifactsCorrectnessConventions.forEach { it.execute(spec) }
+            }
+            return emptyList()
+        }
+        return listOf(ModArtifactsStepSpec().also { spec ->
+            environment.modArtifactsCorrectnessConventions.forEach { it.execute(spec) }
             environment.modArtifactsConventions.forEach { it.execute(spec) }
         })
-        else emptyList()
+    }
 
     /**
      * Create a resolvable [Configuration] that resolves [source]'s

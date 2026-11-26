@@ -457,7 +457,10 @@ class ForgeEnvironmentWiringTest {
     /** LaunchWrapper-era forge coremods implement `IClassTransformer` and
      *  carry descriptor literals used as bytecode-construction inputs. The
      *  forge environment opts dependency mod artifacts into that contract-
-     *  scoped channel while the global modArtifacts default remains off. */
+     *  scoped channel while the global modArtifacts default remains off.
+     *  The opt-in is correctness-critical, so it lands in the
+     *  correctness-convention list (pre-seeds even explicit `modArtifacts
+     *  {}` declarations) — not the convenience list. */
     @Test
     fun `forge mod artifacts enable launchwrapper transformer ldc rewrite`() {
         project = project()
@@ -469,10 +472,18 @@ class ForgeEnvironmentWiringTest {
         (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
 
         val spec = xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec()
-        project.extensions.getByType(
+        val env = project.extensions.getByType(
             xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
             .sourceSet("forge")
-            .modArtifactsConventions.forEach { it.execute(spec) }
+        assertTrue(env.modArtifactsConventions.isEmpty() ||
+            env.modArtifactsConventions.none { action ->
+                val probe = xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec()
+                action.execute(probe)
+                probe.remapLaunchwrapperTransformerLdcs
+            },
+            "the ldc correctness pre-seed must not ride the convenience list — " +
+            "it would be dropped by explicit modArtifacts declarations")
+        env.modArtifactsCorrectnessConventions.forEach { it.execute(spec) }
         assertTrue(spec.remapLaunchwrapperTransformerLdcs,
             "forge dependency artifacts must opt into transformer-scoped ldc rewriting")
         assertTrue(spec.remapClassNameLdcs,

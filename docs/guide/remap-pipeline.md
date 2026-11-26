@@ -52,8 +52,55 @@ remap leaves untouched:
 The step is engine-agnostic — it applies identically when `remap` is
 overridden with `remap("tiny")`, and to remapped dependency views, so
 mod deps get mixin refmaps for the dev runtime. Declare it explicitly
-with `jar { modArtifacts() }` only to pin an engine or ordering; it is
-skipped on identity remaps and on jars without the relevant resources.
+with `jar { modArtifacts() }` to configure its knobs or pin an engine
+or ordering; it is skipped on identity remaps and on jars without the
+relevant resources.
+
+### Conventions and explicit declarations
+
+Loader wirings contribute two tiers of defaults for this step:
+
+- **Convenience knobs** (refmap emission, forced mixin tables, …) —
+  an explicit `modArtifacts { }` declaration takes full control of
+  these. Loader-contributed convenience defaults only shape the
+  auto-appended step; they never rewrite a step you declared yourself.
+- **Correctness flags** (`remapLaunchwrapperTransformerLdcs` on
+  LaunchWrapper-era forge) have true *convention semantics*: without
+  them the loader's mod artifacts boot-crash, so they pre-seed even
+  explicit `modArtifacts { }` declarations — declaring the step for
+  unrelated reasons (say, `disableRefmap()`) must not silently drop a
+  boot-critical rewrite. You still keep the final word per flag: opt
+  out explicitly and the pre-seed stands down:
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        remap {
+            jar {
+                modArtifacts {
+                    // deliberate opt-out — loader correctness
+                    // conventions will not re-enable it
+                    disableLaunchwrapperTransformerLdcRemap()
+                }
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        remap {
+            jar {
+                modArtifacts {
+                    // deliberate opt-out — loader correctness
+                    // conventions will not re-enable it
+                    disableLaunchwrapperTransformerLdcRemap()
+                }
+            }
+        }
+    }
+    ```
 
 ## Standalone artifact remapping
 
