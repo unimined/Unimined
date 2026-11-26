@@ -663,6 +663,26 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  declaration order — the first is the primary ([loaderSpec]). */
     internal val declaredLoaderSpecs = mutableListOf<LoaderSpec>()
 
+    private val primaryLoaderDeclaredHandlers =
+        mutableListOf<(LoaderSpec) -> Unit>()
+
+    /**
+     * Register a wiring hook invoked synchronously when this environment's
+     * primary loader is declared. If the primary is already present (for
+     * example when a transform plugin is applied after the environment's
+     * DSL ran), [handler] is invoked immediately upon registration.
+     *
+     * Transform plugins use this for loader-derived environment state that
+     * must exist before any product resolution can snapshot `spec()` —
+     * notably library substitutions and merge options. It is a wiring
+     * hook, not user DSL; handlers must be cheap and must not resolve
+     * artifacts or configurations.
+     */
+    fun onPrimaryLoaderDeclared(handler: (LoaderSpec) -> Unit) {
+        primaryLoaderDeclaredHandlers += handler
+        loaderSpec.orNull?.let(handler)
+    }
+
     /** LOADER-section copy sources — `combineWith`/`copyFrom` envs whose
      *  non-primary loaders propagate here as compile-classpath
      *  secondaries (resolved lazily in [loaderSpecs]). */
@@ -1326,7 +1346,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  as compile-classpath secondaries. */
     private fun declareLoader(spec: RuntimeLoaderSpec) {
         declaredLoaderSpecs += spec
-        if (declaredLoaderSpecs.size == 1) loaderSpec.set(spec)
+        if (declaredLoaderSpecs.size == 1) {
+            loaderSpec.set(spec)
+            primaryLoaderDeclaredHandlers.forEach { it(spec) }
+        }
     }
 
     /**

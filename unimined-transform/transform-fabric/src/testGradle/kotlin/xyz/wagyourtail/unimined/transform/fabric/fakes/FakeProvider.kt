@@ -62,8 +62,15 @@ class FakeProvider : ProductProvider {
 
     override fun supports(spec: ProductSpec) = true
 
-    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts =
-        FakeArtifacts(ctx, spec.version.version)
+    override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts {
+        resolvedSpecs[spec.environmentId] = spec
+        return FakeArtifacts(ctx, spec.version.version)
+    }
+
+    companion object {
+        /** Last spec each environment resolved with — ordering regression probes. */
+        val resolvedSpecs = java.util.concurrent.ConcurrentHashMap<String, ProductSpec>()
+    }
 }
 
 /** Same fake under the `fake` name for tests that pin a provider

@@ -1,10 +1,6 @@
 package xyz.wagyourtail.unimined.transform.fabric.internal
 
 import xyz.wagyourtail.commonskt.utils.capitalized
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
@@ -68,6 +64,20 @@ internal object FabricDependencyContributions {
             xyz.wagyourtail.unimined.minecraft.merge.JarMerger
                 .SideMarker.FABRIC
         )
+    }
+
+    /** Contribute the loader descriptor's gen-dependent library overlay,
+     *  when it declares one. This remains post-DSL: the overlay generation
+     *  follows `mappingsSpec.ornitheGenVersion`, which user mapping blocks
+     *  commonly configure after the loader declaration. */
+    fun contributeLibraryOverlayCapability(
+        project: Project,
+        environment: MinecraftEnvironment
+    ) {
+        val descriptor = environment.loaderSpec.orNull?.name
+            ?.let { LoaderRegistry.resolveBuiltin(it) }
+            ?.takeIf { it.family == "fabric" }
+            ?: return
         descriptor.capabilities["libraryOverlayMeta"]?.let { meta ->
             // `unimined.ornitheMeta` overrides the descriptor's meta
             // base — mirrors, airgapped caches, and tests (`file:`
@@ -81,36 +91,26 @@ internal object FabricDependencyContributions {
     }
 
     /** Ornithe-era loaders backport slf4j/log4j + modernized deps onto
-     *  old MC via a per-generation overlay — fetch the meta's versions
-     *  index for the stable intermediary generation, then register the
-     *  `gen{n}/libraries` overlay URL with the environment (1.x never
-     *  hard-coded dep lists; the plan keeps the same shape). Drives off
-     *  the descriptor's `libraryOverlayMeta` capability, not the
-     *  loader name. */
+     *  old MC via a per-generation overlay — register the
+     *  `gen{n}/libraries` overlay URL matching the environment's
+     *  configured `ornitheGenVersion` (1.x never hard-coded dep lists;
+     *  the plan keeps the same shape). Drives off the descriptor's
+     *  `libraryOverlayMeta` capability, not the loader name. */
     fun contributeLibraryOverlay(
         project: Project,
         environment: MinecraftEnvironment,
         meta: String
     ) {
-        val gen = try {
-            val index = Json.parseToJsonElement(
-                java.net.URI("$meta/v3/versions").toURL()
-                    .openStream().use { it.readBytes().decodeToString() }
-            ).jsonObject
-            index["intermediaryGenerations"]?.jsonObject
-                ?.get("stableIntermediaryGeneration")?.jsonPrimitive?.int ?: 2
-        } catch (t: Throwable) {
-            project.reportProblem(
-                "fabric/ornithe-meta",
-                "unimined: ornithe meta unreachable — defaulting " +
-                    "library overlay to gen2",
-                t.message
-            )
-            2
-        }
+        // the env's configured gen — 1.x parity
+        // (`provider.mappings.ornitheGenVersion`): the mappings actually
+        // composed determine both the overlay's library set and the
+        // manifest's generation claim; the meta index's
+        // `stableIntermediaryGeneration` is the *ecosystem's* current
+        // gen, not this environment's
+        val gen = environment.mappingsSpec.ornitheGenVersion
         environment.libraryOverlays += "$meta/v3/versions/gen$gen/libraries"
         // 1.x OrnitheFabricMinecraftTransformer's `Calamus-Generation`
-        // manifest attr — the resolved gen, not a descriptor constant
+        // manifest attr
         environment.manifestAttributes.put("Calamus-Generation", gen.toString())
     }
 

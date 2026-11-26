@@ -44,6 +44,16 @@ internal object FabricEnvironmentWiring {
         // no loaderSpec gate at wire time — envs bind at declaration,
         // before `loader(...)` lands; contributions self-gate on the
         // descriptor/resolved providers (empty on non-fabric envs)
+        // Loader-derived library/merge state must be present before any
+        // product resolution snapshots spec(). Binding happens before the
+        // build script's loader(...) call, so afterDslEval is too late:
+        // user/plugin wiring may force an early resolution (for example
+        // through env.obfuscated) and the memoized ProductArtifacts would
+        // otherwise keep the pre-substitution library set forever.
+        environment.onPrimaryLoaderDeclared {
+            FabricDependencyContributions.contributeLibrarySubstitutions(
+                project, environment)
+        }
         // fabric's MC artifact is the vanilla jar — the transform layers
         // loader behavior on top; convention lets users override, and the
         // convention itself only applies when the loader is fabric
@@ -52,11 +62,11 @@ internal object FabricEnvironmentWiring {
                 if (LoaderRegistry.resolveBuiltin(it.name)?.family == "fabric") "native" else null
             }
         )
-        // loaderSpec is only set once the build script's loader(...)
-        // runs — the substitution decision must happen after the DSL
-        // has evaluated but before spec() snapshots librarySubstitutions
+        // the library overlay is gen-dependent on user mapping config
+        // (`ornitheGenVersion`) — it stays post-DSL while the
+        // substitutions themselves land at loader declaration
         project.afterDslEval {
-            FabricDependencyContributions.contributeLibrarySubstitutions(it, environment)
+            FabricDependencyContributions.contributeLibraryOverlayCapability(it, environment)
         }
         FabricDependencyContributions.contributeIntermediaryMappings(project, environment)
         FabricDependencyContributions.contributeLoaderDependency(project, environment)

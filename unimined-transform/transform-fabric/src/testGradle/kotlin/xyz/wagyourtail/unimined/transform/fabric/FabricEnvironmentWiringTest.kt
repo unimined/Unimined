@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
 import xyz.wagyourtail.unimined.transform.TransformExtension
+import xyz.wagyourtail.unimined.transform.fabric.fakes.FakeProvider
 import java.nio.file.Path
 
 /**
@@ -389,6 +390,33 @@ class FabricEnvironmentWiringTest {
             // the rule reaches the provider-facing spec
             assertEquals(listOf(rule), env.spec().librarySubstitutions)
         }
+    }
+
+    @Test
+    fun `LWJGL substitution is present when product resolution happens before evaluation`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("babric") { e ->
+            e.inheritParent.set(false)
+            e.version.set("1.20.1")
+            e.loader("babric", "1.0")
+        }
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("babric")
+
+        // Force product resolution before afterEvaluate. This models user or
+        // plugin wiring that probes env.obfuscated during configuration: the
+        // resolved ProductArtifacts are memoized, so a substitution deferred
+        // to afterDslEval would never reach that artifact view (while the
+        // fresh spec() used by natives would still receive it).
+        env.obfuscated.get()
+
+        assertEquals(
+            listOf("org.lwjgl" to "2.9.4+legacyfabric.18"),
+            FakeProvider.resolvedSpecs["babric"]?.librarySubstitutions,
+            "the memoized product spec must carry the loader substitution"
+        )
     }
 
     @Test
