@@ -61,6 +61,74 @@ configuration and classpath:
 Sibling `sourceSet` envs at `minecraft {}` top level don't share —
 `combineWith("main")` is the way to layer the main env's config in.
 
+#### Packaging modes: what ships in the artifact
+
+`combineWith` always composes the source env's output onto the
+compile and runtime classpaths — the packaging mode controls whether
+that output *also* embeds in the composed env's packaged artifact
+(the dev jar, and the production remap input that mirrors it):
+
+- **`"shadow"`** (default) — combined output embeds flat in the
+  artifact: the shipped mod jar contains the combined source set's
+  classes and resources alongside the env's own. This is the behavior
+  `combineWith` has always had — existing builds are unchanged.
+- **`"none"`** — compile/runtime/environment composition only: the
+  artifact carries the env's own output alone. This is the
+  chimera/merge composition mode — per-loader/per-version era jars
+  stay disjoint so an outer merge helper (a `chimeraJar`-style task)
+  can assemble the combined artifact without dedupe ambiguity.
+- **`"jarinjar"`** — declared vocabulary, not yet implemented:
+  validation hard-errors rather than silently falling back.
+  Jar-in-jar nesting with loader-specific metadata ships in a future
+  release.
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            sourceSet("fabric") {
+                combineWith("main", "none")   // positional string form
+                // or the spec block, which also takes sections:
+                combineWith("common") {
+                    packaging = "none"
+                    sections(EnvironmentSection.MAPPINGS)
+                }
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            sourceSet("fabric") {
+                combineWith("main", "none")   // positional string form
+                // or the spec block, which also takes sections:
+                combineWith("common") {
+                    packaging = "none"
+                    sections(EnvironmentSection.MAPPINGS)
+                }
+            }
+        }
+    }
+    ```
+
+The mode is per edge and composes recursively through combine chains:
+shadowing an env embeds exactly what that env itself ships. When
+`fabric` combines `main` with `"none"`, a gametest env shadowing
+`fabric` doesn't pick `main`'s output up either — the exclusion
+propagates. Mode strings validate lazily — an unknown value fails at
+the point of use with an error listing the valid values
+(`shadow`/`none`/`jarinjar`), never at assignment time.
+
+Compile-time composition is mode-independent: `combinedSourceDirs`
+and mixin-config discovery still see combined sources in `"none"`
+mode, and dev runs keep the full runtime classpath. For the packaged
+view itself, `packagedCombinedOutputs` mirrors `combinedOutputs`
+filtered to shadow-mode edges (the two resolve identically when every
+edge shadows).
+
 ### Merged: several loaders on one environment
 
 Repeat loader declarations inside a single `sourceSet` env to

@@ -1209,8 +1209,27 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * Classes and resources from environments passed to [combineWith]. The
      * future mod packaging plugin consumes this collection; it is exposed so
      * integrations do not need to rediscover compose requests.
+     *
+     * This is the full composition — every edge contributes regardless of
+     * packaging mode (the compile/runtime classpath invariant). For the
+     * subset that ships inside the packaged artifact see
+     * [packagedCombinedOutputs].
      */
     val combinedOutputs: ConfigurableFileCollection = objects.fileCollection()
+
+    /**
+     * The subset of [combinedOutputs] that ships inside this
+     * environment's packaged artifact (the dev jar, and the production
+     * remap input that mirrors it): `shadow`-mode combine edges — the
+     * default — contribute the source env's own output plus the
+     * source's own packaged view recursively, while `"none"`-mode
+     * edges contribute nothing (their output stays on the
+     * compile/runtime classpaths only). The recursion is what makes a
+     * mode propagate through combine chains: shadowing an env embeds
+     * exactly what that env itself ships, no deeper. When every edge
+     * is shadow this resolves identically to [combinedOutputs].
+     */
+    val packagedCombinedOutputs: ConfigurableFileCollection = objects.fileCollection()
 
     /** Source sets from [combineWith], for generated source jars. */
     val combinedSources: ConfigurableFileCollection = objects.fileCollection()
@@ -1650,6 +1669,10 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * By default this copies common environment sections but not the source
      * environment's loader. Request [EnvironmentSection.LOADER] explicitly to
      * inherit that section too.
+     *
+     * The combined output embeds flat in this environment's packaged
+     * artifact (the `shadow` packaging mode); pass a mode string or use
+     * the spec form to change that — see [CombinePackaging].
      */
     fun combineWith(path: String) {
         combineWith(parseEnvironmentPath(path), EnvironmentSection.COMBINE_DEFAULT, false)
@@ -1661,6 +1684,54 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         combineWith(parseEnvironmentPath(path), sections.toSet(), true)
     }
 
+    /**
+     * Compose output from [path] with an explicit packaging mode —
+     * case-insensitive one of `"shadow"` (the default: combined output
+     * embeds flat in the packaged artifact), `"none"` (compose the
+     * compile/runtime classpaths and copy sections only; the artifact
+     * carries this env's own output alone — the chimera/merge
+     * composition mode), or `"jarinjar"` (declared, not yet
+     * implemented). The string is validated lazily at the point of
+     * use; failures list the valid values.
+     */
+    fun combineWith(path: String, packaging: String) {
+        combineWith(
+            parseEnvironmentPath(path),
+            EnvironmentSection.COMBINE_DEFAULT,
+            false,
+            packaging
+        )
+    }
+
+    /** Compose output from [path], configuring packaging mode and/or
+     *  an explicit section selection in the spec block. */
+    fun combineWith(path: String, action: Action<CombineWithSpec>) {
+        val spec = CombineWithSpec().also(action::execute)
+        combineWith(
+            parseEnvironmentPath(path),
+            spec.sectionsOrNull ?: EnvironmentSection.COMBINE_DEFAULT,
+            spec.sectionsOrNull != null,
+            spec.packagingOrNull
+        )
+    }
+
+    /** Groovy DSL overload of the spec form — `combineWith("main") {
+     *  packaging = "none" }`. */
+    fun combineWith(
+        path: String,
+        @DelegatesTo(value = CombineWithSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        val spec = CombineWithSpec()
+        action.delegatingTo(spec)
+        combineWith(
+            parseEnvironmentPath(path),
+            spec.sectionsOrNull ?: EnvironmentSection.COMBINE_DEFAULT,
+            spec.sectionsOrNull != null,
+            spec.packagingOrNull
+        )
+    }
+
     /** Compose output from [sourceSet] in this project. */
     fun combineWith(sourceSet: SourceSet) {
         combineWith(project, sourceSet)
@@ -1669,6 +1740,28 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /** Compose output and copy selected sections from [sourceSet]. */
     fun combineWith(sourceSet: SourceSet, vararg sections: EnvironmentSection) {
         combineWith(project, sourceSet, *sections)
+    }
+
+    /** Compose output from [sourceSet] with an explicit packaging
+     *  mode — see the `combineWith(path, packaging)` overload for the
+     *  valid values. */
+    fun combineWith(sourceSet: SourceSet, packaging: String) {
+        combineWith(project, sourceSet, packaging)
+    }
+
+    /** Compose output from [sourceSet], configuring packaging mode
+     *  and/or sections in the spec block. */
+    fun combineWith(sourceSet: SourceSet, action: Action<CombineWithSpec>) {
+        combineWith(project, sourceSet, action)
+    }
+
+    /** Groovy DSL overload of the spec form for [sourceSet]. */
+    fun combineWith(
+        sourceSet: SourceSet,
+        @DelegatesTo(value = CombineWithSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        combineWith(project, sourceSet, action)
     }
 
     /** Compose output from another project's [sourceSet]. */
@@ -1687,6 +1780,48 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             EnvironmentReference(project.path, sourceSet.name),
             sections.toSet(),
             true
+        )
+    }
+
+    /** Compose output from another project's [sourceSet] with an
+     *  explicit packaging mode — see `combineWith(path, packaging)`
+     *  for the valid values. */
+    fun combineWith(project: Project, sourceSet: SourceSet, packaging: String) {
+        combineWith(
+            EnvironmentReference(project.path, sourceSet.name),
+            EnvironmentSection.COMBINE_DEFAULT,
+            false,
+            packaging
+        )
+    }
+
+    /** Compose output from another project's [sourceSet], configuring
+     *  packaging mode and/or sections in the spec block. */
+    fun combineWith(project: Project, sourceSet: SourceSet, action: Action<CombineWithSpec>) {
+        val spec = CombineWithSpec().also(action::execute)
+        combineWith(
+            EnvironmentReference(project.path, sourceSet.name),
+            spec.sectionsOrNull ?: EnvironmentSection.COMBINE_DEFAULT,
+            spec.sectionsOrNull != null,
+            spec.packagingOrNull
+        )
+    }
+
+    /** Groovy DSL overload of the spec form for another project's
+     *  [sourceSet]. */
+    fun combineWith(
+        project: Project,
+        sourceSet: SourceSet,
+        @DelegatesTo(value = CombineWithSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        val spec = CombineWithSpec()
+        action.delegatingTo(spec)
+        combineWith(
+            EnvironmentReference(project.path, sourceSet.name),
+            spec.sectionsOrNull ?: EnvironmentSection.COMBINE_DEFAULT,
+            spec.sectionsOrNull != null,
+            spec.packagingOrNull
         )
     }
 
@@ -2080,7 +2215,15 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             jar.group = "build"
             jar.description = "Assembles the '$environmentId' environment jar"
             jar.archiveAppendix.set(environmentId)
-            jar.from(sourceSet.output)
+            // `packagedCombinedOutputs` carries `combineWith` envs'
+            // output for shadow-mode edges — shared mod code ships
+            // inside the env jar (1.x parity: the shipped mod jar
+            // contains the main sourceSet's classes, not just the
+            // env's own). "none"-mode edges stay out of the artifact
+            // (chimera/merge composition) while still composing the
+            // classpaths; the production remap mirrors this copy spec,
+            // so the exclusion covers both artifact channels at once.
+            jar.from(sourceSet.output, packagedCombinedOutputs)
         }
     }
 
@@ -2261,8 +2404,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     private fun combineWith(
         source: EnvironmentReference,
         sections: Set<EnvironmentSection>,
-        requireHandlers: Boolean
-    ) = inheritance.combineWith(source, sections, requireHandlers)
+        requireHandlers: Boolean,
+        packaging: String? = null
+    ) = inheritance.combineWith(source, sections, requireHandlers, packaging)
 
     private fun parseEnvironmentPath(path: String): EnvironmentReference =
         parseEnvironmentPath(project.path, path)

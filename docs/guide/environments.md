@@ -190,7 +190,9 @@ Everything below lives inside an env block (`minecraft { … }` or
   the `disable*` verbs.
 - `combinedSources` / `combinedOutputs` — file collections
   populated by `combineWith`; read-mostly, used by generated
-  source jars and mod packaging.
+  source jars and mod packaging. `packagedCombinedOutputs` is the
+  shadow-mode-filtered subset that ships inside the env's artifact —
+  see [packaging modes](multi-project.md#packaging-modes-what-ships-in-the-artifact).
 
 ## Split environment source sets
 
