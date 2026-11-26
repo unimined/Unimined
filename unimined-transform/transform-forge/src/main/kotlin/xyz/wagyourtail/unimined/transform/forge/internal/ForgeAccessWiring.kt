@@ -90,8 +90,10 @@ internal fun contributeAccessSteps(
         // mods you compile against (modRuntimeOnly mods are applied by
         // the loader at runtime instead); mirrors fabricModAnalysis
         conf.extendsFrom(
+            project.configurations.getByName(environment.modApiConfigurationName),
             project.configurations.getByName(environment.modImplementationConfigurationName),
-            project.configurations.getByName(environment.modCompileOnlyConfigurationName)
+            project.configurations.getByName(environment.modCompileOnlyConfigurationName),
+            project.configurations.getByName(environment.modCompileOnlyApiConfigurationName)
         )
         conf.attributes.attribute(
             ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,

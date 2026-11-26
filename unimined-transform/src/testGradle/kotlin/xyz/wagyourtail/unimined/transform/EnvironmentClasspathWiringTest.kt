@@ -70,7 +70,8 @@ class EnvironmentClasspathWiringTest {
         )
 
         for (modView in listOf(
-            "modImplementationRemapped", "modCompileOnlyRemapped", "modRuntimeOnlyRemapped"
+            "modApiRemapped", "modImplementationRemapped", "modCompileOnlyRemapped",
+            "modCompileOnlyApiRemapped", "modRuntimeOnlyRemapped", "modLocalRuntimeRemapped"
         )) {
             val view = project.configurations.getByName(modView)
             assertEquals(
@@ -108,7 +109,10 @@ class EnvironmentClasspathWiringTest {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
 
-        for (bucket in listOf("modImplementation", "modCompileOnly", "modRuntimeOnly")) {
+        for (bucket in listOf(
+            "modApi", "modImplementation", "modCompileOnly",
+            "modCompileOnlyApi", "modRuntimeOnly", "modLocalRuntime"
+        )) {
             val remapped = project.configurations.getByName("${bucket}SourcesRemapped")
             assertTrue(remapped.isCanBeResolved)
             assertFalse(remapped.isCanBeConsumed)
@@ -155,6 +159,41 @@ class EnvironmentClasspathWiringTest {
             project.configurations.getByName("modRuntimeOnlySourcesRemapped"),
             ext.modDevSourcesViewConfigurations["main:modRuntimeOnly"]
         )
+        assertEquals(
+            project.configurations.getByName("modApiSourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modApi"]
+        )
+        assertEquals(
+            project.configurations.getByName("modCompileOnlyApiSourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modCompileOnlyApi"]
+        )
+        assertEquals(
+            project.configurations.getByName("modLocalRuntimeSourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modLocalRuntime"]
+        )
+    }
+
+    @Test
+    fun `new mod buckets are declarable-only with direct and remapped views`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+
+        for (bucket in listOf("modApi", "modCompileOnlyApi", "modLocalRuntime")) {
+            val conf = project.configurations.getByName(bucket)
+            assertFalse(conf.isCanBeResolved, "$bucket must be declarable-only")
+            assertFalse(conf.isCanBeConsumed, "$bucket must not be consumable")
+
+            val direct = project.configurations.getByName("${bucket}Direct")
+            assertTrue(direct.isCanBeResolved)
+            assertEquals(listOf(conf), direct.extendsFrom.toList())
+
+            val remapped = project.configurations.getByName("${bucket}Remapped")
+            assertEquals(
+                "unimined-remapped-main-$bucket",
+                remapped.attributes.getAttribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)
+            )
+            assertEquals(remapped, ext.modDevViewConfigurations["main:$bucket"])
+        }
     }
 
     @Test

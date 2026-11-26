@@ -277,4 +277,50 @@ class EnvironmentDependencySpecTest {
         assertNotNull(project.configurations.findByName("childModCompileOnly"))
     }
 
+    @Test
+    fun `modApi modCompileOnlyApi and modLocalRuntime verbs route to their buckets`() {
+        val project = project()
+        val ext = minecraft(project)
+
+        ext.main.dependencies {
+            it.modApi("com.example:modapi:1.0")
+            it.modCompileOnlyApi("com.example:modcompileapi:1.0")
+            it.modLocalRuntime("com.example:modlocal:1.0")
+        }
+        ext.sourceSet("fabric") {
+            it.dependencies { deps ->
+                deps.modApi("com.example:fmodapi:1.0")
+                deps.modCompileOnlyApi("com.example:fmodcompileapi:1.0")
+                deps.modLocalRuntime("com.example:fmodlocal:1.0")
+            }
+        }
+
+        assertEquals(listOf("com.example:modapi:1.0"), depCoords(project, "modApi"))
+        assertEquals(listOf("com.example:modcompileapi:1.0"), depCoords(project, "modCompileOnlyApi"))
+        assertEquals(listOf("com.example:modlocal:1.0"), depCoords(project, "modLocalRuntime"))
+        assertEquals(listOf("com.example:fmodapi:1.0"), depCoords(project, "fabricModApi"))
+        assertEquals(listOf("com.example:fmodcompileapi:1.0"), depCoords(project, "fabricModCompileOnlyApi"))
+        assertEquals(listOf("com.example:fmodlocal:1.0"), depCoords(project, "fabricModLocalRuntime"))
+    }
+
+    @Test
+    fun `groovy twin dispatches the new mod bucket verbs`() {
+        val project = project()
+        val ext = minecraft(project)
+        val shell = GroovyShell()
+        shell.setVariable("env", ext.main)
+
+        shell.evaluate(
+            "env.dependencies {\n" +
+                    "  modApi 'com.example:gmodapi:1.0'\n" +
+                    "  modCompileOnlyApi 'com.example:gmodcompileapi:1.0'\n" +
+                    "  modLocalRuntime 'com.example:gmodlocal:1.0'\n" +
+                    "}"
+        )
+
+        assertEquals(listOf("com.example:gmodapi:1.0"), depCoords(project, "modApi"))
+        assertEquals(listOf("com.example:gmodcompileapi:1.0"), depCoords(project, "modCompileOnlyApi"))
+        assertEquals(listOf("com.example:gmodlocal:1.0"), depCoords(project, "modLocalRuntime"))
+    }
+
 }

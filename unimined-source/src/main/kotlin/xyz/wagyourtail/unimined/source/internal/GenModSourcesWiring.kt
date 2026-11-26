@@ -38,9 +38,12 @@ import xyz.wagyourtail.unimined.source.task.ModSourceSpec
 internal object GenModSourcesWiring {
 
     private val MOD_BUCKETS = listOf(
+        MinecraftEnvironment::modApiConfigurationName,
         MinecraftEnvironment::modImplementationConfigurationName,
         MinecraftEnvironment::modCompileOnlyConfigurationName,
-        MinecraftEnvironment::modRuntimeOnlyConfigurationName
+        MinecraftEnvironment::modCompileOnlyApiConfigurationName,
+        MinecraftEnvironment::modRuntimeOnlyConfigurationName,
+        MinecraftEnvironment::modLocalRuntimeConfigurationName
     )
 
     fun wire(

@@ -92,9 +92,13 @@ internal object IdeModelResolver {
                         ?.files.orEmpty() +
                     listOfNotNull(
                         project.configurations.findByName(
+                            "${environment.modApiConfigurationName}Direct"),
+                        project.configurations.findByName(
                             "${environment.modImplementationConfigurationName}Direct"),
                         project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Direct")
+                            "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                        project.configurations.findByName(
+                            "${environment.modLocalRuntimeConfigurationName}Direct")
                     ).flatMap { it.files } +
                     remapJarFiles(project, minecraft, environmentId)
             } else {
@@ -281,9 +285,12 @@ internal object IdeModelResolver {
         val suffix = if (minecraft.isIdentityRemap(environmentId).get())
             "Direct" else "Remapped"
         return listOf(
+            environment.modApiConfigurationName,
             environment.modImplementationConfigurationName,
             environment.modCompileOnlyConfigurationName,
-            environment.modRuntimeOnlyConfigurationName
+            environment.modCompileOnlyApiConfigurationName,
+            environment.modRuntimeOnlyConfigurationName,
+            environment.modLocalRuntimeConfigurationName
         ).map { if (sources) "${it}Sources$suffix" else "$it$suffix" }
     }
 
@@ -362,17 +369,29 @@ internal object IdeModelResolver {
             inConfig(environment.minecraftLibrariesConfigurationName) ->
                 ClasspathGroup.LIBRARIES
             inConfig(
-                "${environment.modImplementationConfigurationName}Direct") ||
+                "${environment.modApiConfigurationName}Direct") ||
+                    inConfig(
+                        "${environment.modImplementationConfigurationName}Direct") ||
                     inConfig(
                         "${environment.modCompileOnlyConfigurationName}Direct") ||
                     inConfig(
+                        "${environment.modCompileOnlyApiConfigurationName}Direct") ||
+                    inConfig(
                         "${environment.modRuntimeOnlyConfigurationName}Direct") ||
+                    inConfig(
+                        "${environment.modLocalRuntimeConfigurationName}Direct") ||
+                    inConfig(
+                        "${environment.modApiConfigurationName}Remapped") ||
                     inConfig(
                         "${environment.modImplementationConfigurationName}Remapped") ||
                     inConfig(
                         "${environment.modCompileOnlyConfigurationName}Remapped") ||
                     inConfig(
-                        "${environment.modRuntimeOnlyConfigurationName}Remapped") ->
+                        "${environment.modCompileOnlyApiConfigurationName}Remapped") ||
+                    inConfig(
+                        "${environment.modRuntimeOnlyConfigurationName}Remapped") ||
+                    inConfig(
+                        "${environment.modLocalRuntimeConfigurationName}Remapped") ->
                 ClasspathGroup.MODS
             else -> ClasspathGroup.LOADER
         }

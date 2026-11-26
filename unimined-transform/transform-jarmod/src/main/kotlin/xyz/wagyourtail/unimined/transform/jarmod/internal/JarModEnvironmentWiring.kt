@@ -413,10 +413,16 @@ internal object JarModEnvironmentWiring {
                         }Jar")
                     buildList {
                         project.configurations.findByName(
+                            "${environment.modApiConfigurationName}Direct"
+                        )?.let { addAll(it.files) }
+                        project.configurations.findByName(
                             "${environment.modImplementationConfigurationName}Direct"
                         )?.let { addAll(it.files) }
                         project.configurations.findByName(
                             "${environment.modRuntimeOnlyConfigurationName}Direct"
+                        )?.let { addAll(it.files) }
+                        project.configurations.findByName(
+                            "${environment.modLocalRuntimeConfigurationName}Direct"
                         )?.let { addAll(it.files) }
                         remapJar?.outputs?.files?.let { addAll(it) }
                     }

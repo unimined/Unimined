@@ -48,9 +48,11 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
  * - `raw → dev` is the environment's JAR remap pipeline
  *   ([RemapDependencyTransform]); namespaces arrive as lazy providers so
  *   nothing resolves mappings at configuration time.
- * - `modImplementation`/`modRuntimeOnly` buckets get remapped views via
- *   [RemapExtension.remappedViewFor] and are appended to the source set's
- *   classpaths — keeping `Gradle: g:a:v` library identity in IDEs.
+ * - the `mod*` buckets (`modApi`/`modImplementation`/`modCompileOnly`/
+ *   `modCompileOnlyApi`/`modRuntimeOnly`/`modLocalRuntime`) get remapped
+ *   views via [RemapExtension.remappedViewFor] and are appended to the
+ *   source set's classpaths — keeping `Gradle: g:a:v` library identity
+ *   in IDEs.
  */
 internal object EnvironmentClasspathWiring {
 
@@ -154,21 +156,31 @@ internal object EnvironmentClasspathWiring {
         // artifacts for identity attach, for the remap batch's
         // source-namespace analysis classpath, and for jar-processor
         // spec building
+        val modApiDirect = directModView(
+            project, environment.modApiConfigurationName
+        )
         val modImplementationDirect = directModView(
             project, environment.modImplementationConfigurationName
         )
         val modCompileOnlyDirect = directModView(
             project, environment.modCompileOnlyConfigurationName
         )
+        val modCompileOnlyApiDirect = directModView(
+            project, environment.modCompileOnlyApiConfigurationName
+        )
         val modRuntimeOnlyDirect = directModView(
             project, environment.modRuntimeOnlyConfigurationName
+        )
+        val modLocalRuntimeDirect = directModView(
+            project, environment.modLocalRuntimeConfigurationName
         )
         // compile-only mods join the batch: they sit on the compile
         // classpath next to modImplementation, so sibling inheritance
         // analysis and the dep access scan must see them (loom treats
         // modCompileOnly identically there)
         val modBatch = project.files(
-            modImplementationDirect, modCompileOnlyDirect, modRuntimeOnlyDirect
+            modApiDirect, modImplementationDirect, modCompileOnlyDirect,
+            modCompileOnlyApiDirect, modRuntimeOnlyDirect, modLocalRuntimeDirect
         )
 
         // inline `access { }` declarations + AT/AW/CT files discovered
@@ -420,6 +432,11 @@ internal object EnvironmentClasspathWiring {
             }
         }
 
+        val modApiView = remappedModView(
+            project, minecraft, remap, environment,
+            environment.modApiConfigurationName, modsBundleFile,
+            mcBundleFile, modApiDirect
+        )
         val modImplementationView = remappedModView(
             project, minecraft, remap, environment,
             environment.modImplementationConfigurationName, modsBundleFile,
@@ -430,11 +447,24 @@ internal object EnvironmentClasspathWiring {
             environment.modCompileOnlyConfigurationName, modsBundleFile,
             mcBundleFile, modCompileOnlyDirect
         )
+        val modCompileOnlyApiView = remappedModView(
+            project, minecraft, remap, environment,
+            environment.modCompileOnlyApiConfigurationName, modsBundleFile,
+            mcBundleFile, modCompileOnlyApiDirect
+        )
         val modRuntimeOnlyView = remappedModView(
             project, minecraft, remap, environment,
             environment.modRuntimeOnlyConfigurationName, modsBundleFile,
             mcBundleFile, modRuntimeOnlyDirect
         )
+        val modLocalRuntimeView = remappedModView(
+            project, minecraft, remap, environment,
+            environment.modLocalRuntimeConfigurationName, modsBundleFile,
+            mcBundleFile, modLocalRuntimeDirect
+        )
+        minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modApiConfigurationName}"
+        ] = modApiView
         minecraft.modDevViewConfigurations[
             "$environmentId:${environment.modImplementationConfigurationName}"
         ] = modImplementationView
@@ -442,8 +472,14 @@ internal object EnvironmentClasspathWiring {
             "$environmentId:${environment.modCompileOnlyConfigurationName}"
         ] = modCompileOnlyView
         minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modCompileOnlyApiConfigurationName}"
+        ] = modCompileOnlyApiView
+        minecraft.modDevViewConfigurations[
             "$environmentId:${environment.modRuntimeOnlyConfigurationName}"
         ] = modRuntimeOnlyView
+        minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modLocalRuntimeConfigurationName}"
+        ] = modLocalRuntimeView
 
         // dep `-sources.jar` views — the IDE-attach counterpart of the
         // jar views: the bucket's docs variants (`category=documentation`,
@@ -454,6 +490,13 @@ internal object EnvironmentClasspathWiring {
         // since sources jars carry no markers). The `*SourcesDirect`
         // twins are the identity-env pass-throughs; consumers pick by
         // `isIdentityRemap` exactly like the `*Direct`/`*Remapped` jars
+        minecraft.modDevSourcesViewConfigurations[
+            "$environmentId:${environment.modApiConfigurationName}"
+        ] = remappedModSourcesView(
+            project, minecraft, remap, environment,
+            environment.modApiConfigurationName, modsBundleFile,
+            modApiDirect, libraries
+        )
         minecraft.modDevSourcesViewConfigurations[
             "$environmentId:${environment.modImplementationConfigurationName}"
         ] = remappedModSourcesView(
@@ -469,11 +512,28 @@ internal object EnvironmentClasspathWiring {
             modCompileOnlyDirect, libraries
         )
         minecraft.modDevSourcesViewConfigurations[
+            "$environmentId:${environment.modCompileOnlyApiConfigurationName}"
+        ] = remappedModSourcesView(
+            project, minecraft, remap, environment,
+            environment.modCompileOnlyApiConfigurationName, modsBundleFile,
+            modCompileOnlyApiDirect, libraries
+        )
+        minecraft.modDevSourcesViewConfigurations[
             "$environmentId:${environment.modRuntimeOnlyConfigurationName}"
         ] = remappedModSourcesView(
             project, minecraft, remap, environment,
             environment.modRuntimeOnlyConfigurationName, modsBundleFile,
             modRuntimeOnlyDirect, libraries
+        )
+        minecraft.modDevSourcesViewConfigurations[
+            "$environmentId:${environment.modLocalRuntimeConfigurationName}"
+        ] = remappedModSourcesView(
+            project, minecraft, remap, environment,
+            environment.modLocalRuntimeConfigurationName, modsBundleFile,
+            modLocalRuntimeDirect, libraries
+        )
+        directModSourcesView(
+            project, environment.modApiConfigurationName
         )
         directModSourcesView(
             project, environment.modImplementationConfigurationName
@@ -482,7 +542,13 @@ internal object EnvironmentClasspathWiring {
             project, environment.modCompileOnlyConfigurationName
         )
         directModSourcesView(
+            project, environment.modCompileOnlyApiConfigurationName
+        )
+        directModSourcesView(
             project, environment.modRuntimeOnlyConfigurationName
+        )
+        directModSourcesView(
+            project, environment.modLocalRuntimeConfigurationName
         )
 
         // identity environments (prod namespace == dev namespace)
@@ -500,6 +566,13 @@ internal object EnvironmentClasspathWiring {
         // each branch a first-class conf reference that resolves the
         // live view (and its transforms) at execution.
         val identity = minecraft.isIdentityRemap(environmentId)
+        val modApiFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modApiDirect.name else modApiView.name
+                )
+            }
+        )
         val modImplementationFiles = project.files(
             identity.flatMap { id ->
                 project.configurations.named(
@@ -514,6 +587,13 @@ internal object EnvironmentClasspathWiring {
                 )
             }
         )
+        val modCompileOnlyApiFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modCompileOnlyApiDirect.name else modCompileOnlyApiView.name
+                )
+            }
+        )
         val modRuntimeOnlyFiles = project.files(
             identity.flatMap { id ->
                 project.configurations.named(
@@ -521,14 +601,27 @@ internal object EnvironmentClasspathWiring {
                 )
             }
         )
+        val modLocalRuntimeFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modLocalRuntimeDirect.name else modLocalRuntimeView.name
+                )
+            }
+        )
 
+        // modApi rides the dev classpaths exactly like modImplementation
+        // (compile+runtime); the split is publication-scope only
+        sourceSet.compileClasspath += modApiFiles
         sourceSet.compileClasspath += modImplementationFiles
         // compile-only — the remapped (or identity-direct) view, never
         // the raw bucket, and NEVER the runtime classpath: modCompileOnly
         // is compile-scope like java's compileOnly, dev launches and
-        // prod packaging both stay unaware of it
+        // prod packaging both stay unaware of it. modCompileOnlyApi is
+        // the same in dev — the api split is publication-scope only
         sourceSet.compileClasspath += modCompileOnlyFiles
-        sourceSet.runtimeClasspath += modImplementationFiles + modRuntimeOnlyFiles
+        sourceSet.compileClasspath += modCompileOnlyApiFiles
+        sourceSet.runtimeClasspath += modApiFiles + modImplementationFiles +
+                modRuntimeOnlyFiles + modLocalRuntimeFiles
 
         // merged multi-loader envs: every non-primary loader spec lands
         // its `loaderCoords` artifact on the compile classpath — the

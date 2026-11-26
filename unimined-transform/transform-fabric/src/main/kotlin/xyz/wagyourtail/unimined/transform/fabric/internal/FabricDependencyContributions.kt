@@ -244,9 +244,12 @@ internal object FabricDependencyContributions {
         // surfaces as a *transformed file dep* next to the real loader
         // jar → duplicate loader classes at launch.
         listOf(
+            environment.modApiConfigurationName,
             environment.modImplementationConfigurationName,
             environment.modCompileOnlyConfigurationName,
-            environment.modRuntimeOnlyConfigurationName
+            environment.modCompileOnlyApiConfigurationName,
+            environment.modRuntimeOnlyConfigurationName,
+            environment.modLocalRuntimeConfigurationName
         ).forEach { bucket ->
             project.configurations.matching { it.name == bucket }.all { conf ->
                 conf.withDependencies {
@@ -353,9 +356,12 @@ internal object FabricDependencyContributions {
                 if (spec?.name?.let { LoaderRegistry.resolveBuiltin(it) }?.family != "fabric")
                     return@withDependencies
                 listOf(
+                    "${environment.modApiConfigurationName}Direct",
                     "${environment.modImplementationConfigurationName}Direct",
                     "${environment.modCompileOnlyConfigurationName}Direct",
-                    "${environment.modRuntimeOnlyConfigurationName}Direct"
+                    "${environment.modCompileOnlyApiConfigurationName}Direct",
+                    "${environment.modRuntimeOnlyConfigurationName}Direct",
+                    "${environment.modLocalRuntimeConfigurationName}Direct"
                 ).flatMap { name ->
                     project.configurations.findByName(name)?.files ?: emptySet()
                 }.forEach { jar ->

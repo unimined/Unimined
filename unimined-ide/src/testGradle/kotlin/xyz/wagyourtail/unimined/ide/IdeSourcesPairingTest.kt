@@ -65,11 +65,18 @@ class IdeSourcesPairingTest {
         project.dependencies.add("modImplementation", "com.example:nosrc:1.0")
 
         assertEquals(
-            listOf("modImplementationDirect", "modCompileOnlyDirect", "modRuntimeOnlyDirect"),
+            listOf(
+                "modApiDirect", "modImplementationDirect", "modCompileOnlyDirect",
+                "modCompileOnlyApiDirect", "modRuntimeOnlyDirect", "modLocalRuntimeDirect"
+            ),
             IdeModelResolver.modViewNames(project, ext.main)
         )
         assertEquals(
-            listOf("modImplementationSourcesDirect", "modCompileOnlySourcesDirect", "modRuntimeOnlySourcesDirect"),
+            listOf(
+                "modApiSourcesDirect", "modImplementationSourcesDirect",
+                "modCompileOnlySourcesDirect", "modCompileOnlyApiSourcesDirect",
+                "modRuntimeOnlySourcesDirect", "modLocalRuntimeSourcesDirect"
+            ),
             IdeModelResolver.modViewNames(project, ext.main, sources = true)
         )
 
@@ -94,11 +101,18 @@ class IdeSourcesPairingTest {
             it.modSourceNamespaces.set(listOf("intermediary"))
         }
         assertEquals(
-            listOf("modImplementationRemapped", "modCompileOnlyRemapped", "modRuntimeOnlyRemapped"),
+            listOf(
+                "modApiRemapped", "modImplementationRemapped", "modCompileOnlyRemapped",
+                "modCompileOnlyApiRemapped", "modRuntimeOnlyRemapped", "modLocalRuntimeRemapped"
+            ),
             IdeModelResolver.modViewNames(project, ext.main)
         )
         assertEquals(
-            listOf("modImplementationSourcesRemapped", "modCompileOnlySourcesRemapped", "modRuntimeOnlySourcesRemapped"),
+            listOf(
+                "modApiSourcesRemapped", "modImplementationSourcesRemapped",
+                "modCompileOnlySourcesRemapped", "modCompileOnlyApiSourcesRemapped",
+                "modRuntimeOnlySourcesRemapped", "modLocalRuntimeSourcesRemapped"
+            ),
             IdeModelResolver.modViewNames(project, ext.main, sources = true)
         )
     }

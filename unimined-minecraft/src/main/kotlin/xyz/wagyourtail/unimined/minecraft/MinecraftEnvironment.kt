@@ -1221,7 +1221,21 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     val accessTransformerElementsConfName: String
         get() = "unimined${environmentId.replaceFirstChar(Char::uppercase)}AccessTransformerElements"
 
-    /** Dependency bucket for mods used to compile this environment. */
+    /** Dependency bucket for mods this environment exposes to its
+     *  dependents — compile+runtime visible in dev like
+     *  [modImplementationConfigurationName], but published at api
+     *  (compile+runtime) scope so consumers compile against them
+     *  too (loom `modApi` parity). */
+    val modApiConfigurationName: String
+        get() = if (environmentId == "main") {
+            "modApi"
+        } else {
+            "${environmentId}ModApi"
+        }
+
+    /** Dependency bucket for mods used to compile this environment.
+     *  Published at runtime scope only — compile-visible-transitive
+     *  mods belong in [modApiConfigurationName]. */
     val modImplementationConfigurationName: String
         get() = if (environmentId == "main") {
             "modImplementation"
@@ -1239,12 +1253,36 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             "${environmentId}ModCompileOnly"
         }
 
+    /** Dependency bucket for mods used only to compile this environment
+     *  whose API surface dependents also compile against — dev
+     *  compile-classpath-only like [modCompileOnlyConfigurationName],
+     *  but published at compile (api) scope instead of never
+     *  (loom `modCompileOnlyApi` parity). */
+    val modCompileOnlyApiConfigurationName: String
+        get() = if (environmentId == "main") {
+            "modCompileOnlyApi"
+        } else {
+            "${environmentId}ModCompileOnlyApi"
+        }
+
     /** Dependency bucket for mods used only at runtime in this environment. */
     val modRuntimeOnlyConfigurationName: String
         get() = if (environmentId == "main") {
             "modRuntimeOnly"
         } else {
             "${environmentId}ModRuntimeOnly"
+        }
+
+    /** Dependency bucket for mods present only when this project itself
+     *  runs — dev runtime-classpath-only like
+     *  [modRuntimeOnlyConfigurationName], but NEVER published and never
+     *  transitive to dependents (loom `modLocalRuntime` parity: the
+     *  local-only runtime bucket for mods a user installation provides). */
+    val modLocalRuntimeConfigurationName: String
+        get() = if (environmentId == "main") {
+            "modLocalRuntime"
+        } else {
+            "${environmentId}ModLocalRuntime"
         }
 
     /**
@@ -1659,8 +1697,9 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * Environment-scoped dependency declarations — a KMP-style
      * `dependencies { }` lift over the buckets this environment already
      * owns (`implementation`/`compileOnly`/`runtimeOnly`/`api` on the
-     * bound source set, the env's `modImplementation`/`modCompileOnly`/
-     * `modRuntimeOnly`/`include`). Pure sugar: the string configuration
+     * bound source set, the env's `modApi`/`modImplementation`/
+     * `modCompileOnly`/`modCompileOnlyApi`/`modRuntimeOnly`/
+     * `modLocalRuntime`/`include`). Pure sugar: the string configuration
      * names keep working interchangeably. See [EnvironmentDependencySpec].
      */
     fun dependencies(action: Action<EnvironmentDependencySpec>) {

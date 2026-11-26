@@ -70,6 +70,12 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
         if (!configuredSourceSets.add(environment.environmentId)) return
 
         project.configurations.maybeCreate(
+            environment.modApiConfigurationName
+        ).apply {
+            isCanBeConsumed = false
+            isCanBeResolved = false
+        }
+        project.configurations.maybeCreate(
             environment.modImplementationConfigurationName
         ).apply {
             isCanBeConsumed = false
@@ -82,7 +88,19 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             isCanBeResolved = false
         }
         project.configurations.maybeCreate(
+            environment.modCompileOnlyApiConfigurationName
+        ).apply {
+            isCanBeConsumed = false
+            isCanBeResolved = false
+        }
+        project.configurations.maybeCreate(
             environment.modRuntimeOnlyConfigurationName
+        ).apply {
+            isCanBeConsumed = false
+            isCanBeResolved = false
+        }
+        project.configurations.maybeCreate(
+            environment.modLocalRuntimeConfigurationName
         ).apply {
             isCanBeConsumed = false
             isCanBeResolved = false

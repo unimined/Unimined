@@ -19,9 +19,12 @@ per-dependency configuration.
                 runtimeOnly("com.example:rt:1.0")
                 api("com.example:api-lib:1.0")          // see note below
 
-                modImplementation("com.example:mod:1.0") // mod buckets —
-                modCompileOnly("com.example:mod-stub:1.0") // remapped into
-                modRuntimeOnly("com.example:mod-rt:1.0")   // the dev namespace
+                modApi("com.example:mod-api:1.0")       // mod buckets —
+                modImplementation("com.example:mod:1.0") // remapped into
+                modCompileOnly("com.example:mod-stub:1.0") // the dev namespace
+                modCompileOnlyApi("com.example:mod-compile-api:1.0")
+                modRuntimeOnly("com.example:mod-rt:1.0")
+                modLocalRuntime("com.example:mod-local:1.0")
                 include("com.example:embed:1.0")
             }
             sourceSet("fabric") {
@@ -34,7 +37,7 @@ per-dependency configuration.
             }
         }
     }
-    ```
+```
 
 === "Groovy `build.gradle`"
     ```groovy
@@ -46,9 +49,12 @@ per-dependency configuration.
                 runtimeOnly "com.example:rt:1.0"
                 api "com.example:api-lib:1.0"          // see note below
 
-                modImplementation "com.example:mod:1.0" // mod buckets —
-                modCompileOnly "com.example:mod-stub:1.0" // remapped into
-                modRuntimeOnly "com.example:mod-rt:1.0"   // the dev namespace
+                modApi "com.example:mod-api:1.0"       // mod buckets —
+                modImplementation "com.example:mod:1.0" // remapped into
+                modCompileOnly "com.example:mod-stub:1.0" // the dev namespace
+                modCompileOnlyApi "com.example:mod-compile-api:1.0"
+                modRuntimeOnly "com.example:mod-rt:1.0"
+                modLocalRuntime "com.example:mod-local:1.0"
                 include "com.example:embed:1.0"
             }
             sourceSet("fabric") {
@@ -76,10 +82,12 @@ and providers all work as in the global `dependencies { }` block.
   compile+runtime visible in-dev) — safe against a `java-library`
   applied later, and unimined's dev-variant publishing carries an
   existing `<env>Api` in the env's api-elements channel.
-- **`modApi` does not exist** — publication semantics for
-  compile-visible mod deps are undecided; it is intentionally absent
-  rather than half-wired. `modImplementation` is the correct bucket
-  for mods you compile and ship against.
+- **`modApi`/`modCompileOnlyApi`/`modLocalRuntime` complete the loom
+  vocabulary** — see the [vocabulary matrix](#mod-dependency-vocabulary)
+  below. In short: `modApi` is the compile-visible-transitive bucket
+  (dependents compile against it too), `modCompileOnlyApi` publishes
+  compile-only, and `modLocalRuntime` is for mods present only when
+  this project itself runs — never published, never transitive.
 - **`include` is *not* a classpath dependency** — entries embed in the
   production jar but are never compiled or launched against; declare
   `modImplementation` (fabric-style mods) or `implementation`
@@ -94,31 +102,65 @@ mod jars land remapped onto your mappings:
 === "Kotlin `build.gradle.kts`"
     ```kotlin
     dependencies {
-        modImplementation("maven:coord")   // compile + runtime
-        modCompileOnly("maven:coord")      // compile only
-        modRuntimeOnly("maven:coord")      // runtime only
+        modApi("maven:coord")              // compile + runtime, published api scope
+        modImplementation("maven:coord")   // compile + runtime, published runtime scope
+        modCompileOnly("maven:coord")      // compile only, never published
+        modCompileOnlyApi("maven:coord")   // compile only, published compile scope
+        modRuntimeOnly("maven:coord")      // runtime only, published runtime scope
+        modLocalRuntime("maven:coord")     // runtime only, never published
     }
     ```
 
 === "Groovy `build.gradle`"
     ```groovy
     dependencies {
-        modImplementation("maven:coord")   // compile + runtime
-        modCompileOnly("maven:coord")      // compile only
-        modRuntimeOnly("maven:coord")      // runtime only
+        modApi("maven:coord")              // compile + runtime, published api scope
+        modImplementation("maven:coord")   // compile + runtime, published runtime scope
+        modCompileOnly("maven:coord")      // compile only, never published
+        modCompileOnlyApi("maven:coord")   // compile only, published compile scope
+        modRuntimeOnly("maven:coord")      // runtime only, published runtime scope
+        modLocalRuntime("maven:coord")     // runtime only, never published
     }
     ```
 
 Named envs prefix the bucket (`serverModImplementation`,
-`serverModCompileOnly`, `serverModRuntimeOnly`). All three remap the
-same way — the difference is purely which classpaths they land on:
-`modCompileOnly` mods compile against you (annotation-processor
-stubs, compile-time API surface, javadoc-only references) but never
-reach a runtime classpath and are never published, exactly like
-java's `compileOnly`/`modImplementation` split. For remapped buckets
-beyond this vocabulary (a custom `modLocalRuntime`-style arrangement),
+`serverModApi`, `serverModLocalRuntime`, …). All six remap the
+same way — the difference is purely which classpaths they land on
+and how they publish. For remapped buckets beyond this vocabulary,
 declare a `remap.remappedViews(...)` view over your own bucket
 ([below](#configuration-reference)).
+
+### Mod dependency vocabulary
+
+Loom-parity semantics — one axis is the dev classpaths, the other is
+the published dependency surface:
+
+| Bucket | Dev compile | Dev runtime | Published | Transitive to dependents |
+|---|---|---|---|---|
+| `modApi` | yes | yes | api (compile) + runtime scope | yes — consumers compile against it |
+| `modImplementation` | yes | yes | runtime scope only | runtime only |
+| `modCompileOnly` | yes | no | never | no |
+| `modCompileOnlyApi` | yes | no | compile (api) scope only | compile only |
+| `modRuntimeOnly` | no | yes | runtime scope | runtime only |
+| `modLocalRuntime` | no | yes | never | no |
+
+- **`modApi` vs `modImplementation`** — both compile+runtime in dev;
+  the split is purely the published surface. `modApi` is for mods
+  whose API your own API exposes (dependents must compile against
+  them); `modImplementation` stays an internal detail consumers only
+  need at runtime. This is loom's exact split, and a deliberate
+  correction of unimined 2.0-prerelease behavior: before the
+  vocabulary split existed, `modImplementation` mis-published at
+  api/compile scope — it now publishes **runtime-only** like loom.
+- **`modCompileOnlyApi`** — compile-time API surface that dependents
+  also compile against (the java-library `compileOnlyApi` analog):
+  never on a runtime classpath. Maven consumers see it as an ordinary
+  compile-scope dependency — the pom cannot express compile-only.
+- **`modLocalRuntime`** — mods a user installation provides at runtime
+  (utility mods, renderers, dev tooling): present on every launch of
+  this project — dev *and* prod runs — but never published and never
+  transitive. The canonical pairing is `modCompileOnlyApi` for the
+  compile-time surface + `modLocalRuntime` for the runtime presence.
 
 Mod jars are remapped from the environment's *mod source namespace*
 to its dev namespace — they must already be built against the mod
@@ -474,9 +516,12 @@ on `unimined*` names (`uniminedMainAccessTransformer`).
 
 | Configuration | Lands on | Remapped? | Purpose |
 |---|---|---|---|
-| `modImplementation` / `<env>ModImplementation` | compile + runtime | yes → dev ns | mod jars to compile and run against |
+| `modApi` / `<env>ModApi` | compile + runtime | yes → dev ns | compile-visible-transitive mod deps — published api + runtime scope |
+| `modImplementation` / `<env>ModImplementation` | compile + runtime | yes → dev ns | mod jars to compile and run against — published runtime scope only |
 | `modCompileOnly` / `<env>ModCompileOnly` | compile only | yes → dev ns | mods needed only at compile time — never launched, never published |
-| `modRuntimeOnly` / `<env>ModRuntimeOnly` | runtime | yes → dev ns | mods needed only at launch |
+| `modCompileOnlyApi` / `<env>ModCompileOnlyApi` | compile only | yes → dev ns | compile-time mod API dependents also see — published compile scope |
+| `modRuntimeOnly` / `<env>ModRuntimeOnly` | runtime | yes → dev ns | mods needed only at launch — published runtime scope |
+| `modLocalRuntime` / `<env>ModLocalRuntime` | runtime | yes → dev ns | mods only this project's own runs see — never published, never transitive |
 | `include` / `<env>Include` | production jar (jarjar) | repacked | embed jars inside the mod artifact — *not* a classpath dep ([jar-in-jar](#jar-in-jar-include)) |
 | `unimined<Env>AccessTransformer` | access docs | — | coordinate-consumed access docs (NG `accessTransformer` parity) |
 | `run<Name>Dependencies` | one run's classpath | — | per-run classpath additions for `additionalRuntimeClasspath` maven coords |

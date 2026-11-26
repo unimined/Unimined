@@ -87,9 +87,12 @@ abstract class ExpectPlatformEnvExtension(
         this.remap.putAll(remap)
         val ep = project.extensions.getByType(ExpectPlatformExtension::class.java)
         listOf(
+            env.modApiConfigurationName,
             env.modImplementationConfigurationName,
             env.modCompileOnlyConfigurationName,
-            env.modRuntimeOnlyConfigurationName
+            env.modCompileOnlyApiConfigurationName,
+            env.modRuntimeOnlyConfigurationName,
+            env.modLocalRuntimeConfigurationName
         ).mapNotNull { project.configurations.findByName(it) }
             .forEach { conf ->
                 ep.platform(name, conf) {

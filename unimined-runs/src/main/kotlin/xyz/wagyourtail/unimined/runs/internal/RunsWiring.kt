@@ -313,9 +313,13 @@ internal object RunsWiring {
                     },
                     listOfNotNull(
                         project.configurations.findByName(
+                            "${environment.modApiConfigurationName}Direct"),
+                        project.configurations.findByName(
                             "${environment.modImplementationConfigurationName}Direct"),
                         project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Direct")
+                            "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                        project.configurations.findByName(
+                            "${environment.modLocalRuntimeConfigurationName}Direct")
                     )
                 )
             } else {
@@ -329,9 +333,13 @@ internal object RunsWiring {
                     // namespace envs like the conversion products)
                     listOfNotNull(
                         project.configurations.findByName(
+                            "${environment.modApiConfigurationName}Direct"),
+                        project.configurations.findByName(
                             "${environment.modImplementationConfigurationName}Direct"),
                         project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Direct")
+                            "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                        project.configurations.findByName(
+                            "${environment.modLocalRuntimeConfigurationName}Direct")
                     )
                 )
             }
@@ -397,9 +405,13 @@ internal object RunsWiring {
                         project.files(
                             listOfNotNull(
                                 project.configurations.findByName(
+                                    "${environment.modApiConfigurationName}Direct"),
+                                project.configurations.findByName(
                                     "${environment.modImplementationConfigurationName}Direct"),
                                 project.configurations.findByName(
-                                    "${environment.modRuntimeOnlyConfigurationName}Direct")
+                                    "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                                project.configurations.findByName(
+                                    "${environment.modLocalRuntimeConfigurationName}Direct")
                             )
                         )
                     },

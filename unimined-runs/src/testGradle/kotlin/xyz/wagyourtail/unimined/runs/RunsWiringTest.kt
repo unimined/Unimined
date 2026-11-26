@@ -210,6 +210,57 @@ class RunsWiringTest {
     }
 
     @Test
+    fun `prod run classpath carries runtime-visible mod buckets only`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+        // file deps resolve through the pass-through `*Direct` views
+        // without any remap machinery — safe to resolve in tests
+        fun stubJar(name: String) = dir.resolve(name).toFile()
+            .apply { writeBytes(byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))) }
+        val apiJar = stubJar("api-mod.jar")
+        val implJar = stubJar("impl-mod.jar")
+        val runtimeJar = stubJar("runtime-mod.jar")
+        val localJar = stubJar("local-mod.jar")
+        val compileJar = stubJar("compile-mod.jar")
+        val compileApiJar = stubJar("compile-api-mod.jar")
+        ext.main.dependencies {
+            it.modApi(project.files(apiJar))
+            it.modImplementation(project.files(implJar))
+            it.modRuntimeOnly(project.files(runtimeJar))
+            it.modLocalRuntime(project.files(localJar))
+            it.modCompileOnly(project.files(compileJar))
+            it.modCompileOnlyApi(project.files(compileApiJar))
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val task =
+            project.tasks.findByName("runProdClient") as MinecraftRunTask
+        // the mod views ride one provider blob on the prod classpath —
+        // resolving it exercises exactly the wiring's configuration set
+        // (the pass-through views need no MC artifact, no mappings)
+        val resolved = task.runtimeClasspath.from
+            .filterIsInstance<org.gradle.api.provider.Provider<*>>()
+            // named-configuration providers (`minecraftProd` & co) are
+            // not the mod blob — resolving them would materialize the
+            // MC artifact pipeline, which can't run under ProjectBuilder
+            .filter { it !is org.gradle.api.NamedDomainObjectProvider<*> }
+            .flatMap { (it.get() as? org.gradle.api.file.FileCollection)?.files ?: emptySet() }
+            .map { it.name }
+        for (jar in listOf(apiJar, implJar, runtimeJar, localJar)) {
+            assertTrue(jar.name in resolved,
+                "${jar.name} must reach the prod run classpath: $resolved")
+        }
+        for (jar in listOf(compileJar, compileApiJar)) {
+            assertFalse(jar.name in resolved,
+                "${jar.name} must stay off the prod run classpath: $resolved")
+        }
+    }
+
+    @Test
     fun `per-run classpath additions reach the launch classpath`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

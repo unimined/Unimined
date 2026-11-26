@@ -24,14 +24,18 @@ import org.gradle.api.artifacts.Dependency
  *    java-library-equivalent semantics (compile+runtime visible
  *    in-dev), which unimined's publish wiring then carries in the
  *    env's api-elements channel like any existing `<env>Api`.
- *  - `modImplementation`/`modCompileOnly`/`modRuntimeOnly` — the env's
- *    mod buckets: mod jars remapped from the mod source namespace into
- *    the dev namespace. `modCompileOnly` is compile-classpath-only —
- *    never on runtime classpaths, never published. `modApi` is
- *    deliberately absent: publication semantics for compile-visible
- *    mod deps are undecided (future work — loom's `modApi` carries
- *    dependents-visible access rules, which unimined's access-model
- *    channel would need to express first).
+ *  - `modApi`/`modImplementation`/`modCompileOnly`/`modCompileOnlyApi`/
+ *    `modRuntimeOnly`/`modLocalRuntime` — the env's mod buckets: mod
+ *    jars remapped from the mod source namespace into the dev
+ *    namespace, loom-parity semantics. `modImplementation` is
+ *    compile+runtime in dev and publishes at runtime scope only;
+ *    `modApi` is the same in dev but publishes at api (compile+runtime)
+ *    scope — the compile-visible-transitive bucket. `modCompileOnly`
+ *    is compile-classpath-only — never on runtime classpaths, never
+ *    published; `modCompileOnlyApi` is the same in dev but publishes
+ *    at compile (api) scope. `modRuntimeOnly` is runtime-only in dev
+ *    and publishes at runtime scope; `modLocalRuntime` is runtime-only
+ *    in dev and NEVER published — local-launch-only mods.
  *  - `include` — the jar-in-jar embed bucket. NOT a classpath
  *    dependency: entries ship inside the production jar but are never
  *    compiled or launched against — declare `modImplementation` (or
@@ -142,8 +146,18 @@ class EnvironmentDependencySpec internal constructor(
         return project.dependencies.add(apiName, notation)
     }
 
+    /** Mod jar to compile and run against in this environment, exposed
+     *  to dependents at api (compile+runtime) scope — remapped from the
+     *  mod source namespace into the dev namespace. The
+     *  compile-visible-transitive bucket (loom `modApi` parity).
+     *  (`modApi` / `<env>ModApi`.) */
+    fun modApi(notation: Any): Dependency? =
+        addToModBucket(environment.modApiConfigurationName, notation)
+
     /** Mod jar to compile and run against in this environment —
      *  remapped from the mod source namespace into the dev namespace.
+     *  Publishes at runtime scope only; compile-visible-transitive mod
+     *  deps belong in [modApi].
      *  (`modImplementation` / `<env>ModImplementation`.) */
     fun modImplementation(notation: Any): Dependency? =
         addToModBucket(environment.modImplementationConfigurationName, notation)
@@ -155,10 +169,26 @@ class EnvironmentDependencySpec internal constructor(
     fun modCompileOnly(notation: Any): Dependency? =
         addToModBucket(environment.modCompileOnlyConfigurationName, notation)
 
+    /** Mod jar needed only at compile time in this environment whose
+     *  API surface dependents also compile against — dev
+     *  compile-classpath-only like [modCompileOnly], but published at
+     *  compile (api) scope (loom `modCompileOnlyApi` parity).
+     *  (`modCompileOnlyApi` / `<env>ModCompileOnlyApi`.) */
+    fun modCompileOnlyApi(notation: Any): Dependency? =
+        addToModBucket(environment.modCompileOnlyApiConfigurationName, notation)
+
     /** Mod jar needed only at runtime in this environment —
      *  (`modRuntimeOnly` / `<env>ModRuntimeOnly`.) */
     fun modRuntimeOnly(notation: Any): Dependency? =
         addToModBucket(environment.modRuntimeOnlyConfigurationName, notation)
+
+    /** Mod jar needed only when this project itself runs — dev
+     *  runtime-classpath-only like [modRuntimeOnly] but NEVER published
+     *  and never transitive to dependents (loom `modLocalRuntime`
+     *  parity: mods a user installation provides).
+     *  (`modLocalRuntime` / `<env>ModLocalRuntime`.) */
+    fun modLocalRuntime(notation: Any): Dependency? =
+        addToModBucket(environment.modLocalRuntimeConfigurationName, notation)
 
     /**
      * Jar embedded into this environment's production artifact
