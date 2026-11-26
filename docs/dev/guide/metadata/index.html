@@ -1831,7 +1831,9 @@ needed — declare configs and unimined handles the rest:</p>
 <h2 id="access-files">Access files<a class="headerlink" href="#access-files" title="Permanent link">&para;</a></h2>
 <p>No DSL is required — an access file under the environment's
 resource roots (<code>*.accesswidener</code>, <code>*.classtweaker</code>/<code>.ct</code>,
-<code>accesstransformer.cfg</code>/<code>*_at.cfg</code>) is picked up automatically.</p>
+<code>accesstransformer.cfg</code>/<code>*_at.cfg</code>) is picked up automatically.
+Roots under the build directory are skipped: they hold task outputs,
+this environment's generated metadata included.</p>
 <p>All declared access files — <code>accessWideners</code>/<code>accessTransformers</code>
 collections, <code>access { }</code> rules, <code>accessFile(...)</code> overrides, and
 the auto-discovered resource files — convert into

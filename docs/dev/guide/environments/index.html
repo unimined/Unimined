@@ -2071,7 +2071,11 @@ no AT analog; narrowing <code>at()</code> access has no AW form).</p>
   access-file convention the canonical name is ignored (warn-only).</li>
 <li><strong>Auto-discovery</strong> — resource-side access files (patterns above)
   join the same channels without any declaration: dev-artifact
-  application, canonical merge, metadata reference.</li>
+  application, canonical merge, metadata reference. Resource roots
+  under the build directory are task outputs and are not scanned —
+  declare a generated access file through the task's output file
+  (<code>accessWideners.from(task.map { it.outputFile })</code>), which keeps
+  the task dependency.</li>
 <li><code>combineWith</code> propagates access rules alongside the declared file
   collections, so combined environments share declarations.</li>
 </ul>
