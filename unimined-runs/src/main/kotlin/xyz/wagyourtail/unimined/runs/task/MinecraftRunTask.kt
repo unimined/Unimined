@@ -224,7 +224,7 @@ abstract class MinecraftRunTask @Inject constructor(
     abstract val dryRun: Property<Boolean>
 
     /**
-     * `-Punimined.run.verify` — audit the assembled launch plan
+     * `-Punimined.run.verify=true` — audit the assembled launch plan
      * (classpath entries exist, resolved main class is on the
      * classpath, loader-required resources present, agents/asset
      * index on disk) and return without exec'ing. Fails the task on
