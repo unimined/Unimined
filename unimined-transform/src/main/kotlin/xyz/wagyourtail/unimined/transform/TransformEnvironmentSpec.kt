@@ -62,7 +62,8 @@ class TransformEnvironmentSpec internal constructor(
 
     /** Jar-in-jar packaging knobs — `nestedJars { recompress.set(false) }`;
      *  the env's `include` dependency bucket feeds it. The embed format
-     *  comes from the declared `features { nestedJars("…") }` binding. */
+     *  follows the env's loader unless [NestedJarsSpec.format] or a
+     *  `features { nestedJars("…") }` binding overrides it. */
     val nestedJars = objects.newInstance(NestedJarsSpec::class.java)
 
     /** `nestedJars { }` DSL verb. */

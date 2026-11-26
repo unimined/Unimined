@@ -9,9 +9,9 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import java.nio.file.Path
 
 /**
- * JiJ wiring under the fabric claim — the loader descriptor's
- * `nestedJarsKey` convention supplies the metadata coordinates, so
- * `include` works with no explicit `features { nestedJars }` binding.
+ * JiJ wiring on fabric envs — the loader descriptor supplies the
+ * format and the metadata coordinates (`nestedJarsKey`), so `include`
+ * works with no explicit `features { nestedJars }` binding.
  */
 class NestedJarsFabricWiringTest {
 

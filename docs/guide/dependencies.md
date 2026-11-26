@@ -123,8 +123,9 @@ everything declared on a custom bucket. Inherited deps still produce
 `version.range` metadata entries, so platform-include-style grouping
 needs no extra DSL.
 
-Two formats, chosen per environment — normally by the loader claim
-(fabric-family → `fabric`, forge → `jarjar`) or explicitly:
+Two formats, chosen per environment — normally by the environment's
+loader at its version (fabric-family → `fabric`; neoforge, and Forge
+since 1.18.2-40.1.60 / 1.19-41.0.34 → `jarjar`) or explicitly:
 
 === "Kotlin `build.gradle.kts`"
     ```kotlin
@@ -147,6 +148,10 @@ Two formats, chosen per environment — normally by the loader claim
         }
     }
     ```
+
+On a loader without a jar-in-jar format (earlier Forge, Cleanroom, the
+other loader families) an `include` that resolves any artifact fails
+the build instead of packaging the jar without them.
 
 The transform knobs can also sit directly on the loader declaration —
 `loader(name, version) { }` receives the same environment's transform

@@ -510,6 +510,22 @@ class ForgeEnvironmentWiringTest {
             "the forge wiring must not resurrect an unsafe universal/explicit class list")
     }
 
+    /** `include` on a forge-family env nests as jarjar with no
+     *  `features { nestedJars }` binding — the loader supplies it. */
+    @Test
+    fun `neoforge env resolves the jarjar format without a binding`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.21.1")
+        ext.main.provider.set("fake")
+        serveUserdev("net.neoforged:neoforge:21.1.77")
+        forgeEnv(ext, "neoforge", "1.21.1", "77")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+        val remapJar = project.tasks.getByName("remapNeoforgeJar")
+                as xyz.wagyourtail.unimined.remap.task.RemapJarTask
+        assertEquals("jarjar", remapJar.nestedJarsFormat.get())
+    }
+
     /** Invoke the forge mapping-hop contribution directly — the lambda
      *  is registered last on `deferredDefaultSources`; evaluating it
      *  realizes `resolved` (which resolves + probes the served

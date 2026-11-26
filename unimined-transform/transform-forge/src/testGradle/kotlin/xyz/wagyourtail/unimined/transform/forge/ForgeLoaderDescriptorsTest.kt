@@ -105,6 +105,26 @@ class ForgeLoaderDescriptorsTest {
     }
 
     @Test
+    fun `forge-family jar-in-jar format follows the JarJar eras`() {
+        fun format(id: String, mc: String, version: String) =
+            LoaderRegistry.resolveBuiltin(id)!!.metadata.nestedJarsFormat?.invoke(mc, version)
+        // MinecraftForge reads META-INF/jarjar since 1.18.2-40.1.60 (#8657)
+        // and 1.19-41.0.34 (#8715) — Forge maven changelogs
+        assertEquals(null, format("forge", "1.16.5", "36.2.39"))
+        assertEquals(null, format("forge", "1.18.1", "39.1.2"))
+        assertEquals(null, format("forge", "1.18.2", "40.1.59"))
+        assertEquals("jarjar", format("forge", "1.18.2", "40.1.60"))
+        assertEquals("jarjar", format("forge", "1.18.2", "1.18.2-40.2.0"))
+        assertEquals(null, format("forge", "1.19", "41.0.33"))
+        assertEquals("jarjar", format("forge", "1.19", "41.0.34"))
+        assertEquals("jarjar", format("forge", "1.20.1", "47.2.0"))
+        assertEquals("jarjar", format("lexforge", "26.3", "26.3-66.1.5"))
+        assertEquals("jarjar", format("neoforge", "1.20.1", "47.1.99"))
+        assertEquals("jarjar", format("neoforge", "26.3", "26.3.0.115"))
+        assertEquals(null, format("cleanroom", "1.12.2", "0.5.0-alpha"))
+    }
+
+    @Test
     fun `product capabilities surface atTool versions`() {
         assertEquals("8.2.2", LoaderRegistry.resolveBuiltin("forge")!!.capabilities["atTool"])
         assertEquals("8.1.6", LoaderRegistry.resolveBuiltin("cleanroom")!!.capabilities["atTool"])

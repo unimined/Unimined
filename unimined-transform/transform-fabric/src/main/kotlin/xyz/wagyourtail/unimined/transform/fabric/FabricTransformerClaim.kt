@@ -23,7 +23,6 @@ class FabricTransformerClaim : TransformerClaim {
         env.env.features.binding("mixin")
         env.env.features.binding("accessWidener")
         env.env.features.binding("interfaceInjection")
-        env.env.features.binding("nestedJars", "fabric")
         env.env.features.binding("modDiscovery", "dli")
         env.env.features.binding("mainClass", "net.fabricmc.loader.impl.launch.knot.KnotClient")
         // fabric-loader >=0.15 bundles mixinextras — declare the

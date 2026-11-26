@@ -294,7 +294,6 @@ internal object ProductionJarWiring {
                 if (props["nestedJarsIdentity"] != true) return@doLast
                 val format = (props["nestedJarsFormat"] as? String)
                     ?.takeUnless { it.isEmpty() }
-                    ?: return@doLast
                 @Suppress("UNCHECKED_CAST")
                 val rows = NestedJarsAppender.append(
                     (task as Jar).archiveFile.get().asFile.toPath(),
