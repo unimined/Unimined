@@ -723,6 +723,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Mod dependencies (artifacts)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mod-dependency-vocabulary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod dependency vocabulary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1643,6 +1660,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Mod dependencies (artifacts)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mod-dependency-vocabulary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod dependency vocabulary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1778,58 +1812,69 @@ sugar over the configuration names in the
 <a href="#configuration-reference">reference below</a>: both forms mix freely,
 nothing is deprecated, and string names stay the way to reach exotic
 per-dependency configuration.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_1_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Kotlin <code>build.gradle.kts</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">            </span><span class="n">implementation</span><span class="p">(</span><span class="s">"com.example:lib:1.0"</span><span class="p">)</span><span class="w">   </span><span class="c1">// ordinary buckets</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">            </span><span class="n">compileOnly</span><span class="p">(</span><span class="s">"com.example:stub:1.0"</span><span class="p">)</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">            </span><span class="n">runtimeOnly</span><span class="p">(</span><span class="s">"com.example:rt:1.0"</span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">            </span><span class="n">api</span><span class="p">(</span><span class="s">"com.example:api-lib:1.0"</span><span class="p">)</span><span class="w">          </span><span class="c1">// see note below</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">            </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"com.example:mod:1.0"</span><span class="p">)</span><span class="w"> </span><span class="c1">// mod buckets —</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="n">modCompileOnly</span><span class="p">(</span><span class="s">"com.example:mod-stub:1.0"</span><span class="p">)</span><span class="w"> </span><span class="c1">// remapped into</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">            </span><span class="n">modRuntimeOnly</span><span class="p">(</span><span class="s">"com.example:mod-rt:1.0"</span><span class="p">)</span><span class="w">   </span><span class="c1">// the dev namespace</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">            </span><span class="n">include</span><span class="p">(</span><span class="s">"com.example:embed:1.0"</span><span class="p">)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"fabric"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">            </span><span class="c1">// same block, scoped to the fabric source set —</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">            </span><span class="c1">// verbs land on fabricImplementation,</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">            </span><span class="c1">// fabricModImplementation, …</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">            </span><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">                </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"com.example:fabric-mod:1.0"</span><span class="p">)</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="p">}</span>
+<p>```kotlin
+unimined {
+    minecraft {
+        dependencies {
+            implementation("com.example:lib:1.0")   // ordinary buckets
+            compileOnly("com.example:stub:1.0")
+            runtimeOnly("com.example:rt:1.0")
+            api("com.example:api-lib:1.0")          // see note below</p>
+<div class="highlight"><pre><span></span><code>        modApi("com.example:mod-api:1.0")       // mod buckets —
+        modImplementation("com.example:mod:1.0") // remapped into
+        modCompileOnly("com.example:mod-stub:1.0") // the dev namespace
+        modCompileOnlyApi("com.example:mod-compile-api:1.0")
+        modRuntimeOnly("com.example:mod-rt:1.0")
+        modLocalRuntime("com.example:mod-local:1.0")
+        include("com.example:embed:1.0")
+    }
+    sourceSet("fabric") {
+        // same block, scoped to the fabric source set —
+        // verbs land on fabricImplementation,
+        // fabricModImplementation, …
+        dependencies {
+            modImplementation("com.example:fabric-mod:1.0")
+        }
+    }
+}
 </code></pre></div>
+<p>}</p>
 </div>
+</div>
+</div>
+<p>```</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:1"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">            </span><span class="n">implementation</span><span class="w"> </span><span class="s2">"com.example:lib:1.0"</span><span class="w">   </span><span class="c1">// ordinary buckets</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">            </span><span class="n">compileOnly</span><span class="w"> </span><span class="s2">"com.example:stub:1.0"</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">            </span><span class="n">runtimeOnly</span><span class="w"> </span><span class="s2">"com.example:rt:1.0"</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">            </span><span class="n">api</span><span class="w"> </span><span class="s2">"com.example:api-lib:1.0"</span><span class="w">          </span><span class="c1">// see note below</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">            </span><span class="n">modImplementation</span><span class="w"> </span><span class="s2">"com.example:mod:1.0"</span><span class="w"> </span><span class="c1">// mod buckets —</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">            </span><span class="n">modCompileOnly</span><span class="w"> </span><span class="s2">"com.example:mod-stub:1.0"</span><span class="w"> </span><span class="c1">// remapped into</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">            </span><span class="n">modRuntimeOnly</span><span class="w"> </span><span class="s2">"com.example:mod-rt:1.0"</span><span class="w">   </span><span class="c1">// the dev namespace</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">            </span><span class="n">include</span><span class="w"> </span><span class="s2">"com.example:embed:1.0"</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">            </span><span class="c1">// same block, scoped to the fabric source set —</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">            </span><span class="c1">// verbs land on fabricImplementation,</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">            </span><span class="c1">// fabricModImplementation, …</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">            </span><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">                </span><span class="n">modImplementation</span><span class="w"> </span><span class="s2">"com.example:fabric-mod:1.0"</span>
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">            </span><span class="o">}</span>
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">            </span><span class="n">implementation</span><span class="w"> </span><span class="s2">"com.example:lib:1.0"</span><span class="w">   </span><span class="c1">// ordinary buckets</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">            </span><span class="n">compileOnly</span><span class="w"> </span><span class="s2">"com.example:stub:1.0"</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">            </span><span class="n">runtimeOnly</span><span class="w"> </span><span class="s2">"com.example:rt:1.0"</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">            </span><span class="n">api</span><span class="w"> </span><span class="s2">"com.example:api-lib:1.0"</span><span class="w">          </span><span class="c1">// see note below</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">            </span><span class="n">modApi</span><span class="w"> </span><span class="s2">"com.example:mod-api:1.0"</span><span class="w">       </span><span class="c1">// mod buckets —</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="n">modImplementation</span><span class="w"> </span><span class="s2">"com.example:mod:1.0"</span><span class="w"> </span><span class="c1">// remapped into</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">            </span><span class="n">modCompileOnly</span><span class="w"> </span><span class="s2">"com.example:mod-stub:1.0"</span><span class="w"> </span><span class="c1">// the dev namespace</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">            </span><span class="n">modCompileOnlyApi</span><span class="w"> </span><span class="s2">"com.example:mod-compile-api:1.0"</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">            </span><span class="n">modRuntimeOnly</span><span class="w"> </span><span class="s2">"com.example:mod-rt:1.0"</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">            </span><span class="n">modLocalRuntime</span><span class="w"> </span><span class="s2">"com.example:mod-local:1.0"</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">            </span><span class="n">include</span><span class="w"> </span><span class="s2">"com.example:embed:1.0"</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"fabric"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">            </span><span class="c1">// same block, scoped to the fabric source set —</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">            </span><span class="c1">// verbs land on fabricImplementation,</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">            </span><span class="c1">// fabricModImplementation, …</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">            </span><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">                </span><span class="n">modImplementation</span><span class="w"> </span><span class="s2">"com.example:fabric-mod:1.0"</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -1847,10 +1892,12 @@ and providers all work as in the global <code>dependencies { }</code> block.</p>
   compile+runtime visible in-dev) — safe against a <code>java-library</code>
   applied later, and unimined's dev-variant publishing carries an
   existing <code>&lt;env&gt;Api</code> in the env's api-elements channel.</li>
-<li><strong><code>modApi</code> does not exist</strong> — publication semantics for
-  compile-visible mod deps are undecided; it is intentionally absent
-  rather than half-wired. <code>modImplementation</code> is the correct bucket
-  for mods you compile and ship against.</li>
+<li><strong><code>modApi</code>/<code>modCompileOnlyApi</code>/<code>modLocalRuntime</code> complete the loom
+  vocabulary</strong> — see the <a href="#mod-dependency-vocabulary">vocabulary matrix</a>
+  below. In short: <code>modApi</code> is the compile-visible-transitive bucket
+  (dependents compile against it too), <code>modCompileOnlyApi</code> publishes
+  compile-only, and <code>modLocalRuntime</code> is for mods present only when
+  this project itself runs — never published, never transitive.</li>
 <li><strong><code>include</code> is <em>not</em> a classpath dependency</strong> — entries embed in the
   production jar but are never compiled or launched against; declare
   <code>modImplementation</code> (fabric-style mods) or <code>implementation</code>
@@ -1860,36 +1907,115 @@ and providers all work as in the global <code>dependencies { }</code> block.</p>
 <h2 id="mod-dependencies-artifacts">Mod dependencies (artifacts)<a class="headerlink" href="#mod-dependencies-artifacts" title="Permanent link">&para;</a></h2>
 <p>Each env exposes <code>mod*</code> configurations scoped to its source set —
 mod jars land remapped onto your mappings:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">   </span><span class="c1">// compile + runtime</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">      </span><span class="c1">// compile only</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">modRuntimeOnly</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">      </span><span class="c1">// runtime only</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">modApi</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">              </span><span class="c1">// compile + runtime, published api scope</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">modImplementation</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">   </span><span class="c1">// compile + runtime, published runtime scope</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">      </span><span class="c1">// compile only, never published</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">modCompileOnlyApi</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">   </span><span class="c1">// compile only, published compile scope</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="n">modRuntimeOnly</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">      </span><span class="c1">// runtime only, published runtime scope</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">modLocalRuntime</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span><span class="w">     </span><span class="c1">// runtime only, never published</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">modImplementation</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">   </span><span class="c1">// compile + runtime</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">      </span><span class="c1">// compile only</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">modRuntimeOnly</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">      </span><span class="c1">// runtime only</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">modApi</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">              </span><span class="c1">// compile + runtime, published api scope</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">modImplementation</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">   </span><span class="c1">// compile + runtime, published runtime scope</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">modCompileOnly</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">      </span><span class="c1">// compile only, never published</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="n">modCompileOnlyApi</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">   </span><span class="c1">// compile only, published compile scope</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">modRuntimeOnly</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">      </span><span class="c1">// runtime only, published runtime scope</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="n">modLocalRuntime</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span><span class="w">     </span><span class="c1">// runtime only, never published</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
 </div>
 <p>Named envs prefix the bucket (<code>serverModImplementation</code>,
-<code>serverModCompileOnly</code>, <code>serverModRuntimeOnly</code>). All three remap the
-same way — the difference is purely which classpaths they land on:
-<code>modCompileOnly</code> mods compile against you (annotation-processor
-stubs, compile-time API surface, javadoc-only references) but never
-reach a runtime classpath and are never published, exactly like
-java's <code>compileOnly</code>/<code>modImplementation</code> split. For remapped buckets
-beyond this vocabulary (a custom <code>modLocalRuntime</code>-style arrangement),
+<code>serverModApi</code>, <code>serverModLocalRuntime</code>, …). All six remap the
+same way — the difference is purely which classpaths they land on
+and how they publish. For remapped buckets beyond this vocabulary,
 declare a <code>remap.remappedViews(...)</code> view over your own bucket
 (<a href="#configuration-reference">below</a>).</p>
+<h3 id="mod-dependency-vocabulary">Mod dependency vocabulary<a class="headerlink" href="#mod-dependency-vocabulary" title="Permanent link">&para;</a></h3>
+<p>Loom-parity semantics — one axis is the dev classpaths, the other is
+the published dependency surface:</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Dev compile</th>
+<th>Dev runtime</th>
+<th>Published</th>
+<th>Transitive to dependents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modApi</code></td>
+<td>yes</td>
+<td>yes</td>
+<td>api (compile) + runtime scope</td>
+<td>yes — consumers compile against it</td>
+</tr>
+<tr>
+<td><code>modImplementation</code></td>
+<td>yes</td>
+<td>yes</td>
+<td>runtime scope only</td>
+<td>runtime only</td>
+</tr>
+<tr>
+<td><code>modCompileOnly</code></td>
+<td>yes</td>
+<td>no</td>
+<td>never</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>modCompileOnlyApi</code></td>
+<td>yes</td>
+<td>no</td>
+<td>compile (api) scope only</td>
+<td>compile only</td>
+</tr>
+<tr>
+<td><code>modRuntimeOnly</code></td>
+<td>no</td>
+<td>yes</td>
+<td>runtime scope</td>
+<td>runtime only</td>
+</tr>
+<tr>
+<td><code>modLocalRuntime</code></td>
+<td>no</td>
+<td>yes</td>
+<td>never</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>modApi</code> vs <code>modImplementation</code></strong> — both compile+runtime in dev;
+  the split is purely the published surface. <code>modApi</code> is for mods
+  whose API your own API exposes (dependents must compile against
+  them); <code>modImplementation</code> stays an internal detail consumers only
+  need at runtime. This is loom's exact split, and a deliberate
+  correction of unimined 2.0-prerelease behavior: before the
+  vocabulary split existed, <code>modImplementation</code> mis-published at
+  api/compile scope — it now publishes <strong>runtime-only</strong> like loom.</li>
+<li><strong><code>modCompileOnlyApi</code></strong> — compile-time API surface that dependents
+  also compile against (the java-library <code>compileOnlyApi</code> analog):
+  never on a runtime classpath. Maven consumers see it as an ordinary
+  compile-scope dependency — the pom cannot express compile-only.</li>
+<li><strong><code>modLocalRuntime</code></strong> — mods a user installation provides at runtime
+  (utility mods, renderers, dev tooling): present on every launch of
+  this project — dev <em>and</em> prod runs — but never published and never
+  transitive. The canonical pairing is <code>modCompileOnlyApi</code> for the
+  compile-time surface + <code>modLocalRuntime</code> for the runtime presence.</li>
+</ul>
 <p>Mod jars are remapped from the environment's <em>mod source namespace</em>
 to its dev namespace — they must already be built against the mod
 source namespace (usually the loader's production namespace, e.g.
@@ -1911,12 +2037,12 @@ your own resources. Loom's manifest contract is honored —
 <code>forceRemap { dep -&gt; … }</code> on the environment (NeoGradle's
 <code>forceDeobfuscation</code> equivalent) — predicates select components that
 must remap regardless of markers:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="c1">// …</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">forceRemap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">it</span><span class="p">.</span><span class="na">group</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"com.example"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">it</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"obf-lib"</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="p">.</span><span class="na">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="c1">// …</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="n">forceRemap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">it</span><span class="p">.</span><span class="na">group</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"com.example"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">it</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"obf-lib"</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
 </code></pre></div>
 <p><code>forceRemap</code> also accepts a <code>group:name[:version]</code> coordinate string
 (<code>forceRemap("com.example:obf-lib")</code>); malformed notation fails the
@@ -1950,20 +2076,20 @@ and skips the project-level registration.</p>
 <p>Each env exposes an <code>include</code> configuration (<code>&lt;env&gt;Include</code> for named
 source sets). Artifacts declared there are embedded inside the
 production jar and declared in its loader metadata:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s">"libs/local.jar"</span><span class="p">))</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="s">"maven:coord"</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">include</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s">"libs/local.jar"</span><span class="p">))</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="n">files</span><span class="o">(</span><span class="s2">"libs/local.jar"</span><span class="o">))</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="s2">"maven:coord"</span><span class="o">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">include</span><span class="o">(</span><span class="n">files</span><span class="o">(</span><span class="s2">"libs/local.jar"</span><span class="o">))</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -1977,26 +2103,26 @@ needs no extra DSL.</p>
 <p>Two formats, chosen per environment — normally by the environment's
 loader at its version (fabric-family → <code>fabric</code>; neoforge, and Forge
 since 1.18.2-40.1.60 / 1.19-41.0.34 → <code>jarjar</code>) or explicitly:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="p">(</span><span class="s">"jarjar"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="p">(</span><span class="s">"jarjar"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="o">(</span><span class="s2">"jarjar"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">            </span><span class="n">features</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">nestedJars</span><span class="o">(</span><span class="s2">"jarjar"</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// or "fabric"</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -2009,26 +2135,26 @@ the build instead of packaging the jar without them.</p>
 spec (<code>nestedJars { }</code> plus <code>binding(key, value)</code> for feature
 bindings), so packaging config colocates with the loader it belongs
 to:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_5_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_6_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="n">forge</span><span class="p">(</span><span class="s">"47.2.0"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="n">forge</span><span class="p">(</span><span class="s">"47.2.0"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="n">forge</span><span class="o">(</span><span class="s2">"47.2.0"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="n">forge</span><span class="o">(</span><span class="s2">"47.2.0"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -2059,38 +2185,38 @@ attribute — <code>MOD</code>, <code>LIBRARY</code>, <code>GAMELIBRARY</code> (
 language providers), <code>MOD</code>/<code>GAMELIBRARY</code> in GAME. Stamping it is how
 you mark a nested jar for FML's mod pipeline (scan, runtime remap)
 without <code>mods.toml</code> inside it:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_6_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_7_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"LIBRARY"</span><span class="p">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">                    </span><span class="s">"com.example:lang-lib"</span><span class="p">,</span><span class="w"> </span><span class="s">"LANGPROVIDER"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per g:a</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"local.jar"</span><span class="p">,</span><span class="w"> </span><span class="s">"MOD"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per file name</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"com.example:obf-lib"</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"LIBRARY"</span><span class="p">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">                    </span><span class="s">"com.example:lang-lib"</span><span class="p">,</span><span class="w"> </span><span class="s">"LANGPROVIDER"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per g:a</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"local.jar"</span><span class="p">,</span><span class="w"> </span><span class="s">"MOD"</span><span class="p">)</span><span class="w"> </span><span class="c1">// per file name</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="s">"com.example:obf-lib"</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"LIBRARY"</span><span class="o">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">                    </span><span class="s2">"com.example:lang-lib"</span><span class="o">,</span><span class="w"> </span><span class="s2">"LANGPROVIDER"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per g:a</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"local.jar"</span><span class="o">,</span><span class="w"> </span><span class="s2">"MOD"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per file name</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"com.example:obf-lib"</span><span class="o">,</span><span class="w"> </span><span class="kc">true</span><span class="o">)</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">            </span><span class="o">}</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">                </span><span class="n">fmlModType</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"LIBRARY"</span><span class="o">)</span><span class="w"> </span><span class="c1">// default for every entry</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">                    </span><span class="s2">"com.example:lang-lib"</span><span class="o">,</span><span class="w"> </span><span class="s2">"LANGPROVIDER"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per g:a</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">                </span><span class="n">fmlModTypes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"local.jar"</span><span class="o">,</span><span class="w"> </span><span class="s2">"MOD"</span><span class="o">)</span><span class="w"> </span><span class="c1">// per file name</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">                </span><span class="n">obfuscated</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s2">"com.example:obf-lib"</span><span class="o">,</span><span class="w"> </span><span class="kc">true</span><span class="o">)</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -2153,26 +2279,26 @@ and stamped at a fixed epoch for reproducible builds, STORED for
 <code>fabric</code> so the outer jar compresses the whole nested stream once
 (verbatim embedding would double-compress for ~zero gain). Opt out per
 environment:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_7_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="8:2"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><input id="__tabbed_8_2" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_8_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">recompress</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="o">}</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="n">transform</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">        </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">            </span><span class="n">nestedJars</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="n">recompress</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="w"> </span><span class="o">}</span><span class="w"> </span><span class="c1">// embed verbatim</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -2240,20 +2366,20 @@ the jvmdowngrader java-api, the bukkit classpath-plugin-loader, and
 <code>stitch</code> (yarn-v1 field-name proposals). Each coordinate is a
 <code>Property&lt;String&gt;</code> on the <code>uniminedTools</code> extension, so the version —
 or a fork — is user-overridable:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="8:2"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><input id="__tabbed_8_2" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_8_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="9:2"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_9_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="n">jst</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"net.neoforged.jst:jst-cli:2.1.0"</span><span class="p">)</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="n">diffpatch</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"com.example:DiffPatchFork:1.0"</span><span class="p">)</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="n">jst</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"net.neoforged.jst:jst-cli:2.1.0"</span><span class="p">)</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="n">diffpatch</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"com.example:DiffPatchFork:1.0"</span><span class="p">)</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="n">jst</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"net.neoforged.jst:jst-cli:2.1.0"</span><span class="o">)</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="n">diffpatch</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"com.example:DiffPatchFork:1.0"</span><span class="o">)</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">uniminedTools</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="n">jst</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"net.neoforged.jst:jst-cli:2.1.0"</span><span class="o">)</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="n">diffpatch</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"com.example:DiffPatchFork:1.0"</span><span class="o">)</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>
@@ -2328,10 +2454,16 @@ on <code>unimined*</code> names (<code>uniminedMainAccessTransformer</code>).</p
 </thead>
 <tbody>
 <tr>
+<td><code>modApi</code> / <code>&lt;env&gt;ModApi</code></td>
+<td>compile + runtime</td>
+<td>yes → dev ns</td>
+<td>compile-visible-transitive mod deps — published api + runtime scope</td>
+</tr>
+<tr>
 <td><code>modImplementation</code> / <code>&lt;env&gt;ModImplementation</code></td>
 <td>compile + runtime</td>
 <td>yes → dev ns</td>
-<td>mod jars to compile and run against</td>
+<td>mod jars to compile and run against — published runtime scope only</td>
 </tr>
 <tr>
 <td><code>modCompileOnly</code> / <code>&lt;env&gt;ModCompileOnly</code></td>
@@ -2340,10 +2472,22 @@ on <code>unimined*</code> names (<code>uniminedMainAccessTransformer</code>).</p
 <td>mods needed only at compile time — never launched, never published</td>
 </tr>
 <tr>
+<td><code>modCompileOnlyApi</code> / <code>&lt;env&gt;ModCompileOnlyApi</code></td>
+<td>compile only</td>
+<td>yes → dev ns</td>
+<td>compile-time mod API dependents also see — published compile scope</td>
+</tr>
+<tr>
 <td><code>modRuntimeOnly</code> / <code>&lt;env&gt;ModRuntimeOnly</code></td>
 <td>runtime</td>
 <td>yes → dev ns</td>
-<td>mods needed only at launch</td>
+<td>mods needed only at launch — published runtime scope</td>
+</tr>
+<tr>
+<td><code>modLocalRuntime</code> / <code>&lt;env&gt;ModLocalRuntime</code></td>
+<td>runtime</td>
+<td>yes → dev ns</td>
+<td>mods only this project's own runs see — never published, never transitive</td>
 </tr>
 <tr>
 <td><code>include</code> / <code>&lt;env&gt;Include</code></td>

@@ -23,5 +23,7 @@ unimined {
 
 dependencies {
     implementation(project(":common"))
-    // modImplementation("maven:coord") — remapped mods
+    // modImplementation("maven:coord") — remapped mods; also
+    // modApi/modCompileOnly/modCompileOnlyApi/modRuntimeOnly/
+    // modLocalRuntime — see the dependency vocabulary docs
 }
