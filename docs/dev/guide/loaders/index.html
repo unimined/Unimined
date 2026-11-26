@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -650,6 +652,17 @@
     <span class="md-ellipsis">
       
         Adding a loader to an existing project
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rift-mixins-modernmixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rift mixins (ModernMixins)
       
     </span>
   </a>
@@ -932,6 +945,34 @@
     
   
     Mod Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../era-merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Era Merge Packaging
   
 
     
@@ -1488,6 +1529,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rift-mixins-modernmixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rift mixins (ModernMixins)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1799,6 +1851,51 @@ see <a href="../dependencies/">Dependencies</a>.</p>
 <p>Generating fresh instead? <code>unimined-cli new mymod --loader quilt=0.26.0</code>
 emits the same shape — <code>--modules</code> for the per-loader subproject
 layout.</p>
+<h2 id="rift-mixins-modernmixins">Rift mixins (ModernMixins)<a class="headerlink" href="#rift-mixins-modernmixins" title="Permanent link">&para;</a></h2>
+<p><code>rift(v)</code> environments ship with <strong>ModernMixins</strong> on the runtime
+classpath by default — RiftEnthusiasts' rift mod bundling mixin
+<strong>0.8.6</strong> + <strong>MixinExtras 0.3.6</strong> (<code>maven.modrinth:modernmixins</code>,
+resolved from the modrinth maven, which the rift loader descriptor
+ensures). At launch it strips dimdev's mixin-0.7.11/asm-6.2 jars off
+the classpath and parent-loads its shaded mixin 0.8.6, so rift mods
+can use modern mixin features; the stock trio stays declared because
+its conflict detection keys off those jars.</p>
+<p>Mixin config registration on rift is unimined-wired (RiftLoader
+itself has no <code>mixins</code> key):</p>
+<ul>
+<li><strong>dev runs</strong> — <code>--mixin &lt;config&gt;</code> program args register every env
+  mixin config (read off <code>sun.java.command</code> by both mixin 0.7.x and
+  0.8.x), and the generated <code>META-INF/MANIFEST.MF</code> in the exploded
+  resources dir carries <code>MixinConfigs</code>/<code>TweakClass</code> attrs that mixin
+  0.8's classpath scan picks up.</li>
+<li><strong>production jars</strong> — the same <code>MixinConfigs</code>/<code>TweakClass</code>
+  manifest attrs merge into the jar manifest, which sponge's
+  container scan reads off mod jars in <code>mods/</code>.</li>
+</ul>
+<p>Opt out of ModernMixins (stock mixin 0.7.11 runtime — dev configs
+then register only through the <code>--mixin</code> args):</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">rift</span><span class="p">(</span><span class="s">"1.13.2"</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">modernMixins</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">minecraft</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">sourceSet</span><span class="o">(</span><span class="s2">"main"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">rift</span><span class="o">(</span><span class="s2">"1.13.2"</span><span class="o">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="n">modernMixins</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 
 
 

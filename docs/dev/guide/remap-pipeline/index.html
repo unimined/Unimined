@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -738,6 +740,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Mod artifacts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conventions-and-explicit-declarations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions and explicit declarations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -965,6 +984,34 @@
     
   
     Mod Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../era-merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Era Merge Packaging
   
 
     
@@ -1519,6 +1566,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Mod artifacts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conventions-and-explicit-declarations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions and explicit declarations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1612,6 +1676,13 @@ run a <code>modArtifacts</code> step that rewrites mod-jar metadata the base
 remap leaves untouched:</p>
 <ul>
 <li><code>kotlin.Metadata</code> internal names (any Kotlin mod jar)</li>
+<li>string <code>ldc</code> constants carrying class names or descriptors, but only in
+  class-scoped opt-in channels: explicit classes via
+  <code>enableClassNameLdcRemap("com/example/Transformer")</code>, or — on forge
+  environments — classes implementing LaunchWrapper's <code>IClassTransformer</code>.
+  Those coremod transformers use descriptor literals as bytecode-construction
+  inputs, while arbitrary mod string literals may instead be runtime protocol
+  keys and must never be rewritten wholesale</li>
 <li>mixin configs and refmap emission for jars carrying <code>*.mixins.json</code></li>
 <li>JarModAgent/ClassTransform refmaps for jars whose manifest declares
   <code>JarModAgent-Refmaps</code></li>
@@ -1619,38 +1690,86 @@ remap leaves untouched:</p>
 <p>The step is engine-agnostic — it applies identically when <code>remap</code> is
 overridden with <code>remap("tiny")</code>, and to remapped dependency views, so
 mod deps get mixin refmaps for the dev runtime. Declare it explicitly
-with <code>jar { modArtifacts() }</code> only to pin an engine or ordering; it is
-skipped on identity remaps and on jars without the relevant resources.</p>
+with <code>jar { modArtifacts() }</code> to configure its knobs or pin an engine
+or ordering; it is skipped on identity remaps and on jars without the
+relevant resources.</p>
+<h3 id="conventions-and-explicit-declarations">Conventions and explicit declarations<a class="headerlink" href="#conventions-and-explicit-declarations" title="Permanent link">&para;</a></h3>
+<p>Loader wirings contribute two tiers of defaults for this step:</p>
+<ul>
+<li><strong>Convenience knobs</strong> (refmap emission, forced mixin tables, …) —
+  an explicit <code>modArtifacts { }</code> declaration takes full control of
+  these. Loader-contributed convenience defaults only shape the
+  auto-appended step; they never rewrite a step you declared yourself.</li>
+<li><strong>Correctness flags</strong> (<code>remapLaunchwrapperTransformerLdcs</code> on
+  LaunchWrapper-era forge) have true <em>convention semantics</em>: without
+  them the loader's mod artifacts boot-crash, so they pre-seed even
+  explicit <code>modArtifacts { }</code> declarations — declaring the step for
+  unrelated reasons (say, <code>disableRefmap()</code>) must not silently drop a
+  boot-critical rewrite. You still keep the final word per flag: opt
+  out explicitly and the pre-seed stands down:</li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">jar</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">            </span><span class="n">modArtifacts</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">                </span><span class="c1">// deliberate opt-out — loader correctness</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">                </span><span class="c1">// conventions will not re-enable it</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">                </span><span class="n">disableLaunchwrapperTransformerLdcRemap</span><span class="p">()</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">jar</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">            </span><span class="n">modArtifacts</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                </span><span class="c1">// deliberate opt-out — loader correctness</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">                </span><span class="c1">// conventions will not re-enable it</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">                </span><span class="n">disableLaunchwrapperTransformerLdcRemap</span><span class="o">()</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="o">}</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="o">}</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="o">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="standalone-artifact-remapping">Standalone artifact remapping<a class="headerlink" href="#standalone-artifact-remapping" title="Permanent link">&para;</a></h2>
 <p><code>unimined:remap</code> works outside a Minecraft environment — any jar can be
 remapped between namespaces with <code>remap.artifact(...)</code>, which registers
 a <code>remap&lt;Name&gt;Artifact</code> task:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_2_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">uniminedRemap</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">artifact</span><span class="p">(</span><span class="s">"baritone"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="n">input</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">file</span><span class="p">(</span><span class="s">"baritone.jar"</span><span class="p">))</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span><span class="n">mappings</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">file</span><span class="p">(</span><span class="s">"mapping.txt"</span><span class="p">))</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="n">from</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"target"</span><span class="p">)</span><span class="w">   </span><span class="c1">// optional — see autodetection below</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="n">to</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"source"</span><span class="p">)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="c1">// output defaults to build/remapped/baritone-remapped.jar</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1">// ./gradlew remapBaritoneArtifact</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">uniminedRemap</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">artifact</span><span class="p">(</span><span class="s">"baritone"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">input</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">file</span><span class="p">(</span><span class="s">"baritone.jar"</span><span class="p">))</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">mappings</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">layout</span><span class="p">.</span><span class="na">projectDirectory</span><span class="p">.</span><span class="na">file</span><span class="p">(</span><span class="s">"mapping.txt"</span><span class="p">))</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="n">from</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"target"</span><span class="p">)</span><span class="w">   </span><span class="c1">// optional — see autodetection below</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="n">to</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">"source"</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="c1">// output defaults to build/remapped/baritone-remapped.jar</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">}</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1">// ./gradlew remapBaritoneArtifact</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">uniminedRemap</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">artifact</span><span class="o">(</span><span class="s2">"baritone"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">input</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">file</span><span class="o">(</span><span class="s2">"baritone.jar"</span><span class="o">))</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="n">mappings</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">file</span><span class="o">(</span><span class="s2">"mapping.txt"</span><span class="o">))</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="n">from</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"target"</span><span class="o">)</span><span class="w">   </span><span class="c1">// optional — see autodetection below</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="n">to</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"source"</span><span class="o">)</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="c1">// output defaults to build/remapped/baritone-remapped.jar</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="o">}</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1">// ./gradlew remapBaritoneArtifact</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">uniminedRemap</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">artifact</span><span class="o">(</span><span class="s2">"baritone"</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">input</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">file</span><span class="o">(</span><span class="s2">"baritone.jar"</span><span class="o">))</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="n">mappings</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">layout</span><span class="o">.</span><span class="na">projectDirectory</span><span class="o">.</span><span class="na">file</span><span class="o">(</span><span class="s2">"mapping.txt"</span><span class="o">))</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="n">from</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"target"</span><span class="o">)</span><span class="w">   </span><span class="c1">// optional — see autodetection below</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="n">to</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="s2">"source"</span><span class="o">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="c1">// output defaults to build/remapped/baritone-remapped.jar</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="o">}</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1">// ./gradlew remapBaritoneArtifact</span>
 </code></pre></div>
 </div>
 </div>
@@ -1739,22 +1858,22 @@ mistakes that compile fine but fail at runtime:</p>
 </ul>
 <p>Findings default to <code>ERROR</code> — the task fails. The level is a
 <code>remap</code>-block property:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_3_2">Groovy <code>build.gradle</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Kotlin <code>build.gradle.kts</code></label><label for="__tabbed_4_2">Groovy <code>build.gradle</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">footgunChecks</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">FootgunCheckLevel</span><span class="p">.</span><span class="na">WARN</span><span class="p">)</span><span class="w"> </span><span class="c1">// log and continue; OFF disables</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">unimined</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="n">footgunChecks</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">FootgunCheckLevel</span><span class="p">.</span><span class="na">WARN</span><span class="p">)</span><span class="w"> </span><span class="c1">// log and continue; OFF disables</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="o">{</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">footgunChecks</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">FootgunCheckLevel</span><span class="o">.</span><span class="na">WARN</span><span class="o">)</span><span class="w"> </span><span class="c1">// log and continue; OFF disables</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="o">}</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">unimined</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">remap</span><span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="n">footgunChecks</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">FootgunCheckLevel</span><span class="o">.</span><span class="na">WARN</span><span class="o">)</span><span class="w"> </span><span class="c1">// log and continue; OFF disables</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="o">}</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="o">}</span>
 </code></pre></div>
 </div>
 </div>

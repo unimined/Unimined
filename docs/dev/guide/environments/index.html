@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -1004,6 +1006,34 @@
     
   
     Mod Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../era-merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Era Merge Packaging
   
 
     
@@ -1804,8 +1834,9 @@ onto this convention keep their old shape as a deprecated alias —
   artifact (versions before 1.8.2 — every alpha/beta build plus
   releases and snapshots up to <code>1.8.2-pre*</code>; infdev and older stay
   out) so decompilers and Mixin <code>@Local</code> captures see real variable
-  slots, and <code>preen</code> splits ProGuard-merged bridge methods back into
-  <code>ACC_BRIDGE</code> delegates on every Ornithe version. The newest
+  slots, and <code>preen</code> clears <code>ACC_FINAL</code>/<code>ACC_SYNTHETIC</code>/<code>ACC_BRIDGE</code>
+  on existing ProGuard-merged bridge/implementation hybrids on every
+  Ornithe version (without synthesizing methods). The newest
   <code>net.ornithemc:nests</code> build published for the env's version + side
   also joins the mapping chain automatically (see
   <a href="../mappings/#ornithe-enrichers">Mappings</a>). Each pass opts out
@@ -1818,7 +1849,7 @@ onto this convention keep their old shape as a deprecated alias —
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"b1.7.3"</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">ornithe</span><span class="p">(</span><span class="s">"0.19.5"</span><span class="p">)</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="n">disableLvtPatch</span><span class="p">()</span><span class="w">   </span><span class="c1">// skip the condor LVT pass</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="n">disablePreen</span><span class="p">()</span><span class="w">      </span><span class="c1">// skip the bridge-method pass</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="n">disablePreen</span><span class="p">()</span><span class="w">      </span><span class="c1">// skip the merged-bridge access pass</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="n">disableNests</span><span class="p">()</span><span class="w">      </span><span class="c1">// skip the auto nests source</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">}</span>
@@ -1844,7 +1875,9 @@ onto this convention keep their old shape as a deprecated alias —
   the <code>disable*</code> verbs.
 - <code>combinedSources</code> / <code>combinedOutputs</code> — file collections
   populated by <code>combineWith</code>; read-mostly, used by generated
-  source jars and mod packaging.</p>
+  source jars and mod packaging. <code>packagedCombinedOutputs</code> is the
+  shadow-mode-filtered subset that ships inside the env's artifact —
+  see <a href="../multi-project/#packaging-modes-what-ships-in-the-artifact">packaging modes</a>.</p>
 <h2 id="split-environment-source-sets">Split environment source sets<a class="headerlink" href="#split-environment-source-sets" title="Permanent link">&para;</a></h2>
 <p>Loom <code>splitEnvironmentSourceSets()</code> parity — compile-time
 client/server separation on a single project:</p>
