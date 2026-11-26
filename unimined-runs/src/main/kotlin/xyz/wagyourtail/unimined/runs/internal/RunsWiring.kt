@@ -517,7 +517,7 @@ internal object RunsWiring {
             // (`classpathGroups` sysprop / `modGroupsEnv` env var —
             // see ModGroups for the formats + selection rule)
             task.runtimeClasspath.from(selectedModGroups.map { groups ->
-                groups.flatMap { it.launchFiles() }
+                groups.flatMap { it.launchOutputs() }
             })
             task.systemProperties.putAll(project.provider {
                 val prop = runDescriptor.orNull?.capabilities
@@ -759,7 +759,7 @@ internal object RunsWiring {
                     // mods{} group outputs — the same launch-classpath
                     // contribution run<Name> gets
                     selectedModGroups.map { groups ->
-                        groups.flatMap { it.launchFiles() }
+                        groups.flatMap { it.launchOutputs() }
                     },
                     run.additionalRuntimeClasspath,
                     project.configurations.named("${taskName}Dependencies"),

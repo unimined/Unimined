@@ -80,4 +80,12 @@ abstract class ModGroupSpec @Inject constructor(
         sourceSets.flatMap {
             it.output.classesDirs.files + listOfNotNull(it.output.resourcesDir)
         } + modFiles.files
+
+    /** The group's outputs as classpath contributors — each source set
+     *  contributes its `output` file collection (carrying the
+     *  compile/processResources `builtBy`), so file-consuming task
+     *  inputs pick up the producing-task dependency; raw dirs alone
+     *  trip Gradle's implicit-dependency validation. */
+    fun launchOutputs(): List<Any> =
+        sourceSets.map { it.output } + modFiles
 }
