@@ -227,8 +227,14 @@ internal fun contributeAccessSteps(
     })
 
     // the remap-analysis overlay: declared ATs plus every extracted
-    // dep AT, as AccessModel sections — same namespace binding
+    // dep AT, as AccessModel sections — same namespace binding.
+    // `resolved` is absent on loaderless and non-forge envs (the family
+    // transform wires every env once applied). Those envs must contribute
+    // an empty model without touching either namespace provider: querying
+    // `extractedObfNs` there fails transform-parameter isolation with
+    // "provider has no value available".
     environmentSpec.contributeAccessModel(project.provider {
+        if (resolved.orNull == null) return@provider AccessModel(emptyList())
         val devNs = mapOf("source" to effectiveDevNs.get())
         val obfNs = mapOf("source" to extractedObfNs.get())
         AccessModel(

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
@@ -226,6 +227,64 @@ class ForgeEnvironmentWiringTest {
         assertTrue(env.sideMarkers.isPresent,
             "non-forge env must keep sideMarkers resolvable")
         assertTrue(env.sideMarkers.get().isEmpty())
+    }
+
+    @Test
+    fun `non-forge feather-shaped mod view resolves through transform params`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        // Forge wiring also replays over the implicit main env at
+        // evaluation; keep its product resolution local and well-formed.
+        ext.main.version.set("1.12.2")
+        ext.main.provider.set("fake")
+
+        // official -> intermediary -> named is the feather-family chain
+        // shape; the mod view's production namespace is intermediary.
+        val mappingFile = dir.resolve("feather.tiny")
+        Files.writeString(
+            mappingFile,
+            "tiny\t2\t0\tofficial\tintermediary\tnamed\n" +
+                "c\ta/A\tb/B\tc/C\n"
+        )
+        project.extensions.getByType(
+            org.gradle.api.tasks.SourceSetContainer::class.java
+        ).maybeCreate("legacyfabric")
+        val env = ext.sourceSet("legacyfabric") { e ->
+            e.inheritParent.set(false)
+            e.version.set("1.12.2")
+            e.provider.set("fake")
+            e.loader("feathertest", "1.0")
+            e.modSourceNamespaces.set(listOf("intermediary"))
+            e.mappings { it.file(mappingFile) }
+        }
+
+        // A plain jar carries no mod marker, so after parameter isolation
+        // the transform passes it through without needing a remap engine.
+        // The regression this covers happens earlier: Forge's cross-env
+        // access-model provider used to query its absent loader-resolution
+        // provider while RemapDependencyTransform isolated parameters.
+        val modDir = dir.resolve("repo/com/example/plain-mod/1.0")
+        Files.createDirectories(modDir)
+        JarOutputStream(Files.newOutputStream(modDir.resolve("plain-mod-1.0.jar"))).use { jar ->
+            jar.putNextEntry(JarEntry("data.txt"))
+            jar.write("x".toByteArray())
+            jar.closeEntry()
+        }
+        Files.writeString(
+            modDir.resolve("plain-mod-1.0.pom"),
+            "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">" +
+                "<modelVersion>4.0.0</modelVersion>" +
+                "<groupId>com.example</groupId><artifactId>plain-mod</artifactId>" +
+                "<version>1.0</version></project>"
+        )
+        pinLocalRepo("com.example")
+        project.dependencies.add(env.modImplementationConfigurationName, "com.example:plain-mod:1.0")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val resolved = project.configurations
+            .getByName("legacyfabricModImplementationRemapped")
+            .resolve().map { it.name }
+        assertEquals(listOf("plain-mod-1.0-named.jar"), resolved)
     }
 
     @Test
