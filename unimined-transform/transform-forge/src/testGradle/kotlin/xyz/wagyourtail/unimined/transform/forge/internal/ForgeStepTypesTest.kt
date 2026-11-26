@@ -431,6 +431,63 @@ class ForgeStepTypesTest {
         assertTrue(e.message!!.contains("no binpatches entry"))
     }
 
+    /** userdev jar carrying a NeoForge `patches.lzma` bundle: a JOINED
+     *  `nz` modify patch, a JOINED `META-INF/neoforge.mods.toml`
+     *  create, and a CLIENT-only create. */
+    private fun bundleUserdevJar(): Path {
+        val joined = BinpatchesPackPatcher.PatchBase.JOINED.mask
+        val client = BinpatchesPackPatcher.PatchBase.CLIENT.mask
+        val create = BinpatchesPackPatcher.BundlePatch.Operation.CREATE.bits
+        val modify = BinpatchesPackPatcher.BundlePatch.Operation.MODIFY.bits
+        fun entry(w: DataOutputStream, flags: Int, path: String, data: ByteArray, checksum: Int? = null) {
+            w.writeByte(flags)
+            w.writeShort(path.length); w.write(path.toByteArray())
+            checksum?.let(w::writeInt)
+            w.writeInt(data.size); w.write(data)
+        }
+        val bundle = ByteArrayOutputStream().also { bos ->
+            DataOutputStream(bos).use { w ->
+                w.write("NFPATCHBUNDLE001".toByteArray())
+                w.writeInt(3)
+                w.writeByte(client or joined)
+                entry(w, modify or joined, "nz.class", gdiff(orig, patched), adler(orig))
+                entry(w, create or joined, "META-INF/neoforge.mods.toml",
+                    "modId=\"minecraft\"".toByteArray())
+                entry(w, create or client, "client/Only.class", "client".toByteArray())
+            }
+        }.toByteArray()
+        return jar("userdev.jar", mapOf(
+            "patches.lzma" to ByteArrayOutputStream().also { bos ->
+                LZMACompressorOutputStream(bos).use { it.write(bundle) }
+            }.toByteArray()))
+    }
+
+    @Test
+    fun `userdev-binpatch applies a patch bundle for its base`() {
+        val input = jar("mc.jar", mapOf("nz.class" to orig))
+        val c = ctx(tree())
+        val spec = userdevSpec(bundleUserdevJar(), "patches.lzma").apply {
+            baseType.set(BinpatchesPackPatcher.PatchBase.JOINED)
+        }
+        val e = entries(UserdevBinpatchStepType().create(spec, c).apply(input, c))
+        assertArrayEquals(patched, e["nz.class"])
+        assertEquals("modId=\"minecraft\"", e["META-INF/neoforge.mods.toml"]!!.decodeToString(),
+            "created META-INF entries are written verbatim")
+        assertTrue("client/Only.class" !in e, "entries of another base are not applied")
+    }
+
+    @Test
+    fun `userdev-binpatch patch bundle without a base errors`() {
+        val input = jar("mc.jar", mapOf("nz.class" to orig))
+        val c = ctx(tree())
+        val e = org.junit.jupiter.api.assertThrows<org.gradle.api.GradleException> {
+            UserdevBinpatchStepType()
+                .create(userdevSpec(bundleUserdevJar(), "patches.lzma"), c)
+                .apply(input, c)
+        }
+        assertTrue(e.message!!.contains("patches.lzma"), e.message)
+    }
+
     // ---------- FG2DevFixesStepType ----------
 
     private fun fg2Spec(enabled: Boolean) =
