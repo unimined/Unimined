@@ -151,6 +151,70 @@ class PublishVariantWiringTest {
     }
 
     @Test
+    fun `mod buckets publish at loom-parity scopes`() {
+        val p = project()
+        p.tasks.register("remapFabricJar", Jar::class.java)
+        p.tasks.register("remapFabricSourcesJar", Jar::class.java)
+        bound(p, "fabric")
+
+        val api = conf(p, "fabricApiElements")!!
+        val runtime = conf(p, "fabricRuntimeElements")!!
+        val apiParents = api.extendsFrom.map { it.name }
+        val runtimeParents = runtime.extendsFrom.map { it.name }
+
+        // modApi — the compile-visible-transitive bucket — rides both
+        // the api (compile) and runtime channels
+        assertTrue("fabricModApi" in apiParents,
+            "modApi must publish at api/compile scope: $apiParents")
+        assertTrue("fabricModApi" in runtimeParents,
+            "modApi must publish at runtime scope: $runtimeParents")
+        // modCompileOnlyApi publishes compile-only — the api channel is
+        // the compile view; never on the runtime channel
+        assertTrue("fabricModCompileOnlyApi" in apiParents,
+            "modCompileOnlyApi must publish at compile scope: $apiParents")
+        assertFalse("fabricModCompileOnlyApi" in runtimeParents,
+            "modCompileOnlyApi must stay off the runtime channel: $runtimeParents")
+        // modImplementation is runtime-scope only (loom parity — the
+        // 2.0-prerelease api-scope mis-publication is corrected)
+        assertFalse("fabricModImplementation" in apiParents,
+            "modImplementation must NOT publish at api scope: $apiParents")
+        assertTrue("fabricModImplementation" in runtimeParents,
+            "modImplementation must publish at runtime scope: $runtimeParents")
+        assertTrue("fabricModRuntimeOnly" in runtimeParents,
+            "modRuntimeOnly must publish at runtime scope: $runtimeParents")
+        // modCompileOnly + modLocalRuntime never publish
+        assertFalse("fabricModCompileOnly" in apiParents,
+            "modCompileOnly never publishes: $apiParents")
+        assertFalse("fabricModCompileOnly" in runtimeParents,
+            "modCompileOnly never publishes: $runtimeParents")
+        assertFalse("fabricModLocalRuntime" in apiParents,
+            "modLocalRuntime never publishes: $apiParents")
+        assertFalse("fabricModLocalRuntime" in runtimeParents,
+            "modLocalRuntime never publishes: $runtimeParents")
+
+        // prod variants mirror the dev dependency view — the corrected
+        // scopes carry over
+        val prodApi = conf(p, "fabricProdApiElements")
+        val prodRuntime = conf(p, "fabricProdRuntimeElements")
+        assertNotNull(prodApi, "prod api conf must exist with remap tasks registered")
+        assertNotNull(prodRuntime, "prod runtime conf must exist with remap tasks registered")
+        val prodApiParents = prodApi!!.extendsFrom.map { it.name }
+        val prodRuntimeParents = prodRuntime!!.extendsFrom.map { it.name }
+        assertTrue("fabricModApi" in prodApiParents,
+            "prod api channel mirrors modApi: $prodApiParents")
+        assertTrue("fabricModCompileOnlyApi" in prodApiParents,
+            "prod api channel mirrors modCompileOnlyApi: $prodApiParents")
+        assertFalse("fabricModImplementation" in prodApiParents,
+            "prod api channel must not carry modImplementation: $prodApiParents")
+        assertTrue("fabricModApi" in prodRuntimeParents,
+            "prod runtime channel mirrors modApi: $prodRuntimeParents")
+        assertTrue("fabricModImplementation" in prodRuntimeParents,
+            "prod runtime channel mirrors modImplementation: $prodRuntimeParents")
+        assertFalse("fabricModLocalRuntime" in prodRuntimeParents,
+            "prod runtime channel must not carry modLocalRuntime: $prodRuntimeParents")
+    }
+
+    @Test
     fun `publishProduction false skips prod configurations`() {
         val p = project()
         val ext = p.extensions.getByType(PublishExtension::class.java)

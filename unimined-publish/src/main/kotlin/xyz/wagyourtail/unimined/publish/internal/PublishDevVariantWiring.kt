@@ -231,7 +231,14 @@ internal object PublishDevVariantWiring {
     /** Dependency parents for the api-channel conf: `api` for main
      *  (java semantics — implementation deps stay off the api view),
      *  `<ss>Api`/`<ss>Implementation` for custom source sets which have
-     *  no api/implementation split. */
+     *  no api/implementation split. Mod buckets follow loom parity:
+     *  `modApi` carries the compile-visible-transitive role
+     *  (`modImplementation` is runtime-scope-only — never on the api
+     *  channel), and `modCompileOnlyApi` joins as the compile-only
+     *  scope (the api channel *is* the compile view; maven consumers
+     *  see it as an ordinary compile-scope dependency since the pom
+     *  cannot express compile-only). `modCompileOnly` and
+     *  `modLocalRuntime` are never published. */
     private fun apiDepBuckets(
         environment: MinecraftEnvironment,
         sourceSet: SourceSet
@@ -242,7 +249,8 @@ internal object PublishDevVariantWiring {
             add("${sourceSet.name}Api")
             add(depBucket(sourceSet, "implementation"))
         }
-        add(environment.modImplementationConfigurationName)
+        add(environment.modApiConfigurationName)
+        add(environment.modCompileOnlyApiConfigurationName)
     }
 
     private fun runtimeDepBuckets(
@@ -256,6 +264,7 @@ internal object PublishDevVariantWiring {
         }
         add(depBucket(sourceSet, "implementation"))
         add(depBucket(sourceSet, "runtimeOnly"))
+        add(environment.modApiConfigurationName)
         add(environment.modImplementationConfigurationName)
         add(environment.modRuntimeOnlyConfigurationName)
     }
