@@ -88,11 +88,21 @@ internal object RunsWiring {
         val serverName = if (environmentId == "main") "server" else "${environmentId}Server"
         if (extension.runs.findByName(clientName) == null) {
             extension.runEnvironments[clientName] = environmentId
-            extension.runs.register(clientName) { it.environment.convention(environmentId) }
+            extension.runs.register(clientName) {
+                it.environment.convention(environmentId)
+                // `type` conventions to the run name — env-scoped names
+                // (`lexforge7Client`) aren't the run kind; loader run
+                // mutators gate on `client`/`server` and would skip
+                // the launch config entirely otherwise
+                it.type.convention("client")
+            }
         }
         if (extension.runs.findByName(serverName) == null) {
             extension.runEnvironments[serverName] = environmentId
-            extension.runs.register(serverName) { it.environment.convention(environmentId) }
+            extension.runs.register(serverName) {
+                it.environment.convention(environmentId)
+                it.type.convention("server")
+            }
         }
         // prod-namespace variants — runProdClient/runProdServer launch
         // the compiled/remapped mod jar against the raw (production-
@@ -106,6 +116,7 @@ internal object RunsWiring {
             extension.runs.register(prodClientName) {
                 it.environment.convention(environmentId)
                 it.prod.convention(true)
+                it.type.convention("client")
             }
         }
         if (extension.runs.findByName(prodServerName) == null) {
@@ -113,6 +124,7 @@ internal object RunsWiring {
             extension.runs.register(prodServerName) {
                 it.environment.convention(environmentId)
                 it.prod.convention(true)
+                it.type.convention("server")
             }
         }
 
