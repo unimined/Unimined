@@ -98,6 +98,28 @@ abstract class RunConfig @Inject constructor(
     val additionalRuntimeClasspath: ConfigurableFileCollection =
         objects.fileCollection()
 
+    /**
+     * Extra mod jars staged into this run's mod folder by
+     * `prepare<Name>` — loaders whose descriptor declares the
+     * `modsDir` capability copy mod jars into `runDir/<dir>` (`mods/`
+     * on forge/conversion-family, `plugins/` on bukkit). Files are
+     * copied verbatim — never remapped — and are NOT placed on the
+     * launch classpath: the loader's own folder discovery is what
+     * loads them. Use for jars that must run under the loader's
+     * classloader instead of the system one — e.g. a ModLauncher
+     * `ITransformationService` carrier (mixin-engine coremods) whose
+     * service-loading/classloader assumptions break on `-cp`.
+     *
+     * On loaders that discover classpath mods natively (`modGroupsEnv`
+     * /`classpathGroups` — forge-family `ClasspathLocator` +
+     * `MOD_CLASSES`), this is the ONLY staged content: the project
+     * jar and `*Direct` mod views already register through the
+     * classpath, and a folder copy would double-register them.
+     * Ignored where the loader stages no mod folder.
+     */
+    val modFolderFiles: ConfigurableFileCollection =
+        objects.fileCollection()
+
     /** Working directory — defaults to `run/<environment>-<name>`. */
     abstract val workingDirectory: Property<String>
 
@@ -341,6 +363,7 @@ abstract class RunConfig @Inject constructor(
         height.convention(other.height)
         downloadAssets.convention(other.downloadAssets)
         additionalRuntimeClasspath.from(other.additionalRuntimeClasspath)
+        modFolderFiles.from(other.modFolderFiles)
     }
 
     /** `from(runs.named("client"))` — each property flat-mapped
@@ -381,6 +404,7 @@ abstract class RunConfig @Inject constructor(
         downloadAssets.convention(other.flatMap { it.downloadAssets })
         additionalRuntimeClasspath.from(
             other.map { it.additionalRuntimeClasspath })
+        modFolderFiles.from(other.map { it.modFolderFiles })
     }
 
     init {

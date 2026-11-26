@@ -25,16 +25,31 @@ class RunsLoaderDescriptors : LoaderDescriptorSource {
                 "modGroupsEnv" to "MOD_CLASSES",
             ),
         ),
-        // A second loader identity for run-contribution attribution
-        // tests. It is deliberately capability-free: capability wiring
-        // is a separate stream, while these tests exercise only the
-        // primary-loader name the attribution probe reports.
+        // forge-family shape: folder staging (`modsDir`) PLUS
+        // classpath mod discovery (`modGroupsEnv`) — the wiring must
+        // stage `modFolderFiles` only there
         LoaderDescriptor(
             id = "testforge",
             family = "forge",
             repos = emptyList(),
-            loaderCoords = { _, v -> "com.example:testforge-loader:$v" },
+            loaderCoords = { _, v -> "com.example:testforge:$v" },
             prodNamespace = "searge",
+            capabilities = mapOf(
+                "modGroupsEnv" to "MOD_CLASSES",
+                "modsDir" to "mods",
+            ),
+        ),
+        // conversion-family shape: folder staging is the only mod
+        // discovery — the default jar + `*Direct` set must stage too
+        LoaderDescriptor(
+            id = "testconv",
+            family = "conversion",
+            repos = emptyList(),
+            loaderCoords = { _, v -> "com.example:testconv:$v" },
+            prodNamespace = "official",
+            capabilities = mapOf(
+                "modsDir" to "mods",
+            ),
         )
     )
 

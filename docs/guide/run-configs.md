@@ -116,6 +116,7 @@ Tasks are `run<Name>` — `gradle runClient`, `runProdServer`,
 | `unitTest` | marks the run as a JUnit test run — a Gradle `Test` task (`test<Name>`) materializes alongside `run<Name>`; conventions to `true` for `junit`-typed runs on forge-family loaders (`gametestJunit` capability). The loader's program args ride an args-file in `fml.junit.argsfile`, jvm args an `@argfile` |
 | `unitTestSources` | source sets supplying test classes + classpath for a `unitTest` run — defaults to `test` |
 | `loadedMods` | which of the environment's `mods { "<id>" { } }` groups this run loads — `loadedMods("a", "b")` selects a subset; empty (default) loads all declared groups. Selected groups join the launch classpath and serialize into the loader's mod-grouping channel (`fabric.classPathGroups` / `MOD_CLASSES`) |
+| `modFolderFiles` | extra mod jars staged verbatim into the run's mod folder by `prepare<Name>` — loaders declaring the `modsDir` capability copy them to `runDir/<dir>` (`mods/` on forge/conversion-family, `plugins/` on bukkit). Never remapped and never on the launch classpath — the loader's folder discovery loads them. For jars that must run under the loader's classloader (e.g. a ModLauncher `ITransformationService` carrier like mixin-engine coremods) rather than `-cp`. On classpath-discovery loaders this is the only staged content — the project jar and `*Direct` views already register through `ClasspathLocator`/`MOD_CLASSES` and a folder copy would double-register them |
 
 ## Argument substitution
 

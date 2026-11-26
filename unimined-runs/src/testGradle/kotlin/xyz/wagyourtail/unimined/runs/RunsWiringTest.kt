@@ -964,6 +964,90 @@ class RunsWiringTest {
         assertFalse(derived.downloadAssets.get())
     }
 
+    /** `modsDir` capability → `prepare<Run>.stageInto`. On loaders
+     *  that discover classpath mods natively (`modGroupsEnv`/
+     *  `classpathGroups` — forge-family `ClasspathLocator` +
+     *  `MOD_CLASSES`), only `run.modFolderFiles` stages: the project
+     *  jar and `*Direct` views would double-register. */
+    @Test
+    fun `modsDir capability stages only modFolderFiles on classpath-discovery loaders`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { e ->
+            e.version.set("1.13.2")
+            e.loader("testforge", "1.0")
+        }
+        val runs = project.extensions.getByType(RunsExtension::class.java)
+        val carrier = dir.resolve("carrier.jar").toFile()
+            .apply { writeBytes(byteArrayOf(0)) }
+        runs.named("client") { it.modFolderFiles.from(carrier) }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val prepare = project.tasks.findByName("prepareRunClient")
+            as PrepareRunTask
+        assertEquals("mods", prepare.stageInto.get())
+        val run = runs.runs.getByName("client")
+        assertTrue(
+            prepare.modFiles.from.any { it === run.modFolderFiles },
+            "modFolderFiles must join the staged set")
+        assertFalse(
+            prepare.modFiles.from.any {
+                (it as? org.gradle.api.tasks.TaskProvider<*>)
+                    ?.name == "jar" },
+            "classpath-discovered loaders must not stage the " +
+                "project jar — it registers through the classpath")
+    }
+
+    /** A `modsDir` loader WITHOUT classpath mod discovery keeps the
+     *  default staged set — the project's own jar plus `*Direct`
+     *  views — alongside `run.modFolderFiles`. */
+    @Test
+    fun `modsDir capability keeps default staging on folder-only loaders`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { e ->
+            e.version.set("1.20.1")
+            e.loader("testconv", "1.0")
+        }
+        val runs = project.extensions.getByType(RunsExtension::class.java)
+        val carrier = dir.resolve("carrier.jar").toFile()
+            .apply { writeBytes(byteArrayOf(0)) }
+        runs.named("client") { it.modFolderFiles.from(carrier) }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val prepare = project.tasks.findByName("prepareRunClient")
+            as PrepareRunTask
+        assertEquals("mods", prepare.stageInto.get())
+        val run = runs.runs.getByName("client")
+        assertTrue(
+            prepare.modFiles.from.any {
+                (it as? org.gradle.api.tasks.TaskProvider<*>)
+                    ?.name == "jar" },
+            "folder-only loaders still stage the project jar")
+        assertTrue(
+            prepare.modFiles.from.any { it === run.modFolderFiles },
+            "modFolderFiles must join the staged set")
+    }
+
+    /** No `modsDir` capability → `stageInto` stays unset and nothing
+     *  stages — `modFiles` content is inert. */
+    @Test
+    fun `no modsDir leaves staging unset`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { e ->
+            e.version.set("1.20.1")
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val prepare = project.tasks.findByName("prepareRunClient")
+            as PrepareRunTask
+        assertNull(prepare.stageInto.orNull)
+    }
+
     /** useToolchains=false must steer the executable pick, not just
      *  the java-floor check — requiredJavaVersion 99 provisionally
      *  exists nowhere, so a toolchain resolution here always throws;

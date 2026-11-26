@@ -52,20 +52,6 @@ object ConversionEnvironmentWiring {
                 }
             }
 
-        // loaders consuming a mod folder (FoxLoader's `mods/`) —
-        // prepareRun copies the run's mod jars there. Duck-typed via
-        // `property()` — transform modules don't depend on runs.
-        descriptor.capabilities["modsDir"]?.let { dir ->
-            project.extensions.getByType(
-                xyz.wagyourtail.unimined.transform.TransformExtension::class.java
-            ).sourceSet(environment.environmentId)
-                .prepareTaskMutators += org.gradle.api.Action { task ->
-                    @Suppress("UNCHECKED_CAST")
-                    (task.property("stageInto") as?
-                            org.gradle.api.provider.Property<String>)?.set(dir)
-                }
-        }
-
         // loaders that are fabric-loader forks (bta-babric's
         // `net.fabricmc:fabric-loader:*-bta.N`) launch via knot — the
         // version doc's `net.minecraft.launchwrapper.Launch`/`VanillaTweaker`

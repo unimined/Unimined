@@ -66,7 +66,15 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "gametestJunit" to "fml.junit.argsfile",
                 // named mods{} groups append `id%%dir` entries
                 // to this env var (Loom mods{}/NFRT parity)
-                "modGroupsEnv" to "MOD_CLASSES"
+                "modGroupsEnv" to "MOD_CLASSES",
+                // FML folder-scans `gameDir/mods` — extra jars a run
+                // needs folder-discovered (a ModLauncher
+                // `ITransformationService` carrier like mixin-engine
+                // coremods, which can't ride `-cp`) stage there via
+                // `run.modFolderFiles`; the project jar + classpath
+                // mod views stay out — ClasspathLocator/MOD_CLASSES
+                // already registers them, a folder copy doubles
+                "modsDir" to "mods"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/mods.toml",
@@ -103,7 +111,9 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "gametestJunit" to "fml.junit.argsfile",
                 // named mods{} groups append `id%%dir` entries
                 // to this env var (Loom mods{}/NFRT parity)
-                "modGroupsEnv" to "MOD_CLASSES"
+                "modGroupsEnv" to "MOD_CLASSES",
+                // FML folder-scans `gameDir/mods` — see `forge`
+                "modsDir" to "mods"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/mods.toml",
@@ -163,7 +173,9 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "gametestJunit" to "fml.junit.argsfile",
                 // named mods{} groups append `id%%dir` entries
                 // to this env var (Loom mods{}/NFRT parity)
-                "modGroupsEnv" to "MOD_CLASSES"
+                "modGroupsEnv" to "MOD_CLASSES",
+                // FML folder-scans `gameDir/mods` — see `forge`
+                "modsDir" to "mods"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "META-INF/neoforge.mods.toml",
@@ -205,7 +217,9 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 "gametestJunit" to "fml.junit.argsfile",
                 // named mods{} groups append `id%%dir` entries
                 // to this env var (Loom mods{}/NFRT parity)
-                "modGroupsEnv" to "MOD_CLASSES"
+                "modGroupsEnv" to "MOD_CLASSES",
+                // FML folder-scans `gameDir/mods` — see `forge`
+                "modsDir" to "mods"
             ),
             metadata = LoaderMetadataSpec(
                 fileName = "mcmod.info",

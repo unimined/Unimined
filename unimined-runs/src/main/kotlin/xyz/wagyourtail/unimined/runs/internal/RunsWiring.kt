@@ -309,52 +309,69 @@ internal object RunsWiring {
                     run.workingDirectory.orElse("run/$environmentId-${run.name}").get()
                 )
             )
-            // mod jars staged into `stageInto` when a loader opts in —
-            // dev: the compiled jar + dev-namespace mod buckets;
-            // prod: the remapped jar + prod-namespace `*Remapped` views
-            if (run.prod.get()) {
-                // prod: the remapped (mod-source-namespace) jar + shipped
-                // mod jars via `*Direct` — `*Remapped` views are
-                // dev-namespace and wrong here
-                t.modFiles.from(
-                    project.provider {
-                        val jarTask = project.tasks.findByName(
+            // `modsDir` capability → the run-dir subdir `modFiles`
+            // stage into (conversion `mods/`, forge-family `mods/`).
+            // Unset = no staging. Conditional staging rules a
+            // capability can't express (bukkit's feature-bound
+            // `plugins/`) ride `prepareTaskMutators` below instead.
+            val caps = runDescriptor.orNull?.capabilities
+            caps?.get("modsDir")?.let(t.stageInto::set)
+            // default staged set: dev = the compiled jar + `*Direct`
+            // mod views; prod = the remapped jar + `*Direct` views.
+            // Skipped on loaders that discover classpath mods
+            // natively (`modGroupsEnv`/`classpathGroups` — forge's
+            // ClasspathLocator covers `-cp`, MOD_CLASSES covers the
+            // exploded dirs): the same mods would register twice —
+            // a folder copy plus the classpath entry (`Duplicate key`
+            // in LoadingModList). `run.modFolderFiles` — explicit
+            // per-run jars for folder discovery — always lands.
+            if (caps == null || (!caps.containsKey("modGroupsEnv") &&
+                    !caps.containsKey("classpathGroups"))) {
+                if (run.prod.get()) {
+                    // prod: the remapped (mod-source-namespace) jar + shipped
+                    // mod jars via `*Direct` — `*Remapped` views are
+                    // dev-namespace and wrong here
+                    t.modFiles.from(
+                        project.provider {
+                            val jarTask = project.tasks.findByName(
+                                modJarTaskName(minecraft, environment,
+                                    remap = true))
+                            project.files(jarTask?.outputs?.files ?: project.files())
+                        },
+                        listOfNotNull(
+                            project.configurations.findByName(
+                                "${environment.modApiConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modImplementationConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modLocalRuntimeConfigurationName}Direct")
+                        )
+                    )
+                } else {
+                    t.modFiles.from(
+                        project.tasks.named(
                             modJarTaskName(minecraft, environment,
-                                remap = true))
-                        project.files(jarTask?.outputs?.files ?: project.files())
-                    },
-                    listOfNotNull(
-                        project.configurations.findByName(
-                            "${environment.modApiConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modImplementationConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modLocalRuntimeConfigurationName}Direct")
+                                remap = false)),
+                        // `*Direct` views — the buckets themselves are
+                        // declarable-only; direct = mod-source-namespace
+                        // pass-through (matches dev classpath for identity-
+                        // namespace envs like the conversion products)
+                        listOfNotNull(
+                            project.configurations.findByName(
+                                "${environment.modApiConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modImplementationConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modRuntimeOnlyConfigurationName}Direct"),
+                            project.configurations.findByName(
+                                "${environment.modLocalRuntimeConfigurationName}Direct")
+                        )
                     )
-                )
-            } else {
-                t.modFiles.from(
-                    project.tasks.named(
-                        modJarTaskName(minecraft, environment,
-                            remap = false)),
-                    // `*Direct` views — the buckets themselves are
-                    // declarable-only; direct = mod-source-namespace
-                    // pass-through (matches dev classpath for identity-
-                    // namespace envs like the conversion products)
-                    listOfNotNull(
-                        project.configurations.findByName(
-                            "${environment.modApiConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modImplementationConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modRuntimeOnlyConfigurationName}Direct"),
-                        project.configurations.findByName(
-                            "${environment.modLocalRuntimeConfigurationName}Direct")
-                    )
-                )
+                }
             }
+            t.modFiles.from(run.modFolderFiles)
             transformSpec.effectivePrepareTaskMutators().forEach { it.execute(t) }
         }
 
