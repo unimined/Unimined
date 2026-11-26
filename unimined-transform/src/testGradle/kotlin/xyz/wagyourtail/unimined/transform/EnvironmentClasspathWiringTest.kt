@@ -275,9 +275,12 @@ class EnvironmentClasspathWiringTest {
         (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
 
         val gen = env.generatedAccessFiles.files.single()
+        // canonicalize: on macOS the temp dir is a /var -> /private/var
+        // symlink and the two spellings never relativize (upstream #226)
         assertEquals("META-INF/custom_at.cfg",
-            gen.relativeTo(
-                dir.resolve("build/unimined/access/main/jar").toFile()
+            gen.canonicalFile.relativeTo(
+                dir.resolve("build/unimined/access/main/jar")
+                    .toFile().canonicalFile
             ).path.replace('\\', '/'))
         assertEquals("public a/B", gen.readText().trim())
     }

@@ -424,4 +424,102 @@ class GenerateModMetadataTaskTest {
         }
     }
 
+    /** Minimal compiled class bytes — [ifaces] implemented, optional
+     *  `@Mixin` annotation carrying [mixinTargets]. */
+    private fun scanClassBytes(
+        internalName: String,
+        ifaces: List<String>,
+        mixinTargets: List<String>
+    ): ByteArray {
+        val cw = org.objectweb.asm.ClassWriter(0)
+        cw.visit(
+            org.objectweb.asm.Opcodes.V17, org.objectweb.asm.Opcodes.ACC_PUBLIC,
+            internalName, null, "java/lang/Object", ifaces.toTypedArray()
+        )
+        if (mixinTargets.isNotEmpty()) {
+            val av = cw.visitAnnotation(
+                "Lorg/spongepowered/asm/mixin/Mixin;", true)
+            val arr = av.visitArray("value")
+            mixinTargets.forEach {
+                arr.visit(null, org.objectweb.asm.Type.getObjectType(it))
+            }
+            arr.visitEnd()
+            av.visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    private fun scanFixture(): Path {
+        val classes = dir.resolve("classes")
+        val f = classes.resolve("com/example/mixin/MyMixin.class")
+        Files.createDirectories(f.parent)
+        Files.write(f, scanClassBytes(
+            "com/example/mixin/MyMixin",
+            ifaces = listOf("com/example/ExampleInterface"),
+            mixinTargets = listOf("net/minecraft/class_161")
+        ))
+        return classes
+    }
+
+    private val noIdMeta = ModMetadata(
+        id = null, name = null, version = null,
+        description = null, authors = emptyList(), license = null,
+        url = null, icon = null, environment = null,
+        depends = emptyMap(), sections = emptyMap()
+    )
+
+    /** Positive control for the scan gate — with `mod.id` declared the
+     *  scan runs and its rows merge into the canonical access doc
+     *  (upstream #222). */
+    @Test
+    fun `interfaceInjectionScan rows reach the canonical doc when id declared`() {
+        val res = dir.resolve("resources")
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": ["MyMixin"]}""", res)
+        val t = task("fabric", emptyList(), res)
+        t.classesDirs.from(scanFixture().toFile())
+        t.interfaceInjectionScan.set(true)
+        t.loaderVersion.set("0.18.0")
+        t.generate()
+
+        val canon = dir.resolve("gen/testmod.accesswidener")
+        assertTrue(Files.isRegularFile(canon),
+            "scan-derived CT rows must emit a canonical doc")
+        val text = canon.readText()
+        assertTrue(Regex("transitive-inject-interface\\s+" +
+            "net/minecraft/class_161\\s+com/example/ExampleInterface")
+            .containsMatchIn(text),
+            "scan row missing from canonical doc:\n$text")
+    }
+
+    /** Issue #222 — without a `mod` id the scan's output channels
+     *  have nothing to key on: the scan is skipped (with a warning)
+     *  rather than silently emitting an unreferenced doc. */
+    @Test
+    fun `interfaceInjectionScan without mod id skips the scan`() {
+        val res = dir.resolve("resources")
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": ["MyMixin"]}""", res)
+        val t = task("fabric", emptyList(), res)
+        t.metadata.set(noIdMeta)
+        t.classesDirs.from(scanFixture().toFile())
+        t.interfaceInjectionScan.set(true)
+        t.loaderVersion.set("0.18.0")
+        t.generate()
+
+        // no canonical doc carries scan rows — the `{modid}` fallback
+        // path must not appear either
+        val out = dir.resolve("gen")
+        val scanRow = Regex("transitive-inject-interface")
+        val emitted = if (Files.isDirectory(out)) {
+            Files.walk(out).use { s ->
+                s.filter { Files.isRegularFile(it) }
+                    .map { it.readText() }.toList()
+            }
+        } else emptyList()
+        assertFalse(emitted.any { scanRow.containsMatchIn(it) },
+            "scan rows must not emit without a mod id: $emitted")
+    }
+
 }

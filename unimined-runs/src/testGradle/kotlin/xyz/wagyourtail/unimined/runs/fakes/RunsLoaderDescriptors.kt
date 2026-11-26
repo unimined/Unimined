@@ -24,6 +24,17 @@ class RunsLoaderDescriptors : LoaderDescriptorSource {
                 "classpathGroups" to "fabric.classPathGroups",
                 "modGroupsEnv" to "MOD_CLASSES",
             ),
+        ),
+        // A second loader identity for run-contribution attribution
+        // tests. It is deliberately capability-free: capability wiring
+        // is a separate stream, while these tests exercise only the
+        // primary-loader name the attribution probe reports.
+        LoaderDescriptor(
+            id = "testforge",
+            family = "forge",
+            repos = emptyList(),
+            loaderCoords = { _, v -> "com.example:testforge-loader:$v" },
+            prodNamespace = "searge",
         )
     )
 

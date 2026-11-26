@@ -26,17 +26,22 @@ class GradlePlugin : Plugin<Project> {
             target.pluginManager.withPlugin("xyz.wagyourtail.unimined.remap") {
                 val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
                 minecraft.onEnvironmentBound { environment, sourceSet ->
+                    val spec = target.extensions
+                        .getByType(TransformExtension::class.java)
+                        .sourceSet(environment.environmentId)
                     // attach the env's transform spec as a named
                     // extension — Groovy `minecraft { transform { } }`
                     // delegates to it; Kotlin gets the `transform`
                     // extension fn (LoaderEnvDsl)
                     if (environment.extensions.findByName("transform") == null) {
-                        environment.extensions.add(
-                            "transform",
-                            target.extensions
-                                .getByType(TransformExtension::class.java)
-                                .sourceSet(environment.environmentId)
-                        )
+                        environment.extensions.add("transform", spec)
+                    }
+                    // loader attribution for run-contribution
+                    // inheritance — reads lazily, so `loader(...)`
+                    // declarations and LOADER-section conventions
+                    // resolve by the time runs materialize
+                    spec.runContributionLoaderProbe = {
+                        environment.loaderSpec.orNull?.name
                     }
                     EnvironmentClasspathWiring.wire(target, environment, sourceSet)
                 }

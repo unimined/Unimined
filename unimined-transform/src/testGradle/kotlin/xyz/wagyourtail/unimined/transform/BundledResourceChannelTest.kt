@@ -21,8 +21,12 @@ class BundledResourceChannelTest {
         val res = BundledResource("/bundled-test/payload.bin")
         val out = BundledResourceChannel.materialize(
             project(), "main", res, BundledResourceChannelTest::class.java)
+        // canonicalize: on macOS the temp dir is a /var -> /private/var
+        // symlink and the two spellings never relativize (upstream #226)
         assertEquals("unimined/bundled/main/payload.bin",
-            out.relativeTo(File(dir, "build")).path.replace('\\', '/'))
+            out.canonicalFile.relativeTo(
+                File(dir, "build").canonicalFile
+            ).path.replace('\\', '/'))
         assertArrayEquals("bundled-payload".toByteArray(), out.readBytes())
     }
 

@@ -19,8 +19,7 @@ import xyz.wagyourtail.commonskt.reader.StringCharReader
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.util.FabricNamespaces
-import xyz.wagyourtail.unimined.api.util.failProblem
-import xyz.wagyourtail.unimined.api.util.reportProblem
+import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
@@ -63,7 +62,29 @@ import kotlin.io.path.isRegularFile
  * `classTweakers` metadata key and `custom.*injected_interfaces`).
  */
 @DisableCachingByDefault
-abstract class GenerateModMetadataTask : DefaultTask() {
+abstract class GenerateModMetadataTask
+@javax.inject.Inject constructor(
+    /** ObjectFactory for Problems-API reporting — injected so the
+     *  execution-time problem calls never touch [getProject] (a
+     *  configuration-cache violation). */
+    private val objects: org.gradle.api.model.ObjectFactory
+) : DefaultTask() {
+
+    /** Execution-time problem report — the task logger plus injected
+     *  factory are the only configuration-cache-safe carriers. */
+    private fun reportProblem(
+        id: String,
+        summary: String,
+        details: String? = null,
+        severity: UniminedProblems.Severity = UniminedProblems.Severity.WARNING
+    ) = UniminedProblems.report(logger, objects, id, summary, details, severity)
+
+    /** Execution-time problem failure — see [reportProblem]. */
+    private fun failProblem(
+        id: String,
+        summary: String,
+        details: String? = null
+    ): Nothing = UniminedProblems.fail(logger, objects, id, summary, details)
 
     /** Loader-neutral model snapshot (serializable). */
     @get:Input
@@ -250,7 +271,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         val loader = loaderName.orNull
 
         if (loader == null && meta.sections.isNotEmpty()) {
-            project.failProblem(
+            failProblem(
                 "metadata/loader-missing",
                 "unimined: mod { loader(...) } declared on environment " +
                         "'${environmentId.get()}' but the environment " +
@@ -302,6 +323,23 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             var gametestEntrypoints = emptyList<String>()
             var clientGametestEntrypoints = emptyList<String>()
 
+            if (meta.id == null && interfaceInjectionScan.get()) {
+                // the scan's output channels all key on the mod id —
+                // the access doc's `{modid}` expansion, the emitted
+                // documents nothing references without emit(). Warn
+                // rather than silently skip (upstream #222): a
+                // hand-written-metadata project can declare just the
+                // id — generated docs merge into manual ones
+                reportProblem(
+                    "metadata/scan-needs-id",
+                    "unimined: interfaceInjectionScan is set on " +
+                            "environment '${environmentId.get()}' but " +
+                            "mod { } declares no `id` — the mixin-class " +
+                            "scan is skipped",
+                    "set mod.id (generated metadata merges into " +
+                            "hand-written files) or turn the scan off"
+                )
+            }
             if (meta.id != null) {
                 // class-dir scans only matter for emitted docs — the
                 // access doc's fmj declaration needs emit()
@@ -452,7 +490,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 matches.forEach { f -> mergedSources += f.toAbsolutePath().toString() }
                 MetadataJsonMerge.merge(manual!!, content)
             } else {
-                project.failProblem(
+                failProblem(
                     "metadata/manual-collision",
                     "unimined: generated mod metadata '$path' collides " +
                             "with the manual file ${matches.first()}",
@@ -510,7 +548,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
     ): List<AccessOutput> {
         val format = accessFormatOverride.orNull?.let { name ->
             AccessFormatConvert.Format.byName(name)
-                ?: project.failProblem(
+                ?: failProblem(
                     "access/format",
                     "unimined: access { format = '$name' } isn't a " +
                             "known access format (aw, at, legacy_at)")
@@ -521,7 +559,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             if (accessPathOverride.isPresent ||
                 accessFormatOverride.isPresent
             ) {
-                project.reportProblem(
+                reportProblem(
                     "access/override-ignored",
                     "unimined: accessFileName/access { format } " +
                             "ignored — loader has no access-file " +
@@ -533,7 +571,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         if (accessFormatOverride.isPresent &&
             accessFormatOverride.get() != emitter.accessFormat
         ) {
-            project.reportProblem(
+            reportProblem(
                 "access/emit-format",
                 "unimined: access doc emits as '${format.name}' " +
                         "instead of the loader's conventional " +
@@ -556,7 +594,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 specSourceFormats[Paths.get(spec.path)
                     .toAbsolutePath().normalize()] =
                     AccessFormatConvert.Format.byName(name)
-                        ?: project.failProblem(
+                        ?: failProblem(
                             "access/format",
                             "unimined: accessFile(format='$name') isn't " +
                                     "a known access format (aw, at, " +
@@ -633,7 +671,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
             }
         }
         val warn: (String) -> Unit = {
-            project.reportProblem("access/convert", "unimined: $it")
+            reportProblem("access/convert", "unimined: $it")
         }
         val ctRows = extraCtRows.toMutableList()
         val converted = files.map { f ->
@@ -646,14 +684,14 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                 // CT doc — access directives ride the AW merge; CT-only
                 // directives accumulate for the emit decision below
                 doc = ctDocToAw(bytes, ctRows)
-                    ?: project.failProblem(
+                    ?: failProblem(
                         "access/malformed",
                         "unimined: access file '$f' has a classTweaker " +
                                 "header but malformed content"
                     )
                 src = AccessFormatConvert.Format.AW
             }
-            src ?: project.failProblem(
+            src ?: failProblem(
                 "access/unknown-doc",
                 "unimined: env-declared access file '$f' isn't an " +
                         "AT/AW/CT document (no recognized " +
@@ -671,7 +709,7 @@ abstract class GenerateModMetadataTask : DefaultTask() {
                     src != AccessFormatConvert.Format.AW &&
                     format == AccessFormatConvert.Format.AW
                 ) {
-                    project.reportProblem(
+                    reportProblem(
                         "access/convert-needs-tree",
                         "unimined: converting '$f' to AW needs the " +
                                 "env's mapping tree for member " +
@@ -838,12 +876,12 @@ abstract class GenerateModMetadataTask : DefaultTask() {
 
     private fun validate(meta: ModMetadata) {
         if (meta.sections.isEmpty() && mixinConfigs.get().isEmpty()) return
-        val id = meta.id ?: project.failProblem(
+        val id = meta.id ?: failProblem(
             "metadata/id-missing",
             "unimined: mod { } declares metadata but no `id` — set " +
                 "`mod.id`"
         )
-        if (!id.matches(Regex("[a-z][a-z0-9_-]*"))) project.failProblem(
+        if (!id.matches(Regex("[a-z][a-z0-9_-]*"))) failProblem(
             "metadata/id-invalid",
             "unimined: mod.id '$id' is invalid — must match " +
                 "[a-z][a-z0-9_-]*"

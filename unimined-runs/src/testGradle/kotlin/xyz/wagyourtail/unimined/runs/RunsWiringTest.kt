@@ -907,4 +907,27 @@ class RunsWiringTest {
         assertFalse(derived.downloadAssets.get())
     }
 
+    /** useToolchains=false must steer the executable pick, not just
+     *  the java-floor check — requiredJavaVersion 99 provisionally
+     *  exists nowhere, so a toolchain resolution here always throws;
+     *  resolving the build JVM instead proves the task-level override
+     *  reaches `javaExecutable` (upstream #226: the macOS failure was
+     *  a Java-8 toolchain lookup on machines without one). */
+    @Test
+    fun `useToolchains false resolves the build JVM without a toolchain lookup`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.sourceSet("main") { env ->
+            env.version.set("1.20.1")
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val task = project.tasks.findByName("runClient") as MinecraftRunTask
+        task.useToolchains.set(false)
+        task.requiredJavaVersion.set(99)
+        val exe = task.javaExecutable.get()
+        assertTrue(exe.replace('\\', '/').contains("/bin/java"),
+            "toolchains-off must resolve the build JVM, got: $exe")
+    }
 }

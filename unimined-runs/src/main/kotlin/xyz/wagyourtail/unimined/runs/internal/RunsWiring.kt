@@ -551,10 +551,15 @@ internal object RunsWiring {
             task.useToolchains.set(environment.useToolchains)
             // resolved at execution — toolchain resolution (and any
             // auto-provisioning) stays out of configuration time
-            task.javaExecutable.set(environment.useToolchains.flatMap { use ->
+            // keyed on the *task* properties, not the env's — a per-run
+            // `useToolchains`/`requiredJavaVersion` override must steer
+            // the executable pick the same way it steers launch()'s
+            // java-floor check (upstream #226: opting out of toolchains
+            // must not resolve one anyway)
+            task.javaExecutable.set(task.useToolchains.flatMap { use ->
                 if (use) toolchains.launcherFor {
                     it.languageVersion.set(
-                        environment.requiredJavaVersion.map(JavaLanguageVersion::of))
+                        task.requiredJavaVersion.map(JavaLanguageVersion::of))
                 }.map { it.executablePath.asFile.absolutePath }
                 else project.providers.provider {
                     File(System.getProperty("java.home"), "bin/java").absolutePath

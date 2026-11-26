@@ -197,6 +197,27 @@ class TransformEnvironmentSpec internal constructor(
     private val inheritedEnvironments =
         linkedMapOf<EnvironmentReference, () -> TransformEnvironmentSpec>()
 
+    /**
+     * Loader-name probe for run-contribution inheritance filtering —
+     * installed by environment binding (the transform plugin's
+     * `onEnvironmentBound` hook), returns the env's primary loader
+     * name at query time, `null` when the env is loaderless.
+     *
+     * Loader wirings register their run contributions on their own
+     * environment's spec and self-gate on that env's loader, so every
+     * contribution is attributed to the registering env's primary
+     * loader. When another env inherits the spec chain, an inherited
+     * contribution applies only when the launched env's loader is the
+     * one that registered it — otherwise a per-loader env combining a
+     * multi-loader `main` would also run `main`'s other loaders'
+     * shaping (fabric's `-Dfabric.development` on a forge run).
+     * Contributions from a *loaderless* origin carry no attribution —
+     * they are the cross-cutting/user channel and pass through.
+     * `null` probe (uninstalled — detached specs outside a bound
+     * project) falls back to the legacy unfiltered composition.
+     */
+    internal var runContributionLoaderProbe: (() -> String?)? = null
+
     /** Add a transformer to this environment's pipeline. */
     fun transformer(transformer: MinecraftTransformer) {
         transformers.add(transformer)
@@ -342,73 +363,84 @@ class TransformEnvironmentSpec internal constructor(
         }
     }
 
-    /** Run mutators compose like decorators: inherited before local. */
-    fun effectiveRunMutators(
-        visiting: MutableSet<String> = mutableSetOf()
-    ): List<Action<RunConfigSpec>> {
+    /**
+     * Whether an inherited run contribution registered on [origin]'s
+     * spec applies to this (the launched) environment — see
+     * [runContributionLoaderProbe] for the attribution rule: own
+     * contributions always apply; inherited ones apply when the
+     * origin is loaderless (cross-cutting) or its primary loader
+     * matches this env's. The launched env wires its own loader's
+     * contributions directly, so filtering inherited mismatches never
+     * loses shaping the env actually needs.
+     */
+    private fun runContributionApplies(origin: TransformEnvironmentSpec): Boolean {
+        if (origin === this) return true
+        val originProbe = origin.runContributionLoaderProbe
+        val ownProbe = runContributionLoaderProbe
+        // probes uninstalled on either side (detached specs — tests or
+        // projects without the transform wiring) — legacy composition
+        if (originProbe == null || ownProbe == null) return true
+        val originLoader = originProbe() ?: return true
+        return originLoader == ownProbe()
+    }
+
+    /** Recursive attribution walk — every contribution paired with the
+     *  spec that registered it, inherited-before-local order. */
+    private fun <T> attributedRunContributions(
+        visiting: MutableSet<String>,
+        select: TransformEnvironmentSpec.() -> List<T>
+    ): List<Pair<TransformEnvironmentSpec, T>> {
         val key = "$projectPath:$environmentId"
         if (!visiting.add(key)) {
             failCycle(key)
         }
         try {
             return inheritedEnvironments.values.flatMap { resolver ->
-                resolver().effectiveRunMutators(visiting)
-            } + runMutators
+                resolver().attributedRunContributions(visiting, select)
+            } + select(this).map { this to it }
         } finally {
             visiting.remove(key)
         }
     }
+
+    /** Run-contribution composition shared by the four channels:
+     *  inherited-before-local like decorators, with inherited items
+     *  filtered by [runContributionApplies]. */
+    private fun <T> effectiveRunContributions(
+        visiting: MutableSet<String>,
+        select: TransformEnvironmentSpec.() -> List<T>
+    ): List<T> {
+        return inheritedEnvironments.values.flatMap { resolver ->
+            resolver().attributedRunContributions(visiting, select)
+        }.filter { (origin, _) ->
+            runContributionApplies(origin)
+        }.map { it.second } + select(this)
+    }
+
+    /** Run mutators compose like decorators: inherited before local,
+     *  filtered by loader attribution — see [runContributionLoaderProbe]. */
+    fun effectiveRunMutators(
+        visiting: MutableSet<String> = mutableSetOf()
+    ): List<Action<RunConfigSpec>> =
+        effectiveRunContributions(visiting) { runMutators }
 
     /** Run task mutators compose like [effectiveRunMutators]. */
     fun effectiveRunTaskMutators(
         visiting: MutableSet<String> = mutableSetOf()
-    ): List<Action<org.gradle.api.Task>> {
-        val key = "$projectPath:$environmentId"
-        if (!visiting.add(key)) {
-            failCycle(key)
-        }
-        try {
-            return inheritedEnvironments.values.flatMap { resolver ->
-                resolver().effectiveRunTaskMutators(visiting)
-            } + runTaskMutators
-        } finally {
-            visiting.remove(key)
-        }
-    }
+    ): List<Action<org.gradle.api.Task>> =
+        effectiveRunContributions(visiting) { runTaskMutators }
 
     /** Run task contributions compose like [effectiveRunMutators]. */
     fun effectiveRunTaskContributions(
         visiting: MutableSet<String> = mutableSetOf()
-    ): List<Action<RunTaskContext>> {
-        val key = "$projectPath:$environmentId"
-        if (!visiting.add(key)) {
-            failCycle(key)
-        }
-        try {
-            return inheritedEnvironments.values.flatMap { resolver ->
-                resolver().effectiveRunTaskContributions(visiting)
-            } + runTaskContributions
-        } finally {
-            visiting.remove(key)
-        }
-    }
+    ): List<Action<RunTaskContext>> =
+        effectiveRunContributions(visiting) { runTaskContributions }
 
     /** Prepare task mutators compose like [effectiveRunTaskMutators]. */
     fun effectivePrepareTaskMutators(
         visiting: MutableSet<String> = mutableSetOf()
-    ): List<Action<org.gradle.api.Task>> {
-        val key = "$projectPath:$environmentId"
-        if (!visiting.add(key)) {
-            failCycle(key)
-        }
-        try {
-            return inheritedEnvironments.values.flatMap { resolver ->
-                resolver().effectivePrepareTaskMutators(visiting)
-            } + prepareTaskMutators
-        } finally {
-            visiting.remove(key)
-        }
-    }
+    ): List<Action<org.gradle.api.Task>> =
+        effectiveRunContributions(visiting) { prepareTaskMutators }
 
     /** Jar processors compose like decorators: inherited before local,
      *  then declared-pipeline step contributions in realize() order. */

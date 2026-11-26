@@ -416,7 +416,7 @@ Metadata auto-discovery toggles (see
 |---|---|---|
 | `discoverMixinConfigs` | `true` | `*.mixins.json` resources auto-fill the `mixins` array |
 | `discoverGametestEntrypoints` | `true` | compiled-class scan for loader gametest interfaces/annotations |
-| `interfaceInjectionScan` | `false` | mixin-class scan deriving `inject-interface` rules (opt-in — `access { injectInterface(...) }` is the always-on path) |
+| `interfaceInjectionScan` | `false` | mixin-class scan deriving `inject-interface` rules (opt-in — `access { injectInterface(...) }` is the always-on path); requires a declared `mod.id` — skipped with a warning otherwise |
 
 ## Mod classpath groups
 
