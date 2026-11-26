@@ -1761,7 +1761,10 @@ onto this convention keep their old shape as a deprecated alias —
   <code>sourceCompatibility</code>/<code>targetCompatibility</code>, Kotlin <code>jvmTarget</code>)
   — it conventions to <code>requiredJavaVersion</code>, and the
   <a href="../../adapters/jvmdg/">jvmdg adapter</a>'s <code>source</code> raises it without
-  moving the run floor.</li>
+  moving the run floor. Compile/runtime classpath dependency resolution
+  advertises the env runtime floor even when <code>compileJavaVersion</code> is
+  lower, so Java-17+ Minecraft/loader libraries remain selectable while
+  jvmdg emits older bytecode.</li>
 <li><strong>Access widening</strong> — <code>accessWideners</code> / <code>accessTransformers</code> are
   file collections of <code>*.accesswidener</code> / <code>accesstransformer.cfg</code>
   applied to the dev artifact; <code>transitiveAccessWideners</code> (default
@@ -1791,8 +1794,13 @@ onto this convention keep their old shape as a deprecated alias —
   <code>replaceLibraryVersion(group, name, classifier) { … }</code> rewrite
   matched library versions (regexes, <code>null</code> drops the library);
   <code>libraryFilter { dep -&gt; … }</code> keeps a library only when every
-  filter accepts it; <code>libraryCoordFilters</code> maps whole coords;
-  <code>obfuscatedLibraries</code> flags coords that remap with the MC jar.</li>
+  filter accepts it; <code>libraryCoordFilters</code> maps whole coords. These
+  channels apply both to Mojang/provider version libraries and to
+  library coordinates flattened out of loader metadata (forge userdev
+  and FG2 <code>dev.json</code>/<code>version.json</code>); structured loader entries keep
+  their platform rules, and natives-only entries do not become bogus
+  plain-jar dependencies. <code>obfuscatedLibraries</code> flags coords that remap
+  with the MC jar.</li>
 <li><strong>LWJGL 3 swap</strong> — <code>lwjgl3 { }</code> drops every <code>org.lwjgl.lwjgl:*</code>
   library (jars <em>and</em> natives entries) and puts lwjgl3 artifacts on
   the classpath and the host natives set instead — the
