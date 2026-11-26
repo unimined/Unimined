@@ -91,9 +91,12 @@ class ClassTweaker private constructor(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
     ): List<AccessElement> = lookup(MethodTarget(owner, name, desc), transitiveOnly)
 
+    /** Access elements for a field — AT fields carry no descriptor and,
+     *  as in FML, match by name alone; rules naming [desc] follow. */
     fun fieldChanges(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
-    ): List<AccessElement> = lookup(FieldTarget(owner, name, desc), transitiveOnly)
+    ): List<AccessElement> = listOf("", desc).distinct()
+        .flatMap { lookup(FieldTarget(owner, name, it), transitiveOnly) }
 
     private fun lookup(target: Target, transitiveOnly: Boolean): List<AccessElement> =
     // `access` already contains every directive (transitive ones included);

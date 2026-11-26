@@ -122,6 +122,51 @@ class ClassTweakerTest {
     }
 
     @Test
+    fun `at field rules apply by name to every descriptor`() {
+        // AT syntax names no field descriptor — FML's field transformer
+        // matches every field of that name
+        val bytes = writeClass(
+            Opcodes.ACC_PUBLIC or 0x200, privateMethod = false,
+            fields = listOf(
+                Triple("state", "I", Opcodes.ACC_PRIVATE or Opcodes.ACC_FINAL),
+                Triple("state", "J", Opcodes.ACC_PRIVATE)
+            )
+        )
+        val at = ClassTweaker.parse(
+            "accesstransformer.cfg",
+            "public-f a/b/C state",
+            mapOf("source" to "named")
+        )
+        assertEquals(
+            mapOf("stateI" to Opcodes.ACC_PUBLIC, "stateJ" to Opcodes.ACC_PUBLIC),
+            fieldAccess(apply(bytes, own = listOf(at)))
+        )
+    }
+
+    @Test
+    fun `member changes list a descriptor-less rule once`() {
+        val at = ClassTweaker.parse("accesstransformer.cfg", "public-f a/b/C state")
+        // `public-f` = add PUBLIC + remove FINAL
+        assertEquals(2, at.fieldChanges("a/b/C", "state", "").size)
+        assertEquals(2, at.fieldChanges("a/b/C", "state", "I").size)
+    }
+
+    /** Each field's access flags, keyed by name + descriptor. */
+    private fun fieldAccess(bytes: ByteArray): Map<String, Int> {
+        val flags = LinkedHashMap<String, Int>()
+        ClassReader(bytes).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitField(
+                access: Int, name: String, descriptor: String,
+                signature: String?, value: Any?
+            ): org.objectweb.asm.FieldVisitor? {
+                flags[name + descriptor] = access
+                return null
+            }
+        }, 0)
+        return flags
+    }
+
+    @Test
     fun `accessible class and method become public`() {
         val bytes = writeClass(access = Opcodes.ACC_PRIVATE or 0x200 /*super*/, privateMethod = true)
         val aw = ClassTweaker.parse(
