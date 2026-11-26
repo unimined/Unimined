@@ -207,6 +207,13 @@ abstract class GenerateModMetadataTask
     @get:Input
     abstract val discoverGametestEntrypoints: Property<Boolean>
 
+    /** Env `emitLoaderMetadata` flag — `false` suppresses generated
+     *  loader descriptor documents (mcmod.info, mods.toml, fmj, …) so
+     *  hand-maintained resources stay authoritative; manifest
+     *  attributes (`MixinConfigs`, `FMLAT`) still emit. */
+    @get:Input
+    abstract val emitLoaderMetadata: Property<Boolean>
+
     /** Env `interfaceInjectionScan` flag — compiled mixin classes are
      *  scanned for implemented interfaces (opt-in; `access {
      *  injectInterface(...) }` is the always-on declaration path). */
@@ -233,6 +240,7 @@ abstract class GenerateModMetadataTask
         declaredInterfaceInjections.convention(emptyMap())
         discoverMixinConfigs.convention(true)
         discoverGametestEntrypoints.convention(true)
+        emitLoaderMetadata.convention(true)
         interfaceInjectionScan.convention(false)
     }
 
@@ -428,7 +436,7 @@ abstract class GenerateModMetadataTask
             emitter.emitManifest(ctx)?.let {
                 emitted[ModMetadataEmitter.MANIFEST_PATH] = it
             }
-            if (meta.id != null) {
+            if (meta.id != null && emitLoaderMetadata.get()) {
                 emitted += emitter.emit(ctx)
             }
         }
@@ -474,6 +482,29 @@ abstract class GenerateModMetadataTask
                     java.io.ByteArrayInputStream(manifest)).mainAttributes)
                 bytes = java.io.ByteArrayOutputStream()
                     .also { mf.write(it) }.toByteArray()
+            }
+            // exploded classpath dirs join forge's MOD_CLASSES unions,
+            // whose SecureJar name comes from the *last* META-INF
+            // manifest carrier — member order reversal by bootstrap's
+            // secureJar can land this dir last, and a manifest without
+            // Automatic-Module-Name then derives the empty union-root
+            // filename → `Invalid module name: ''` (upstream
+            // MinecraftForge footgun; the `_<env>` manifest member
+            // appended by ForgeRunWiring can't always win). Stamp an
+            // env-scoped AMN so every carrier resolves a valid name
+            // regardless of order; a manually declared AMN wins.
+            run {
+                val mf = java.util.jar.Manifest(
+                    java.io.ByteArrayInputStream(bytes))
+                if (mf.mainAttributes.getValue(
+                        "Automatic-Module-Name") == null) {
+                    mf.mainAttributes.putValue(
+                        "Automatic-Module-Name",
+                        "unimined.dev." + environmentId.get()
+                            .replace(Regex("[^A-Za-z0-9._]+"), "_"))
+                    bytes = java.io.ByteArrayOutputStream()
+                        .also { mf.write(it) }.toByteArray()
+                }
             }
             val target = out.resolve(ModMetadataEmitter.MANIFEST_PATH)
             Files.createDirectories(target.parent)

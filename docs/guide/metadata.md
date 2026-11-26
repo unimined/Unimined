@@ -54,6 +54,14 @@ recursively, arrays union and deduplicate, and generated scalar
 values win. Only the merged copy ships — the source file is excluded
 from `processResources`. Non-JSON collisions still fail the build.
 
+Set the environment's `emitLoaderMetadata` flag to `false` to keep
+hand-written descriptor documents wholly authoritative: no generated
+`fabric.mod.json`/`mods.toml`/`mcmod.info` is emitted or merged, so
+the resource ships as written. Generated mixin configs, converted
+access files, and manifest attributes (`MixinConfigs`, `FMLAT`, …)
+still emit — dev runs and packaged jars need those even when the
+loader document itself is maintained by hand.
+
 ## Discovery
 
 `gen<Env>ModMetadata` scans the environment's resources and
@@ -160,7 +168,12 @@ generated resources (`META-INF/MANIFEST.MF`) so **dev runs see it** —
 FML (modern `SecureJar` and legacy `CoreModManager` alike) parses
 manifests inside classpath *directories*, which is how exploded dev
 mods carry `FMLModType`/`MixinConfigs`/`FMLAT`. The file copy is
-excluded from the packed jar; the attrs ride the real manifest.
+excluded from the packed jar; the attrs ride the real manifest. The
+dev-resource copy is stamped
+`Automatic-Module-Name: unimined.dev.<env>` when the manifest does not
+already declare one — forge's exploded `MOD_CLASSES` unions otherwise
+can derive an empty, invalid JPMS module name depending on member
+order.
 
 Environment-fact attributes (`Fabric-Mapping-Namespace`,
 `MixinConfigs`, `FMLAT`, loader-version stamps, …) describe the
@@ -177,6 +190,10 @@ Era-correct emission per forge-family loader:
 | `neoforge` ≥ 20.3 | `[[mixins]]` in `neoforge.mods.toml` (better errors) | same |
 | `neoforge` < 20.3 | `MixinConfigs` manifest attr | same |
 | `cleanroom` / legacy ≤1.12.2 | `MixinConfigs` manifest attr | canonical cfg auto-detected; non-canonical outputs additionally listed under `FMLAT` |
+
+On LaunchWrapper-era forge-family loaders (≤1.12.2), `MixinConfigs` is
+paired with the `TweakClass` manifest attribute — LaunchWrapper only
+registers mixin containers whose manifest names the mixin tweaker.
 
 Loader-contributed extras merge verbatim: `environment.manifestAttributes`
 (env channel — e.g. `manifestAttributes["FMLModType"] = "LANGPROVIDER"`

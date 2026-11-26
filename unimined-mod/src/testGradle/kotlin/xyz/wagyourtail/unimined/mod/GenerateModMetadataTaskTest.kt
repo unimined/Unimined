@@ -69,6 +69,11 @@ class GenerateModMetadataTaskTest {
         return f
     }
 
+    private fun manifestAttributes(path: Path): java.util.jar.Attributes =
+        Files.newInputStream(path).use {
+            java.util.jar.Manifest(it).mainAttributes
+        }
+
     @Test
     fun `declared AW emits canonical widener and fmj declaration`() {
         val res = dir.resolve("resources")
@@ -520,6 +525,64 @@ class GenerateModMetadataTaskTest {
         } else emptyList()
         assertFalse(emitted.any { scanRow.containsMatchIn(it) },
             "scan rows must not emit without a mod id: $emitted")
+    }
+
+    @Test
+    fun `emitLoaderMetadata false suppresses loader documents but keeps manifest attrs`() {
+        val res = dir.resolve("resources")
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": []}""", res)
+        val t = task("testmanifest", emptyList(), res)
+        t.minecraftVersion.set("1.12.2")
+        t.emitLoaderMetadata.set(false)
+        t.generate()
+
+        val out = dir.resolve("gen")
+        assertFalse(Files.exists(out.resolve("testmod.manifestloader")),
+            "loader descriptor must stay hand-authored when emission is off")
+        val attrs = manifestAttributes(dir.resolve("gen.mf"))
+        assertEquals("testmod.mixins.json", attrs.getValue("MixinConfigs"))
+    }
+
+    @Test
+    fun `emitLoaderMetadata default emits loader documents`() {
+        val t = task("testmanifest", emptyList())
+        t.generate()
+
+        assertTrue(Files.isRegularFile(
+            dir.resolve("gen/testmod.manifestloader")))
+    }
+
+    @Test
+    fun `dev manifest stamps a sanitized automatic module name`() {
+        val res = dir.resolve("resources")
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": []}""", res)
+        val t = task("testmanifest", emptyList(), res)
+        t.environmentId.set("fabric-client")
+        t.generate()
+
+        val attrs = manifestAttributes(
+            dir.resolve("gen/META-INF/MANIFEST.MF"))
+        assertEquals("unimined.dev.fabric_client",
+            attrs.getValue("Automatic-Module-Name"))
+    }
+
+    @Test
+    fun `manual automatic module name wins over the dev manifest stamp`() {
+        val res = dir.resolve("resources")
+        write("META-INF/MANIFEST.MF",
+            "Manifest-Version: 1.0\r\n" +
+                    "Automatic-Module-Name: manual.module\r\n\r\n", res)
+        write("testmod.mixins.json",
+            """{"package": "com.example.mixin", "mixins": []}""", res)
+        val t = task("testmanifest", emptyList(), res)
+        t.generate()
+
+        val attrs = manifestAttributes(
+            dir.resolve("gen/META-INF/MANIFEST.MF"))
+        assertEquals("manual.module",
+            attrs.getValue("Automatic-Module-Name"))
     }
 
     @Test

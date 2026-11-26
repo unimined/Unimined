@@ -177,6 +177,7 @@ internal object ModPackagingWiring {
                     .groupBy({ it.owner }, { it.signature })
             })
             t.discoverMixinConfigs.set(environment.discoverMixinConfigs)
+            t.emitLoaderMetadata.set(environment.emitLoaderMetadata)
             t.discoverGametestEntrypoints.set(
                 environment.discoverGametestEntrypoints)
             t.interfaceInjectionScan.set(environment.interfaceInjectionScan)

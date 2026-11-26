@@ -61,6 +61,19 @@ class ForgeModMetadataEmitterTest {
         val mf = emittedManifest(out)!!
         assertEquals("testmod.mixins.json",
             mf.mainAttributes.getValue("MixinConfigs"))
+        assertNull(mf.mainAttributes.getValue("TweakClass"),
+            "ModLauncher-era loaders ignore the LaunchWrapper tweak class")
+    }
+
+    @Test
+    fun `legacy forge pairs mixin configs with the mixin tweaker`() {
+        val out = ForgeModMetadataEmitter().emit(
+            ctx("forge", mc = "1.12.2"))
+        val mf = emittedManifest(out)!!
+        assertEquals("testmod.mixins.json",
+            mf.mainAttributes.getValue("MixinConfigs"))
+        assertEquals("org.spongepowered.asm.launch.MixinTweaker",
+            mf.mainAttributes.getValue("TweakClass"))
     }
 
     @Test

@@ -80,6 +80,14 @@ abstract class ForgeFamilyMetadataEmitter : ModMetadataEmitter {
         val attrs = linkedMapOf<String, String>()
         if (mixinRefs.isNotEmpty() && !tomlMixins(context)) {
             attrs["MixinConfigs"] = mixinRefs.joinToString(",")
+            // LaunchWrapper-era containers are only registered as mixin
+            // containers when their manifest declares the MixinTweaker
+            // TweakClass — `MixinConfigs` alone is ignored, both for jars
+            // and exploded dev dirs. ModLauncher-era loaders ignore the
+            // attribute entirely.
+            if (legacyEra(context.minecraftVersion)) {
+                attrs["TweakClass"] = "org.spongepowered.asm.launch.MixinTweaker"
+            }
         }
         section?.fmlModType?.let { attrs["FMLModType"] = it }
         if (legacyEra(context.minecraftVersion)) {

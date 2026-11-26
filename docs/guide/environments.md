@@ -475,6 +475,7 @@ Metadata auto-discovery toggles (see
 |---|---|---|
 | `discoverMixinConfigs` | `true` | `*.mixins.json` resources auto-fill the `mixins` array |
 | `discoverGametestEntrypoints` | `true` | compiled-class scan for loader gametest interfaces/annotations |
+| `emitLoaderMetadata` | `true` | generated loader descriptors (`fabric.mod.json`, `mods.toml`, `mcmod.info`, …); `false` keeps hand-written descriptors authoritative while manifest attributes still emit |
 | `interfaceInjectionScan` | `false` | mixin-class scan deriving `inject-interface` rules (opt-in — `access { injectInterface(...) }` is the always-on path); requires a declared `mod.id` — skipped with a warning otherwise |
 
 ## Mod classpath groups

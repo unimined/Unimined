@@ -540,6 +540,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         interfaceInjectionScan.convention(parent.interfaceInjectionScan)
         discoverMixinConfigs.convention(parent.discoverMixinConfigs)
         discoverGametestEntrypoints.convention(parent.discoverGametestEntrypoints)
+        emitLoaderMetadata.convention(parent.emitLoaderMetadata)
         accessWideners.from(parent.accessWideners)
         accessTransformers.from(parent.accessTransformers)
         consumedAccessDocs.from(parent.consumedAccessDocs)
@@ -970,6 +971,17 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * to require explicit entrypoint declaration.
      */
     val discoverGametestEntrypoints: Property<Boolean> =
+        objects.property(Boolean::class.java).convention(true)
+
+    /**
+     * Whether generated loader descriptors (`mcmod.info`, `mods.toml`,
+     * `fabric.mod.json`, `litemod.json`, …) are emitted by
+     * `gen<Env>ModMetadata` (default `true`). Set `false` to keep
+     * hand-maintained descriptor files authoritative — the emitted
+     * manifest attributes (`MixinConfigs`, `FMLAT`, …) still generate
+     * so dev runs and packaged jars pick up mixin configs.
+     */
+    val emitLoaderMetadata: Property<Boolean> =
         objects.property(Boolean::class.java).convention(true)
 
     /**
