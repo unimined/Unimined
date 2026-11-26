@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.produceCached
+import xyz.wagyourtail.unimined.transform.internal.authoredResourceDirs
 import java.io.File
 import org.gradle.api.tasks.SourceSetContainer
 import java.nio.file.Files
@@ -186,7 +187,7 @@ internal object FabricEnvironmentWiring {
                 (project.extensions
                     .getByType(SourceSetContainer::class.java)
                     .findByName(environment.environmentId)
-                    ?.resources?.srcDirs.orEmpty())
+                    ?.let { authoredResourceDirs(project, it) }.orEmpty())
                     .mapNotNull { it.resolve(name).takeIf(File::isFile) }
                     .flatMap {
                     synthesizeLocalInjectedInterfacesCt(

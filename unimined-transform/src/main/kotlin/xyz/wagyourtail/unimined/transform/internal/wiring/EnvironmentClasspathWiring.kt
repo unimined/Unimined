@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mapping.internal.MinecraftVersions
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.transform.internal.DepAccessScan
+import xyz.wagyourtail.unimined.transform.internal.authoredResourceDirs
 import xyz.wagyourtail.unimined.remap.RemapStepSpec
 import xyz.wagyourtail.unimined.remap.spi.ModArtifactOnlyStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
@@ -1025,11 +1026,12 @@ internal object EnvironmentClasspathWiring {
                 }
         }
 
-        // 3. AT/AW/CT files discovered under the env's resource roots —
-        //    header first, extension fallback; format-matched collection
+        // 3. AT/AW/CT files discovered under the env's authored resource
+        //    roots — header first, extension fallback; format-matched
+        //    collection
         val awFiles = mutableListOf<java.io.File>()
         val atFiles = mutableListOf<java.io.File>()
-        for (dir in sourceSet.resources.srcDirs) {
+        for (dir in authoredResourceDirs(project, sourceSet)) {
             if (!dir.isDirectory) continue
             dir.walkTopDown().forEach { f ->
                 if (!f.isFile) return@forEach

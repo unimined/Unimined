@@ -130,6 +130,37 @@ class FabricEnvironmentWiringTest {
         assertTrue(resolved.any { it.startsWith("asm-") })
     }
 
+    private fun localInjectionDocs(project: org.gradle.api.Project): List<java.io.File> =
+        project.extensions.getByType(RemapExtension::class.java).sourceSet("fabric")
+            .contributedSteps(RemapSurface.JAR)
+            .filterIsInstance<ApplyClassTweakerStepSpec>()
+            .flatMap { it.classTweakerFiles.files }
+            .filter { it.name.endsWith("-injected-interfaces.ct") }
+
+    private fun injectingModJson(target: String) =
+        """{"schemaVersion": 1, "id": "testmod",
+           "custom": {"loom:injected_interfaces": {"$target": ["a/Iface"]}}}"""
+
+    @Test
+    fun `mod json under the build dir yields no local injected interfaces`() {
+        // the env's own generated (merged) mod json lands in a build-dir
+        // resource root — its injections must not come back as own docs
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.devNamespace.set("named")
+        val env = fabricEnv(project, ext)
+        env.devNamespace.set("named")
+        val generated = dir.resolve("build/generated/res/fabric.mod.json").toFile()
+        generated.parentFile.mkdirs()
+        generated.writeText(injectingModJson("a/Generated"))
+        project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .getByName("fabric").resources.srcDir(generated.parentFile)
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        assertEquals(emptyList<java.io.File>(), localInjectionDocs(project))
+    }
+
     /** `customGameProvider` adds the loader's skipMcProvider prop to run
      *  configs (1.x patcher flag); unset it adds nothing */
     @Test

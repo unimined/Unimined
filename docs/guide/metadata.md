@@ -114,6 +114,8 @@ needed — declare configs and unimined handles the rest:
 No DSL is required — an access file under the environment's
 resource roots (`*.accesswidener`, `*.classtweaker`/`.ct`,
 `accesstransformer.cfg`/`*_at.cfg`) is picked up automatically.
+Roots under the build directory are skipped: they hold task outputs,
+this environment's generated metadata included.
 
 All declared access files — `accessWideners`/`accessTransformers`
 collections, `access { }` rules, `accessFile(...)` overrides, and
