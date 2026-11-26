@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.minecraft.internal.env
 
+import xyz.wagyourtail.unimined.api.spec.CheckLevel
 import xyz.wagyourtail.unimined.api.util.failProblem
+import xyz.wagyourtail.unimined.api.util.strictCheck
 import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 
@@ -20,7 +22,11 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
      *  mid-validation contributes no new constraints. */
     private val validatingCombinations = ThreadLocal<MutableSet<String>>()
 
-    /** Validate version, loader, and dev-namespace compatibility for combined outputs. */
+    /** Validate version, loader, and dev-namespace compatibility for
+     *  combined outputs. The mismatch checks ride
+     *  [MinecraftChecksSpec.combination] (1.x `footgunChecks`' scope);
+     *  cycle rejection is unconditional — a cyclic chain can't
+     *  resolve at all. */
     fun validate(environment: MinecraftEnvironment) {
         if (environment.combinedWith.isEmpty()) return
         val targetKey = "${project.path}:${environment.environmentId}"
@@ -30,6 +36,11 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
         if (!validating.add(targetKey)) return
         try {
             rejectCombinationCycles(environment, linkedSetOf(targetKey))
+            // OFF skips the mismatch checks without resolving either
+            // side's version/namespace — the namespace probe can
+            // compose mapping trees
+            val level = ext.checks.combination.get()
+            if (level == CheckLevel.OFF) return
             for (sourceReference in environment.combinedWith) {
                 val source = ext.environment(sourceReference)
                 // unset on either side = no constraint — an implicit
@@ -40,7 +51,8 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 val targetVersion = environment.version.orNull
                 if (sourceVersion != null && targetVersion != null &&
                     sourceVersion != targetVersion) {
-                    project.failProblem(
+                    project.strictCheck(
+                        level,
                         "env/combination-version",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
@@ -55,7 +67,8 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 val sourceLoaders = source.loaderSpecs.map { it.name }
                 if (targetLoader != null && sourceLoaders.isNotEmpty() &&
                     targetLoader !in sourceLoaders) {
-                    project.failProblem(
+                    project.strictCheck(
+                        level,
                         "env/combination-loader",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +
@@ -72,7 +85,8 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
                 if (targetNamespace != null && sourceNamespace != null &&
                     targetNamespace != sourceNamespace
                 ) {
-                    project.failProblem(
+                    project.strictCheck(
+                        level,
                         "env/combination-namespace",
                         "Cannot combine '${project.path}:${environment.environmentId}' " +
                                 "with '${sourceReference.projectPath}:${sourceReference.environmentId}': " +

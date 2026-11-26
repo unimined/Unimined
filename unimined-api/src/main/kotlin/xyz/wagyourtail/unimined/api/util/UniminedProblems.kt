@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
 import org.gradle.util.GradleVersion
+import xyz.wagyourtail.unimined.api.spec.CheckLevel
 
 /**
  * Gradle Problems API routing — warnings Unimined emits get a
@@ -142,3 +143,20 @@ fun Project.failProblem(
     details: String? = null,
     logger: Logger = this.logger
 ): Nothing = UniminedProblems.fail(logger, this, id, summary, details)
+
+/** Emit a strict-check finding per [level] — [CheckLevel.ERROR] throws
+ *  via [failProblem], [CheckLevel.WARN] reports via [reportProblem],
+ *  [CheckLevel.OFF] ignores. Shared dispatch for Unimined's opt-out
+ *  validations so every named check honors the same level semantics. */
+fun Project.strictCheck(
+    level: CheckLevel,
+    id: String,
+    summary: String,
+    details: String? = null
+) {
+    when (level) {
+        CheckLevel.OFF -> {}
+        CheckLevel.WARN -> reportProblem(id, summary, details)
+        CheckLevel.ERROR -> failProblem(id, summary, details)
+    }
+}

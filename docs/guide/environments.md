@@ -52,6 +52,44 @@ dependency configurations.
 
 Envs are also the scope of `mod { }` metadata and `runs { }`.
 
+**Strict checks.** `minecraft { checks { } }` carries the enforcement
+levels for Unimined's environment validations — the scope 1.x's
+`unimined.footgunChecks` Boolean gated, now split into named checks
+(1.x's jar lint didn't exist; 2.0's `remap { checks { jarLint } }` is
+unrelated):
+
+- `combination` — `combineWith` consistency: a combined env must share
+  its sources' Minecraft version, loader family, and dev namespace.
+  Combine-*cycle* rejection is not gated — a cyclic chain can't
+  resolve at all, so it always fails.
+- `versionConflict` — an env inheriting sections from another must
+  resolve the same MC version (or leave it unset to inherit).
+
+Both take `CheckLevel.ERROR` (default, fails the build), `WARN`
+(logged finding), or `OFF` (skip):
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            checks {
+                combination.set(CheckLevel.OFF)
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            checks {
+                combination.set(CheckLevel.OFF)
+            }
+        }
+    }
+    ```
+
 **Task naming.** Per-environment tasks follow `verb<Env>Noun` — the
 environment id (capitalized) sits between the verb and the object:
 `genFabricSources`, `validateForgeAccess`, `remapClientJar`,

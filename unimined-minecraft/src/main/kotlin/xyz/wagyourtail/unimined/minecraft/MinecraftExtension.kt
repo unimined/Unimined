@@ -284,6 +284,26 @@ abstract class MinecraftExtension @Inject constructor(
     val javaVersion: Property<Int>
         get() = main.javaVersion
 
+    /**
+     * `checks { }` — enforcement levels for the strict environment
+     * validations (combine consistency, version conflicts). This is
+     * where 1.x's `unimined.footgunChecks` Boolean lives on in 2.0 —
+     * split into named checks; the `remap` module's production-jar
+     * lint is `remap { checks { jarLint } }` instead.
+     */
+    val checks: MinecraftChecksSpec =
+        objects.newInstance(MinecraftChecksSpec::class.java)
+
+    /** `checks { combination = WARN }` — [Action] form. */
+    fun checks(action: Action<MinecraftChecksSpec>) =
+        action.execute(checks)
+
+    /** Groovy DSL form of [checks]. */
+    fun checks(
+        @DelegatesTo(value = MinecraftChecksSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = checks(Action { action.delegatingTo(it) })
+
     /** SAM listener for environment↔source-set binding. */
     fun interface EnvironmentBoundHandler {
         fun onBound(environment: MinecraftEnvironment, sourceSet: SourceSet)

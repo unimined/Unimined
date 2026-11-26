@@ -11,6 +11,8 @@ import xyz.wagyourtail.unimined.api.util.delegatingTo
 import xyz.wagyourtail.unimined.api.util.dependencyNotationPredicate
 import xyz.wagyourtail.unimined.api.util.failProblem
 import xyz.wagyourtail.unimined.api.util.reportProblem
+import xyz.wagyourtail.unimined.api.util.strictCheck
+import xyz.wagyourtail.unimined.api.spec.CheckLevel
 import org.gradle.api.Action
 import org.gradle.api.JavaVersion
 import org.gradle.api.Named
@@ -548,14 +550,22 @@ abstract class MinecraftEnvironment @Inject internal constructor(
         // api) — see MinecraftEnvironmentCopyHandler.wireDependencies
     }
 
-    /** Environments sharing sections must resolve the same mc version. */
+    /** Environments sharing sections must resolve the same mc version.
+     *  Strictness gated on `checks { versionConflict }`. The extension
+     *  lookup must stay behind the cheap early-outs — this runs during
+     *  `uniminedMinecraft`'s own construction for `main`, where the
+     *  extension isn't registered yet. */
     internal fun checkVersionConflicts() {
         val target = version.orNull ?: return
-        for (source in inheritance.references + inheritance.versionCopySources) {
-            val other = project.extensions
-                .getByType(MinecraftExtension::class.java)
-                .environment(source).version.orNull ?: continue
-            if (other != target) project.failProblem(
+        val sources = inheritance.references + inheritance.versionCopySources
+        if (sources.isEmpty()) return
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val level = ext.checks.versionConflict.get()
+        if (level == CheckLevel.OFF) return
+        for (source in sources) {
+            val other = ext.environment(source).version.orNull ?: continue
+            if (other != target) project.strictCheck(
+                level,
                 "env/version-conflict",
                 "Minecraft environment '$environmentId' inherits from " +
                     "'${source.projectPath}:${source.environmentId}' " +
