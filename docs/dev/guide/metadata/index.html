@@ -1785,7 +1785,12 @@ compiled classes at execution time, gated by three env flags:</p>
   <code>discoverGametestEntrypoints</code>, default <code>true</code>.</li>
 <li>Mixin classes are scanned for <code>@Mixin</code> targets × implemented
   interfaces — <code>interfaceInjectionScan</code>, default <code>false</code> (opt-in).
-  Each pair becomes an <code>inject-interface</code> rule: on loaders whose
+  Requires a declared <code>mod.id</code>: the scan's output channels (the
+  <code>{modid}</code> access-doc expansion, the emitted metadata documents)
+  all key on it, so with a fully hand-written metadata setup and no
+  <code>mod { }</code> id the scan is skipped and the task warns — declaring
+  just the id is enough, generated documents merge into hand-written
+  ones. Each pair becomes an <code>inject-interface</code> rule: on loaders whose
   access doc can carry classTweaker directives (fabric ≥ <code>0.18.0</code>)
   the rules merge into the canonical <code>*.accesswidener</code> file, and on
   every loader they emit the loader's injected-interfaces metadata
