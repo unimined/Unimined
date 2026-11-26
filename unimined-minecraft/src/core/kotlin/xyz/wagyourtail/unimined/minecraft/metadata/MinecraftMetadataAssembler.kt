@@ -26,14 +26,19 @@ object MinecraftMetadataAssembler {
             version.downloads?.get("server")?.let { put(ArtifactKey.SERVER, it) }
         }
         val (auxLibs, libs) = version.libraries
-            .filter { it.appliesTo(platform) }
+            .filter { VersionLibraryRules.appliesTo(it, platform) }
             .partition { lib ->
                 obfuscatedPrefixes.any { lib.name.startsWith("$it:") }
             }
         return ResolvedMinecraftMetadata(
             version = version,
             downloads = downloads,
-            libraries = libs.map { it.name },
+            // natives-only entries (legacy lwjgl/twitch shape) have no
+            // plain jar coordinate; their classifiers ride the natives
+            // resolution channel instead of the compile/runtime classpath
+            libraries = libs.mapNotNull {
+                VersionLibraryRules.classpathCoordinate(it, platform)
+            },
             obfuscatedAuxArtifacts = auxLibs.mapNotNull { lib ->
                 val artifact = lib.downloads?.get("artifact")
                 val url = artifact?.url ?: return@mapNotNull null
@@ -45,27 +50,6 @@ object MinecraftMetadataAssembler {
             },
             assetIndex = version.assetIndex
         )
-    }
-
-    private fun VersionJson.Library.appliesTo(platform: PlatformInfo): Boolean {
-        if (rules.isEmpty()) return true
-        var allowed = false
-        for (rule in rules) {
-            if (rule.matches(platform)) allowed = rule.action == "allow"
-        }
-        return allowed
-    }
-
-    private fun VersionJson.Rule.matches(platform: PlatformInfo): Boolean {
-        val osRule = os
-        if (osRule != null) {
-            if (osRule.name != null && osRule.name != platform.osName) return false
-            if (osRule.arch != null && !Regex(osRule.arch).containsMatchIn(platform.arch)) return false
-            if (osRule.version != null && !Regex(osRule.version).containsMatchIn(platform.osVersion)) return false
-        }
-        return features.orEmpty().all { (key, expected) ->
-            (platform.features[key] ?: false) == expected
-        }
     }
 
 }

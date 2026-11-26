@@ -250,6 +250,106 @@ class EnvironmentClasspathWiringTest {
         )
     }
 
+    /** Publish a minimal Gradle-module-metadata library whose jar variant
+     *  declares [jvmVersion], pinned to an exclusive local repository. */
+    private fun serveJvmModule(project: Project, coords: String, jvmVersion: Int) {
+        val (g, a, v) = coords.split(":")
+        val moduleDir = dir.resolve("repo/${g.replace('.', '/')}/$a/$v").toFile()
+        moduleDir.mkdirs()
+        val jarBytes = byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+        moduleDir.resolve("$a-$v.jar").writeBytes(jarBytes)
+        fun hash(algorithm: String) = java.security.MessageDigest
+            .getInstance(algorithm).digest(jarBytes)
+            .joinToString("") { "%02x".format(it) }
+        moduleDir.resolve("$a-$v.pom").writeText(
+            "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">" +
+                    "<modelVersion>4.0.0</modelVersion><groupId>$g</groupId>" +
+                    "<artifactId>$a</artifactId><version>$v</version>" +
+                    "<!-- do_not_remove: published-with-gradle-metadata --></project>"
+        )
+        fun variant(name: String, usage: String) = """
+          {"name":"$name","attributes":{
+            "org.gradle.category":"library",
+            "org.gradle.dependency.bundling":"external",
+            "org.gradle.jvm.environment":"standard-jvm",
+            "org.gradle.jvm.version":$jvmVersion,
+            "org.gradle.libraryelements":"jar",
+            "org.gradle.usage":"$usage"
+          },"files":[{"name":"$a-$v.jar","url":"$a-$v.jar",
+            "size":${jarBytes.size},"sha512":"${hash("SHA-512")}",
+            "sha256":"${hash("SHA-256")}","sha1":"${hash("SHA-1")}"}]}
+        """.trimIndent()
+        moduleDir.resolve("$a-$v.module").writeText("""
+          {"formatVersion":"1.1","component":{"group":"$g","module":"$a","version":"$v"},
+           "createdBy":{"gradle":{"version":"9.0.0"}},
+           "variants":[${variant("apiElements", "java-api")},
+             ${variant("runtimeElements", "java-runtime")}]}
+        """.trimIndent())
+        project.repositories.exclusiveContent { exclusive ->
+            exclusive.forRepository {
+                project.repositories.maven { it.url = dir.resolve("repo").toFile().toURI() }
+            }
+            exclusive.filter { it.includeGroup(g) }
+        }
+    }
+
+    @Test
+    fun `modern java library variants resolve against the env runtime floor`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.registry.register(YarnIntermediaryFakeProvider(project, javaVersion = 17))
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        serveJvmModule(project, "com.example:modernlib:1.0", 17)
+        project.dependencies.add("minecraftLibraries", "com.example:modernlib:1.0")
+
+        // compileClasspath must expose the same runtime floor; resolving the
+        // library bucket directly avoids executing the unrelated MC artifact
+        // transform while exercising Gradle's module-attribute selection.
+        assertEquals(17, project.configurations.getByName("compileClasspath")
+            .attributes.getAttribute(
+                org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE))
+        val probe = project.configurations.create("modernLibraryResolutionProbe") {
+            it.isCanBeConsumed = false
+            it.isCanBeResolved = true
+            it.extendsFrom(project.configurations.getByName("minecraftLibraries"))
+            it.attributes.attribute(
+                org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
+                ext.main.requiredJavaVersion.get()
+            )
+        }
+        assertTrue(probe.resolve().any { it.name == "modernlib-1.0.jar" },
+            "Java-17 module variant rejected by env library resolution")
+    }
+
+    @Test
+    fun `env java version supplies classpath resolution attributes independent of compile target`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.registry.register(YarnIntermediaryFakeProvider(project, javaVersion = 17))
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+
+        // jvmdg-style setup: emit Java-8 bytecode while resolving the
+        // Java-17 runtime libraries the game itself requires. Dependency
+        // resolution must still advertise 17 on both resolvable classpaths.
+        val compileJava = project.tasks.getByName("compileJava")
+            as org.gradle.api.tasks.compile.JavaCompile
+        compileJava.options.release.set(8)
+
+        for (name in listOf("compileClasspath", "runtimeClasspath")) {
+            assertEquals(
+                17,
+                project.configurations.getByName(name).attributes.getAttribute(
+                    org.gradle.api.attributes.java.TargetJvmVersion
+                        .TARGET_JVM_VERSION_ATTRIBUTE
+                ),
+                "$name must resolve game libraries for the env runtime JVM"
+            )
+        }
+        assertEquals(8, compileJava.options.release.get())
+    }
+
     @Test
     fun `loaderless env wires access apply and env-local generated doc`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
@@ -705,7 +805,10 @@ class EnvironmentClasspathWiringTest {
 
 
 
-private class YarnIntermediaryFakeArtifacts(private val project: Project) : ProductArtifacts {
+private class YarnIntermediaryFakeArtifacts(
+    private val project: Project,
+    private val javaVersion: Int = 8
+) : ProductArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
         project.provider { emptyList() }
@@ -714,7 +817,9 @@ private class YarnIntermediaryFakeArtifacts(private val project: Project) : Prod
     override val namespaceMode: Provider<NamespaceMode> =
         project.provider { NamespaceMode.REMAPPABLE }
     override val capabilities = project.provider {
-        EnvironmentCapabilities(minecraftVersion = "1.20.1")
+        EnvironmentCapabilities(
+            minecraftVersion = "1.20.1", javaVersion = javaVersion
+        )
     }
     override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
     override val extraDependencies = project.objects.fileCollection()
@@ -723,10 +828,13 @@ private class YarnIntermediaryFakeArtifacts(private val project: Project) : Prod
     override val launch: LaunchMetadata? = null
 }
 
-private class YarnIntermediaryFakeProvider(private val project: Project) : ProductProvider {
+private class YarnIntermediaryFakeProvider(
+    private val project: Project,
+    private val javaVersion: Int = 8
+) : ProductProvider {
     override val name = "fake"
     override fun supports(spec: ProductSpec) = spec.version.version == "1.20.1"
     override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts =
-        YarnIntermediaryFakeArtifacts(project)
+        YarnIntermediaryFakeArtifacts(project, javaVersion)
 }
 }

@@ -479,16 +479,39 @@ internal fun contributeUserdevLibraries(
             val r = resolved.orNull ?: return@withDependencies
             val coords = when (val profile = r.profile) {
                 is ForgeProfile.Userdev ->
-                    UserdevExtract.libraryCoords(profile.config)
+                    ForgeLibraryCoordinates.classpathCoords(profile.config.json)
+                        .filter { !it.contains("legacydev") }
+                        .map(UserdevExtract::repairLibraryCoord)
                 // FG2: dev.json (dev package) or version.json
                 // (universal) `libraries` — launchwrapper,
-                // scala/akka, ...
-                is ForgeProfile.Binpatches -> profile.libraries
+                // scala/akka, ... These documents carry Mojang-shaped
+                // rules/natives blocks; evaluate them before creating
+                // dependencies (the legacy twitch entries are natives-only
+                // and OS-gated, not plain jars).
+                is ForgeProfile.Binpatches -> {
+                    val document = profile.devPackage?.devJson ?: profile.versionJson
+                    document?.let { ForgeLibraryCoordinates.classpathCoords(it) }
+                        ?: emptyList()
+                }
 
                 else -> return@withDependencies
             }
-            coords.forEach {
-                deps.add(project.dependencies.create(it))
+            coords.mapNotNull {
+                xyz.wagyourtail.unimined.api.spec.applyLibraryRules(
+                    it,
+                    environment.librarySubstitutions,
+                    environment.libraryRules,
+                    environment.libraryCoordFilters
+                )
+            }.distinct().forEach { coord ->
+                val dep = project.dependencies.create(coord)
+                // loader-declared libraries are part of the same effective
+                // MC library set as provider-declared ones — keep-filters
+                // must gate both channels or `libraryFilter` is inert for
+                // forge-era metadata
+                if (environment.libraryFilters.all { it(dep) }) {
+                    deps.add(dep)
+                }
             }
             // forge >=49 (mc >=1.20.3): forge ships its own dev
             // relauncher — mirror `bootstrap:<ver>` with

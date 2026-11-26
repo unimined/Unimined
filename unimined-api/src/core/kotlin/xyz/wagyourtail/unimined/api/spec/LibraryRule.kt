@@ -54,10 +54,17 @@ fun applyLibraryRules(
     for (f in coordFilters.asReversed()) {
         c = f(c) ?: return null
     }
-    val parts = c.split(':')
+    // Gradle artifact extensions (`coord@jar`) are notation suffixes, not
+    // part of the version/classifier component. Strip the suffix before
+    // matching and restore it on rebuilds so substitutions do not corrupt
+    // or silently lose the extension.
+    val extension = if ('@' in c) "@${c.substringAfterLast('@')}" else ""
+    val baseCoord = c.substringBeforeLast('@')
+    val parts = baseCoord.split(':')
+    fun withExtension(rebuilt: String): String = rebuilt + extension
     for (rule in DEFAULT_LIBRARY_RULES + rules) {
         val (matched, replacement) = rule.applyTo(parts)
-        if (matched) return replacement
+        if (matched) return replacement?.let(::withExtension)
     }
     if (parts.size >= 3) {
         val groupName = "${parts[0]}:${parts[1]}"
@@ -65,8 +72,10 @@ fun applyLibraryRules(
             if (':' in key) groupName == key else groupName.startsWith(key)
         }?.second
         if (version != null) {
-            return (listOf(parts[0], parts[1], version) + parts.drop(3))
-                .joinToString(":")
+            return withExtension(
+                (listOf(parts[0], parts[1], version) + parts.drop(3))
+                    .joinToString(":")
+            )
         }
     }
     return c

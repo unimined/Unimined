@@ -79,7 +79,10 @@ Everything below lives inside an env block (`minecraft { … }` or
   `sourceCompatibility`/`targetCompatibility`, Kotlin `jvmTarget`)
   — it conventions to `requiredJavaVersion`, and the
   [jvmdg adapter](../adapters/jvmdg.md)'s `source` raises it without
-  moving the run floor.
+  moving the run floor. Compile/runtime classpath dependency resolution
+  advertises the env runtime floor even when `compileJavaVersion` is
+  lower, so Java-17+ Minecraft/loader libraries remain selectable while
+  jvmdg emits older bytecode.
 - **Access widening** — `accessWideners` / `accessTransformers` are
   file collections of `*.accesswidener` / `accesstransformer.cfg`
   applied to the dev artifact; `transitiveAccessWideners` (default
@@ -109,8 +112,13 @@ Everything below lives inside an env block (`minecraft { … }` or
   `replaceLibraryVersion(group, name, classifier) { … }` rewrite
   matched library versions (regexes, `null` drops the library);
   `libraryFilter { dep -> … }` keeps a library only when every
-  filter accepts it; `libraryCoordFilters` maps whole coords;
-  `obfuscatedLibraries` flags coords that remap with the MC jar.
+  filter accepts it; `libraryCoordFilters` maps whole coords. These
+  channels apply both to Mojang/provider version libraries and to
+  library coordinates flattened out of loader metadata (forge userdev
+  and FG2 `dev.json`/`version.json`); structured loader entries keep
+  their platform rules, and natives-only entries do not become bogus
+  plain-jar dependencies. `obfuscatedLibraries` flags coords that remap
+  with the MC jar.
 - **LWJGL 3 swap** — `lwjgl3 { }` drops every `org.lwjgl.lwjgl:*`
   library (jars *and* natives entries) and puts lwjgl3 artifacts on
   the classpath and the host natives set instead — the

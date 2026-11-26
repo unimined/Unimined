@@ -316,4 +316,31 @@ class LibraryDslWiringTest {
         assertFalse(anyVersion(dep(project, "com.example:other:1.0")))
     }
 
+    @Test
+    fun `library substitutions and rules preserve artifact extension notation`() {
+        val env = env(project())
+
+        env.librarySubstitutions += "com.example:exact" to "2.0"
+        assertEquals(
+            "com.example:exact:2.0@jar",
+            applyLibraryRules("com.example:exact:1.0@jar",
+                env.librarySubstitutions, env.libraryRules,
+                env.libraryCoordFilters)
+        )
+
+        env.replaceLibraryVersion(name = "rich") { "3.0" }
+        assertEquals(
+            "com.example:rich:3.0@jar",
+            applyLibraryRules("com.example:rich:1.0@jar",
+                env.librarySubstitutions, env.libraryRules,
+                env.libraryCoordFilters)
+        )
+        assertEquals(
+            "com.example:rich:3.0:natives-linux@jar",
+            applyLibraryRules("com.example:rich:1.0:natives-linux@jar",
+                env.librarySubstitutions, env.libraryRules,
+                env.libraryCoordFilters)
+        )
+    }
+
 }

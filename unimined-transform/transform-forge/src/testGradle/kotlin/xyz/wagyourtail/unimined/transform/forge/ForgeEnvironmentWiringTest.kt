@@ -90,6 +90,29 @@ class ForgeEnvironmentWiringTest {
         pinLocalRepo(g)
     }
 
+    /** Serve a probe-valid FG2 dev package (`dev.json` +
+     *  `devbinpatches.pack.lzma`) as the loader's `:userdev` classifier. */
+    private fun serveDevPackage(coords: String, devJson: String) {
+        val repo = dir.resolve("repo").toFile()
+        val (g, a, v) = coords.split(":")
+        val jarDir = repo.resolve("${g.replace('.', '/')}/$a/$v")
+        jarDir.mkdirs()
+        jarDir.resolve("$a-$v.pom").writeText(
+            """<project xmlns="http://maven.apache.org/POM/4.0.0">""" +
+                    "<modelVersion>4.0.0</modelVersion>" +
+                    "<groupId>$g</groupId><artifactId>$a</artifactId>" +
+                    "<version>$v</version></project>")
+        JarOutputStream(jarDir.resolve("$a-$v-userdev.jar").outputStream()).use { out ->
+            out.putNextEntry(JarEntry("dev.json"))
+            out.write(devJson.toByteArray())
+            out.closeEntry()
+            out.putNextEntry(JarEntry("devbinpatches.pack.lzma"))
+            out.write("x".toByteArray())
+            out.closeEntry()
+        }
+        pinLocalRepo(g)
+    }
+
     /** Serve a probe-irrelevant `:universal` classifier — the artifact
      *  only needs to exist for classpath-selection assertions. */
     private fun serveUniversal(coords: String) {
@@ -973,6 +996,99 @@ class ForgeEnvironmentWiringTest {
             xyz.wagyourtail.unimined.transform.forge.internal
                 .UserdevUniversalLinkage.SEPARATE,
             linkage("26.3"))
+    }
+
+    /** Legacy FG2 metadata carries structured Mojang library entries.
+     *  They must be evaluated structurally and then pass through the same
+     *  rewrite/filter channels as provider-declared version libraries. */
+    @Test
+    fun `FG2 dev libraries apply platform rules natives shape and env filters`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.7.10")
+        ext.main.provider.set("fake")
+        val coords = "net.minecraftforge:forge:1.7.10-10.13.4.1614-1.7.10"
+        val os = xyz.wagyourtail.unimined.minecraft.metadata.PlatformInfo
+            .current().osName
+        val otherOs = if (os == "linux") "windows" else "linux"
+        serveDevPackage(coords, """
+            {"libraries":[
+              {"name":"com.example:current-platform:1.0","rules":[
+                {"action":"allow","os":{"name":"$os"}}
+              ]},
+              {"name":"com.example:other-platform:1.0","rules":[
+                {"action":"allow","os":{"name":"$otherOs"}}
+              ]},
+              {"name":"tv.twitch:twitch-platform:5.16",
+               "natives":{"$os":"natives-$os"},
+               "downloads":{"natives-$os":{"url":"https://example.invalid/natives.jar"}}},
+              {"name":"com.example:dropped:1.0"},
+              {"name":"com.example:rewrite:1.0"}
+            ]}
+        """.trimIndent())
+        val env = forgeEnv(ext, "lexforge", "1.7.10", "10.13.4.1614-1.7.10")
+        env.libraryFilter { it.name != "dropped" }
+        env.libraryCoordFilter {
+            if (it == "com.example:rewrite:1.0") "com.example:rewritten:2.0" else it
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val deps = project.configurations
+            .getByName("forgeUserdevLibrariesLexforge")
+            .incoming.dependencies
+        val coordsInConf = deps.map { "${it.group}:${it.name}:${it.version}" }
+
+        assertTrue("com.example:current-platform:1.0" in coordsInConf,
+            "current-platform library missing: $coordsInConf")
+        assertTrue("com.example:rewritten:2.0" in coordsInConf,
+            "libraryCoordFilter rewrite missing: $coordsInConf")
+        for (absent in listOf(
+            "com.example:other-platform:1.0",
+            "tv.twitch:twitch-platform:5.16",
+            "com.example:dropped:1.0",
+            "com.example:rewrite:1.0"
+        )) {
+            assertFalse(absent in coordsInConf,
+                "$absent must not reach the userdev library configuration: $coordsInConf")
+        }
+    }
+
+    /** Exact-coordinate repairs are data-driven userdev metadata fixes,
+     *  not version preferences scattered through the transformer. */
+    @Test
+    fun `userdev library coordinates pass through exact upstream repairs`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        val coords = "net.minecraftforge:forge:1.20.1-47.3.0"
+        serveUserdev(coords, """
+            {"mcp":"de.oceanlabs.mcp:mcp_config:1.20.1@zip",
+             "libraries":[
+               "cpw.mods:securejarhandler:3.0.8@jar",
+               "com.google.code.gson:gson:2.8.0",
+               "net.minecraft:launchwrapper:1.12"
+             ]}
+        """.trimIndent())
+        forgeEnv(ext, "forge", "1.20.1", "47.3.0")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        assertEquals(
+            "cpw.mods:securejarhandler:3.0.9@jar",
+            xyz.wagyourtail.unimined.transform.forge.internal.userdev
+                .UserdevExtract.repairLibraryCoord(
+                    "cpw.mods:securejarhandler:3.0.8@jar")
+        )
+        val coordsInConf = project.configurations
+            .getByName("forgeUserdevLibrariesForge")
+            .incoming.dependencies
+            .map { "${it.group}:${it.name}:${it.version}" }
+        assertTrue("cpw.mods:securejarhandler:3.0.9" in coordsInConf,
+            "securejarhandler repair missing: $coordsInConf")
+        assertTrue("com.google.code.gson:gson:2.8.9" in coordsInConf,
+            "gson repair missing: $coordsInConf")
+        assertTrue("net.minecraft:launchwrapper:1.12" in coordsInConf,
+            "unrepaired coordinate must pass through: $coordsInConf")
     }
 
     private data class Product(

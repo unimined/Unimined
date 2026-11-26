@@ -44,7 +44,9 @@ class VersionJson(
         val downloads: Map<String, ArtifactOrRules>? = null,
         val rules: List<Rule> = emptyList(),
         val natives: Map<String, String>? = null,
-        val extract: Extract? = null
+        val extract: Extract? = null,
+        /** Custom maven mirror/base URL declared by some loader-era metadata. */
+        val url: String? = null
     )
 
     @Serializable

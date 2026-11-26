@@ -164,17 +164,50 @@ internal object UserdevExtract {
     }
 
     /**
+     * Exact-coordinate repairs for userdev metadata. Keys and values are
+     * full `group:name:version` coordinates; an `@extension` on the input
+     * is preserved. Keep this data-driven — entries must be
+     * upstream metadata defects or patch-level repairs, never loader
+     * version preferences.
+     */
+    private val USERDEV_LIBRARY_COORDINATE_REPAIRS: List<Pair<String, String>> = listOf(
+        // 1.x pinned the vulnerable/broken gson referenced by older FG
+        // userdev to its patch release.
+        "com.google.code.gson:gson:2.8.0" to "com.google.code.gson:gson:2.8.9",
+        // SJH 3.0.9 is the upstream patch for 3.0.8's broken union-fs
+        // directory-stream contract; userdev metadata continued to
+        // reference the broken patch level after the fix published.
+        "cpw.mods:securejarhandler:3.0.8" to "cpw.mods:securejarhandler:3.0.9"
+    )
+
+    /** Apply [USERDEV_LIBRARY_COORDINATE_REPAIRS] to one coordinate. */
+    fun repairLibraryCoord(coord: String): String {
+        val base = coord.substringBeforeLast('@')
+        val extension = if ('@' in coord) "@${coord.substringAfterLast('@')}" else ""
+        val repair = USERDEV_LIBRARY_COORDINATE_REPAIRS.firstOrNull { (broken, _) ->
+            // A key without an extension matches the same exact coordinate
+            // regardless of the input's artifact extension; a keyed
+            // extension requires a full-notation match.
+            val keyedExtension = '@' in broken
+            if (keyedExtension) coord == broken else base == broken
+        }?.second ?: return coord
+        val repairedBase = repair.substringBeforeLast('@')
+        val repairedExtension = if ('@' in repair) {
+            "@${repair.substringAfterLast('@')}"
+        } else {
+            extension
+        }
+        return repairedBase + repairedExtension
+    }
+
+    /**
      * Classpath-side library coordinates from the userdev `libraries`
-     * array — 1.x `apply()`: `legacydev` entries skipped, `gson:2.8.0`
-     * pinned up to `2.8.9`.
+     * array — 1.x `apply()`: `legacydev` entries skipped, then exact
+     * upstream-metadata repairs applied.
      */
     fun libraryCoords(config: UserdevConfig): List<String> =
-        config.libraries.filter { !it.contains("legacydev") }.map { coord ->
-            val parts = coord.split(":")
-            if (parts.size >= 3 && parts[1] == "gson" && parts[2] == "2.8.0")
-                "${parts[0]}:${parts[1]}:2.8.9"
-            else coord
-        }
+        config.libraries.filter { !it.contains("legacydev") }
+            .map(::repairLibraryCoord)
 
     /**
      * Write `client-extra-<ver>.jar`: every non-class, non-`META-INF`

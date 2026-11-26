@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.access.AccessModel
 import xyz.wagyourtail.unimined.api.spec.DeclaredAccessFile
@@ -556,6 +557,29 @@ internal object EnvironmentClasspathWiring {
         }
         project.configurations.named(sourceSet.compileClasspathConfigurationName) {
             it.extendsFrom(mergedLoader)
+        }
+
+        // Dependency resolution must describe the JVM the environment
+        // actually runs on, not the bytecode level the compile task is
+        // configured to emit. Those intentionally differ under jvmdg
+        // (compile Java 8 bytecode against a Java-17+ game runtime).
+        // Gradle otherwise seeds resolvable classpaths from the compile
+        // task's source/target/release settings and then rejects modern
+        // authlib/securejarhandler module variants as incompatible.
+        // `requiredJavaVersion` itself stays lazy: provider-backed
+        // capabilities populate it from version metadata at resolution
+        // time, then the user/loader `javaVersion` floor raises it.
+        val resolutionJavaVersion = environment.requiredJavaVersion
+        listOf(
+            sourceSet.compileClasspathConfigurationName,
+            sourceSet.runtimeClasspathConfigurationName
+        ).forEach { configurationName ->
+            project.configurations.named(configurationName) { conf ->
+                conf.attributes.attributeProvider(
+                    TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
+                    resolutionJavaVersion
+                )
+            }
         }
 
         ProductionJarWiring.wire(

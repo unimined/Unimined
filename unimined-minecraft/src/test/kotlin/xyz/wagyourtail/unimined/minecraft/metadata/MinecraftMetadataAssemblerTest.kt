@@ -131,4 +131,37 @@ class MinecraftMetadataAssemblerTest {
         )
     }
 
+    @Test
+    fun `natives-only libraries do not become plain jar coordinates`() {
+        val version = VersionJson(
+            id = "1.7.10",
+            type = "release",
+            libraries = listOf(
+                VersionJson.Library("org.example:plain:1.0"),
+                // Legacy twitch shape: only classifier downloads exist;
+                // the bare coordinate has no artifact and must be left
+                // to the natives channel even on platforms where it applies.
+                VersionJson.Library(
+                    "tv.twitch:twitch-platform:5.16",
+                    natives = mapOf(
+                        "windows" to "natives-windows-\${arch}",
+                        "osx" to "natives-osx"
+                    ),
+                    downloads = mapOf(
+                        "natives-windows-32" to VersionJson.ArtifactOrRules(
+                            url = "https://libs.example/twitch-platform-natives-windows-32.jar"
+                        )
+                    )
+                )
+            )
+        )
+        val root = Json.parseToJsonElement("{}") as kotlinx.serialization.json.JsonObject
+
+        val assembled = MinecraftMetadataAssembler.assemble(
+            version, root, PlatformInfo("windows", "amd64", "10.0")
+        )
+
+        assertEquals(listOf("org.example:plain:1.0"), assembled.libraries)
+    }
+
 }
