@@ -286,7 +286,7 @@ class UniminedRepos private constructor(
         "https://maven.ornithemc.net/releases",
         servedGroups = setOf("net.ornithemc"))
     val legacyFabric by Maven("Legacy Fabric",
-        "https://maven.legacyfabric.net",
+        "https://repo.legacyfabric.net/legacyfabric",
         servedGroups = setOf("net.legacyfabric"))
     val quilt by Maven("Quilt",
         "https://maven.quiltmc.org/repository/release",

@@ -189,7 +189,7 @@ object LoaderApi {
         "legacyfabric" to PomModulesProvider(
             "legacy-fabric-api",
             "net.legacyfabric.legacy-fabric-api:legacy-fabric-api",
-            "https://maven.legacyfabric.net/net/legacyfabric/legacy-fabric-api/legacy-fabric-api/<v>/legacy-fabric-api-<v>.pom",
+            "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/legacy-fabric-api/legacy-fabric-api/<v>/legacy-fabric-api-<v>.pom",
         ),
         "stationapi" to StationApiProvider("releases"),
         "stationapi-snapshots" to StationApiProvider("snapshots"),
