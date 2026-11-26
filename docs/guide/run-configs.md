@@ -173,6 +173,25 @@ the fabric-family prod-namespace flag), javaagent jars exist, and the
 asset index is on disk. An empty plan prints an `OK` line; violations
 list as `FAIL` entries and fail the task, so it doubles as a CI gate.
 
+### Interactive pass/fail survey
+
+`-Punimined.verify=true` is the human-verification counterpart to the
+static audit above: the game really launches, and when its process exits
+the run task prompts on the controlling terminal for `pass`, `fail`, or
+`skip` (the default is `pass` after a clean exit, `fail` after a nonzero
+one). Each run appends a row to `verification-results.md` in the project
+directory; a failure verdict can carry a one-line note.
+
+```bash
+./gradlew runClient -Punimined.verify=true
+```
+
+The verdict is the task outcome: `fail` fails the task even when the
+game exited cleanly, while `pass` forgives a nonzero exit (useful for
+window-close quirks). `skip` and rows recorded as `unverified` — the
+fallback when no controlling terminal is available — defer to the
+process exit code. This is a manual matrix-pass harness, not a CI gate.
+
 ## Launch scripts
 
 `genLaunchScript<Name>` resolves the same launch as `run<Name>` but

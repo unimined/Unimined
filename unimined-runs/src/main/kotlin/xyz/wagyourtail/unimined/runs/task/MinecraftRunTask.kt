@@ -39,6 +39,16 @@ abstract class MinecraftRunTask @Inject constructor(
         val LAUNCH_TOKEN = Regex("\\$\\{([^}]+)}")
     }
 
+    /** Interactive-verification mode — prompt pass/fail on the
+     *  controlling terminal after the game exits and append to
+     *  [verifyResultsFile]. Wired from `-Punimined.verify`. */
+    @get:Input
+    abstract val verifySurvey: Property<Boolean>
+
+    /** Markdown results file the verification survey appends to. */
+    @get:Internal
+    abstract val verifyResultsFile: RegularFileProperty
+
     /** Launch metadata — serializable reconstruction data from the
      *  provider; the version chain is fetched lazily inside it. */
     @get:Internal
@@ -507,7 +517,8 @@ abstract class MinecraftRunTask @Inject constructor(
         }
 
         runDirectory.get().asFile.mkdirs()
-        execOperations.javaexec { exec ->
+        val verify = verifySurvey.get()
+        val result = execOperations.javaexec { exec ->
             exec.workingDir = runDirectory.get().asFile
             javaExecutable.orNull?.let { exec.executable = it }
             exec.mainClass.set(resolvedMainClass)
@@ -515,6 +526,7 @@ abstract class MinecraftRunTask @Inject constructor(
             exec.jvmArgs(allJvmArgs)
             exec.args(allArgs)
             exec.environment(allEnv)
+            if (verify) exec.isIgnoreExitValue = true
             stdin.orNull?.let {
                 // ensure the final command is newline-terminated or the
                 // console reader never dispatches it
@@ -523,6 +535,75 @@ abstract class MinecraftRunTask @Inject constructor(
                 )
             }
         }
+        if (verify) {
+            val rc = result?.exitValue ?: 0
+            // in verify mode the human is the oracle: the verdict IS
+            // the task outcome. fail verdicts fail the run even on a
+            // clean exit (crash-free but broken); pass forgives nonzero
+            // exits (alt-f4 quirks); skip/unverified leave the exit
+            // code in charge
+            when (surveyAfterRun(rc)) {
+                "fail" -> throw org.gradle.api.GradleException(
+                    "human verification failed${if (rc != 0) " (exit code $rc)" else ""}")
+                "pass" -> if (rc != 0) logger.lifecycle(
+                    "[unimined:verify] nonzero exit rc=$rc forgiven by pass verdict")
+                else -> if (rc != 0) throw org.gradle.api.GradleException(
+                    "Javaexec failed: exit code $rc")
+            }
+        }
+    }
+
+    /**
+     * Interactive pass/fail survey appended to [verifyResultsFile] after
+     * the game window closes — human-verification harness for aggregate
+     * run tasks. Enabled with `-Punimined.verify=true`; prompts on the
+     * controlling terminal (`/dev/tty`, `CONIN$` on Windows) since daemon
+     * stdin isn't user-connected. Abnormal exits pre-fill `fail`. Without
+     * a tty the row records `unverified` with the exit code.
+     */
+    private fun surveyAfterRun(exitCode: Int): String {
+        val resultsFile = verifyResultsFile.get().asFile
+        if (!resultsFile.exists()) {
+            resultsFile.parentFile?.mkdirs()
+            resultsFile.writeText(
+                "# Human verification results\n\n" +
+                    "| run | result | note |\n|---|---|---|\n")
+        }
+        val default = if (exitCode == 0) "pass" else "fail"
+        val tty = listOf("/dev/tty", "CONIN\$").map { File(it) }
+            .firstOrNull { it.exists() && it.canRead() }
+        var verdict = default
+        var note = ""
+        if (tty != null) {
+            try {
+                println("[unimined:verify] ${name} exited rc=$exitCode — " +
+                    "pass/fail/skip? [$default]")
+                val answer = tty.bufferedReader().use { it.readLine() }?.trim().orEmpty()
+                verdict = when (answer.ifEmpty { default }) {
+                    "p", "pass" -> "pass"
+                    "f", "fail" -> "fail"
+                    "s", "skip" -> "skip"
+                    else -> answer.ifEmpty { default }
+                }
+                if (verdict == "fail") {
+                    println("[unimined:verify] one-line note (what broke)?")
+                    note = tty.bufferedReader().use { it.readLine() }?.trim().orEmpty()
+                }
+            } catch (e: Exception) {
+                logger.warn("[unimined:verify] prompt failed (${e.message}) — recording unverified")
+                verdict = "unverified"
+                note = "rc=$exitCode"
+            }
+        } else {
+            logger.warn("[unimined:verify] no controlling terminal — recording unverified")
+            verdict = "unverified"
+            note = "rc=$exitCode"
+        }
+        if (note.isEmpty() && exitCode != 0) note = "rc=$exitCode"
+        resultsFile.appendText(
+            "| $name | $verdict | ${note.replace("|", "\\|")} |\n")
+        logger.lifecycle("[unimined:verify] $name recorded as $verdict")
+        return verdict
     }
 
     /**

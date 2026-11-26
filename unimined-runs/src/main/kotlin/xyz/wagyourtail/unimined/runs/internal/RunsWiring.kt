@@ -408,6 +408,14 @@ internal object RunsWiring {
         val configureRunTask = Action<MinecraftRunTask> { task ->
             task.dependsOn(prepare)
             task.onlyIf { runEnabled.get() }
+            // interactive verification survey — `-Punimined.verify=true`
+            // prompts pass/fail after each game window closes (dev
+            // tooling, records to the project-root results file)
+            task.verifySurvey.convention(
+                project.providers.gradleProperty("unimined.verify")
+                    .map { it.toBoolean() }.orElse(false))
+            task.verifyResultsFile.convention(
+                project.layout.projectDirectory.file("verification-results.md"))
             run.beforeRunDeps.forEach { task.dependsOn(it) }
             beforeRunTasks.forEach { task.dependsOn(it) }
             task.group = "unimined"
