@@ -39,11 +39,21 @@ class ModArtifactsStepSpec(
     var classNameLdcClasses: Set<String> = emptySet()
 
     /** Whether class-name/desc `ldc` rewriting is active. Derived from
-     *  [classNameLdcClasses]; retained as the boolean input companion to
-     *  the explicit opt-in list. */
+     *  [classNameLdcClasses] and [remapLaunchwrapperTransformerLdcs];
+     *  retained as the boolean input companion to the opt-in list. */
     @get:Input
     val remapClassNameLdcs: Boolean
-        get() = classNameLdcClasses.isNotEmpty()
+        get() = classNameLdcClasses.isNotEmpty() || remapLaunchwrapperTransformerLdcs
+
+    /** Detect classes implementing `net.minecraft.launchwrapper.IClassTransformer`
+     *  and rewrite class-name/descriptor `ldc` strings in just those classes.
+     *  LaunchWrapper coremod transformers use such literals to construct the
+     *  bytecode they inject; unlike arbitrary mod classes, that is a binary
+     *  class-reference channel rather than a runtime mapping protocol. Loader
+     *  wirings opt in where LaunchWrapper coremods are a supported artifact
+     *  shape (legacy forge); the default remains off. */
+    @get:Input
+    var remapLaunchwrapperTransformerLdcs: Boolean = false
 
     /** Refmap JSON emission — [disableRefmap] flips it off for every
      *  config (1.x `disableRefmap()` covering all readers). */
@@ -87,6 +97,16 @@ class ModArtifactsStepSpec(
      *  contribute this defensively; the empty default already means off. */
     fun disableClassNameLdcRemap() {
         classNameLdcClasses = emptySet()
+    }
+
+    /** Opt in to LaunchWrapper-transformer-scoped `ldc` rewriting. */
+    fun enableLaunchwrapperTransformerLdcRemap() {
+        remapLaunchwrapperTransformerLdcs = true
+    }
+
+    /** Opt out of LaunchWrapper-transformer-scoped `ldc` rewriting. */
+    fun disableLaunchwrapperTransformerLdcRemap() {
+        remapLaunchwrapperTransformerLdcs = false
     }
 
     /** 1.x `mixinRemap { disableRefmap() }` — no refmap emission. */

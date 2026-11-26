@@ -454,6 +454,33 @@ class ForgeEnvironmentWiringTest {
             "1.20.1", "47.1.79", "net.neoforged:forge:1.20.1-47.1.79"))
     }
 
+    /** LaunchWrapper-era forge coremods implement `IClassTransformer` and
+     *  carry descriptor literals used as bytecode-construction inputs. The
+     *  forge environment opts dependency mod artifacts into that contract-
+     *  scoped channel while the global modArtifacts default remains off. */
+    @Test
+    fun `forge mod artifacts enable launchwrapper transformer ldc rewrite`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.7.10")
+        ext.main.provider.set("fake")
+        serveUserdev("net.minecraftforge:forge:1.7.10-10.13.4.1614")
+        forgeEnv(ext, "forge", "1.7.10", "10.13.4.1614")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val spec = xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec()
+        project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+            .sourceSet("forge")
+            .modArtifactsConventions.forEach { it.execute(spec) }
+        assertTrue(spec.remapLaunchwrapperTransformerLdcs,
+            "forge dependency artifacts must opt into transformer-scoped ldc rewriting")
+        assertTrue(spec.remapClassNameLdcs,
+            "the transformer opt-in activates the derived ldc pass input")
+        assertTrue(spec.classNameLdcClasses.isEmpty(),
+            "the forge wiring must not resurrect an unsafe universal/explicit class list")
+    }
+
     /** Invoke the forge mapping-hop contribution directly — the lambda
      *  is registered last on `deferredDefaultSources`; evaluating it
      *  realizes `resolved` (which resolves + probes the served

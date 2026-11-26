@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.mapping.element.mapping.ClassMapping
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.remapper.ExtensionContext
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension
+import xyz.wagyourtail.unimined.mapping.remapper.ext.annotation.MemberRefParts
 
 /**
  * Bridges legacy reobfuscated mixin target strings through shipped refmaps.
@@ -47,14 +48,28 @@ class LegacyRefmapClassTargetExtension(
             json.parseToJsonElement(bytes.decodeToString()).jsonObject
         }.getOrNull() ?: return
         val mappings = root["mappings"] as? JsonObject ?: return
-        for ((mixin, entries) in mappings) {
-            val clsEntries = entries as? JsonObject ?: continue
-            val dst = refmapEntries.getOrPut(mixin) { mutableMapOf() }
-            for ((key, value) in clsEntries) {
-                val primitive = value as? JsonPrimitive ?: continue
-                if (primitive.isString) dst.putIfAbsent(key, primitive.content)
+
+        fun ingest(table: JsonObject, overwrite: Boolean) {
+            for ((mixin, entries) in table) {
+                val clsEntries = entries as? JsonObject ?: continue
+                val dst = refmapEntries.getOrPut(mixin) { mutableMapOf() }
+                for ((key, value) in clsEntries) {
+                    val primitive = value as? JsonPrimitive ?: continue
+                    if (!primitive.isString) continue
+                    if (overwrite) dst[key] = primitive.content
+                    else dst.putIfAbsent(key, primitive.content)
+                }
             }
         }
+
+        // Top-level `mappings` is the AP's default production table (often
+        // notch), not necessarily this transform's source namespace. Hybrid
+        // artifacts such as LiteLoader carry the actual compile→source bridge
+        // under `data.<sourceNs>` (`data.searge`); those rows must win or a
+        // production value like `D` is mistaken for a source-space member.
+        ingest(mappings, overwrite = false)
+        ((root["data"] as? JsonObject)?.get(ctx.fns.name) as? JsonObject)
+            ?.let { ingest(it, overwrite = true) }
     }
 
     override fun postApply(input: ClassNode, output: ClassNode, cls: ClassMapping?) {
@@ -110,9 +125,14 @@ class LegacyRefmapClassTargetExtension(
     }
 
     /** Map a compile-space member selector through its exact refmap value.
-     *  Refmap values are production-space canonical refs (`Lowner;name` plus
-     *  a JVM method descriptor or `:field` descriptor). Bare annotation
-     *  selectors stay bare; owner-qualified selectors stay canonical. */
+     *  The value is eligible only when it is a real member in this transform's
+     *  source namespace: production refmap rows can share a class name with
+     *  the source row while their single-letter/searge member belongs to a
+     *  different namespace. Resolving those rows would overwrite an already
+     *  correct dev-space selector with a foreign member (LiteLoader's
+     *  `updateTimeLightAndEntities` → `D` failure). Resolved refs render in
+     *  canonical owner-qualified form so obfuscated targets cannot over-match
+     *  a bare single-letter selector. */
     private fun remapMember(value: String, entries: Map<String, String>): String {
         val mappedSource = entries[value] ?: return value
         val match = MEMBER_REF.matchEntire(mappedSource.trim()) ?: return value
@@ -121,14 +141,15 @@ class LegacyRefmapClassTargetExtension(
         val desc = match.groupValues[3]
         if (ctx.tree.getClass(ctx.fns, InternalName.unchecked(owner)) == null) return value
         val isMethod = desc.startsWith("(")
-        val mappedName = if (isMethod) ctx.mapMethod(owner, name, desc)
-            else ctx.mapField(owner, name, desc.removePrefix(":"))
-        if (mappedName == name && value == mappedSource) return value
-        if (';' !in value && !value.startsWith("L")) return mappedName
-        val mappedOwner = ctx.mapClass(owner)
-        val mappedDesc = if (isMethod) ctx.mapDesc(desc, false)
-            else ":" + ctx.mapDesc(desc.removePrefix(":"), true)
-        return "L$mappedOwner;$mappedName$mappedDesc"
+        val isField = !isMethod
+        val memberDesc = if (isMethod) desc else desc.removePrefix(":")
+        if (ctx.memberCandidateCount(owner, name, isField) == 0) return value
+        if (ctx.resolveMemberDesc(owner, name, isField) != ctx.mapDesc(memberDesc, isField)) {
+            return value
+        }
+        val parsed = MemberRefParts.parse(mappedSource, isField) ?: return value
+        val resolved = parsed.resolve(ctx, emptyList(), isField) ?: return value
+        return parsed.render(resolved)
     }
 
     private fun remapTarget(value: String, entries: Map<String, String>): String {

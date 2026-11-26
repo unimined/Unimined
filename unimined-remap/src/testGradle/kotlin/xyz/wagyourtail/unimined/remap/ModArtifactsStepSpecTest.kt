@@ -111,6 +111,20 @@ class ModArtifactsStepSpecTest {
         assertEquals(emptySet<String>(), spec.classNameLdcClasses)
     }
 
+    @Test
+    fun `launchwrapper transformer ldc remap is independently opt-in`() {
+        val spec = ModArtifactsStepSpec()
+        assertFalse(spec.remapLaunchwrapperTransformerLdcs)
+        assertFalse(spec.remapClassNameLdcs)
+        spec.enableLaunchwrapperTransformerLdcRemap()
+        assertTrue(spec.remapLaunchwrapperTransformerLdcs)
+        assertTrue(spec.remapClassNameLdcs)
+        assertEquals(emptySet<String>(), spec.classNameLdcClasses)
+        spec.disableLaunchwrapperTransformerLdcRemap()
+        assertFalse(spec.remapLaunchwrapperTransformerLdcs)
+        assertFalse(spec.remapClassNameLdcs)
+    }
+
     // ---------- serialization ----------
 
     private fun roundTrip(spec: ModArtifactsStepSpec): ModArtifactsStepSpec {
@@ -133,6 +147,7 @@ class ModArtifactsStepSpecTest {
             enableBaseMixin()
             enableJarModAgent()
             enableClassNameLdcRemap("com/example/Transformer")
+            enableLaunchwrapperTransformerLdcRemap()
         }
         val copy = roundTrip(spec)
         assertEquals("uml", copy.engine)
@@ -141,6 +156,8 @@ class ModArtifactsStepSpecTest {
         assertEquals(spec.noRefmapConfigs, copy.noRefmapConfigs)
         assertEquals(spec.forceMixinTables, copy.forceMixinTables)
         assertEquals(spec.classNameLdcClasses, copy.classNameLdcClasses)
+        assertEquals(spec.remapLaunchwrapperTransformerLdcs,
+            copy.remapLaunchwrapperTransformerLdcs)
         assertEquals(spec.remapClassNameLdcs, copy.remapClassNameLdcs)
     }
 
@@ -153,6 +170,7 @@ class ModArtifactsStepSpecTest {
         assertEquals(emptySet<String>(), copy.noRefmapConfigs)
         assertEquals(emptySet<String>(), copy.forceMixinTables)
         assertEquals(emptySet<String>(), copy.classNameLdcClasses)
+        assertFalse(copy.remapLaunchwrapperTransformerLdcs)
         assertFalse(copy.remapClassNameLdcs)
     }
 

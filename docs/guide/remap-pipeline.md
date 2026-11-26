@@ -38,11 +38,13 @@ run a `modArtifacts` step that rewrites mod-jar metadata the base
 remap leaves untouched:
 
 - `kotlin.Metadata` internal names (any Kotlin mod jar)
-- string `ldc` constants carrying class names or descriptors, but only for
-  classes explicitly opted in with
-  `enableClassNameLdcRemap("com/example/Transformer")`; the pass is
-  class-scoped because arbitrary string literals may be runtime protocol
-  keys rather than binary class references
+- string `ldc` constants carrying class names or descriptors, but only in
+  class-scoped opt-in channels: explicit classes via
+  `enableClassNameLdcRemap("com/example/Transformer")`, or — on forge
+  environments — classes implementing LaunchWrapper's `IClassTransformer`.
+  Those coremod transformers use descriptor literals as bytecode-construction
+  inputs, while arbitrary mod string literals may instead be runtime protocol
+  keys and must never be rewritten wholesale
 - mixin configs and refmap emission for jars carrying `*.mixins.json`
 - JarModAgent/ClassTransform refmaps for jars whose manifest declares
   `JarModAgent-Refmaps`

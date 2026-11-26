@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.remapper.uml
 
 import kotlinx.coroutines.runBlocking
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
@@ -217,8 +219,12 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
         // and class-scoped. 1.x applied this only to forge's artifact
         // ObjectHolderRegistry classes; blindly scanning every mod class
         // corrupts string-based runtime protocols such as NilLoader's.
-        if (spec.classNameLdcClasses.isNotEmpty()) {
-            val ldcClasses = spec.classNameLdcClasses
+        // The launchwrapper-transformer opt-in is likewise class-scoped,
+        // but derives its class set from the binary coremod contract.
+        val ldcClasses = spec.classNameLdcClasses +
+            if (spec.remapLaunchwrapperTransformerLdcs) launchwrapperTransformerClasses(input)
+            else emptySet()
+        if (ldcClasses.isNotEmpty()) {
             exts += AsmExtensionFactory { c -> ClassNameLdcExtension(c, ldcClasses) }
         }
         // `modArtifacts { off() }` — 1.x mixinRemap.off parity: the
@@ -291,6 +297,42 @@ class UmlModArtifactsStepType : RemapStepType<ModArtifactsStepSpec> {
             }
         }
         return exts
+    }
+
+    /** Internal names of classes in [input] implementing LaunchWrapper's
+     *  `IClassTransformer`, including subclasses of transformer base classes
+     *  inside the same jar. The scan is contract-based (not a text scan), so
+     *  ordinary mod classes — including NilLoader mini-transformers, which do
+     *  not implement the LaunchWrapper interface — stay outside the string
+     *  rewrite. */
+    private fun launchwrapperTransformerClasses(input: Path): Set<String> {
+        val nodes = mutableMapOf<String, ClassNode>()
+        java.util.zip.ZipFile(input.toFile()).use { zip ->
+            for (entry in zip.entries().asSequence().filter { it.name.endsWith(".class") }) {
+                val node = ClassNode()
+                runCatching {
+                    ClassReader(zip.getInputStream(entry).readBytes())
+                        .accept(node, ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+                }.onSuccess { nodes[node.name] = node }
+            }
+        }
+
+        fun isTransformer(name: String): Boolean {
+            var cur: String? = name
+            val seen = mutableSetOf<String>()
+            while (cur != null && seen.add(cur)) {
+                val node = nodes[cur] ?: return false
+                if (LAUNCHWRAPPER_TRANSFORMER in node.interfaces) return true
+                cur = node.superName
+            }
+            return false
+        }
+
+        return nodes.keys.filterTo(mutableSetOf(), ::isTransformer)
+    }
+
+    private companion object {
+        const val LAUNCHWRAPPER_TRANSFORMER = "net/minecraft/launchwrapper/IClassTransformer"
     }
 
 }

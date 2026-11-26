@@ -315,6 +315,12 @@ internal object ForgeEnvironmentWiring {
         project.extensions.getByType(RemapExtension::class.java)
             .sourceSet(environment.environmentId)
             .modArtifactsConventions += org.gradle.api.Action { spec ->
+                // LaunchWrapper-era forge coremods implement IClassTransformer
+                // and hardcode descriptors they later hand to ASM. Scope the
+                // ldc pass to that binary contract; arbitrary mod strings stay
+                // untouched (NilLoader's runtime protocol hazard).
+                spec.enableLaunchwrapperTransformerLdcRemap()
+
                 val r = resolved.orNull ?: return@Action
                 if (r.descriptor.id == "neoforge" &&
                     environment.version.get() != "1.20.1") {
