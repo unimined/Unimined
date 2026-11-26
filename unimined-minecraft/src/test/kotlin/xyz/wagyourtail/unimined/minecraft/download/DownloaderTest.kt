@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
+import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Duration
@@ -231,6 +234,31 @@ class DownloaderTest {
         val path = d.fetchMetadata("https://x/meta.json", "metadata/meta.json")
         assertEquals("fresh", java.nio.file.Files.readString(path))
         assertEquals(2, calls)
+    }
+
+    @Test
+    fun `default transport follows redirects`() {
+        val body = "redirected".toByteArray()
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/redirect") { exchange ->
+            exchange.responseHeaders.add("Location", "/target")
+            exchange.sendResponseHeaders(302, -1)
+            exchange.close()
+        }
+        server.createContext("/target") { exchange ->
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+        try {
+            val path = Downloader(dir).fetch(
+                "http://127.0.0.1:${server.address.port}/redirect",
+                "redirected.bin"
+            )
+            assertArrayEquals(body, Files.readAllBytes(path))
+        } finally {
+            server.stop(0)
+        }
     }
 
     @Test

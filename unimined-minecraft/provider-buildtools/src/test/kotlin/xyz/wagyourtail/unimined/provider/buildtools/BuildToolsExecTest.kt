@@ -29,8 +29,11 @@ class BuildToolsExecTest {
         val downloader = Downloader(
             cacheDir = dir.resolve("cache"), offline = false,
             refreshCache = false,
-            metadataTtl = java.time.Duration.ofHours(24)
-        ) { _, _ -> }
+            metadataTtl = java.time.Duration.ofHours(24),
+            // keep the unit test hermetic; the fake javaExec never reads
+            // these bytes, but serverJar does resolve the cache artifact
+            fetch = { "buildtools".toByteArray() }
+        )
         return BuildToolsExec(downloader, dir.resolve("work")) { _, args, d ->
             invocations?.add(args)
             Files.createDirectories(d.resolve("Mod/target"))

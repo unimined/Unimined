@@ -36,8 +36,10 @@ internal class BuildToolsExec(
 ) {
 
     private fun buildTools(): Path = downloader.fetch(
-        "https://hub.spigotmc.org/jenkins/job/BuildTools/" +
-            "lastSuccessfulBuild/artifact/target/BuildTools.jar",
+        // Spigot retired the Jenkins artifact endpoint; releases are
+        // now published from the BuildTools GitHub repository.
+        "https://github.com/SpigotMC/BuildTools/releases/latest/download/" +
+            "BuildTools.jar",
         "buildtools/BuildTools.jar"
     )
 

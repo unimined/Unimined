@@ -23,7 +23,11 @@ import xyz.wagyourtail.unimined.api.util.writeAtomically
  */
 class Downloader(
     val cacheDir: Path,
-    private val client: HttpClient = HttpClient.newHttpClient(),
+    private val client: HttpClient = HttpClient.newBuilder()
+        // release-asset endpoints commonly redirect to their CDN;
+        // NORMAL still refuses an HTTPS -> HTTP downgrade
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .build(),
     private val offline: Boolean = false,
     private val refreshCache: Boolean = false,
     private val metadataTtl: Duration = Duration.ofHours(24),
