@@ -26,8 +26,9 @@ internal class NestedJarsPlan(
     val files: FileCollection,
     /** Per-artifact coordinate/metadata rows (path-paired to [files]). */
     val entries: Provider<List<NestedJarEntrySpec>>,
-    /** `fabric`|`jarjar` — absent when the env declares no binding and
-     *  its loader metadata carries no `nestedJarsKey` (feature off). */
+    /** `fabric`|`jarjar` — absent when nothing overrides it and the
+     *  env's loader nests no jars at its version (`include` then fails
+     *  at packaging). */
     val format: Provider<String>,
     val recompress: Provider<Boolean>,
     val metadataFile: Provider<String>,
@@ -52,18 +53,18 @@ internal object NestedJarsWiring {
             LoaderRegistry.resolveBuiltin(it.name)
         }
 
-        // format: explicit `nestedJars { format }` override → the
-        // claim's `features { nestedJars("…") }` binding → the loader
-        // descriptor's metadata key (fabric-family loaders always have
-        // one, so `include` works without an explicit binding)
-        val format = envSpec?.nestedJars?.format
-            ?.orElse(project.provider {
-                envSpec.features.bindings["nestedJars"]
-            })
-            ?.orElse(descriptor.map { d ->
-                d?.metadata?.nestedJarsKey?.let { "fabric" }
-            })
-            ?: descriptor.map { d -> d?.metadata?.nestedJarsKey?.let { "fabric" } }
+        // format: explicit `nestedJars { format }` override → a declared
+        // `features { nestedJars("…") }` binding → the format the env's
+        // loader reads at its Minecraft/loader version
+        val declared: Provider<String> = envSpec?.nestedJars?.format
+            ?.orElse(project.provider { envSpec.features.bindings["nestedJars"] })
+            ?: project.provider { null }
+        val format = declared.orElse(environment.loaderSpec.flatMap { spec ->
+            environment.version.map { mc ->
+                LoaderRegistry.resolveBuiltin(spec.name)
+                    ?.metadata?.nestedJarsFormat?.invoke(mc, spec.version)
+            }
+        })
 
         val metadataFile = descriptor.map { it?.metadata?.fileName }
         val nestedJarsKey = descriptor.map { it?.metadata?.nestedJarsKey }

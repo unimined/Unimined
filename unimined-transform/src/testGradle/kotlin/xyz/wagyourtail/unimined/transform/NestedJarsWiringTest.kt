@@ -132,7 +132,7 @@ class NestedJarsWiringTest {
     }
 
     @Test
-    fun `no binding and no loader metadata means JiJ stays off`() {
+    fun `no binding and no loader metadata resolves no format`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.sourceSet("main") {

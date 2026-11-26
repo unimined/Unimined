@@ -248,6 +248,28 @@ class NestedJarsAppenderTest {
     }
 
     @Test
+    fun `jars without a format fail instead of being dropped`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val dep = jar("lib.jar", mapOf("y.class" to "y"))
+        val e = org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            NestedJarsAppender.append(
+                out,
+                listOf(NestedJarsAppender.Input(dep, MavenCoords("com.acme", "lib", "3.1"))),
+                null, true, null, null
+            )
+        }
+        assertTrue("lib.jar" in e.message!!, e.message)
+    }
+
+    @Test
+    fun `no jars and no format leave the jar untouched`() {
+        val out = jar("mod.jar", mapOf("x.class" to "x"))
+        val before = out.readBytes()
+        assertTrue(NestedJarsAppender.append(out, emptyList(), null, true, null, null).isEmpty())
+        assertTrue(before.contentEquals(out.readBytes()))
+    }
+
+    @Test
     fun `jarjar metadata matches the neoforged jarjar schema`() {
         val out = jar("mod.jar", mapOf("x.class" to "x"))
         val dep = jar("lib.jar", mapOf("y.class" to "y"))

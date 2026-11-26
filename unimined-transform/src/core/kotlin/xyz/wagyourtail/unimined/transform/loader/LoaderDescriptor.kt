@@ -184,4 +184,13 @@ data class LoaderMetadataSpec(
      *  (`jars` / `quilt_loader.jars`). */
     val nestedJarsKey: String? = null,
 
+    /** The jar-in-jar packaging the loader reads for
+     *  `(mcVersion, loaderVersion)` — `fabric` (`META-INF/jars/` +
+     *  [nestedJarsKey] rows, the default when that key is set) or
+     *  `jarjar` (`META-INF/jarjar/` + `metadata.json`). `null` (or a
+     *  `null` result) when the loader nests nothing: an `include` with
+     *  artifacts then fails instead of shipping without them. */
+    val nestedJarsFormat: ((mcVersion: String, loaderVersion: String) -> String?)? =
+        nestedJarsKey?.let { { _: String, _: String -> "fabric" } },
+
     )

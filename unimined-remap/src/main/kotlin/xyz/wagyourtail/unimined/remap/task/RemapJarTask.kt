@@ -120,7 +120,8 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
     @get:Nested
     abstract val nestedJarEntries: ListProperty<NestedJarEntrySpec>
 
-    /** `fabric`|`jarjar` — absent means JiJ is off for this jar. */
+    /** `fabric`|`jarjar` — absent when the env's loader nests no jars;
+     *  any [nestedJarEntries] then fail the task. */
     @get:Optional
     @get:Input
     abstract val nestedJarsFormat: Property<String>
@@ -185,26 +186,24 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
             // environments never reach here (remapJar is skipped) —
             // ProductionJarWiring hangs the same appender off the
             // plain `Jar` task there instead.
-            if (nestedJarsFormat.orNull != null) {
-                NestedJarsAppender.append(
-                        jarPath,
-                        nestedJarEntries.get().map { s ->
-                            NestedJarsAppender.Input(
-                                s.jar.get().asFile.toPath(),
-                                s.coords.orNull?.let(::MavenCoords),
-                                s.versionRange.orNull,
-                                s.fmlModType.orNull,
-                                s.obfuscated.orNull
-                            )
-                        },
-                        nestedJarsFormat.get(),
-                        nestedJarsRecompress.getOrElse(true),
-                        nestedJarsMetadataFile.orNull,
-                        nestedJarsKey.orNull,
-                        targetNamespace.get()
-                    )
-                    .forEach { project.reportProblem("nested-jars", it) }
-            }
+            NestedJarsAppender.append(
+                    jarPath,
+                    nestedJarEntries.getOrElse(emptyList()).map { s ->
+                        NestedJarsAppender.Input(
+                            s.jar.get().asFile.toPath(),
+                            s.coords.orNull?.let(::MavenCoords),
+                            s.versionRange.orNull,
+                            s.fmlModType.orNull,
+                            s.obfuscated.orNull
+                        )
+                    },
+                    nestedJarsFormat.orNull,
+                    nestedJarsRecompress.getOrElse(true),
+                    nestedJarsMetadataFile.orNull,
+                    nestedJarsKey.orNull,
+                    targetNamespace.get()
+                )
+                .forEach { project.reportProblem("nested-jars", it) }
             stampAndLintProductionJar(
                 jarPath, targetNamespace.get(),
                 footgunChecks.getOrElse(

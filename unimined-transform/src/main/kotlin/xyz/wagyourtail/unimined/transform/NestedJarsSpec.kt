@@ -8,8 +8,9 @@ import javax.inject.Inject
 
 /**
  * Jar-in-jar packaging knobs for one environment — the `include`
- * bucket's embed behavior. The format itself is normally decided by
- * the claim's `features { nestedJars("fabric"|"jarjar") }` binding.
+ * bucket's embed behavior. The format itself normally follows the
+ * environment's loader at its version (fabric family `fabric`,
+ * JarJar-era forge and neoforge `jarjar`).
  */
 abstract class NestedJarsSpec @Inject constructor() {
 
@@ -29,8 +30,9 @@ abstract class NestedJarsSpec @Inject constructor() {
     @get:Input
     abstract val recompress: Property<Boolean>
 
-    /** Embed format override (`fabric`|`jarjar`); the env's declared
-     *  `nestedJars` binding wins otherwise. */
+    /** Embed format override (`fabric`|`jarjar`); otherwise a declared
+     *  `features { nestedJars("…") }` binding, then the loader's own
+     *  format. */
     @get:Optional
     @get:Input
     abstract val format: Property<String>

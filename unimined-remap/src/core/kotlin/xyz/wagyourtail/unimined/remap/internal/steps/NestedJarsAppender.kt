@@ -86,6 +86,9 @@ object NestedJarsAppender {
      * Append [jars] to [output] under [format]. The output jar is
      * rewritten to a sibling temp and moved atomically.
      *
+     * @param format `fabric`|`jarjar`; `null` — the environment's loader
+     *   nests nothing — fails when [jars] isn't empty rather than
+     *   shipping the jar without them.
      * @param metadataFile loader metadata entry name (`fabric.mod.json`
      *   / `quilt.mod.json`); required for `fabric`.
      * @param nestedJarsKey dotted key path for the `{file}` array
@@ -99,13 +102,20 @@ object NestedJarsAppender {
     fun append(
         output: Path,
         jars: List<Input>,
-        format: String,
+        format: String?,
         recompress: Boolean,
         metadataFile: String?,
         nestedJarsKey: String?,
         expectedNamespace: String? = null
     ): List<String> {
         if (jars.isEmpty()) return emptyList()
+        requireNotNull(format) {
+            "include declares ${jars.size} jar(s) " +
+                    "(${jars.joinToString { it.path.fileName.toString() }}), but " +
+                    "this environment's loader has no jar-in-jar format at " +
+                    "its version — drop the include or set " +
+                    "nestedJars { format.set(\"fabric\"|\"jarjar\") }"
+        }
         require(format == "fabric" || format == "jarjar") {
             "nestedJars format '$format' is not one of: fabric, jarjar"
         }

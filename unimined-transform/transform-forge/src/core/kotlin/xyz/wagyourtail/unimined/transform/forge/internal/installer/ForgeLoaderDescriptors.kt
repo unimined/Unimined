@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptorSource
 import xyz.wagyourtail.unimined.transform.loader.LoaderRepo
 import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
+import xyz.wagyourtail.unimined.transform.internal.versionAtLeast
 
 /**
  * Forge-family loader products — the 1.x `ForgeLike` product subclasses
@@ -15,6 +16,19 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderMetadataSpec
  * only in coordinates/repo/prodNs, not pipeline.
  */
 internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
+
+    /** MinecraftForge reads `META-INF/jarjar` since 1.18.2-40.1.60
+     *  (#8657) and 1.19-41.0.34 (#8715); every later Minecraft version
+     *  ships it, every earlier one nests nothing. */
+    private val forgeJarInJar: (String, String) -> String? = { mc, v ->
+        val forge = v.removePrefix("$mc-")
+        val supported = when (mc) {
+            "1.18.2" -> versionAtLeast(forge, "40.1.60")
+            "1.19" -> versionAtLeast(forge, "41.0.34")
+            else -> versionAtLeast(mc, "1.19.1")
+        }
+        if (supported) "jarjar" else null
+    }
 
     override fun descriptors(): List<LoaderDescriptor> = listOf(
         LoaderDescriptor(
@@ -59,7 +73,8 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 accessDiscovery = setOf(
                     AccessDiscovery.META_INF_ACCESSTRANSFORMER,
                     AccessDiscovery.FMLAT_MANIFEST
-                )
+                ),
+                nestedJarsFormat = forgeJarInJar
             )
         ),
         LoaderDescriptor(
@@ -95,7 +110,8 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 accessDiscovery = setOf(
                     AccessDiscovery.META_INF_ACCESSTRANSFORMER,
                     AccessDiscovery.FMLAT_MANIFEST
-                )
+                ),
+                nestedJarsFormat = forgeJarInJar
             )
         ),
         LoaderDescriptor(
@@ -154,7 +170,10 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 accessDiscovery = setOf(
                     AccessDiscovery.META_INF_ACCESSTRANSFORMER,
                     AccessDiscovery.FMLAT_MANIFEST
-                )
+                ),
+                // every neoforge release (1.20.1's `net.neoforged:forge`
+                // included) forked from a JarJar-era Forge
+                nestedJarsFormat = { _, _ -> "jarjar" }
             )
         ),
         LoaderDescriptor(

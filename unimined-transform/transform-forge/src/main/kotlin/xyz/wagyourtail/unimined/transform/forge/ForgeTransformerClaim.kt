@@ -25,7 +25,6 @@ class ForgeTransformerClaim : TransformerClaim {
         env.env.features.binding("classTweaker")
         env.env.features.binding("mixin")
         env.env.features.binding("modDiscovery", "modClasses")
-        env.env.features.binding("nestedJars", "jarjar")
         // neoforge >=20.2.84 bundles mixinextras — declare the
         // capability (1.x parity: enableMixinExtra at the same gate)
         env.minecraft?.loaderSpec?.orNull?.let { spec ->
