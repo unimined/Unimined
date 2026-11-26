@@ -374,6 +374,29 @@ class EnvironmentClasspathWiringTest {
     }
 
     @Test
+    fun `access discovery skips resource roots under the build dir`() {
+        // a build-dir root is a task output — the env's own generated
+        // metadata lands there and must not come back as an authored doc
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val doc = "accessWidener\tv1\tnamed\naccessible\tclass\ta/B\n"
+        val authored = dir.resolve("src/main/resources/own.accesswidener").toFile()
+        val generated = dir.resolve("build/generated/res/gen.accesswidener").toFile()
+        for (f in listOf(authored, generated)) {
+            f.parentFile.mkdirs()
+            f.writeText(doc)
+        }
+        project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .getByName("main").resources.srcDir(generated.parentFile)
+        val env = project.extensions.getByType(MinecraftExtension::class.java).main
+        env.devNamespace.set("named")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val names = env.accessWideners.files.map { it.name }
+        assertTrue("own.accesswidener" in names, "authored doc must be discovered: $names")
+        assertFalse("gen.accesswidener" in names, "build-dir doc must be skipped: $names")
+    }
+
+    @Test
     fun `loaderless access doc honors format and fileName`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

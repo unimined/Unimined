@@ -302,6 +302,25 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         (if (signature.startsWith('L')) signature else "L$signature")
             .let { if (it.endsWith(';')) it else "$it;" }
 
+    /** The class `Signature` after appending [injected] — JVMS
+     *  ClassSignature lists the superclass, then every superinterface.
+     *  A non-generic class carries none, so one is only synthesized when
+     *  an injected interface is generic. */
+    private fun injectedSignature(
+        signature: String?,
+        superName: String?,
+        interfaces: Array<out String>?,
+        injected: List<String>
+    ): String? {
+        if (injected.isEmpty()) return signature
+        if (signature == null && injected.none { '<' in it }) return null
+        val base = signature ?: buildString {
+            append(wrap(superName ?: "java/lang/Object"))
+            interfaces?.forEach { append(wrap(it)) }
+        }
+        return injected.fold(base) { sig, inj -> sig + wrap(inj) }
+    }
+
     internal fun applyToClass(
         bytes: ByteArray,
         tweakers: List<ClassTweaker>,
@@ -319,10 +338,14 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
             ) {
                 className = name
                 visited?.classes?.add(name)
+                // an interface the class already declares (or one several
+                // docs inject) must not be listed twice in the signature
                 val injected = injectedSignatures(name)
+                    .filter { interfaceInternal(it) !in interfaces.orEmpty() }
+                    .distinctBy(::interfaceInternal)
                 val merged = (interfaces?.toList().orEmpty() +
                         injected.map(::interfaceInternal)
-                        ).distinct().toTypedArray()
+                        ).toTypedArray()
                 super.visit(
                     version,
                     // `$`-named directives are inner-class targets — the
@@ -337,8 +360,7 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                     if ('$' in name) access
                     else adjust(access, ElementType.CLASS) { t, d -> t.classChanges(name, d) },
                     name,
-                    injected.fold(signature ?: "") { sig, inj -> sig + wrap(inj) }
-                        .takeIf { it.isNotEmpty() },
+                    injectedSignature(signature, superName, interfaces, injected),
                     superName, merged
                 )
             }

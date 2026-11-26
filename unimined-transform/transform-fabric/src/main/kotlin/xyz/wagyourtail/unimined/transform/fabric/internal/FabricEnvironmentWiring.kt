@@ -23,6 +23,8 @@ import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.produceCached
+import xyz.wagyourtail.unimined.api.util.writeAtomically
+import xyz.wagyourtail.unimined.transform.internal.authoredResourceDirs
 import java.io.File
 import org.gradle.api.tasks.SourceSetContainer
 import java.nio.file.Files
@@ -182,7 +184,10 @@ internal object FabricEnvironmentWiring {
         // declaration in dev namespace (the project's own mappings,
         // like user-authored AWs). Applies via the own channel; dep
         // jars' II stays on `dependencyClassTweakerFiles` (loom parity:
-        // `RemappedSpecContext` scans local mods too).
+        // `RemappedSpecContext` scans local mods too). Project state,
+        // so env-scoped under the project cache rather than `ctCacheDir`
+        val localCtDir = UniminedCache.project(project)
+            .resolve("fabric/ct/${environment.environmentId}")
         val localIis = project.provider {
             val descriptor = loaderSpec.orNull?.name
                 ?.let { LoaderRegistry.resolveBuiltin(it) }
@@ -196,11 +201,11 @@ internal object FabricEnvironmentWiring {
                 (project.extensions
                     .getByType(SourceSetContainer::class.java)
                     .findByName(environment.environmentId)
-                    ?.resources?.srcDirs.orEmpty())
+                    ?.let { authoredResourceDirs(project, it) }.orEmpty())
                     .mapNotNull { it.resolve(name).takeIf(File::isFile) }
                     .flatMap {
                     synthesizeLocalInjectedInterfacesCt(
-                        it, ctCacheDir, devNamespace.get()
+                        it, localCtDir, devNamespace.get()
                     )
                 }
             }
@@ -328,16 +333,21 @@ internal object FabricEnvironmentWiring {
     ): List<Path> {
         val injections = FabricModAnalysis.injectedInterfacesFile(file.toPath())
         if (injections.isEmpty()) return emptyList()
-        val target = dir.resolve(
-            "local-${file.nameWithoutExtension}-injected-interfaces.ct")
-        target.produceCached { tmp ->
-            val sb = StringBuilder("classTweaker\tv1\t$devNamespace\n")
+        val body = buildString {
+            append("classTweaker\tv1\t$devNamespace\n")
             for ((t, ifaces) in injections.toSortedMap()) {
                 for (iface in ifaces.sorted()) {
-                    sb.append("inject-interface\t$t\t$iface\n")
+                    append("inject-interface\t$t\t$iface\n")
                 }
             }
-            Files.write(tmp, sb.toString().toByteArray())
+        }
+        val target = dir.resolve(
+            "local-${file.nameWithoutExtension}-injected-interfaces.ct")
+        // the mod json is edited in place — rewrite on change, and only
+        // then (an unchanged rewrite would churn tracked inputs)
+        if (!Files.isRegularFile(target) || Files.readString(target) != body) {
+            Files.createDirectories(dir)
+            target.writeAtomically { tmp -> Files.writeString(tmp, body) }
         }
         return listOf(target)
     }
