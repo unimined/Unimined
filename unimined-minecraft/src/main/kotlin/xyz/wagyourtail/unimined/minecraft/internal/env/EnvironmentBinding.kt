@@ -381,6 +381,12 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                 // and an absent contribution would otherwise leave the
                 // isolated param with no configured value (2.0.0 defect)
                 p.sideMarkers.set(environment.sideMarkers.orElse(emptyList()))
+                // orElse — same absent-provider poisoning as
+                // sideMarkers: loader wirings contribute via
+                // addAll(provider) and an absent value would
+                // otherwise leave the param unset
+                p.sideJarPatches.set(
+                    environment.sideJarPatches.orElse(emptyList()))
                 // split-side merged env: remap each side into the
                 // shared (mod-source) namespace before merging — the
                 // raw merge can't pair disjoint obf namespaces.

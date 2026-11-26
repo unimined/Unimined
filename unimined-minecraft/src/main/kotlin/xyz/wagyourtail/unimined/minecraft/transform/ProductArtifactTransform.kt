@@ -147,6 +147,15 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
                 xyz.wagyourtail.unimined.minecraft.merge.JarMerger
                         .SideMarker>
 
+        /** Pre-merge side-jar patch passes
+         *  (`MinecraftEnvironment.sideJarPatches`) — Serializable
+         *  specs resolved against `SideJarPatchProcessor`
+         *  ServiceLoader impls at execution. */
+        @get:Input
+        val sideJarPatches: ListProperty<
+                xyz.wagyourtail.unimined.minecraft.spi
+                        .SideJarPatchSpec>
+
         /** Shared namespace both sides are remapped into before
          *  merging — set only on split-side merged environments
          *  (`official` is a union of disjoint client/server obf
@@ -216,7 +225,16 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
             mergeExcludeGlobs = p.mergeExcludeGlobs.get(),
             stripBundledServerLibraries = p.stripBundledServerLibraries.get(),
             sideMarkers = p.sideMarkers.get(),
-            preMerge = preMergeHook(p),
+            // side-jar patching runs before the split-era namespace
+            // bridge — patches index each side's own obf names, which
+            // the bridge rewrites
+            preMerge = listOfNotNull(
+                sidePatchHook(p), preMergeHook(p)
+            ).takeIf { it.isNotEmpty() }?.let { hooks ->
+                { c: Path, s: Path ->
+                    hooks.fold(c to s) { acc, h -> h(acc.first, acc.second) }
+                }
+            },
             logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(Logging.getLogger(ProductArtifactTransform::class.java))
         )
         val produced = producer.produce(spec, request)
@@ -228,6 +246,41 @@ abstract class ProductArtifactTransform : TransformAction<ProductArtifactTransfo
         Perf.emit("produce.transform", "env" to p.environmentId.get(),
             "key" to p.artifactKey.get(), "version" to p.version.get(),
             "ms" to (System.nanoTime() - t0) / 1_000_000)
+    }
+
+    /**
+     * Build the pre-merge hook for loader-contributed side-jar patch
+     * passes ([Params.sideJarPatches]) — each spec's
+     * `SideJarPatchProcessor` runs on both clean side jars, which the
+     * merge then consumes (1.x forge binpatch order: patch sides,
+     * then merge so marker stamping applies to patched content).
+     * `null` when no specs were contributed.
+     */
+    private fun sidePatchHook(p: Params): ((Path, Path) -> Pair<Path, Path>)? {
+        val specs = p.sideJarPatches.get()
+        if (specs.isEmpty()) return null
+        val processors = java.util.ServiceLoader.load(
+            xyz.wagyourtail.unimined.minecraft.spi
+                .SideJarPatchProcessor::class.java,
+            xyz.wagyourtail.unimined.minecraft.spi
+                .SideJarPatchProcessor::class.java.classLoader
+        ).associateBy { it.type }
+        val workDir = Files.createTempDirectory("unimined-side-patch")
+        return { client, server ->
+            var c = client
+            var s = server
+            for (spec in specs) {
+                val proc = processors[spec.type]
+                    ?: error(
+                        "no SideJarPatchProcessor named '${spec.type}' " +
+                                "on the classpath (specs: " +
+                                processors.keys.joinToString() + ")"
+                    )
+                c = proc.patch("client", c, spec.args, workDir)
+                s = proc.patch("server", s, spec.args, workDir)
+            }
+            c to s
+        }
     }
 
     /**

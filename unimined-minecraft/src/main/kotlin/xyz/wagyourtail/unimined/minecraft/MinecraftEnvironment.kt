@@ -1997,6 +1997,18 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             .JarMerger.SideMarker::class.java)
         .convention(emptyList())
 
+    /** Loader-contributed pre-merge side-jar patch passes — each
+     *  spec's [xyz.wagyourtail.unimined.minecraft.spi.SideJarPatchProcessor]
+     *  runs on the clean client/server jars before the merge
+     *  (1.x forge binpatch order: patch sides, then merge — merge
+     *  stamping applies to the patched outputs). Only meaningful on
+     *  merged-side environments. */
+    val sideJarPatches: ListProperty<xyz.wagyourtail.unimined.minecraft
+            .spi.SideJarPatchSpec> = objects
+        .listProperty(xyz.wagyourtail.unimined.minecraft.spi
+            .SideJarPatchSpec::class.java)
+        .convention(emptyList())
+
     /** Loader-contributed attributes merged into the environment jar's
      *  manifest at packaging time (1.x `jarTask.manifest` parity —
      *  ornithe's `Calamus-Generation`, legacyfabric's
