@@ -890,6 +890,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Verifying a launch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interactive-passfail-survey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive pass/fail survey
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1703,6 +1720,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Verifying a launch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interactive-passfail-survey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive pass/fail survey
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1994,6 +2028,10 @@ immediately — after whatever already ran.</p>
 <td><code>loadedMods</code></td>
 <td>which of the environment's <code>mods { "&lt;id&gt;" { } }</code> groups this run loads — <code>loadedMods("a", "b")</code> selects a subset; empty (default) loads all declared groups. Selected groups join the launch classpath and serialize into the loader's mod-grouping channel (<code>fabric.classPathGroups</code> / <code>MOD_CLASSES</code>)</td>
 </tr>
+<tr>
+<td><code>modFolderFiles</code></td>
+<td>extra mod jars staged verbatim into the run's mod folder by <code>prepare&lt;Name&gt;</code> — loaders declaring the <code>modsDir</code> capability copy them to <code>runDir/&lt;dir&gt;</code> (<code>mods/</code> on forge/conversion-family, <code>plugins/</code> on bukkit). Never remapped and never on the launch classpath — the loader's folder discovery loads them. For jars that must run under the loader's classloader (e.g. a ModLauncher <code>ITransformationService</code> carrier like mixin-engine coremods) rather than <code>-cp</code>. On classpath-discovery loaders this is the only staged content — the project jar and <code>*Direct</code> views already register through <code>ClasspathLocator</code>/<code>MOD_CLASSES</code> and a folder copy would double-register them</td>
+</tr>
 </tbody>
 </table>
 <h2 id="argument-substitution">Argument substitution<a class="headerlink" href="#argument-substitution" title="Permanent link">&para;</a></h2>
@@ -2037,16 +2075,30 @@ is present on the classpath, loader-required resources are present
 the fabric-family prod-namespace flag), javaagent jars exist, and the
 asset index is on disk. An empty plan prints an <code>OK</code> line; violations
 list as <code>FAIL</code> entries and fail the task, so it doubles as a CI gate.</p>
+<h3 id="interactive-passfail-survey">Interactive pass/fail survey<a class="headerlink" href="#interactive-passfail-survey" title="Permanent link">&para;</a></h3>
+<p><code>-Punimined.verify=true</code> is the human-verification counterpart to the
+static audit above: the game really launches, and when its process exits
+the run task prompts on the controlling terminal for <code>pass</code>, <code>fail</code>, or
+<code>skip</code> (the default is <code>pass</code> after a clean exit, <code>fail</code> after a nonzero
+one). Each run appends a row to <code>verification-results.md</code> in the project
+directory; a failure verdict can carry a one-line note.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>runClient<span class="w"> </span>-Punimined.verify<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p>The verdict is the task outcome: <code>fail</code> fails the task even when the
+game exited cleanly, while <code>pass</code> forgives a nonzero exit (useful for
+window-close quirks). <code>skip</code> and rows recorded as <code>unverified</code> — the
+fallback when no controlling terminal is available — defer to the
+process exit code. This is a manual matrix-pass harness, not a CI gate.</p>
 <h2 id="launch-scripts">Launch scripts<a class="headerlink" href="#launch-scripts" title="Permanent link">&para;</a></h2>
 <p><code>genLaunchScript&lt;Name&gt;</code> resolves the same launch as <code>run&lt;Name&gt;</code> but
 writes runnable <code>run&lt;Name&gt;.sh</code> / <code>run&lt;Name&gt;.cmd</code> into the run's
 working directory (<code>run/&lt;env&gt;-&lt;name&gt;/</code>) instead of exec'ing — for
 launching outside Gradle, e.g. under a debugger or another terminal.
 <code>genLaunchScripts</code> (plural) emits them for every declared run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./gradlew<span class="w"> </span>genLaunchScriptClient
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># or everything:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>./gradlew<span class="w"> </span>genLaunchScripts
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>./run/main-client/runClient.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./gradlew<span class="w"> </span>genLaunchScriptClient
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># or everything:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>./gradlew<span class="w"> </span>genLaunchScripts
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>./run/main-client/runClient.sh
 </code></pre></div>
 <p>The scripts <code>cd</code> into their own directory, export the launch
 environment, and exec <code>java</code> with the fully resolved args/classpath —
@@ -2055,7 +2107,7 @@ the same values <code>run&lt;Name&gt;</code> would use.</p>
 <p><code>uniminedRuns</code> prints one line per declared run config (task, env,
 side, type, prod flag, enabled, main class) — a quick check of what
 <code>runs { }</code> materialized:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./gradlew<span class="w"> </span>uniminedRuns
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>./gradlew<span class="w"> </span>uniminedRuns
 </code></pre></div>
 <h2 id="cache-maintenance">Cache maintenance<a class="headerlink" href="#cache-maintenance" title="Permanent link">&para;</a></h2>
 <p><code>pruneUniminedCache</code> prunes the global unimined cache

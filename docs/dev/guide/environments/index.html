@@ -2171,6 +2171,11 @@ catches stale targets, the task form without needing a remap run.</p>
 <td>compiled-class scan for loader gametest interfaces/annotations</td>
 </tr>
 <tr>
+<td><code>emitLoaderMetadata</code></td>
+<td><code>true</code></td>
+<td>generated loader descriptors (<code>fabric.mod.json</code>, <code>mods.toml</code>, <code>mcmod.info</code>, …); <code>false</code> keeps hand-written descriptors authoritative while manifest attributes still emit</td>
+</tr>
+<tr>
 <td><code>interfaceInjectionScan</code></td>
 <td><code>false</code></td>
 <td>mixin-class scan deriving <code>inject-interface</code> rules (opt-in — <code>access { injectInterface(...) }</code> is the always-on path); requires a declared <code>mod.id</code> — skipped with a warning otherwise</td>

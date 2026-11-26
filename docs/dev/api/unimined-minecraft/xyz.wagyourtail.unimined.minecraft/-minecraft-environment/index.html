@@ -554,6 +554,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1508671925%2FProperties%2F-1355253599" anchor-label="emitLoaderMetadata" id="-1508671925%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="emit-loader-metadata.html"><span>emit</span><wbr><span>Loader</span><wbr><span><span>Metadata</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1508671925%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="emit-loader-metadata.html">emitLoaderMetadata</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether generated loader descriptors (<code class="lang-kotlin">mcmod.info</code>, <code class="lang-kotlin">mods.toml</code>, <code class="lang-kotlin">fabric.mod.json</code>, <code class="lang-kotlin">litemod.json</code>, …) are emitted by <code class="lang-kotlin">gen&lt;Env&gt;ModMetadata</code> (default <code class="lang-kotlin">true</code>). Set <code class="lang-kotlin">false</code> to keep hand-maintained descriptor files authoritative — the emitted manifest attributes (<code class="lang-kotlin">MixinConfigs</code>, <code class="lang-kotlin">FMLAT</code>, …) still generate so dev runs and packaged jars pick up mixin configs.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="-1647336692%2FProperties%2F-1355253599" anchor-label="environmentId" id="-1647336692%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
             <div class="main-subrow keyValue ">
@@ -1300,6 +1315,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="side.html">side</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/Property///PointingToDeclaration/">Property</span><span class="token operator">&lt;</span><span data-unresolved-link="xyz.wagyourtail.unimined.api.spec/Side///PointingToDeclaration/">Side</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Client/server/merged side for this source set. Convention inherits the implicit parent's side lazily — same mechanism as <a href="version.html">version</a>: transform wirings install family conventions on bound envs (bukkit-family → SERVER), and a copy-time convention would clobber them since the last convention wins. An explicit <code class="lang-kotlin">combineWith</code>/<code class="lang-kotlin">copyFrom</code> SIDE still replaces this convention.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-751874962%2FProperties%2F-1355253599" anchor-label="sideJarPatches" id="-751874962%2FProperties%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="side-jar-patches.html"><span>side</span><wbr><span>Jar</span><wbr><span><span>Patches</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-751874962%2FProperties%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="side-jar-patches.html">sideJarPatches</a><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.provider/ListProperty///PointingToDeclaration/">ListProperty</span><span class="token operator">&lt;</span><a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-side-jar-patch-spec/index.html">SideJarPatchSpec</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loader-contributed pre-merge side-jar patch passes — each spec's <a href="../../../unimined-minecraft/xyz.wagyourtail.unimined.minecraft.spi/-side-jar-patch-processor/index.html">xyz.wagyourtail.unimined.minecraft.spi.SideJarPatchProcessor</a> runs on the clean client/server jars before the merge (1.x forge binpatch order: patch sides, then merge — merge stamping applies to the patched outputs). Only meaningful on merged-side environments.</p></div></div></div>
                 </div>
               </div>
             </div>

@@ -1772,6 +1772,13 @@ document is <strong>merged</strong> into it rather than colliding: objects merge
 recursively, arrays union and deduplicate, and generated scalar
 values win. Only the merged copy ships — the source file is excluded
 from <code>processResources</code>. Non-JSON collisions still fail the build.</p>
+<p>Set the environment's <code>emitLoaderMetadata</code> flag to <code>false</code> to keep
+hand-written descriptor documents wholly authoritative: no generated
+<code>fabric.mod.json</code>/<code>mods.toml</code>/<code>mcmod.info</code> is emitted or merged, so
+the resource ships as written. Generated mixin configs, converted
+access files, and manifest attributes (<code>MixinConfigs</code>, <code>FMLAT</code>, …)
+still emit — dev runs and packaged jars need those even when the
+loader document itself is maintained by hand.</p>
 <h2 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h2>
 <p><code>gen&lt;Env&gt;ModMetadata</code> scans the environment's resources and
 compiled classes at execution time, gated by three env flags:</p>
@@ -1868,7 +1875,12 @@ generated resources (<code>META-INF/MANIFEST.MF</code>) so <strong>dev runs see 
 FML (modern <code>SecureJar</code> and legacy <code>CoreModManager</code> alike) parses
 manifests inside classpath <em>directories</em>, which is how exploded dev
 mods carry <code>FMLModType</code>/<code>MixinConfigs</code>/<code>FMLAT</code>. The file copy is
-excluded from the packed jar; the attrs ride the real manifest.</p>
+excluded from the packed jar; the attrs ride the real manifest. The
+dev-resource copy is stamped
+<code>Automatic-Module-Name: unimined.dev.&lt;env&gt;</code> when the manifest does not
+already declare one — forge's exploded <code>MOD_CLASSES</code> unions otherwise
+can derive an empty, invalid JPMS module name depending on member
+order.</p>
 <p>Environment-fact attributes (<code>Fabric-Mapping-Namespace</code>,
 <code>MixinConfigs</code>, <code>FMLAT</code>, loader-version stamps, …) describe the
 environment, not your mod's identity, so they emit <strong>even when
@@ -1907,6 +1919,9 @@ still reach the jar and the dev classpath.</p>
 </tr>
 </tbody>
 </table>
+<p>On LaunchWrapper-era forge-family loaders (≤1.12.2), <code>MixinConfigs</code> is
+paired with the <code>TweakClass</code> manifest attribute — LaunchWrapper only
+registers mixin containers whose manifest names the mixin tweaker.</p>
 <p>Loader-contributed extras merge verbatim: <code>environment.manifestAttributes</code>
 (env channel — e.g. <code>manifestAttributes["FMLModType"] = "LANGPROVIDER"</code>
 or ornithe's <code>Calamus-Generation</code>) plus emitter attrs
