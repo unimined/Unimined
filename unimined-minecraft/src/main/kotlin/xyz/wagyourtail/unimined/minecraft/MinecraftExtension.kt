@@ -992,6 +992,17 @@ abstract class MinecraftExtension @Inject constructor(
     internal fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
         resolution.resolved(environment)
 
+    /** Environment-scoped dependency declarations for the default
+     *  `main` environment — see [MinecraftEnvironment.dependencies]. */
+    fun dependencies(action: Action<EnvironmentDependencySpec>) = main.dependencies(action)
+
+    /** Groovy DSL overload for the default environment's scoped
+     *  dependency declarations. */
+    fun dependencies(
+        @DelegatesTo(value = EnvironmentDependencySpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = main.dependencies(action)
+
     /** Configure mappings for the default `main` environment. */
     fun mappings(action: Action<MappingsSpecImpl>) = main.mappings(action)
 

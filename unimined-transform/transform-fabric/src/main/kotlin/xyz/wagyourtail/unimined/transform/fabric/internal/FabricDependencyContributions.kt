@@ -245,6 +245,7 @@ internal object FabricDependencyContributions {
         // jar → duplicate loader classes at launch.
         listOf(
             environment.modImplementationConfigurationName,
+            environment.modCompileOnlyConfigurationName,
             environment.modRuntimeOnlyConfigurationName
         ).forEach { bucket ->
             project.configurations.matching { it.name == bucket }.all { conf ->
@@ -353,6 +354,7 @@ internal object FabricDependencyContributions {
                     return@withDependencies
                 listOf(
                     "${environment.modImplementationConfigurationName}Direct",
+                    "${environment.modCompileOnlyConfigurationName}Direct",
                     "${environment.modRuntimeOnlyConfigurationName}Direct"
                 ).flatMap { name ->
                     project.configurations.findByName(name)?.files ?: emptySet()

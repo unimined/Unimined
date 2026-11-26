@@ -69,7 +69,9 @@ class EnvironmentClasspathWiringTest {
             dev.attributes.getAttribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)
         )
 
-        for (modView in listOf("modImplementationRemapped", "modRuntimeOnlyRemapped")) {
+        for (modView in listOf(
+            "modImplementationRemapped", "modCompileOnlyRemapped", "modRuntimeOnlyRemapped"
+        )) {
             val view = project.configurations.getByName(modView)
             assertEquals(
                 "unimined-remapped-main-${modView.removeSuffix("Remapped")}",
@@ -106,7 +108,7 @@ class EnvironmentClasspathWiringTest {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
 
-        for (bucket in listOf("modImplementation", "modRuntimeOnly")) {
+        for (bucket in listOf("modImplementation", "modCompileOnly", "modRuntimeOnly")) {
             val remapped = project.configurations.getByName("${bucket}SourcesRemapped")
             assertTrue(remapped.isCanBeResolved)
             assertFalse(remapped.isCanBeConsumed)
@@ -146,8 +148,31 @@ class EnvironmentClasspathWiringTest {
             ext.modDevSourcesViewConfigurations["main:modImplementation"]
         )
         assertEquals(
+            project.configurations.getByName("modCompileOnlySourcesRemapped"),
+            ext.modDevSourcesViewConfigurations["main:modCompileOnly"]
+        )
+        assertEquals(
             project.configurations.getByName("modRuntimeOnlySourcesRemapped"),
             ext.modDevSourcesViewConfigurations["main:modRuntimeOnly"]
+        )
+    }
+
+    @Test
+    fun `modCompileOnly bucket is declarable-only with direct and remapped views`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+
+        val bucket = project.configurations.getByName("modCompileOnly")
+        assertFalse(bucket.isCanBeResolved)
+        assertFalse(bucket.isCanBeConsumed)
+
+        val direct = project.configurations.getByName("modCompileOnlyDirect")
+        assertTrue(direct.isCanBeResolved)
+        assertEquals(listOf(bucket), direct.extendsFrom.toList())
+
+        assertEquals(
+            project.configurations.getByName("modCompileOnlyRemapped"),
+            ext.modDevViewConfigurations["main:modCompileOnly"]
         )
     }
 

@@ -1,5 +1,91 @@
 # Dependencies
 
+## Environment-scoped `dependencies { }`
+
+Environments own a scoped dependency block — KMP source-set style —
+covering the buckets the env's source set already uses. It is pure
+sugar over the configuration names in the
+[reference below](#configuration-reference): both forms mix freely,
+nothing is deprecated, and string names stay the way to reach exotic
+per-dependency configuration.
+
+=== "Kotlin `build.gradle.kts`"
+    ```kotlin
+    unimined {
+        minecraft {
+            dependencies {
+                implementation("com.example:lib:1.0")   // ordinary buckets
+                compileOnly("com.example:stub:1.0")
+                runtimeOnly("com.example:rt:1.0")
+                api("com.example:api-lib:1.0")          // see note below
+
+                modImplementation("com.example:mod:1.0") // mod buckets —
+                modCompileOnly("com.example:mod-stub:1.0") // remapped into
+                modRuntimeOnly("com.example:mod-rt:1.0")   // the dev namespace
+                include("com.example:embed:1.0")
+            }
+            sourceSet("fabric") {
+                // same block, scoped to the fabric source set —
+                // verbs land on fabricImplementation,
+                // fabricModImplementation, …
+                dependencies {
+                    modImplementation("com.example:fabric-mod:1.0")
+                }
+            }
+        }
+    }
+    ```
+
+=== "Groovy `build.gradle`"
+    ```groovy
+    unimined {
+        minecraft {
+            dependencies {
+                implementation "com.example:lib:1.0"   // ordinary buckets
+                compileOnly "com.example:stub:1.0"
+                runtimeOnly "com.example:rt:1.0"
+                api "com.example:api-lib:1.0"          // see note below
+
+                modImplementation "com.example:mod:1.0" // mod buckets —
+                modCompileOnly "com.example:mod-stub:1.0" // remapped into
+                modRuntimeOnly "com.example:mod-rt:1.0"   // the dev namespace
+                include "com.example:embed:1.0"
+            }
+            sourceSet("fabric") {
+                // same block, scoped to the fabric source set —
+                // verbs land on fabricImplementation,
+                // fabricModImplementation, …
+                dependencies {
+                    modImplementation "com.example:fabric-mod:1.0"
+                }
+            }
+        }
+    }
+    ```
+
+Inside `minecraft { }` the block scopes to the `main` environment;
+inside `sourceSet("x") { }` it scopes to that env. Notation passes
+through untouched — coordinates, maps, `project(...)`, `files(...)`,
+and providers all work as in the global `dependencies { }` block.
+
+- **`api` asymmetry** — Gradle creates `api` only for `main` under
+  the `java-library` plugin; custom source sets have no `<env>Api`
+  bucket at all. Rather than erroring, the first `api(...)` call
+  materializes the missing bucket with java-library-equivalent
+  semantics (`<env>Implementation` extends it, so api deps are
+  compile+runtime visible in-dev) — safe against a `java-library`
+  applied later, and unimined's dev-variant publishing carries an
+  existing `<env>Api` in the env's api-elements channel.
+- **`modApi` does not exist** — publication semantics for
+  compile-visible mod deps are undecided; it is intentionally absent
+  rather than half-wired. `modImplementation` is the correct bucket
+  for mods you compile and ship against.
+- **`include` is *not* a classpath dependency** — entries embed in the
+  production jar but are never compiled or launched against; declare
+  `modImplementation` (fabric-style mods) or `implementation`
+  (jarjar library deps) alongside when dev runs need the contents.
+  See [jar-in-jar](#jar-in-jar-include).
+
 ## Mod dependencies (artifacts)
 
 Each env exposes `mod*` configurations scoped to its source set —
@@ -9,6 +95,7 @@ mod jars land remapped onto your mappings:
     ```kotlin
     dependencies {
         modImplementation("maven:coord")   // compile + runtime
+        modCompileOnly("maven:coord")      // compile only
         modRuntimeOnly("maven:coord")      // runtime only
     }
     ```
@@ -17,17 +104,20 @@ mod jars land remapped onto your mappings:
     ```groovy
     dependencies {
         modImplementation("maven:coord")   // compile + runtime
+        modCompileOnly("maven:coord")      // compile only
         modRuntimeOnly("maven:coord")      // runtime only
     }
     ```
 
 Named envs prefix the bucket (`serverModImplementation`,
-`serverModRuntimeOnly`). A mod needed only at compile time
-(annotation-processor stubs, javadoc-only references) goes on the
-plain `compileOnly` — plain-library jars are never remapped, and
-mod-remap only matters for jars that reach a runtime classpath. For
-a remapped compile-only view, declare a
-`remap.remappedViews(...)` view over your own bucket
+`serverModCompileOnly`, `serverModRuntimeOnly`). All three remap the
+same way — the difference is purely which classpaths they land on:
+`modCompileOnly` mods compile against you (annotation-processor
+stubs, compile-time API surface, javadoc-only references) but never
+reach a runtime classpath and are never published, exactly like
+java's `compileOnly`/`modImplementation` split. For remapped buckets
+beyond this vocabulary (a custom `modLocalRuntime`-style arrangement),
+declare a `remap.remappedViews(...)` view over your own bucket
 ([below](#configuration-reference)).
 
 Mod jars are remapped from the environment's *mod source namespace*
@@ -385,6 +475,7 @@ on `unimined*` names (`uniminedMainAccessTransformer`).
 | Configuration | Lands on | Remapped? | Purpose |
 |---|---|---|---|
 | `modImplementation` / `<env>ModImplementation` | compile + runtime | yes → dev ns | mod jars to compile and run against |
+| `modCompileOnly` / `<env>ModCompileOnly` | compile only | yes → dev ns | mods needed only at compile time — never launched, never published |
 | `modRuntimeOnly` / `<env>ModRuntimeOnly` | runtime | yes → dev ns | mods needed only at launch |
 | `include` / `<env>Include` | production jar (jarjar) | repacked | embed jars inside the mod artifact — *not* a classpath dep ([jar-in-jar](#jar-in-jar-include)) |
 | `unimined<Env>AccessTransformer` | access docs | — | coordinate-consumed access docs (NG `accessTransformer` parity) |

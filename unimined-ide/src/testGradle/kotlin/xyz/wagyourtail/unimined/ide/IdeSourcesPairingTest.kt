@@ -65,11 +65,11 @@ class IdeSourcesPairingTest {
         project.dependencies.add("modImplementation", "com.example:nosrc:1.0")
 
         assertEquals(
-            listOf("modImplementationDirect", "modRuntimeOnlyDirect"),
+            listOf("modImplementationDirect", "modCompileOnlyDirect", "modRuntimeOnlyDirect"),
             IdeModelResolver.modViewNames(project, ext.main)
         )
         assertEquals(
-            listOf("modImplementationSourcesDirect", "modRuntimeOnlySourcesDirect"),
+            listOf("modImplementationSourcesDirect", "modCompileOnlySourcesDirect", "modRuntimeOnlySourcesDirect"),
             IdeModelResolver.modViewNames(project, ext.main, sources = true)
         )
 
@@ -94,11 +94,11 @@ class IdeSourcesPairingTest {
             it.modSourceNamespaces.set(listOf("intermediary"))
         }
         assertEquals(
-            listOf("modImplementationRemapped", "modRuntimeOnlyRemapped"),
+            listOf("modImplementationRemapped", "modCompileOnlyRemapped", "modRuntimeOnlyRemapped"),
             IdeModelResolver.modViewNames(project, ext.main)
         )
         assertEquals(
-            listOf("modImplementationSourcesRemapped", "modRuntimeOnlySourcesRemapped"),
+            listOf("modImplementationSourcesRemapped", "modCompileOnlySourcesRemapped", "modRuntimeOnlySourcesRemapped"),
             IdeModelResolver.modViewNames(project, ext.main, sources = true)
         )
     }

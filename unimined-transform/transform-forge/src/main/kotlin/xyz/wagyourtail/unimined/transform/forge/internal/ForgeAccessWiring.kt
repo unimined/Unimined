@@ -86,8 +86,12 @@ internal fun contributeAccessSteps(
     ) { conf ->
         conf.isCanBeConsumed = false
         conf.isCanBeResolved = true
+        // compile-visible mod buckets — AT/CT extraction applies to
+        // mods you compile against (modRuntimeOnly mods are applied by
+        // the loader at runtime instead); mirrors fabricModAnalysis
         conf.extendsFrom(
-            project.configurations.getByName(environment.modImplementationConfigurationName)
+            project.configurations.getByName(environment.modImplementationConfigurationName),
+            project.configurations.getByName(environment.modCompileOnlyConfigurationName)
         )
         conf.attributes.attribute(
             ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,

@@ -39,6 +39,7 @@ internal object GenModSourcesWiring {
 
     private val MOD_BUCKETS = listOf(
         MinecraftEnvironment::modImplementationConfigurationName,
+        MinecraftEnvironment::modCompileOnlyConfigurationName,
         MinecraftEnvironment::modRuntimeOnlyConfigurationName
     )
 

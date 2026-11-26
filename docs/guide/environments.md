@@ -62,6 +62,12 @@ onto this convention keep their old shape as a deprecated alias —
 Everything below lives inside an env block (`minecraft { … }` or
 `sourceSet("x") { … }`):
 
+- **Dependencies** — `dependencies { }` declares ordinary
+  (`implementation`/`compileOnly`/`runtimeOnly`/`api`) and mod
+  (`modImplementation`/`modCompileOnly`/`modRuntimeOnly`/`include`)
+  buckets scoped to the environment — the KMP-style surface over the
+  string configuration names; see
+  [Dependencies](dependencies.md#environment-scoped-dependencies).
 - **Java** — `javaVersion` sets the compile/run floor (conventioned
   from the loader descriptor); `useToolchains` toggles Gradle
   toolchains for env-scoped compiles (conventioned from the

@@ -76,6 +76,12 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             isCanBeResolved = false
         }
         project.configurations.maybeCreate(
+            environment.modCompileOnlyConfigurationName
+        ).apply {
+            isCanBeConsumed = false
+            isCanBeResolved = false
+        }
+        project.configurations.maybeCreate(
             environment.modRuntimeOnlyConfigurationName
         ).apply {
             isCanBeConsumed = false

@@ -263,7 +263,7 @@ it redeclares a name or format.
 
 Dependency-declared access applies to a `common` env too (loom
 `transitiveAccessWideners` parity): `modImplementation`/
-`modRuntimeOnly` jars are scanned for conventional access docs —
+`modCompileOnly`/`modRuntimeOnly` jars are scanned for conventional access docs —
 `*.accesswidener`/`.classtweaker` entries, `fabric.mod.json`
 `accessWidener`/`classTweakers` refs, `META-INF/accesstransformer.cfg`
 + `FMLAT` manifest entries, and `custom.*injected_interfaces` keys

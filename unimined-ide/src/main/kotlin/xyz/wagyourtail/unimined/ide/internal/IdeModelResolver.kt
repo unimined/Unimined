@@ -282,6 +282,7 @@ internal object IdeModelResolver {
             "Direct" else "Remapped"
         return listOf(
             environment.modImplementationConfigurationName,
+            environment.modCompileOnlyConfigurationName,
             environment.modRuntimeOnlyConfigurationName
         ).map { if (sources) "${it}Sources$suffix" else "$it$suffix" }
     }
@@ -363,9 +364,13 @@ internal object IdeModelResolver {
             inConfig(
                 "${environment.modImplementationConfigurationName}Direct") ||
                     inConfig(
+                        "${environment.modCompileOnlyConfigurationName}Direct") ||
+                    inConfig(
                         "${environment.modRuntimeOnlyConfigurationName}Direct") ||
                     inConfig(
                         "${environment.modImplementationConfigurationName}Remapped") ||
+                    inConfig(
+                        "${environment.modCompileOnlyConfigurationName}Remapped") ||
                     inConfig(
                         "${environment.modRuntimeOnlyConfigurationName}Remapped") ->
                 ClasspathGroup.MODS

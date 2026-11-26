@@ -84,6 +84,9 @@ internal class MinecraftEnvironmentCopyHandler(
         val sourceImplementation = extension.project.configurations.getByName(
             source.modImplementationConfigurationName
         )
+        val sourceCompileOnly = extension.project.configurations.getByName(
+            source.modCompileOnlyConfigurationName
+        )
         val sourceRuntime = extension.project.configurations.getByName(
             source.modRuntimeOnlyConfigurationName
         )
@@ -93,6 +96,13 @@ internal class MinecraftEnvironmentCopyHandler(
         }.all { targetConfiguration ->
             if (sourceImplementation !in targetConfiguration.extendsFrom) {
                 targetConfiguration.extendsFrom(sourceImplementation)
+            }
+        }
+        extension.project.configurations.matching {
+            it.name == target.modCompileOnlyConfigurationName
+        }.all { targetConfiguration ->
+            if (sourceCompileOnly !in targetConfiguration.extendsFrom) {
+                targetConfiguration.extendsFrom(sourceCompileOnly)
             }
         }
         extension.project.configurations.matching {

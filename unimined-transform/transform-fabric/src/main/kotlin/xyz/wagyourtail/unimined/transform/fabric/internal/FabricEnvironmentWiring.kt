@@ -110,6 +110,7 @@ internal object FabricEnvironmentWiring {
             conf.isCanBeResolved = true
             conf.extendsFrom(
                 project.configurations.getByName(environment.modImplementationConfigurationName),
+                project.configurations.getByName(environment.modCompileOnlyConfigurationName),
                 // loom parity: the loader's embedded libraries ride the
                 // same view onto the mod classpath. The loader jar
                 // itself joins below as a *file* dep — the mod buckets

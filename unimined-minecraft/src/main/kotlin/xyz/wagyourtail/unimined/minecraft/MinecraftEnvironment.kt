@@ -1229,6 +1229,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             "${environmentId}ModImplementation"
         }
 
+    /** Dependency bucket for mods used only to compile this environment —
+     *  remapped onto the compile classpath like [modImplementationConfigurationName]
+     *  but never on runtime classpaths, never published. */
+    val modCompileOnlyConfigurationName: String
+        get() = if (environmentId == "main") {
+            "modCompileOnly"
+        } else {
+            "${environmentId}ModCompileOnly"
+        }
+
     /** Dependency bucket for mods used only at runtime in this environment. */
     val modRuntimeOnlyConfigurationName: String
         get() = if (environmentId == "main") {
@@ -1644,6 +1654,24 @@ abstract class MinecraftEnvironment @Inject internal constructor(
             extensions.add("transform", spec)
         }
     }
+
+    /**
+     * Environment-scoped dependency declarations — a KMP-style
+     * `dependencies { }` lift over the buckets this environment already
+     * owns (`implementation`/`compileOnly`/`runtimeOnly`/`api` on the
+     * bound source set, the env's `modImplementation`/`modCompileOnly`/
+     * `modRuntimeOnly`/`include`). Pure sugar: the string configuration
+     * names keep working interchangeably. See [EnvironmentDependencySpec].
+     */
+    fun dependencies(action: Action<EnvironmentDependencySpec>) {
+        action.execute(EnvironmentDependencySpec(this, project))
+    }
+
+    /** Groovy DSL twin of [dependencies]. */
+    fun dependencies(
+        @DelegatesTo(value = EnvironmentDependencySpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = action.delegatingTo(EnvironmentDependencySpec(this, project))
 
     /** Configure this environment's mapping sources. */
     fun mappings(action: Action<MappingsSpecImpl>) {

@@ -156,10 +156,19 @@ internal object EnvironmentClasspathWiring {
         val modImplementationDirect = directModView(
             project, environment.modImplementationConfigurationName
         )
+        val modCompileOnlyDirect = directModView(
+            project, environment.modCompileOnlyConfigurationName
+        )
         val modRuntimeOnlyDirect = directModView(
             project, environment.modRuntimeOnlyConfigurationName
         )
-        val modBatch = project.files(modImplementationDirect, modRuntimeOnlyDirect)
+        // compile-only mods join the batch: they sit on the compile
+        // classpath next to modImplementation, so sibling inheritance
+        // analysis and the dep access scan must see them (loom treats
+        // modCompileOnly identically there)
+        val modBatch = project.files(
+            modImplementationDirect, modCompileOnlyDirect, modRuntimeOnlyDirect
+        )
 
         // inline `access { }` declarations + AT/AW/CT files discovered
         // in the env's resources — materialized once the env's loader
@@ -415,6 +424,11 @@ internal object EnvironmentClasspathWiring {
             environment.modImplementationConfigurationName, modsBundleFile,
             mcBundleFile, modImplementationDirect
         )
+        val modCompileOnlyView = remappedModView(
+            project, minecraft, remap, environment,
+            environment.modCompileOnlyConfigurationName, modsBundleFile,
+            mcBundleFile, modCompileOnlyDirect
+        )
         val modRuntimeOnlyView = remappedModView(
             project, minecraft, remap, environment,
             environment.modRuntimeOnlyConfigurationName, modsBundleFile,
@@ -423,6 +437,9 @@ internal object EnvironmentClasspathWiring {
         minecraft.modDevViewConfigurations[
             "$environmentId:${environment.modImplementationConfigurationName}"
         ] = modImplementationView
+        minecraft.modDevViewConfigurations[
+            "$environmentId:${environment.modCompileOnlyConfigurationName}"
+        ] = modCompileOnlyView
         minecraft.modDevViewConfigurations[
             "$environmentId:${environment.modRuntimeOnlyConfigurationName}"
         ] = modRuntimeOnlyView
@@ -444,6 +461,13 @@ internal object EnvironmentClasspathWiring {
             modImplementationDirect, libraries
         )
         minecraft.modDevSourcesViewConfigurations[
+            "$environmentId:${environment.modCompileOnlyConfigurationName}"
+        ] = remappedModSourcesView(
+            project, minecraft, remap, environment,
+            environment.modCompileOnlyConfigurationName, modsBundleFile,
+            modCompileOnlyDirect, libraries
+        )
+        minecraft.modDevSourcesViewConfigurations[
             "$environmentId:${environment.modRuntimeOnlyConfigurationName}"
         ] = remappedModSourcesView(
             project, minecraft, remap, environment,
@@ -452,6 +476,9 @@ internal object EnvironmentClasspathWiring {
         )
         directModSourcesView(
             project, environment.modImplementationConfigurationName
+        )
+        directModSourcesView(
+            project, environment.modCompileOnlyConfigurationName
         )
         directModSourcesView(
             project, environment.modRuntimeOnlyConfigurationName
@@ -479,6 +506,13 @@ internal object EnvironmentClasspathWiring {
                 )
             }
         )
+        val modCompileOnlyFiles = project.files(
+            identity.flatMap { id ->
+                project.configurations.named(
+                    if (id) modCompileOnlyDirect.name else modCompileOnlyView.name
+                )
+            }
+        )
         val modRuntimeOnlyFiles = project.files(
             identity.flatMap { id ->
                 project.configurations.named(
@@ -488,6 +522,11 @@ internal object EnvironmentClasspathWiring {
         )
 
         sourceSet.compileClasspath += modImplementationFiles
+        // compile-only — the remapped (or identity-direct) view, never
+        // the raw bucket, and NEVER the runtime classpath: modCompileOnly
+        // is compile-scope like java's compileOnly, dev launches and
+        // prod packaging both stay unaware of it
+        sourceSet.compileClasspath += modCompileOnlyFiles
         sourceSet.runtimeClasspath += modImplementationFiles + modRuntimeOnlyFiles
 
         // merged multi-loader envs: every non-primary loader spec lands
