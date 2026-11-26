@@ -362,11 +362,13 @@ internal fun contributeAccessSteps(
         RemapSurface.JAR, jarProcessorsSpec, StepScope.ENVIRONMENT_ARTIFACT
     )
 
-    // userdev shades the universal jar into the dev artifact —
-    // FML's `findJarOnClasspath(forge-<mc>-<ver>)` hands the single
-    // matched jar to the `minecraft` mod content, so forge classes
-    // + META-INF/mods.toml must live inside it (FG6's merged
-    // `forge-<v>_mapped_*` artifact shape). Pre-remap for every
+    // Legacy/FML-10/11 userdev shades the universal jar into the dev
+    // artifact. Pre-FML-10 discovery hands the single matched jar to
+    // the `minecraft` mod content, so loader classes +
+    // META-INF/mods.toml must live inside it; FML 10/11 instead scans
+    // the universal manifest's `FML-System-Mods`, which the processor
+    // retains for 1.21.9–1.21.11. Post-1.21.11 follows MDG's separate
+    // universal classpath root and contributes no shade step. Pre-remap
     // era: the universal's loader classes reference Minecraft at
     // the `obfNamespace` boundary (obf for notchObf, srg for
     // modern userdev — same as the binpatch step's output), so
@@ -376,6 +378,15 @@ internal fun contributeAccessSteps(
     shadeSpec.processorSpecs.set(resolved.map { r ->
         val profile = r.profile as? ForgeProfile.Userdev
             ?: return@map emptyList()
+        val linkage = userdevUniversalLinkage(environment.version.get())
+        if (linkage == UserdevUniversalLinkage.SEPARATE) {
+            // FML 12+/unobfuscated-era shape — the universal stays a
+            // separate classpath root (contributed by
+            // contributeLoaderDependency); shading it into the game jar
+            // both drops its manifest identity and makes that root
+            // collide with Minecraft's resource root during discovery
+            return@map emptyList()
+        }
         profile.config.universal?.let { coord ->
             runCatching {
                 project.configurations.detachedConfiguration(
@@ -395,7 +406,9 @@ internal fun contributeAccessSteps(
                                     // checksums target the pre-patch
                                     // jar and fatal on the
                                     // already-patched dev jar
-                                    profile.config.universalFilters
+                                    profile.config.universalFilters,
+                                    keepManifest = linkage ==
+                                            UserdevUniversalLinkage.SHADED_WITH_MANIFEST
                                 )
                             )
                 )

@@ -233,6 +233,20 @@ class ForgeJarProcessorsTest {
     }
 
     @Test
+    fun `universal shade can retain the loader manifest for FML system-mod discovery`() {
+        val target = jar("mc.jar", mapOf("a/A.class" to byteArrayOf(1)))
+        UserdevUniversalShadeProcessor().processJar(target,
+            UserdevUniversalShadeProcessor.Spec(
+                universalJar(), emptyList(), keepManifest = true),
+            ctx)
+        val out = entries(target)
+        assertTrue(out.containsKey("META-INF/MANIFEST.MF"),
+            "FML 10+ locates NeoForge through the universal manifest")
+        assertFalse(out.containsKey("META-INF/TEST.SF"),
+            "signature debris is still stripped when the manifest survives")
+    }
+
+    @Test
     fun `universalFilters include-regex gates what shades`() {
         val target = jar("mc.jar", emptyMap())
         UserdevUniversalShadeProcessor().processJar(target,

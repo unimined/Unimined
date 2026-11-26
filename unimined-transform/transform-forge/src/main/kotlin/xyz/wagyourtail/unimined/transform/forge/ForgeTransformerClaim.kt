@@ -19,8 +19,7 @@ class ForgeTransformerClaim : TransformerClaim {
 
     override val claimedFamilies = setOf("forge")
 
-    override fun transformer(env: TransformerClaim.TransformerEnvContext)
-            : MinecraftTransformer {
+    override fun contribute(env: TransformerClaim.TransformerEnvContext) {
         env.env.features.binding("accessTransformer")
         env.env.features.binding("classTweaker")
         env.env.features.binding("mixin")
@@ -33,9 +32,11 @@ class ForgeTransformerClaim : TransformerClaim {
                     .transform.internal.versionAtLeast(spec.version, "20.2.84")
             ) env.env.features.binding("mixinExtras")
         }
+    }
 
+    override fun transformer(env: TransformerClaim.TransformerEnvContext)
+            : MinecraftTransformer {
         env.minecraft?.let { ForgeEnvironmentWiring.wire(env.project, it) }
-
         return CustomTransformer(env)
     }
 

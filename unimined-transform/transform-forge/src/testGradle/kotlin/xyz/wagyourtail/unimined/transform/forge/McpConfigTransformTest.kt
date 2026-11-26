@@ -111,6 +111,45 @@ class McpConfigTransformTest {
         assertSame(pipeline, pipeline.withToolOverride("nope", "g:a:1"))
     }
 
+    /** #224 — NeoForm 26.x descriptors carry only `steps.joined`.
+     *  Split-side envs must fall back to that chain (MDG always runs
+     *  `--dist joined`); a missing requested side is only an error when
+     *  no joined chain exists either. */
+    @Test
+    fun `split side falls back to joined steps when the descriptor has no side chain`(
+        @TempDir dir: Path
+    ) {
+        val descriptor = dir.resolve("neoform-26.3-1.zip").toFile()
+        JarOutputStream(descriptor.outputStream()).use { jar ->
+            jar.putNextEntry(JarEntry("config.json"))
+            jar.write(
+                """
+                {
+                  "spec": 6, "version": "26.3",
+                  "data": { "patches": "patches/" },
+                  "steps": { "joined": [
+                    { "type": "downloadClient" },
+                    { "type": "downloadServer" }
+                  ]},
+                  "functions": {}, "libraries": []
+                }
+                """.trimIndent().toByteArray())
+            jar.closeEntry()
+        }
+        val pipeline = McpConfigDescriptorFormat().parse(
+            descriptor,
+            object : FormatContext {
+                override val side = "server"
+                override val bindingNames = setOf("client", "server")
+            }
+        )
+        assertEquals(
+            listOf("downloadClient", "downloadServer"),
+            pipeline.steps.map { it.name },
+            "a server env must consume the joined chain when no " +
+                    "steps.server section exists")
+    }
+
     /**
      * Spec ≥6 (26.x neoform) descriptors decorate the steps we replace
      * with in-process bindings — `downloadJson`,

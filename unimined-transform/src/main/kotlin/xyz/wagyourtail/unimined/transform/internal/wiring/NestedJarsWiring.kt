@@ -58,6 +58,11 @@ internal object NestedJarsWiring {
         // one, so `include` works without an explicit binding)
         val format = envSpec?.nestedJars?.format
             ?.orElse(project.provider {
+                // production is a claim consumer too — force the
+                // idempotent contribution here as well as post-DSL so
+                // post-evaluation env construction can't observe the
+                // rowless fallback before `loader(...)` is declared
+                envSpec.contributeTransformerClaim()
                 envSpec.features.bindings["nestedJars"]
             })
             ?.orElse(descriptor.map { d ->

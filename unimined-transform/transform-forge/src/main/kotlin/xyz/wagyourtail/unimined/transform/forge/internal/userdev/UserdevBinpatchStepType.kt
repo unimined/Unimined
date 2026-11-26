@@ -32,10 +32,10 @@ abstract class UserdevBinpatchStepSpec : DevArtifactOnlyStepSpec {
 
 
     /** The jar carrying the lzma archive at [binpatchesKey] — the
-     *  userdev jar for MERGED envs (`config.binpatches`), the
-     *  `:installer` jar for split-side envs (`data/<side>.lzma`).
-     *  Optional: absent on non-Userdev profiles (spec passes the jar
-     *  through unchanged). */
+     *  userdev jar for MERGED envs and combined-patch profiles
+     *  (`config.binpatches`), the `:installer` jar for legacy
+     *  split-side envs (`data/<side>.lzma`). Optional: absent on
+     *  non-Userdev profiles (spec passes the jar through unchanged). */
     @get:InputFile
     @get:Optional
     @get:PathSensitive(PathSensitivity.NAME_ONLY)

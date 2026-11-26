@@ -18,8 +18,7 @@ class FabricTransformerClaim : TransformerClaim {
 
     override val claimedFamilies = setOf("fabric")
 
-    override fun transformer(env: TransformerClaim.TransformerEnvContext)
-            : MinecraftTransformer {
+    override fun contribute(env: TransformerClaim.TransformerEnvContext) {
         // declared bindings — fabric's stock feature pack
         env.env.features.binding("mixin")
         env.env.features.binding("accessWidener")
@@ -35,11 +34,13 @@ class FabricTransformerClaim : TransformerClaim {
                     .transform.internal.versionAtLeast(spec.version, "0.15.0")
             ) env.env.features.binding("mixinExtras")
         }
+    }
 
+    override fun transformer(env: TransformerClaim.TransformerEnvContext)
+            : MinecraftTransformer {
         // env-level wiring (loader dep, intermediary hop, AW steps,
         // Knot launch) — consumed at environment binding
         env.minecraft?.let { FabricEnvironmentWiring.wire(env.project, it) }
-
         return CustomTransformer(env)
     }
 

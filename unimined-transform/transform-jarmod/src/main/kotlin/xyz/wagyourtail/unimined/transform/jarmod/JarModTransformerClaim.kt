@@ -18,10 +18,12 @@ class JarModTransformerClaim : TransformerClaim {
 
     override val claimedFamilies = setOf("jarmod")
 
+    override fun contribute(env: TransformerClaim.TransformerEnvContext) {
+        env.env.features.binding("modDiscovery", "classpath")
+    }
+
     override fun transformer(env: TransformerClaim.TransformerEnvContext)
             : MinecraftTransformer {
-        env.env.features.binding("modDiscovery", "classpath")
-
         env.minecraft?.let {
             JarModEnvironmentWiring.createConfigurations(env.project, it)
             JarModEnvironmentWiring.wire(env.project, it)

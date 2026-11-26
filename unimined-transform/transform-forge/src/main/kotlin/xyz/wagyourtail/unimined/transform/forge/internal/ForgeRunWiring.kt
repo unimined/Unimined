@@ -157,14 +157,17 @@ internal fun contributeRunMutators(
         // snapshot into the config cache at STORE, before the writer
         // task executes — a `fileContents` provider stays lazy and
         // serializable end-to-end (the flatMap carries the writer dep).
-        ctx.lazyJvmArg(
-            project.providers.fileContents(
-                writer.flatMap { it.outputFile }
-            ).asText.map { content ->
-                "-DlegacyClassPath=" + content.trim()
-                    .replace("\n", java.io.File.pathSeparator)
-            }
-        )
+        if ((resolved.orNull?.profile as? ForgeProfile.Userdev)
+                ?.config?.noLegacyClasspath != true) {
+            ctx.lazyJvmArg(
+                project.providers.fileContents(
+                    writer.flatMap { it.outputFile }
+                ).asText.map { content ->
+                    "-DlegacyClassPath=" + content.trim()
+                        .replace("\n", java.io.File.pathSeparator)
+                }
+            )
+        }
     }
     // unprotect — always-on for Userdev (1.x FG3 parity:
     // `unprotectRuntime = true`). The agent needs tiny mappings

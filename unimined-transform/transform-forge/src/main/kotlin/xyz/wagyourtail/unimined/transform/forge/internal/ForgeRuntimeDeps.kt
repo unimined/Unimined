@@ -60,6 +60,15 @@ internal fun contributeClientExtra(
         // it and throws; yield an empty list instead
         val r = resolved.orNull ?: return@provider emptyList()
         if (r.profile !is ForgeProfile.Userdev) return@provider emptyList()
+        if (userdevUniversalLinkage(environment.version.get()) ==
+                UserdevUniversalLinkage.SEPARATE) {
+            // MDG's post-1.21.11 shape keeps the plain patched game
+            // jar (resources included) beside a separate universal —
+            // there is no class-only game jar for client-extra to
+            // complement, and a second resource root only duplicates
+            // entries on the classpath
+            return@provider emptyList()
+        }
         val raw = rawView.files.firstOrNull { it.extension == "jar" }
             ?: return@provider emptyList()
         val out = cacheDir.resolve(

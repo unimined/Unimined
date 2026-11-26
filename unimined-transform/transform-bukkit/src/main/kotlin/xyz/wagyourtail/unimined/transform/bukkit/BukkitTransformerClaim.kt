@@ -18,12 +18,14 @@ class BukkitTransformerClaim : TransformerClaim {
 
     override val claimedFamilies = setOf("bukkit")
 
-    override fun transformer(env: TransformerClaim.TransformerEnvContext)
-            : MinecraftTransformer {
+    override fun contribute(env: TransformerClaim.TransformerEnvContext) {
         if (env.env.features.bindings["modDiscovery"] == null) {
             env.env.features.binding("modDiscovery", "plugins")
         }
+    }
 
+    override fun transformer(env: TransformerClaim.TransformerEnvContext)
+            : MinecraftTransformer {
         env.minecraft?.let { BukkitEnvironmentWiring.wire(env.project, it) }
 
         return CustomTransformer(env)

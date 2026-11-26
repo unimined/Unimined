@@ -13,15 +13,18 @@ import java.util.jar.JarFile
 /**
  * `userdev-universal-shade` jar processor — overlays the userdev
  * `universal` artifact's entries into the patched Minecraft jar (1.x
- * `JarModMinecraftTransformer.transform` shade). Required on
- * launchwrapper-era (notchObf) userdev — FML classes must live in the
- * dev jar itself; modern userdev leaves the loader on the module
- * path and declares no shade requirement.
+ * `JarModMinecraftTransformer.transform` shade). Legacy and
+ * FML-10/11-era userdev need loader classes inside the dev jar;
+ * post-1.21.11 NeoForge does not use this processor at all because
+ * the universal stays a separate classpath root.
  *
  * `universalFilters` are include-regexes over entry names (FG's own
  * semantic — e.g. `^(?!binpatches\.pack\.lzma$).*$`); an empty list
- * shades everything. `META-INF` (signature debris) and
- * `module-info.class` are always skipped.
+ * shades everything. Signature debris, patch packs, and
+ * `module-info.class` are always skipped. The loader manifest is
+ * skipped in the legacy shape but retained when [Spec.keepManifest]
+ * is set for FML 10/11's `FML-System-Mods` scan; other META-INF
+ * content (mods.toml, services, access transformers) survives.
  */
 class UserdevUniversalShadeProcessor : JarProcessor {
 
@@ -29,23 +32,40 @@ class UserdevUniversalShadeProcessor : JarProcessor {
 
     override fun buildSpec(context: SpecContext): JarProcessorSpec? = null
 
-    data class Spec(val jar: Path, val filters: List<String>) : JarProcessorSpec {
+    data class Spec(
+        val jar: Path,
+        val filters: List<String>,
+        /** Keep the universal's `META-INF/MANIFEST.MF` — FML 10+
+         *  discovers NeoForge by its `FML-System-Mods` attribute. */
+        val keepManifest: Boolean = false
+    ) : JarProcessorSpec {
         companion object {
             private const val serialVersionUID = 1L
         }
     }
 
-    /** `filter\n...` lines then `jarPath` — the universal jar is
-     *  fingerprinted via the step's `modJars` inputs, so the payload
-     *  only needs identity. */
+    /** `filter\n...` lines then `jarPath`, then the keep-manifest
+     *  boolean — the universal jar is fingerprinted via the step's
+     *  `modJars` inputs, so the payload only needs identity. The final
+     *  boolean is optional when reading legacy payloads. */
     override fun serializeSpec(spec: JarProcessorSpec): String {
         val s = spec as Spec
-        return (s.filters + s.jar.toAbsolutePath().toString()).joinToString("\n")
+        return (s.filters + s.jar.toAbsolutePath().toString() +
+                s.keepManifest.toString()).joinToString("\n")
     }
 
     override fun deserializeSpec(payload: String): JarProcessorSpec {
         val lines = payload.split("\n")
-        return Spec(Paths.get(lines.last()), lines.dropLast(1))
+        val keepManifest = lines.last().toBooleanStrictOrNull() == true
+        val jarLine = if (lines.last().toBooleanStrictOrNull() != null)
+            lines[lines.lastIndex - 1] else lines.last()
+        val filterCount = lines.lastIndex - if (
+            lines.last().toBooleanStrictOrNull() != null) 1 else 0
+        return Spec(
+            Paths.get(jarLine),
+            lines.take(filterCount),
+            keepManifest
+        )
     }
 
     override fun processJar(jar: Path, spec: JarProcessorSpec, context: ProcessorContext) {
@@ -68,7 +88,7 @@ class UserdevUniversalShadeProcessor : JarProcessor {
                     // META-INF/mods.toml, coremods.json, services/ and
                     // accesstransformer.cfg are runtime-load-bearing
                     // (forge mod discovery + FML service bindings)
-                    if (e.name == "META-INF/MANIFEST.MF" ||
+                    if ((e.name == "META-INF/MANIFEST.MF" && !s.keepManifest) ||
                         e.name.endsWith(".SF") || e.name.endsWith(".RSA") ||
                         e.name.endsWith(".DSA") || e.name.endsWith(".EC")
                     ) continue

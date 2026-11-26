@@ -56,9 +56,13 @@ internal fun userdevInstallerJar(
     environment: MinecraftEnvironment,
     resolved: Provider<ResolvedForge>
 ): Provider<File> = resolved.map { r ->
-    (r.profile as? ForgeProfile.Userdev) ?: return@map null
-    when (environment.side.get()) {
-        Side.MERGED, Side.COMMON -> r.jar.toFile()
+    val profile = (r.profile as? ForgeProfile.Userdev) ?: return@map null
+    when {
+        // combined packs live in the userdev artifact itself — the
+        // installer's client-side pack is not the dev pipeline input
+        profile.config.combinedBinaryPatches -> r.jar.toFile()
+        environment.side.get() == Side.MERGED ||
+                environment.side.get() == Side.COMMON -> r.jar.toFile()
         else -> {
             val base = r.descriptor.loaderCoords(
                 environment.version.get(),
@@ -69,6 +73,21 @@ internal fun userdevInstallerJar(
             ).apply { isTransitive = false }.files.single()
         }
     }
+}
+
+/** Entry inside [userdevInstallerJar]'s artifact carrying the patch
+ *  pack for this environment. Combined profiles always name their
+ *  userdev-local joined pack (`patches.lzma` on NeoForge 1.21.11+);
+ *  older split-side profiles use the installer's `data/<side>.lzma`. */
+internal fun userdevBinpatchesKey(
+    profile: ForgeProfile.Userdev,
+    side: Side
+): String? = when {
+    profile.config.combinedBinaryPatches -> profile.config.binpatches
+    side == Side.MERGED || side == Side.COMMON -> profile.config.binpatches
+    side == Side.CLIENT -> "data/client.lzma"
+    side == Side.SERVER -> "data/server.lzma"
+    else -> profile.config.binpatches
 }
 
 /**
@@ -125,11 +144,7 @@ internal fun contributeBinpatchStep(
     ))
     spec.binpatchesKey.set(resolved.map {
         val p = it.profile as? ForgeProfile.Userdev ?: return@map null
-        when (environment.side.get()) {
-            Side.MERGED, Side.COMMON -> p.config.binpatches
-            Side.CLIENT -> "data/client.lzma"
-            Side.SERVER -> "data/server.lzma"
-        }
+        userdevBinpatchesKey(p, environment.side.get())
     })
     // in-process patcher — the userdev `binpatcher` tool spec
     // (binarypatcher JVM + args) is not consulted

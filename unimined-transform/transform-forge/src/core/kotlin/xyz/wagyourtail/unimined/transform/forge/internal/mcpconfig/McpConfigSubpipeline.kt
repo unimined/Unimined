@@ -41,10 +41,19 @@ internal class McpConfigDescriptorFormat : PipelineDescriptorFormat {
             val config = jar.getInputStream(jar.getJarEntry("config.json")).use {
                 json.parseToJsonElement(it.readBytes().decodeToString()).jsonObject
             }
-            val side = ctx.side ?: "client"
+            val requestedSide = ctx.side ?: "client"
+            val stepsObject = config["steps"]!!.jsonObject
+            // NeoForm spec ≥6 (26.x) ships only a joined chain. MDG
+            // invokes those descriptors with `--dist joined` even for
+            // client/server installs, so a missing requested side falls
+            // back to joined; descriptors with neither still fail below.
+            val side = if (requestedSide in stepsObject) requestedSide
+            else if ("joined" in stepsObject) "joined"
+            else requestedSide
             val data = config["data"]!!.jsonObject.mapValues { (_, v) ->
                 (v as? kotlinx.serialization.json.JsonObject)
-                    ?.get(side)?.jsonPrimitive?.content
+                    ?.let { it[side] ?: it["client"] }
+                    ?.jsonPrimitive?.content
                     ?: v.jsonPrimitive.content
             }
             val functions = config["functions"]!!.jsonObject.mapValues { (n, f) ->

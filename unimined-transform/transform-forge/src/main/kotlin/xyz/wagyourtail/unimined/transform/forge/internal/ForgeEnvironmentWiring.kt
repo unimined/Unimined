@@ -389,8 +389,28 @@ internal object ForgeEnvironmentWiring {
                     // unpatched CoreFMLLibraries would shadow the
                     // checksum-patched copy in the merged jar
                     resolved.orNull?.let { r ->
-                        if (r.profile !is ForgeProfile.ZipPatches)
-                            deps.add(project.dependencies.create(r.notation))
+                        if (r.profile !is ForgeProfile.ZipPatches) {
+                            val userdev = r.profile as? ForgeProfile.Userdev
+                            val separateUniversal = userdev?.config?.universal
+                                ?.takeIf {
+                                    userdevUniversalLinkage(environment.version.get()) ==
+                                            UserdevUniversalLinkage.SEPARATE
+                                }
+                            // FML 12 discovers NeoForge from the universal
+                            // jar's manifest as its own classpath root — the
+                            // metadata-only userdev artifact is not loader API
+                            val notation: String = separateUniversal ?: r.notation
+                            val dependency = project.dependencies.create(notation)
+                            if (separateUniversal != null && dependency is
+                                    org.gradle.api.artifacts.ExternalModuleDependency) {
+                                // the neoforge module pom is a dependency
+                                // aggregate (including neoform itself); MDG's
+                                // separate-universal shape wants the loader jar
+                                // only — userdev `libraries` supply the rest
+                                dependency.isTransitive = false
+                            }
+                            deps.add(dependency)
+                        }
                     }
                 }
             }

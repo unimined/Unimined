@@ -138,6 +138,24 @@ class UserdevConfig(val json: JsonObject) {
         get() =
             json["notchObf"]?.jsonPrimitive?.booleanOrNull == true
 
+    /** `features.<key>` boolean — NeoForge userdev uses these to
+     *  describe pipeline-shape changes (`combinedBinaryPatches`,
+     *  `noLegacyClasspath`). Absent/malformed values are false. */
+    fun featureFlag(key: String): Boolean =
+        (json["features"] as? JsonObject)?.get(key)
+            ?.jsonPrimitive?.booleanOrNull == true
+
+    /** `features.combinedBinaryPatches` — the userdev jar carries one
+     *  joined patch pack at [binpatches] instead of the installer
+     *  artifact's `data/<side>.lzma` split packs. */
+    val combinedBinaryPatches: Boolean
+        get() = featureFlag("combinedBinaryPatches")
+
+    /** `features.noLegacyClasspath` — FML no longer reads the
+     *  `-DlegacyClassPath` classpath side-channel (NeoForge 1.21.11+). */
+    val noLegacyClasspath: Boolean
+        get() = featureFlag("noLegacyClasspath")
+
     /** `ats` — path prefix(es) inside the installer jar under which
      *  the userdev AT files live (1.x reads this as a single
      *  `startsWith` prefix; newer userdev declares a list —

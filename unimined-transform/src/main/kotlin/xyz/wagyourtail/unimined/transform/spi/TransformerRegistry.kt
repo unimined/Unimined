@@ -29,6 +29,15 @@ interface TransformerClaim {
     /** The transform for a claimed env. */
     fun transformer(env: TransformerEnvContext): MinecraftTransformer
 
+    /**
+     * Environment-facing contributions independent of the legacy
+     * transformer-task pipeline — feature bindings and other metadata
+     * production wiring consumes. Runs once per environment before
+     * [transformer] selection and at post-DSL environment binding, so
+     * implementations must be idempotent and must not register tasks.
+     */
+    fun contribute(env: TransformerEnvContext) {}
+
     /** Context a claim receives to build its transform — the
      *  descriptor row (null for rowless custom envs), the env's
      *  declared pipeline/features spec, and the project for task
@@ -74,14 +83,21 @@ class TransformerRegistry {
      * descriptor's family wins; the fallback (`custom`) claims
      * rowless envs and unclaimed families; null when nothing claims.
      */
-    fun select(ctx: TransformerClaim.TransformerEnvContext): MinecraftTransformer? {
+    fun select(ctx: TransformerClaim.TransformerEnvContext): MinecraftTransformer? =
+        selectClaim(ctx)?.transformer(ctx)
+
+    /** Resolve the claiming implementation without instantiating its
+     *  transformer — production wiring needs the claim's
+     *  [TransformerClaim.contribute] metadata without registering the
+     *  legacy transformer task graph. */
+    fun selectClaim(ctx: TransformerClaim.TransformerEnvContext): TransformerClaim? {
         val family = ctx.descriptor?.family
         val claims = all
         if (family != null) {
             claims.firstOrNull { family in it.claimedFamilies }
-                ?.let { return it.transformer(ctx) }
+                ?.let { return it }
         }
-        return claims.firstOrNull { it.fallbackClaim }?.transformer(ctx)
+        return claims.firstOrNull { it.fallbackClaim }
     }
 
     companion object {

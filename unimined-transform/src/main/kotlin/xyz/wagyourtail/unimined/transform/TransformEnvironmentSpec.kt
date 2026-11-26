@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.transform
 
 import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
+import xyz.wagyourtail.unimined.api.util.afterDslEval
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
@@ -260,6 +261,41 @@ class TransformEnvironmentSpec internal constructor(
                 override val minecraft = minecraft()
             }
         }
+        // a loader-specific context replaces the rowless default —
+        // allow the correct claim to contribute even if an earlier
+        // context object was installed first. Evaluation is post-DSL:
+        // `loader(...)` commonly lands inside the env configuration
+        // action after the binding callback installs this context
+        contributedClaim = null
+        contributedFamily = null
+        project.afterDslEval {
+            contributeTransformerClaim()
+        }
+    }
+
+    private var contributedClaim: TransformerClaim? = null
+    private var contributedFamily: String? = null
+
+    /**
+     * Run the selected claim's production-facing [TransformerClaim.contribute]
+     * once per claimed family. The legacy transformer-task pipeline is no
+     * longer the only consumer of claim metadata (`nestedJars` feeds
+     * production repacking), so environment binding invokes this post-DSL;
+     * [effectiveTransformers] and production feature consumers invoke the
+     * same path. Family is tracked because post-evaluation env construction
+     * can otherwise probe the rowless fallback before `loader(...)` runs.
+     */
+    internal fun contributeTransformerClaim(): TransformerClaim? {
+        val ctx = transformerClaimContext?.invoke() ?: return null
+        val family = ctx.descriptor?.family
+        if (contributedClaim != null && contributedFamily == family) {
+            return contributedClaim
+        }
+        val claim = transformerRegistry.selectClaim(ctx) ?: return null
+        claim.contribute(ctx)
+        contributedClaim = claim
+        contributedFamily = family
+        return claim
     }
 
     internal fun effectiveTransformers(
@@ -276,10 +312,13 @@ class TransformEnvironmentSpec internal constructor(
                 if (inherited.isNotEmpty()) return inherited
             }
             // no explicit or inherited transform — let registry claims
-            // resolve (`custom` wins envs no bundled transform claims)
-            transformerClaimContext?.invoke()
-                ?.let { ctx -> transformerRegistry.select(ctx) }
-                ?.let { return listOf(it) }
+            // resolve (`custom` wins envs no bundled transform claims).
+            // Contribution is idempotent and shared with production
+            // environment wiring; transformer instantiation remains
+            // confined to this legacy pipeline path
+            transformerClaimContext?.invoke()?.let { ctx ->
+                contributeTransformerClaim()?.transformer(ctx)
+            }?.let { return listOf(it) }
             return emptyList()
         } finally {
             visiting.remove(key)

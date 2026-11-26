@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge
 
+import kotlinx.serialization.json.jsonObject
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -59,7 +60,7 @@ class ForgeEnvironmentWiringTest {
     /** Serve a probe-valid userdev jar for [coords] (`g:a:v`) from a
      *  local maven repo — `config.json` + `binpatches.pack.lzma` is the
      *  minimum `ForgeInstallerProbe` needs for `Userdev`. */
-    private fun serveUserdev(coords: String) {
+    private fun serveUserdev(coords: String, configJson: String? = null) {
         val repo = dir.resolve("repo").toFile()
         val (g, a, v) = coords.split(":")
         val jarDir = repo.resolve("${g.replace('.', '/')}/$a/$v")
@@ -76,7 +77,7 @@ class ForgeEnvironmentWiringTest {
         else "de.oceanlabs.mcp:mcp_config:1.20.1@zip"
         JarOutputStream(jarDir.resolve("$a-$v-userdev.jar").outputStream()).use { out ->
             out.putNextEntry(JarEntry("config.json"))
-            out.write("""{"mcp": "$mcp"}""".toByteArray())
+            out.write((configJson ?: """{"mcp": "$mcp"}""").toByteArray())
             out.closeEntry()
             out.putNextEntry(JarEntry("binpatches.pack.lzma"))
             out.write("x".toByteArray())
@@ -85,6 +86,23 @@ class ForgeEnvironmentWiringTest {
         // exclusiveContent keeps resolution local — the plugin-
         // contributed forge maven precedes this repo otherwise and
         // the test would probe a live artifact (repo rule + flaky)
+        pinLocalRepo(g)
+    }
+
+    /** Serve a probe-irrelevant `:universal` classifier — the artifact
+     *  only needs to exist for classpath-selection assertions. */
+    private fun serveUniversal(coords: String) {
+        val repo = dir.resolve("repo").toFile()
+        val (g, a, v) = coords.split(":")
+        val jarDir = repo.resolve("${g.replace('.', '/')}/$a/$v")
+        jarDir.mkdirs()
+        JarOutputStream(
+            jarDir.resolve("$a-$v-universal.jar").outputStream()
+        ).use { out ->
+            out.putNextEntry(JarEntry("META-INF/neoforge.mods.toml"))
+            out.write("x".toByteArray())
+            out.closeEntry()
+        }
         pinLocalRepo(g)
     }
 
@@ -639,6 +657,226 @@ class ForgeEnvironmentWiringTest {
             xyz.wagyourtail.unimined.transform.forge.internal.binpatch
                 .installerRenameToolOverride(project, env, resolved).orNull,
             "joined envs track the descriptor-declared rename tool")
+    }
+
+    /** #227 — FML 12/NeoForge 26.x discovers NeoForge from the
+     *  universal jar's own manifest, so MDG keeps that jar as a
+     *  separate classpath root instead of shading it into Minecraft.
+     *  The loader classpath must therefore carry `:universal`, not the
+     *  metadata-only `:userdev` probe artifact. */
+    @Test
+    fun `post-1_21_11 neoforge loader classpath uses the separate universal artifact`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("26.3")
+        ext.main.provider.set("fake")
+        val coords = "net.neoforged:neoforge:26.3.0.115"
+        serveUserdev(
+            coords,
+            """{"mcp":"net.neoforged:neoform:26.3-1@zip",""" +
+                    """"universal":"$coords:universal",""" +
+                    """"features":{"noLegacyClasspath":true,""" +
+                    """"combinedBinaryPatches":true}}"""
+        )
+        serveUniversal(coords)
+        forgeEnv(ext, "neoforge", "26.3", "115")
+
+        val files = project.configurations
+            .getByName("forgeLoaderNeoforge").files
+        assertTrue(
+            files.any { it.name == "neoforge-26.3.0.115-universal.jar" },
+            "the universal jar must be a separate compile/runtime root: $files")
+        assertFalse(
+            files.any { it.name == "neoforge-26.3.0.115-userdev.jar" },
+            "the metadata-only userdev probe artifact is not loader API: $files")
+    }
+
+    /** #224 end-to-end wiring shape — a split-side env on a
+     *  combined-patch userdev resolves the userdev artifact itself
+     *  (`patches.lzma`); no `:installer` artifact is served here, so
+     *  the legacy installer lookup would fail resolution outright. */
+    @Test
+    fun `split-side combined userdev binpatch step consumes the userdev pack`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("26.3")
+        ext.main.provider.set("fake")
+        val coords = "net.neoforged:neoforge:26.3.0.115"
+        serveUserdev(
+            coords,
+            """{"mcp":"net.neoforged:neoform:26.3-1@zip",""" +
+                    """"binpatches":"patches.lzma","features":""" +
+                    """{"combinedBinaryPatches":true}}"""
+        )
+        val env = forgeEnv(ext, "neoforge", "26.3", "115")
+        env.side.set(xyz.wagyourtail.unimined.api.spec.Side.SERVER)
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val spec = project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+            .sourceSet("neoforge")
+            .contributedPreSteps(
+                xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
+                xyz.wagyourtail.unimined.remap.spi.StepScope.ENVIRONMENT_ARTIFACT)
+            .filterIsInstance<xyz.wagyourtail.unimined.transform.forge
+                .internal.userdev.UserdevBinpatchStepSpec>()
+            .single()
+        assertEquals("patches.lzma", spec.binpatchesKey.get())
+        assertEquals("neoforge-26.3.0.115-userdev.jar",
+            spec.installerJar.get().asFile.name)
+    }
+
+    /** #227 — the 1.21.9–1.21.11 middle era still shades NeoForge,
+     *  but must retain the universal manifest FML scans for. The shade
+     *  is a pre-remap `jar-processors` contribution, so assert the
+     *  serialized processor spec wiring rather than only the version
+     *  gate helper. */
+    @Test
+    fun `neoforge 1_21_9 universal shade keeps the system-mod manifest`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.21.9")
+        ext.main.provider.set("fake")
+        val coords = "net.neoforged:neoforge:21.9.16-beta"
+        serveUserdev(
+            coords,
+            """{"mcp":"net.neoforged:neoform:1.21.9-20250930.151910@zip",""" +
+                    """"universal":"$coords:universal","binpatches":"joined.lzma"}"""
+        )
+        serveUniversal(coords)
+        forgeEnv(ext, "neoforge", "1.21.9", "21.9.16-beta")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val payloads = project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+            .sourceSet("neoforge")
+            .contributedPreSteps(
+                xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
+                xyz.wagyourtail.unimined.remap.spi.StepScope.ENVIRONMENT_ARTIFACT)
+            .filterIsInstance<xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec>()
+            .flatMap { it.processorSpecs.get() }
+        val shade = payloads.singleOrNull {
+            it.startsWith("userdev-universal-shade ")
+        }
+        assertNotNull(shade,
+            "1.21.9 must keep the in-jar universal linkage: $payloads")
+        val spec = xyz.wagyourtail.unimined.transform.forge.processor
+            .UserdevUniversalShadeProcessor()
+            .deserializeSpec(shade!!.substringAfter(' ')) as
+                xyz.wagyourtail.unimined.transform.forge.processor
+                    .UserdevUniversalShadeProcessor.Spec
+        assertTrue(spec.keepManifest,
+            "FML 10/11 discovers NeoForge by the shaded universal manifest")
+    }
+
+    /** #227 — post-1.21.11 the universal must not be a jar processor
+     *  at all: it is the separate loader-classpath artifact asserted
+     *  by the loader-classpath test. */
+    @Test
+    fun `post-1_21_11 neoforge does not contribute universal shading`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("26.3")
+        ext.main.provider.set("fake")
+        val coords = "net.neoforged:neoforge:26.3.0.115"
+        serveUserdev(
+            coords,
+            """{"mcp":"net.neoforged:neoform:26.3-1@zip",""" +
+                    """"universal":"$coords:universal","binpatches":"patches.lzma",""" +
+                    """"features":{"combinedBinaryPatches":true}}"""
+        )
+        serveUniversal(coords)
+        forgeEnv(ext, "neoforge", "26.3", "115")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val payloads = project.extensions.getByType(
+            xyz.wagyourtail.unimined.remap.RemapExtension::class.java)
+            .sourceSet("neoforge")
+            .contributedPreSteps(
+                xyz.wagyourtail.unimined.remap.spi.RemapSurface.JAR,
+                xyz.wagyourtail.unimined.remap.spi.StepScope.ENVIRONMENT_ARTIFACT)
+            .filterIsInstance<xyz.wagyourtail.unimined.transform.JarProcessorsStepSpec>()
+            .flatMap { it.processorSpecs.get() }
+        assertFalse(payloads.any { it.startsWith("userdev-universal-shade ") },
+            "separate-universal eras must not shade the loader into Minecraft: $payloads")
+    }
+
+    /** #228 — family claims carry production-relevant feature bindings
+     *  (`nestedJars("jarjar")` feeds `include` repacking). Environment
+     *  binding must evaluate the claim layer itself; the legacy
+     *  transformer pipeline is not the only consumer. */
+    @Test
+    fun `forge environment binding materializes claim feature bindings`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.21.1")
+        ext.main.provider.set("fake")
+        serveUserdev("net.neoforged:neoforge:21.1.77")
+        forgeEnv(ext, "neoforge", "1.21.1", "77")
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val bindings = project.extensions.getByType(
+            xyz.wagyourtail.unimined.transform.TransformExtension::class.java
+        ).sourceSet("neoforge").features.bindings
+        assertEquals("jarjar", bindings["nestedJars"],
+            "the forge claim's nested-jar format must be visible to production wiring")
+        assertEquals("modClasses", bindings["modDiscovery"])
+    }
+
+    /** #224 — `features.combinedBinaryPatches` means the userdev jar's
+     *  own joined pack is authoritative even on split-side envs; the
+     *  installer's `data/<side>.lzma` belongs to the production
+     *  installer chain, not the dev patch pipeline. */
+    @Test
+    fun `combined binary patches select the joined userdev pack on split sides`() {
+        val config = xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig(
+            kotlinx.serialization.json.Json.parseToJsonElement(
+                """{"binpatches":"patches.lzma","features":""" +
+                        """{"combinedBinaryPatches":true}}"""
+            ).jsonObject
+        )
+        val profile = xyz.wagyourtail.unimined.transform.forge.internal
+            .ForgeProfile.Userdev(config)
+        for (side in listOf(
+            xyz.wagyourtail.unimined.api.spec.Side.CLIENT,
+            xyz.wagyourtail.unimined.api.spec.Side.SERVER,
+            xyz.wagyourtail.unimined.api.spec.Side.MERGED
+        )) {
+            assertEquals(
+                "patches.lzma",
+                xyz.wagyourtail.unimined.transform.forge.internal.binpatch
+                    .userdevBinpatchesKey(profile, side),
+                "combined patches must not become data/${side.name.lowercase()}.lzma")
+        }
+    }
+
+    /** #227 era gate — mirrors MDG: manifest-carrying in-jar NeoForge
+     *  for 1.21.9–1.21.11, a separate universal root afterwards. */
+    @Test
+    fun `userdev universal linkage follows the FML discovery era`() {
+        fun linkage(mc: String) =
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .userdevUniversalLinkage(mc)
+        assertEquals(
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .UserdevUniversalLinkage.SHADED,
+            linkage("1.21.8"))
+        assertEquals(
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .UserdevUniversalLinkage.SHADED_WITH_MANIFEST,
+            linkage("1.21.9"))
+        assertEquals(
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .UserdevUniversalLinkage.SHADED_WITH_MANIFEST,
+            linkage("1.21.11"))
+        assertEquals(
+            xyz.wagyourtail.unimined.transform.forge.internal
+                .UserdevUniversalLinkage.SEPARATE,
+            linkage("26.3"))
     }
 
     private data class Product(
