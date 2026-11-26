@@ -142,6 +142,26 @@ class FabricEnvironmentWiringTest {
            "custom": {"loom:injected_interfaces": {"$target": ["a/Iface"]}}}"""
 
     @Test
+    fun `local injected interfaces follow the authored mod json`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.devNamespace.set("named")
+        val env = fabricEnv(project, ext)
+        env.devNamespace.set("named")
+        val fmj = dir.resolve("src/fabric/resources/fabric.mod.json").toFile()
+        fmj.parentFile.mkdirs()
+        fmj.writeText(injectingModJson("a/First"))
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        assertTrue(localInjectionDocs(project).single().readText().contains("a/First"))
+        // the mod json is edited in place — the synthesized doc follows it
+        fmj.writeText(injectingModJson("a/Second"))
+        val doc = localInjectionDocs(project).single().readText()
+        assertTrue(doc.contains("a/Second") && !doc.contains("a/First"), doc)
+    }
+
+    @Test
     fun `mod json under the build dir yields no local injected interfaces`() {
         // the env's own generated (merged) mod json lands in a build-dir
         // resource root — its injections must not come back as own docs
