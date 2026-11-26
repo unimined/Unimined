@@ -170,7 +170,7 @@ via `remap("tiny")`, access steps, custom steps). Environment-scoped
 steps and `modArtifacts` are not applied; those only make sense on
 environment jars.
 
-## Production-jar validation (`footgunChecks`)
+## Production-jar validation (`checks.jarLint`)
 
 After the pipeline, `remap<JarTask>` (and `remap<Name>Artifact`) stamps
 the manifest with `Unimined-Mapping-Namespace: <target>` — a remapped
@@ -189,14 +189,16 @@ mistakes that compile fine but fail at runtime:
 - the manifest namespace marker is present and matches the target
   namespace
 
-Findings default to `ERROR` — the task fails. The level is a
-`remap`-block property:
+Findings default to `ERROR` — the task fails. The level lives in the
+`checks { }` spec alongside any future strict checks:
 
 === "Kotlin `build.gradle.kts`"
     ```kotlin
     unimined {
         remap {
-            footgunChecks.set(FootgunCheckLevel.WARN) // log and continue; OFF disables
+            checks {
+                jarLint.set(CheckLevel.WARN) // log and continue; OFF disables
+            }
         }
     }
     ```
@@ -205,7 +207,9 @@ Findings default to `ERROR` — the task fails. The level is a
     ```groovy
     unimined {
         remap {
-            footgunChecks.set(FootgunCheckLevel.WARN) // log and continue; OFF disables
+            checks {
+                jarLint.set(CheckLevel.WARN) // log and continue; OFF disables
+            }
         }
     }
     ```

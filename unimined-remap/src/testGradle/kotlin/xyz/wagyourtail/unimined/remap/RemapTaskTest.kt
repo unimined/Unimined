@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.remap.fakes.FakeStep
+import xyz.wagyourtail.unimined.api.spec.CheckLevel
 import xyz.wagyourtail.unimined.remap.fakes.FakeStepSpec
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.task.RemapJarTask
@@ -167,7 +168,7 @@ class RemapTaskTest {
     }
 
     @Test
-    fun `footgunChecks error fails on dangling access widener`() {
+    fun `jarLint error fails on dangling access widener`() {
         val project = project()
         val input = dir.resolve("in.jar").also {
             writeJar(it, mapOf(
@@ -183,7 +184,7 @@ class RemapTaskTest {
     }
 
     @Test
-    fun `footgunChecks warn logs but succeeds`() {
+    fun `jarLint warn logs but succeeds`() {
         val project = project()
         val input = dir.resolve("in.jar").also {
             writeJar(it, mapOf(
@@ -192,13 +193,13 @@ class RemapTaskTest {
             ))
         }
         val task = remapJarTask(project, input)
-        task.footgunChecks.set(FootgunCheckLevel.WARN)
+        task.jarLint.set(CheckLevel.WARN)
         task.copy()
         assertTrue(Files.exists(dir.resolve("out.jar")))
     }
 
     @Test
-    fun `footgunChecks off skips validation`() {
+    fun `jarLint off skips validation`() {
         val project = project()
         val input = dir.resolve("in.jar").also {
             writeJar(it, mapOf(
@@ -207,7 +208,7 @@ class RemapTaskTest {
             ))
         }
         val task = remapJarTask(project, input)
-        task.footgunChecks.set(FootgunCheckLevel.OFF)
+        task.jarLint.set(CheckLevel.OFF)
         task.copy()
         assertTrue(Files.exists(dir.resolve("out.jar")))
     }

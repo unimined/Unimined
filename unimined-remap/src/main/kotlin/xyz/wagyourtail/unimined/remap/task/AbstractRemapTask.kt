@@ -90,13 +90,13 @@ abstract class AbstractRemapTask : DefaultTask() {
      * orchestration). `@Internal`: arbitrary `MappingData` impls are not
      * configuration-cache serializable, so prefer [mappingFile].
      */
-    /** Post-remap validation of the emitted production jar — packaging
-     *  footguns (dangling AW/mixin/nested-jar/icon paths, missing
-     *  entrypoint/main classes, wrong namespace marker). Unset means
-     *  [xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR]. */
+    /** Post-remap packaging lint of the emitted production jar —
+     *  dangling AW/mixin/nested-jar/icon paths, missing
+     *  entrypoint/main classes, wrong namespace marker. Unset means
+     *  [xyz.wagyourtail.unimined.api.spec.CheckLevel.ERROR]. */
     @get:Optional
     @get:Input
-    abstract val footgunChecks: Property<xyz.wagyourtail.unimined.remap.FootgunCheckLevel>
+    abstract val jarLint: Property<xyz.wagyourtail.unimined.api.spec.CheckLevel>
 
     @get:Internal
     abstract val mappingData: Property<MappingData>
@@ -158,8 +158,8 @@ abstract class AbstractRemapTask : DefaultTask() {
         if (surface.get() == RemapSurface.JAR) {
             stampAndLintProductionJar(
                 outPath, tgtNs,
-                footgunChecks.getOrElse(
-                    xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
+                jarLint.getOrElse(
+                    xyz.wagyourtail.unimined.api.spec.CheckLevel.ERROR
                 ),
                 project, logger, path
             )

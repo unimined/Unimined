@@ -96,13 +96,14 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
     @get:Input
     abstract val accessModel: Property<String>
 
-    /** Post-remap validation of the emitted production jar — packaging
-     *  footguns (dangling AW/mixin/nested-jar/icon paths, missing
-     *  entrypoint/main classes, wrong namespace marker). Conventions to
-     *  `remap.footgunChecks` at the wiring site; unset means [FootgunCheckLevel.ERROR]. */
+    /** Post-remap packaging lint of the emitted production jar —
+     *  dangling AW/mixin/nested-jar/icon paths, missing
+     *  entrypoint/main classes, wrong namespace marker. Conventions to
+     *  `remap.checks.jarLint` at the wiring site; unset means
+     *  [xyz.wagyourtail.unimined.api.spec.CheckLevel.ERROR]. */
     @get:Optional
     @get:Input
-    abstract val footgunChecks: Property<xyz.wagyourtail.unimined.remap.FootgunCheckLevel>
+    abstract val jarLint: Property<xyz.wagyourtail.unimined.api.spec.CheckLevel>
 
     /**
      * Resolved `include`-bucket jars bound for the production artifact —
@@ -206,8 +207,8 @@ abstract class RemapJarTask : Jar(), ProducesArtifacts {
                 .forEach { project.reportProblem("nested-jars", it) }
             stampAndLintProductionJar(
                 jarPath, targetNamespace.get(),
-                footgunChecks.getOrElse(
-                    xyz.wagyourtail.unimined.remap.FootgunCheckLevel.ERROR
+                jarLint.getOrElse(
+                    xyz.wagyourtail.unimined.api.spec.CheckLevel.ERROR
                 ),
                 project, logger, path
             )

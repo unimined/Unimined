@@ -151,7 +151,7 @@ internal object ProductionJarWiring {
             // feeds inheritance/propagation for engines that need it
             t.remapClasspath.from(sourceSet.compileClasspath)
             t.remapClasspath.from(splitClientClasspath(project, environment))
-            t.footgunChecks.set(remap.footgunChecks)
+            t.jarLint.set(remap.checks.jarLint)
             nestedJars?.let { p ->
                 t.nestedJars.from(p.files)
                 t.nestedJarEntries.set(p.entries)
@@ -231,7 +231,7 @@ internal object ProductionJarWiring {
             })
             t.remapClasspath.from(sourceSet.compileClasspath)
             t.remapClasspath.from(splitClientClasspath(project, environment))
-            t.footgunChecks.set(remap.footgunChecks)
+            t.jarLint.set(remap.checks.jarLint)
         }
         sourcesJar.archiveClassifier.set(
             identity.map { isIdentity ->

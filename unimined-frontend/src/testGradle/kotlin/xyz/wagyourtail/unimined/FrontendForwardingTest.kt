@@ -15,7 +15,7 @@ import xyz.wagyourtail.unimined.migrate.MigrateExtension
 import xyz.wagyourtail.unimined.migrate.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.mod.ModExtension
-import xyz.wagyourtail.unimined.remap.FootgunCheckLevel
+import xyz.wagyourtail.unimined.api.spec.CheckLevel
 import xyz.wagyourtail.unimined.remap.RemapExtension
 import xyz.wagyourtail.unimined.runs.RunsExtension
 
@@ -57,14 +57,14 @@ class FrontendForwardingTest {
         var remapCaptured: RemapExtension? = null
         facade.remap(Action {
             remapCaptured = it
-            it.footgunChecks.set(FootgunCheckLevel.OFF)
+            it.checks.jarLint.set(CheckLevel.OFF)
         })
         assertSame(
             p.extensions.getByType(RemapExtension::class.java),
             remapCaptured,
             "unimined.remap must delegate to uniminedRemap"
         )
-        assertEquals(FootgunCheckLevel.OFF, remapCaptured!!.footgunChecks.get())
+        assertEquals(CheckLevel.OFF, remapCaptured!!.checks.jarLint.get())
 
         var runsCaptured: RunsExtension? = null
         facade.runs(Action {

@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.remap
 
 import groovy.lang.Closure
 import xyz.wagyourtail.unimined.api.util.callDelegate
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -59,14 +60,23 @@ abstract class RemapExtension @Inject constructor(
     internal val viewWiring = RemappedViewWiring(this)
 
     /**
-     * Post-remap validation level for production jars — packaging
-     * footguns compile fine and only fail at runtime: dangling
-     * access-widener/mixin/nested-jar/icon paths, missing
-     * entrypoint/main classes, wrong remapped-namespace marker.
-     * Defaults to [FootgunCheckLevel.ERROR]; `remap { footgunChecks = WARN }`
-     * downgrades to warnings, `OFF` disables.
+     * `remap { checks { } }` — enforcement levels for the remap
+     * module's strict validations (production-jar packaging lint via
+     * [RemapChecksSpec.jarLint]). 1.x `unimined.footgunChecks` covered
+     * environment-combination checks instead — those live on
+     * `minecraft { checks { combination } }` now.
      */
-    abstract val footgunChecks: org.gradle.api.provider.Property<FootgunCheckLevel>
+    val checks: RemapChecksSpec =
+        objects.newInstance(RemapChecksSpec::class.java)
+
+    /** `checks { jarLint = WARN }` — [Action] form. */
+    fun checks(action: Action<RemapChecksSpec>) = action.execute(checks)
+
+    /** Groovy DSL form of [checks]. */
+    fun checks(
+        @DelegatesTo(value = RemapChecksSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) = checks(Action { action.delegatingTo(it) })
 
     private val environments = mutableMapOf<String, RemapEnvironmentSpec>()
 
@@ -107,7 +117,6 @@ abstract class RemapExtension @Inject constructor(
     }
 
     init {
-        footgunChecks.convention(FootgunCheckLevel.ERROR)
         EnvironmentCopyRegistry.registerHandler(
             project,
             RemapEnvironmentCopyHandler(project)
@@ -595,7 +604,7 @@ abstract class RemapExtension @Inject constructor(
             t.targetNamespace.set(spec.to)
             t.remapClasspath.from(spec.classpath)
             t.stepSpecs.set(artifactSteps())
-            t.footgunChecks.set(footgunChecks)
+            t.jarLint.set(checks.jarLint)
         }
     }
 
