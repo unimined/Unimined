@@ -1742,7 +1742,7 @@ questions:</p>
   sources artifact into the dev namespace for IDE attach.</li>
 <li><strong>Dependencies without shipped sources</strong> — <code>genModSources</code> /
   <code>gen&lt;Env&gt;ModSources</code> <em>decompiles</em> the env's <code>modImplementation</code> /
-  <code>modRuntimeOnly</code> dependencies (already remapped to the dev
+  <code>modCompileOnly</code> / <code>modRuntimeOnly</code> dependencies (already remapped to the dev
   namespace) through the same engine + <code>RemapSurface.SOURCES</code>
   pipeline as <code>genSources</code>, then publishes each result under the
   dep's own coordinates in the env's generated local repo. The dep

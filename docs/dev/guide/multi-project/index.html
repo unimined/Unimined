@@ -2134,7 +2134,7 @@ the same propagation — a child's own <code>access { }</code> block wins when
 it redeclares a name or format.</p>
 <p>Dependency-declared access applies to a <code>common</code> env too (loom
 <code>transitiveAccessWideners</code> parity): <code>modImplementation</code>/
-<code>modRuntimeOnly</code> jars are scanned for conventional access docs —
+<code>modCompileOnly</code>/<code>modRuntimeOnly</code> jars are scanned for conventional access docs —
 <code>*.accesswidener</code>/<code>.classtweaker</code> entries, <code>fabric.mod.json</code>
 <code>accessWidener</code>/<code>classTweakers</code> refs, <code>META-INF/accesstransformer.cfg</code>
 + <code>FMLAT</code> manifest entries, and <code>custom.*injected_interfaces</code> keys

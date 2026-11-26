@@ -1744,6 +1744,12 @@ onto this convention keep their old shape as a deprecated alias —
 <p>Everything below lives inside an env block (<code>minecraft { … }</code> or
 <code>sourceSet("x") { … }</code>):</p>
 <ul>
+<li><strong>Dependencies</strong> — <code>dependencies { }</code> declares ordinary
+  (<code>implementation</code>/<code>compileOnly</code>/<code>runtimeOnly</code>/<code>api</code>) and mod
+  (<code>modImplementation</code>/<code>modCompileOnly</code>/<code>modRuntimeOnly</code>/<code>include</code>)
+  buckets scoped to the environment — the KMP-style surface over the
+  string configuration names; see
+  <a href="../dependencies/#environment-scoped-dependencies">Dependencies</a>.</li>
 <li><strong>Java</strong> — <code>javaVersion</code> sets the compile/run floor (conventioned
   from the loader descriptor); <code>useToolchains</code> toggles Gradle
   toolchains for env-scoped compiles (conventioned from the

@@ -1,0 +1,246 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>EnvironmentDependencySpec</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    unimined
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.1.0
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":unimined-minecraft/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":unimined-minecraft/main" data-filter=":unimined-minecraft/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    unimined
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="unimined-minecraft::xyz.wagyourtail.unimined.minecraft/EnvironmentDependencySpec///PointingToDeclaration//-1355253599">
+  <div class="breadcrumbs"><a href="../../index.html">unimined-minecraft</a><span class="delimiter">/</span><a href="../index.html">xyz.wagyourtail.unimined.minecraft</a><span class="delimiter">/</span><span class="current">EnvironmentDependencySpec</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Environment</span><wbr><span>Dependency</span><wbr><span><span>Spec</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">EnvironmentDependencySpec</a></div><p class="paragraph">The receiver of an environment's <code class="lang-kotlin">dependencies { }</code> block — a scoped syntactic lift over the environment's <i>existing</i> dependency buckets (KMP source-set-dependencies style). Every verb resolves the configuration the env's source set already owns and adds the notation to it; no new resolution machinery exists behind the block, and the string configuration names remain fully functional alongside it.</p><p class="paragraph">Vocabulary:</p><ul><li><p class="paragraph"><code class="lang-kotlin">implementation</code>/<code class="lang-kotlin">compileOnly</code>/<code class="lang-kotlin">runtimeOnly</code> — the source set's     ordinary java buckets (<code class="lang-kotlin">implementation</code> for <code class="lang-kotlin">main</code>,     <code class="lang-kotlin">&lt;env&gt;Implementation</code> for named envs). Non-mod jars on these pass     through un-remapped, like the global <code class="lang-kotlin">dependencies { }</code> block.</p></li><li><p class="paragraph"><code class="lang-kotlin">api</code> — materialized on first use where Gradle doesn't create it:     <code class="lang-kotlin">api</code> exists only for <code class="lang-kotlin">main</code> under <code class="lang-kotlin">java-library</code>, and custom     source sets have no <code class="lang-kotlin">&lt;env&gt;Api</code> bucket at all. First use creates     the bucket and wires <code class="lang-kotlin">&lt;env&gt;Implementation.extendsFrom(&lt;env&gt;Api)</code> —     java-library-equivalent semantics (compile+runtime visible     in-dev), which unimined's publish wiring then carries in the     env's api-elements channel like any existing <code class="lang-kotlin">&lt;env&gt;Api</code>.</p></li><li><p class="paragraph"><code class="lang-kotlin">modImplementation</code>/<code class="lang-kotlin">modCompileOnly</code>/<code class="lang-kotlin">modRuntimeOnly</code> — the env's     mod buckets: mod jars remapped from the mod source namespace into     the dev namespace. <code class="lang-kotlin">modCompileOnly</code> is compile-classpath-only —     never on runtime classpaths, never published. <code class="lang-kotlin">modApi</code> is     deliberately absent: publication semantics for compile-visible     mod deps are undecided (future work — loom's <code class="lang-kotlin">modApi</code> carries     dependents-visible access rules, which unimined's access-model     channel would need to express first).</p></li><li><p class="paragraph"><code class="lang-kotlin">include</code> — the jar-in-jar embed bucket. NOT a classpath     dependency: entries ship inside the production jar but are never     compiled or launched against — declare <code class="lang-kotlin">modImplementation</code> (or     <code class="lang-kotlin">implementation</code> for library jarjar deps) alongside when dev runs     need the contents.</p></li></ul><p class="paragraph">Dependency notation passes straight through to the project's <span data-unresolved-link="org.gradle.api.artifacts.dsl/DependencyHandler///PointingToDeclaration/">org.gradle.api.artifacts.dsl.DependencyHandler</span>, so every shape the global block accepts (coordinates, maps, <code class="lang-kotlin">project(...)</code>, <code class="lang-kotlin">files(...)</code>, providers) works here. Exotic per-dependency configuration (<code class="lang-kotlin">{ transitive = false }</code>, capability tweaks) has no scoped twin — declare it on the string configuration name instead.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="1956415686%2FFunctions%2F-1355253599" anchor-label="api" id="1956415686%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="api.html"><span><span>api</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1956415686%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="api.html"><span class="token function">api</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Api dependency of this environment's source set — <code class="lang-kotlin">api</code> / <code class="lang-kotlin">&lt;env&gt;Api</code>, materialized on first use. Gradle creates <code class="lang-kotlin">api</code> only for <code class="lang-kotlin">main</code> under the <code class="lang-kotlin">java-library</code> plugin and never creates <code class="lang-kotlin">&lt;env&gt;Api</code> for custom source sets (there is no java consumable variant for it); unimined creates the missing bucket and wires <code class="lang-kotlin">&lt;env&gt;Implementation.extendsFrom(&lt;env&gt;Api)</code>, giving it java-library-equivalent in-dev semantics. Pre-creating the bucket is safe against a later <code class="lang-kotlin">java-library</code> application (Gradle's own creation is tolerant), and unimined's dev-variant publishing already extends its api-elements channel from an existing <code class="lang-kotlin">&lt;env&gt;Api</code>, so the dependency surface stays meaningful for consumers of the env's artifact.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1614389825%2FFunctions%2F-1355253599" anchor-label="compileOnly" id="1614389825%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="compile-only.html"><span>compile</span><wbr><span><span>Only</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1614389825%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="compile-only.html"><span class="token function">compileOnly</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Compile-only dependency of this environment's source set — <code class="lang-kotlin">compileOnly</code> / <code class="lang-kotlin">&lt;env&gt;CompileOnly</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-46231126%2FFunctions%2F-1355253599" anchor-label="implementation" id="-46231126%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="implementation.html"><span><span>implementation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-46231126%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="implementation.html"><span class="token function">implementation</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Compile+runtime dependency of this environment's source set — <code class="lang-kotlin">implementation</code> / <code class="lang-kotlin">&lt;env&gt;Implementation</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1528720776%2FFunctions%2F-1355253599" anchor-label="include" id="-1528720776%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="include.html"><span><span>include</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1528720776%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="include.html"><span class="token function">include</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Jar embedded into this environment's production artifact (jar-in-jar — <code class="lang-kotlin">include</code> / <code class="lang-kotlin">&lt;env&gt;Include</code>). NOT a classpath dependency: entries ship inside the production jar but are never compiled or launched against — declare <a href="mod-implementation.html">modImplementation</a> (or <a href="implementation.html">implementation</a> for library jarjar deps) alongside when dev runs need the contents.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1930967713%2FFunctions%2F-1355253599" anchor-label="modCompileOnly" id="-1930967713%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mod-compile-only.html"><span>mod</span><wbr><span>Compile</span><wbr><span><span>Only</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1930967713%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="mod-compile-only.html"><span class="token function">modCompileOnly</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Mod jar needed only at compile time in this environment — remapped like <a href="mod-implementation.html">modImplementation</a> but never on runtime classpaths and never published. (<code class="lang-kotlin">modCompileOnly</code> / <code class="lang-kotlin">&lt;env&gt;ModCompileOnly</code>.)</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2043097548%2FFunctions%2F-1355253599" anchor-label="modImplementation" id="2043097548%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mod-implementation.html"><span>mod</span><wbr><span><span>Implementation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2043097548%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="mod-implementation.html"><span class="token function">modImplementation</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Mod jar to compile and run against in this environment — remapped from the mod source namespace into the dev namespace. (<code class="lang-kotlin">modImplementation</code> / <code class="lang-kotlin">&lt;env&gt;ModImplementation</code>.)</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-281022438%2FFunctions%2F-1355253599" anchor-label="modRuntimeOnly" id="-281022438%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mod-runtime-only.html"><span>mod</span><wbr><span>Runtime</span><wbr><span><span>Only</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-281022438%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="mod-runtime-only.html"><span class="token function">modRuntimeOnly</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Mod jar needed only at runtime in this environment — (<code class="lang-kotlin">modRuntimeOnly</code> / <code class="lang-kotlin">&lt;env&gt;ModRuntimeOnly</code>.)</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1030632196%2FFunctions%2F-1355253599" anchor-label="runtimeOnly" id="-1030632196%2FFunctions%2F-1355253599" data-filterable-set=":unimined-minecraft/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-minecraft/main" data-filterable-set=":unimined-minecraft/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="runtime-only.html"><span>runtime</span><wbr><span><span>Only</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1030632196%2FFunctions%2F-1355253599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-minecraft/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="runtime-only.html"><span class="token function">runtimeOnly</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">notation<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="org.gradle.api.artifacts/Dependency///PointingToDeclaration/">Dependency</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Runtime-only dependency of this environment's source set — <code class="lang-kotlin">runtimeOnly</code> / <code class="lang-kotlin">&lt;env&gt;RuntimeOnly</code>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
