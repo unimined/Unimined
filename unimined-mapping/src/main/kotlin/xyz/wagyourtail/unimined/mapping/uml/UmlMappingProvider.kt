@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okio.BufferedSource
 import okio.buffer
 import okio.source
 import org.gradle.api.GradleException
@@ -14,6 +13,8 @@ import xyz.wagyourtail.unimined.api.util.Perf
 import xyz.wagyourtail.unimined.api.util.ProgressGate
 import xyz.wagyourtail.unimined.api.util.uniminedLogger
 import xyz.wagyourtail.unimined.mapping.internal.CountingMappingSink
+import xyz.wagyourtail.unimined.mapping.internal.detectUmlFormat
+import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.FormatProvider
@@ -25,7 +26,6 @@ import xyz.wagyourtail.unimined.mapping.processors.SignatureFixesPostProcessor
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.path.inputStream
 import kotlin.io.path.name
 import kotlin.io.path.readText
 
@@ -38,10 +38,6 @@ class UmlMappingProvider : MappingProvider {
 
     override val name = "uml"
 
-    // marker so detect()/supports() accept .umfb payloads — the actual
-    // read dispatches on magic in readTree, never through this provider
-    private val UMFB_PROVIDER by lazy { FormatRegistry.byName["umf"] }
-
     override fun supports(spec: MaterializedMappingSource): Boolean =
         spec.formatHint?.let { FormatRegistry.byName[it] != null }
             ?: spec.files.all { detect(it) != null }
@@ -49,6 +45,12 @@ class UmlMappingProvider : MappingProvider {
     override fun resolve(
         source: MaterializedMappingSource,
         ctx: MappingContext
+    ): MappingData = resolve(source, ctx, null)
+
+    override fun resolve(
+        source: MaterializedMappingSource,
+        ctx: MappingContext,
+        context: MappingTree?
     ): MappingData {
         val hint = source.formatHint?.let {
             FormatRegistry.byName[it]
@@ -58,19 +60,30 @@ class UmlMappingProvider : MappingProvider {
         // context formats (the MCP csv readers) mutate searge-keyed rows
         // on an existing tree — they must run after the base documents
         // and see the accumulating tree, not a null context
+        val detected = source.files.associateWith { detect(it) }
         val files = source.files.sortedBy {
-            (detect(it)?.mustBeAfter?.isNotEmpty() == true).compareTo(false)
+            (detected[it]?.mustBeAfter?.isNotEmpty() == true).compareTo(false)
         }
+        // csv-only archives (mcp_snapshot/mcp_stable ship no base doc)
+        // get their context from sibling sources — seed the accumulator
+        // so their overlay readers still see the rows they rewrite
+        val seedContext = context != null &&
+                files.any { detected[it]?.mustBeAfter?.isNotEmpty() == true }
         // single-file sources with no namespace renaming can parse
         // straight into the result tree — the staging→emit second pass
         // would be a pure copy into an empty tree (~half the read cost
         // on the forge searge umf: 7.3 s emit for a 7.7 s parse).
-        val direct = files.size == 1 && nsMap.isEmpty()
+        // never direct with a seeded context: a lone context format
+        // would emit the seed back into the tree it iterates
+        val direct = files.size == 1 && nsMap.isEmpty() && !seedContext
         // a trusted materialization is tree output — its rows are pairwise
         // non-mergeable, so the direct load can skip merge trials. Only on
         // the direct path: multi-file sources merge across file boundaries.
         val tree = if (source.trusted && direct)
             MutableMappingTree.canonical() else MutableMappingTree()
+        if (seedContext) {
+            context!!.emit(tree)
+        }
         for (file in files) {
             val staged = Perf.span("mappings.read.parse",
                 "env" to ctx.environmentId, "file" to file.name) {
@@ -156,20 +169,7 @@ class UmlMappingProvider : MappingProvider {
         else -> emptyMap()
     }
 
-    // UMFB (binary) payloads carry no FormatRegistry entry — the registry's
-    // reader contract is CharReader-based — so derived .umfb files are
-    // claimed by magic sniff and read via the binary path in readTree
-    private fun isUmfb(src: BufferedSource): Boolean = runCatching {
-        val peek = src.peek()
-        peek.request(4) && peek.readUtf8(4) == "UMFB"
-    }.getOrDefault(false)
-
-    private fun detect(path: Path): FormatProvider? = runCatching {
-        path.inputStream().source().buffer().use { src ->
-            if (isUmfb(src)) UMFB_PROVIDER
-            else FormatRegistry.autodetectFormat(path.name, src)
-        }
-    }.getOrNull()
+    private fun detect(path: Path): FormatProvider? = detectUmlFormat(path)
 
     private fun readTree(
         path: Path, hint: FormatProvider?, ctx: MappingContext,

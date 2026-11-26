@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.mapping.MutableMappingTree
 import xyz.wagyourtail.unimined.mapping.formats.FormatReaderSettings
 import xyz.wagyourtail.unimined.mapping.formats.umf.UMFB
 import xyz.wagyourtail.unimined.mapping.formats.umf.UMFReader
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
 import xyz.wagyourtail.unimined.mapping.sink.emit
 import kotlin.reflect.KClass
 
@@ -33,7 +34,16 @@ class UmlMappingTreeSerializer : MappingViewSerializer {
     override fun write(data: MappingData): ByteArray? {
         val tree = data.view<MappingTree>() ?: return null
         val buf = Buffer()
-        tree.emit(UMFB.write(buf), sort = true)
+        // `-Dunimined.mappings.umfText` emits the greppable UMF text
+        // form instead of binary UMFB — the read side dispatches on the
+        // magic so consumers hydrate either transparently. Production
+        // stays binary for the hydrate-speed win on large composed
+        // trees; the text toggle exists for debugging bundles.
+        if (java.lang.Boolean.getBoolean("unimined.mappings.umfText")) {
+            tree.emit(UMFWriter.write(buf, minimize = false), sort = true)
+        } else {
+            tree.emit(UMFB.write(buf), sort = true)
+        }
         return buf.readByteArray()
     }
 

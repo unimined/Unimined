@@ -37,4 +37,16 @@ interface MappingSource {
     val namedNamespaces: Set<String>
         get() = emptySet()
 
+    /**
+     * Emitted tree namespaces (post-[nsMap] chain names) whose class
+     * cells use `__` as the inner-class separator — feather/enigma-style
+     * Java-identifier markers for nested classes. The resolver
+     * normalizes those cells to JVM `$` names while reading the source's
+     * part, so the composed tree, remap views, exports and caches all
+     * carry real binary names. Non-class cells and other columns are
+     * untouched.
+     */
+    val dollarInnerClassNamespaces: Set<String>
+        get() = emptySet()
+
 }

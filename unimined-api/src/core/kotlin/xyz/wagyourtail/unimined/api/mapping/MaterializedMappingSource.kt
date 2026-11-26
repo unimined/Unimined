@@ -28,6 +28,11 @@ interface MaterializedMappingSource {
     val namedNamespaces: Set<String>
         get() = declaration.namedNamespaces
 
+    /** `__`-marker class columns propagated from the declaration —
+     *  see [MappingSource.dollarInnerClassNamespaces]. */
+    val dollarInnerClassNamespaces: Set<String>
+        get() = declaration.dollarInnerClassNamespaces
+
     /**
      * Companion files extracted alongside the mapping documents — the
      * yarn `v2` convention of shipping `extras/record_signatures.json`

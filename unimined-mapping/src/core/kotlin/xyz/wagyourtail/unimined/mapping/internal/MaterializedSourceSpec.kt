@@ -24,7 +24,8 @@ data class MaterializedSourceSpec(
     val formatHint: String?,
     val nsMap: Map<String, String>,
     val namedNamespaces: Set<String>,
-    val attachments: Map<String, String>
+    val attachments: Map<String, String>,
+    val dollarInnerClassNamespaces: Set<String> = emptySet()
 ) {
 
     companion object {
@@ -35,7 +36,8 @@ data class MaterializedSourceSpec(
             formatHint = m.formatHint,
             nsMap = m.nsMap,
             namedNamespaces = m.namedNamespaces,
-            attachments = m.attachments.mapValues { it.value.toString() }
+            attachments = m.attachments.mapValues { it.value.toString() },
+            dollarInnerClassNamespaces = m.dollarInnerClassNamespaces
         )
 
         /** Decode one manifest entry produced by [toJson]. */
@@ -48,7 +50,9 @@ data class MaterializedSourceSpec(
                 namedNamespaces = (o["namedNamespaces"] as? JsonArray)
                     ?.map { it.jsonPrimitive.content }?.toSet() ?: emptySet(),
                 attachments = (o["attachments"] as? JsonObject)
-                    ?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap()
+                    ?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap(),
+                dollarInnerClassNamespaces = (o["dollarInnerClassNamespaces"] as? JsonArray)
+                    ?.map { it.jsonPrimitive.content }?.toSet() ?: emptySet()
             )
         }
 
@@ -63,6 +67,9 @@ data class MaterializedSourceSpec(
             put("namedNamespaces", JsonArray(namedNamespaces.map { JsonPrimitive(it) }))
         if (attachments.isNotEmpty())
             put("attachments", JsonObject(attachments.mapValues { JsonPrimitive(it.value) }))
+        if (dollarInnerClassNamespaces.isNotEmpty())
+            put("dollarInnerClassNamespaces",
+                JsonArray(dollarInnerClassNamespaces.map { JsonPrimitive(it) }))
     }.let(::JsonObject)
 
     /** Rebuild the materialized source — the declaration is a stub
@@ -78,7 +85,8 @@ data class MaterializedSourceSpec(
         formatHint = formatHint,
         nsMap = nsMap,
         namedNamespaces = namedNamespaces,
-        attachments = attachments.mapValues { Paths.get(it.value) }
+        attachments = attachments.mapValues { Paths.get(it.value) },
+        dollarInnerClassNamespaces = dollarInnerClassNamespaces
     )
 
 }

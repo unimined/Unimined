@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.api.mapping.MaterializedMappingSource
 import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.spec.Side
+import xyz.wagyourtail.unimined.mapping.sink.emit
 import java.security.MessageDigest
 import java.nio.file.Files
 
@@ -76,7 +77,8 @@ internal object MappingResolver {
             if (filtered !== m.files) {
                 m = RuntimeMaterializedMappingSource(
                     m.declaration, filtered, m.formatHint,
-                    m.nsMap, m.namedNamespaces, m.attachments, m.trusted
+                    m.nsMap, m.namedNamespaces,
+                    m.dollarInnerClassNamespaces, m.attachments, m.trusted
                 )
             }
             if (m.files.isEmpty()) {
@@ -107,12 +109,7 @@ internal object MappingResolver {
             // (CPU-bound parsing + GC, not IO), ~3× worse than the
             // ~8 s serial total. Parallelizing the merge/compose is
             // where the remaining serial budget actually sits.
-            val parts = mats.map { (_, m) ->
-                Perf.span("mappings.read", "env" to ctx.environmentId,
-                    "files" to m.files.size) {
-                    providers.select(m).resolve(m, ctx)
-                }
-            }
+            val parts = resolveParts(mats.map { it.second }, ctx, providers)
             val request = MappingComposeRequest(
                 Perf.span("mappings.envCollapse", "env" to ctx.environmentId) {
                     envCollapse(parts, ctx)
@@ -162,6 +159,63 @@ internal object MappingResolver {
         return data
     }
 
+    /**
+     * Resolve each materialized source into a part, in declaration
+     * order. Context-dependent sources (the MCP csv overlays) rewrite
+     * rows streamed from an existing tree, so each part is fed the
+     * union of the trees resolved before it — csv-only archives
+     * (`mcp_snapshot`/`mcp_stable` ship no base doc) then see the
+     * sibling source carrying the rows they key on. Accumulation
+     * stops at the last context-dependent part so specs without csv
+     * overlays pay nothing.
+     */
+    private fun resolveParts(
+        mats: List<MaterializedMappingSource>,
+        ctx: MappingContext,
+        providers: MappingProviderRegistry
+    ): List<MappingData> {
+        val slog = uniminedLogger(ctx.environmentId, ctx.logger).subLogger("mappings")
+        val lastContextConsumer = mats.indexOfLast { m ->
+            m.files.any {
+                detectUmlFormat(it, m.formatHint)?.mustBeAfter?.isNotEmpty() == true
+            }
+        }
+        val overlayContext = MutableMappingTree()
+        var contextLive = false
+        val parts = ArrayList<MappingData>(mats.size)
+        for ((index, m) in mats.withIndex()) {
+            val t0 = System.nanoTime()
+            val part = Perf.span("mappings.read", "env" to ctx.environmentId,
+                "files" to m.files.size) {
+                providers.select(m).resolve(
+                    m, ctx, if (contextLive) overlayContext else null
+                )
+            }
+            // source-declared `__` inner-class markers normalize to JVM
+            // `$` names before the part joins compose — renest, exports
+            // and caches then see binary names (1.x's feather insertInto
+            // delegator parity)
+            if (m.dollarInnerClassNamespaces.isNotEmpty()) {
+                (part.view<MappingTree>() as? MutableMappingTree)
+                    ?.dollarInnerClassNames(
+                        m.dollarInnerClassNamespaces
+                            .mapTo(mutableSetOf()) { Namespace(it) }
+                    )
+            }
+            parts += part
+            slog.lifecycle(
+                "resolved ${m.files.joinToString { it.fileName.toString() }} in ${(System.nanoTime() - t0) / 1_000_000}ms"
+            )
+            if (index < lastContextConsumer) {
+                parts.last().view<MappingTree>()?.let {
+                    it.emit(overlayContext)
+                    contextLive = true
+                }
+            }
+        }
+        return parts
+    }
+
     /** Materialize all effective sources in [spec] — keeps each
      *  declaration's `nsMap`/`formatHint`/`namedNamespaces` so consumers
      *  (e.g. bundle tasks) can re-read the files with the same relabels
@@ -176,7 +230,8 @@ internal object MappingResolver {
         if (filtered.isEmpty()) return@mapNotNull null
         if (filtered !== m.files) RuntimeMaterializedMappingSource(
             m.declaration, filtered, m.formatHint,
-            m.nsMap, m.namedNamespaces, m.attachments, m.trusted
+            m.nsMap, m.namedNamespaces,
+            m.dollarInnerClassNamespaces, m.attachments, m.trusted
         ) else m
     }
 
@@ -193,11 +248,12 @@ internal object MappingResolver {
         postProcessors: MappingPostProcessorRegistry = MappingPostProcessorRegistry()
     ): MappingData {
         val named = LinkedHashSet<String>()
-        val parts = mats.mapNotNull { m ->
-            if (m.files.isEmpty()) return@mapNotNull null
+        val resolved = mats.filter { m ->
+            if (m.files.isEmpty()) return@filter false
             named += m.namedNamespaces
-            providers.select(m).resolve(m, ctx)
+            true
         }
+        val parts = resolveParts(resolved, ctx, providers)
         val request = MappingComposeRequest(envCollapse(parts, ctx))
         var data = composers.select(request).compose(request, ctx)
         data.view<MappingTree>()?.namespaces
@@ -239,16 +295,10 @@ internal object MappingResolver {
         val cacheHit = data != null
         if (data == null) {
             val parts = files.map { file ->
-                val t0 = System.nanoTime()
-                val materialized = RuntimeMaterializedMappingSource(
+                RuntimeMaterializedMappingSource(
                     RawFileSource(file), listOf(file), null
                 )
-                providers.select(materialized).resolve(materialized, ctx).also {
-                    slog.lifecycle(
-                        "resolved ${file.fileName} in ${(System.nanoTime() - t0) / 1_000_000}ms"
-                    )
-                }
-            }
+            }.let { resolveParts(it, ctx, providers) }
             val request = MappingComposeRequest(envCollapse(parts, ctx))
             val t1 = System.nanoTime()
             data = composers.select(request).compose(request, ctx).also { composed ->
@@ -327,7 +377,13 @@ internal object MappingResolver {
         // share. Unhashable (missing/lazy) files just disable the cache.
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-merged-v5")
+        put("unimined-merged-v7")
+        // v7: source-declared `__` inner-class markers (feather named
+        // columns) normalize to `$` at read — composed output differs
+        // from v6 which carried raw `__` cells
+        // v6: context-dependent parts (MCP csv overlays) now read
+        // against the union of prior parts' trees — csv-only archives
+        // produce populated member rows instead of empty columns.
         // v5: sided envs env-collapse parts pre-compose (mcp:client
         // folds into mcp) + single-part trees now fill too —
         // both change composed output vs v4
@@ -354,7 +410,9 @@ internal object MappingResolver {
         val root = ctx.globalCacheDir ?: return null
         val md = MessageDigest.getInstance("SHA-1")
         fun put(s: String) = md.update(s.toByteArray(Charsets.UTF_8))
-        put("unimined-readfiles-v2")
+        put("unimined-readfiles-v3")
+        // v3: same cross-part overlay context as merged-v6 —
+        // csv files read against prior files' trees
         for (f in files) {
             put(f.fileName.toString())
             val bytes = runCatching { Files.readAllBytes(f) }
