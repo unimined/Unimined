@@ -79,6 +79,7 @@ nav:
     - Datagen: guide/datagen.md
     - Gametests: guide/gametest.md
     - Mod Metadata: guide/metadata.md
+    - Era Merge Packaging: guide/era-merge.md
     - Multiple Source Sets & Projects: guide/multi-project.md
     - Publishing: guide/publishing.md
     - Fork Development: guide/fork-dev.md

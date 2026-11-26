@@ -5,6 +5,9 @@ plugins {
 dependencies {
     "coreApi"(project(":unimined-api"))
     api(project(":unimined-minecraft"))
+    // loader descriptors provide era-merge nesting capabilities; the transform
+    // core has no dependency back on this module
+    implementation(project(":unimined-transform"))
     // access-file format conversion for GenerateModMetadataTask
     implementation(project(":unimined-remap:remapper-access"))
     // metadata emit/merge/scan are core-side (FabricModJsonEmitter,

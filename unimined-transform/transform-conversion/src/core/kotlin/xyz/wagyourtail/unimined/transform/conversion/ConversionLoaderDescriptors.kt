@@ -94,6 +94,9 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "official",
             metadata = LoaderMetadataSpec(
                 fileName = "fabric.mod.json",
+                // bta-babric is a fabric-loader fork; FMJ `jars[]` nesting
+                // is valid and era-merge partitioning keys off this fact
+                nestedJarsKey = "jars"
             )
         ),
     )

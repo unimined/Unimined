@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.mod
 
 import groovy.lang.Closure
 import xyz.wagyourtail.unimined.api.util.callDelegate
+import xyz.wagyourtail.unimined.api.util.delegatingTo
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
@@ -9,6 +10,9 @@ import org.gradle.api.Project
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.TaskProvider
+import xyz.wagyourtail.unimined.mod.internal.EraMergeWiring
+import xyz.wagyourtail.unimined.mod.task.MergeEraJarsTask
 import javax.inject.Inject
 
 /**
@@ -30,7 +34,7 @@ import javax.inject.Inject
  * ```
  */
 abstract class ModExtension @Inject constructor(
-    project: Project,
+    private val project: Project,
     objects: org.gradle.api.model.ObjectFactory
 ) {
 
@@ -68,6 +72,13 @@ abstract class ModExtension @Inject constructor(
      *  `name.mixins.json` into the environment's generated resources. */
     val mixins: NamedDomainObjectContainer<MixinConfig> =
         objects.domainObjectContainer(MixinConfig::class.java)
+
+    internal val mergedEraJarSpec: EraMergeSpec =
+        objects.newInstance(EraMergeSpec::class.java)
+    internal val chimeraJarSpec: EraMergeSpec =
+        objects.newInstance(EraMergeSpec::class.java)
+    internal val eraMergeEnvironments =
+        mutableListOf<EraMergeWiring.BoundEnvironment>()
 
     private val loaderSections = linkedMapOf<String, LoaderSection>()
 
@@ -134,6 +145,42 @@ abstract class ModExtension @Inject constructor(
         @DelegatesTo(value = LoaderSection::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) = loader("fabric", action)
+
+    /**
+     * Configure the single-loader multi-version merge artifact and attach it
+     * to `assemble`. Returns the registered task for further archive-property
+     * customization.
+     */
+    fun mergedEraJar(action: Action<EraMergeSpec>): TaskProvider<MergeEraJarsTask> {
+        action.execute(mergedEraJarSpec)
+        EraMergeWiring.linkAssemble(project, EraMergeWiring.Flavor.MERGED_ERA)
+        return EraMergeWiring.task(project, EraMergeWiring.Flavor.MERGED_ERA)
+    }
+
+    /** Groovy DSL overload for [mergedEraJar]. */
+    fun mergedEraJar(
+        @DelegatesTo(value = EraMergeSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): TaskProvider<MergeEraJarsTask> =
+        mergedEraJar(Action<EraMergeSpec> { action.delegatingTo(it) })
+
+    /**
+     * Configure the multi-loader chimera artifact and attach it to
+     * `assemble`. Returns the registered task for further archive-property
+     * customization.
+     */
+    fun chimeraJar(action: Action<EraMergeSpec>): TaskProvider<MergeEraJarsTask> {
+        action.execute(chimeraJarSpec)
+        EraMergeWiring.linkAssemble(project, EraMergeWiring.Flavor.CHIMERA)
+        return EraMergeWiring.task(project, EraMergeWiring.Flavor.CHIMERA)
+    }
+
+    /** Groovy DSL overload for [chimeraJar]. */
+    fun chimeraJar(
+        @DelegatesTo(value = EraMergeSpec::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ): TaskProvider<MergeEraJarsTask> =
+        chimeraJar(Action<EraMergeSpec> { action.delegatingTo(it) })
 
     /** Serializable model snapshot for task inputs. */
     internal fun snapshot(): ModMetadata = ModMetadata(

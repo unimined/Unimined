@@ -4,6 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.util.uniminedAdopt
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.mod.internal.EraMergeWiring
 import xyz.wagyourtail.unimined.mod.internal.ModPackagingWiring
 
 /**
@@ -18,6 +19,7 @@ class GradlePlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         target.extensions.create("uniminedMod", ModExtension::class.java, target)
+        EraMergeWiring.install(target)
         target.uniminedAdopt("mod", ModExtension::class.java)
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined") {
             target.uniminedAdopt("mod", ModExtension::class.java)
@@ -26,6 +28,7 @@ class GradlePlugin : Plugin<Project> {
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             minecraft.onEnvironmentBound { environment, sourceSet ->
+                EraMergeWiring.environmentBound(target, environment, sourceSet)
                 ModPackagingWiring.wire(target, environment, sourceSet)
             }
         }
