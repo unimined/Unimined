@@ -333,6 +333,83 @@ class ClassTweakerTest {
         )
     }
 
+    @Test
+    fun `non-generic injection into a non-generic class keeps no signature`() {
+        val ct = ClassTweaker.parse(
+            "mod.classtweaker",
+            "classTweaker\tv1\tnamed\n" +
+                    "inject-interface\ta/b/C\tcom/foo/Ext"
+        )
+        val out = apply(
+            writeClass(Opcodes.ACC_PUBLIC, false, superName = "a/b/Base"),
+            own = listOf(ct)
+        )
+        assertArrayEquals(arrayOf("com/foo/Ext"), ClassReader(out).interfaces)
+        // a Signature without the superclass would make javac read the
+        // injected interface as the superclass
+        assertNull(readSignature(out))
+    }
+
+    @Test
+    fun `generic injection into a non-generic class starts the signature from its supertypes`() {
+        val ct = ClassTweaker.parse(
+            "mod.classtweaker",
+            "classTweaker\tv1\tnamed\n" +
+                    "inject-interface\ta/b/C\tcom/foo/Ext<Ljava/lang/String;>"
+        )
+        val out = apply(
+            writeClass(
+                Opcodes.ACC_PUBLIC, false,
+                superName = "a/b/Base", interfaces = arrayOf("a/b/Existing")
+            ),
+            own = listOf(ct)
+        )
+        assertArrayEquals(arrayOf("a/b/Existing", "com/foo/Ext"), ClassReader(out).interfaces)
+        assertEquals(
+            "La/b/Base;La/b/Existing;Lcom/foo/Ext<Ljava/lang/String;>;",
+            readSignature(out)
+        )
+    }
+
+    @Test
+    fun `an interface injected by own and dependency docs is listed once`() {
+        val own = ClassTweaker.parse(
+            "mod.classtweaker",
+            "classTweaker\tv1\tnamed\n" +
+                    "inject-interface\ta/b/C\tcom/foo/Ext"
+        )
+        val dep = ClassTweaker.parse(
+            "dep.classtweaker",
+            "classTweaker\tv1\tnamed\n" +
+                    "transitive-inject-interface\ta/b/C\tcom/foo/Ext"
+        )
+        val out = apply(
+            writeClass(Opcodes.ACC_PUBLIC, false, signature = "Ljava/lang/Object;"),
+            own = listOf(own), dep = listOf(dep)
+        )
+        assertArrayEquals(arrayOf("com/foo/Ext"), ClassReader(out).interfaces)
+        assertEquals("Ljava/lang/Object;Lcom/foo/Ext;", readSignature(out))
+    }
+
+    @Test
+    fun `reapplying an injection leaves a generic signature unchanged`() {
+        // several apply steps on one env may carry the same doc
+        val ct = ClassTweaker.parse(
+            "mod.classtweaker",
+            "classTweaker\tv1\tnamed\n" +
+                    "inject-interface\ta/b/C\tcom/foo/Ext"
+        )
+        val original = writeClass(
+            Opcodes.ACC_PUBLIC, false,
+            signature = "La/b/Base<La/b/C;>;",
+            superName = "a/b/Base"
+        )
+        val once = apply(original, own = listOf(ct))
+        val twice = apply(once, own = listOf(ct))
+        assertArrayEquals(arrayOf("com/foo/Ext"), ClassReader(twice).interfaces)
+        assertEquals("La/b/Base<La/b/C;>;Lcom/foo/Ext;", readSignature(twice))
+    }
+
     private fun readSignature(bytes: ByteArray): String? {
         var sig: String? = null
         ClassReader(bytes).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
@@ -694,11 +771,13 @@ class ClassTweakerTest {
         methodAccess: Int = if (privateMethod) Opcodes.ACC_PRIVATE else Opcodes.ACC_PROTECTED,
         signature: String? = null,
         innerClasses: List<Triple<String, String?, Int>> = emptyList(),
-        fields: List<Triple<String, String, Int>> = emptyList()
+        fields: List<Triple<String, String, Int>> = emptyList(),
+        superName: String = "java/lang/Object",
+        interfaces: Array<String>? = null
     ): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
-            Opcodes.V17, access, className, signature, "java/lang/Object", null
+            Opcodes.V17, access, className, signature, superName, interfaces
         )
         val method = writer.visitMethod(methodAccess, "hidden", "()V", null, null)
         method.visitCode()
