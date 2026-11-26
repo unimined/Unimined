@@ -73,6 +73,31 @@ object BinpatchesPackPatcher {
         }
 
     /**
+     * The `binpatch/<side>/` sides present in [packJarBytes] (from
+     * [unpackPack]) — universal `binpatches.pack` archives split
+     * `client`/`server`, FG2 dev packages (`devbinpatches.pack`)
+     * carry a single `merged` set authored against the merged dev
+     * jar.
+     */
+    fun packSides(packJarBytes: ByteArray): Set<String> {
+        val sides = LinkedHashSet<String>()
+        JarInputStream(ByteArrayInputStream(packJarBytes)).use { jar ->
+            while (true) {
+                val entry = jar.nextJarEntry ?: break
+                if (entry.name.startsWith("binpatch/") &&
+                    entry.name.endsWith(".binpatch")
+                ) {
+                    sides.add(
+                        entry.name.substringAfter('/')
+                            .substringBefore('/')
+                    )
+                }
+            }
+        }
+        return sides
+    }
+
+    /**
      * Read the `binpatch/&lt;side&gt;/` entries of [packJarBytes]
      * (from [unpackPack]), keyed by their jar entry name
      * (`com/example/Foo.class`).
@@ -411,13 +436,16 @@ object BinpatchesPackPatcher {
                     // `name == key` records aren't self-excluded; the
                     // add() return is the concurrent dedup guard
                     !patch.existsAtTarget && key !in applied &&
-                            (patch.name + ".class") !in applied &&
+                            (patch.name.replace('.', '/') + ".class") !in applied &&
                             applied.add(key)
                 }
                 .map { (side, kv) ->
                     val (_, patch) = kv
-                    // add-classes keep their obf entry name too
-                    val name = patch.sourceClassName + ".class"
+                    // `name` is the entry path (obf or srg-slash);
+                    // `sourceClassName` is dot-form on srg records
+                    // — emitting it verbatim would write
+                    // `net.minecraft.X.class` entries
+                    val name = patch.name.replace('.', '/') + ".class"
                     Triple(side, name, patcher.get().patch(ByteArray(0), patch.patch))
                 }
                 .toList()

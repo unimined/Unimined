@@ -125,6 +125,21 @@ class BinpatchesPackPatcherTest {
     }
 
     @Test
+    fun `packSides reports only the sides the pack carries`() {
+        val devPack = jarBytes(mapOf(
+            "binpatch/merged/nz.binpatch" to byteArrayOf(1),
+            "binpatch/merged/zz.binpatch" to byteArrayOf(2)))
+        assertEquals(setOf("merged"),
+            BinpatchesPackPatcher.packSides(devPack))
+        val universalPack = jarBytes(mapOf(
+            "binpatch/client/nz.binpatch" to byteArrayOf(1),
+            "binpatch/server/zz.binpatch" to byteArrayOf(2),
+            "other/file.txt" to byteArrayOf(3)))
+        assertEquals(setOf("client", "server"),
+            BinpatchesPackPatcher.packSides(universalPack))
+    }
+
+    @Test
     fun `readPatches keys pack records by src class path`() {
         val rec = packRecord("nz patch", "nz", "net.mc.Server",
             exists = true, checksum = 0xABCD, patch = byteArrayOf(9))
@@ -199,7 +214,10 @@ class BinpatchesPackPatcherTest {
         val c = "added-body".toByteArray()
         val input = jar("in.jar", mapOf(
             "nz.class" to "x".toByteArray()))
-        val patch = ClassPatch("p", "added/New", "added/New",
+        // real pack shape: `name` is the entry path (slash form);
+        // `src`/`tgt` carry dot-form class names — the emitted entry
+        // must come from `name`, not the dotted src
+        val patch = ClassPatch("added/New", "added.New", "added.New",
             existsAtTarget = false, inputChecksum = 0,
             patch = gdiff(ByteArray(0), c))
         val out = dir.resolve("out.jar")

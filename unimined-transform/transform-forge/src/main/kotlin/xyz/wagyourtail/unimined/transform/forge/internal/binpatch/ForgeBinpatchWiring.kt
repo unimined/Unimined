@@ -191,20 +191,22 @@ internal fun contributeBinpatchStep(
         RemapSurface.JAR, spec, StepScope.ENVIRONMENT_ARTIFACT
     )
 
-    // FG2-era binary patching — `Binpatches` profile: reads the
-    // pack out of the universal jar, or `devbinpatches.pack.lzma`
-    // from a FG2 `userdev` dev package when one exists (1.x only
-    // knew the universal path; plan §5). In-process patcher —
-    // no tool exec.
+    // FG2-era binary patching — `Binpatches` profile: reads
+    // `binpatches.pack.lzma` out of the universal jar. FG2 `userdev`
+    // dev packages carry `devbinpatches.pack.lzma` authored against
+    // FML's workspace merge — its input checksums never match the
+    // canonical merged jar — so the universal artifact resolved
+    // alongside ([ResolvedForge.universalJar]) wins; the dev pack is
+    // only the fallback when no universal resolved.
     val packSpec = objects.newInstance(BinpatchesPackStepSpec::class.java)
     packSpec.loaderJar.set(project.layout.file(resolved.map { r ->
         val p = r.profile as? ForgeProfile.Binpatches ?: return@map null
-        (p.devPackage?.jar ?: r.jar).toFile()
+        (r.universalJar ?: p.devPackage?.jar ?: r.jar).toFile()
     }))
     packSpec.packEntry.set(resolved.map { r ->
         val p = r.profile as? ForgeProfile.Binpatches ?: return@map null
-        if (p.devPackage != null) "devbinpatches.pack.lzma"
-        else "binpatches.pack.lzma"
+        if (r.universalJar == null && p.devPackage != null)
+            "devbinpatches.pack.lzma" else "binpatches.pack.lzma"
     })
     packSpec.side.set(resolved.map { r ->
         if (r.profile !is ForgeProfile.Binpatches) return@map null
@@ -215,6 +217,34 @@ internal fun contributeBinpatchStep(
             // chain — userdev has no per-side common descriptor
             Side.MERGED, Side.COMMON -> "joined"
         }
+    })
+    // merged-side envs patch the clean client/server jars before the
+    // merge — the merged jar's shared classes are member-merged
+    // unions stamped at merge time, so no side patch can apply to
+    // them (1.x `transformIntern` per side → merge). Single-side
+    // envs keep the JAR step: their env artifact *is* the side jar.
+    // Joined envs without a universal (dev-package fallback) also
+    // keep the JAR step — the merged-input apply attempts it.
+    val joined = { environment.side.get().let {
+        it == Side.MERGED || it == Side.COMMON
+    } }
+    packSpec.preMerged.set(resolved.map { r ->
+        r.profile is ForgeProfile.Binpatches &&
+                r.universalJar != null && joined()
+    })
+    environment.sideJarPatches.addAll(resolved.map { r ->
+        if (r.profile !is ForgeProfile.Binpatches ||
+            r.universalJar == null || !joined()
+        ) return@map emptyList()
+        listOf(
+            xyz.wagyourtail.unimined.minecraft.spi.SideJarPatchSpec(
+                "forge-binpatch-pack",
+                mapOf(
+                    "loaderJar" to r.universalJar.toString(),
+                    "packEntry" to "binpatches.pack.lzma"
+                )
+            )
+        )
     })
     val absent = project.providers.provider<RegularFile> { null }
     val sideJars = project.extensions.getByType(MinecraftExtension::class.java)
@@ -234,12 +264,15 @@ internal fun contributeBinpatchStep(
 /**
  * FG2 dev-environment injections — classpath coremods,
  * MOD_CLASSES resource/lang loading, runtime-deobf strip +
- * `UniminedFg2` helper splice. Applies to every FG2-era
- * environment: the `Binpatches` profile AND `Userdev` with
- * `notchObf` (userdev3 backported to FG2-era MC, e.g. 1.12.2 —
- * 1.x applies `FixFG2Coremods`/`ResourceLoading`/
- * `DeobfEnvironment` on the FG3 path whenever the version is
- * FG2-era). Contributed after `contributeAccessSteps` so it runs
+ * `UniminedFg2` helper splice. Applies to the `Binpatches`
+ * profile AND every `Userdev` env: `Userdev` with `notchObf`
+ * (userdev3 backported to FG2-era MC, e.g. 1.12.2 — 1.x applies
+ * `FixFG2Coremods`/`ResourceLoading`/`DeobfEnvironment` on the
+ * FG3 path whenever the version is FG2-era) needs the FG2 class
+ * fixes, and ModLauncher-era `Userdev` (1.13+) needs
+ * `ObjectHolderRegistryTx`'s `net.minecraft.init` prefix
+ * widening — every other transformer target is absent there and
+ * no-ops. Contributed after `contributeAccessSteps` so it runs
  * after `jarProcessors` — it patches the FML classes that only
  * exist in-jar once the universal shade lands.
  */

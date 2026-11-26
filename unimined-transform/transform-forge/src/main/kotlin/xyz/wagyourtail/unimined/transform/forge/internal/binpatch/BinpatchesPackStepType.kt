@@ -51,6 +51,14 @@ abstract class BinpatchesPackStepSpec : DevArtifactOnlyStepSpec {
     @get:Input
     abstract val side: Property<String>
 
+    /** Set on merged-side environments whose clean side jars are
+     *  patched ahead of the merge instead (`MinecraftEnvironment
+     *  .sideJarPatches` pre-merge pass) — the pipeline input is
+     *  already the patched merge, so this step passes through. */
+    @get:Optional
+    @get:Input
+    abstract val preMerged: Property<Boolean>
+
     /** The clean client jar — used to attribute merged-jar entries
      *  to their origin side (1.x patches each side's clean jar
      *  *before* merging; on the merged jar the equivalent is
@@ -78,7 +86,9 @@ class BinpatchesPackStepType : RemapStepType<BinpatchesPackStepSpec> {
     override fun supports(spec: RemapSpec) = true
 
     override fun create(spec: BinpatchesPackStepSpec, ctx: StepContext) = ArtifactStep { input, c ->
-        if (!spec.loaderJar.isPresent || !spec.packEntry.isPresent)
+        if (!spec.loaderJar.isPresent || !spec.packEntry.isPresent ||
+            spec.preMerged.getOrElse(false)
+        )
             return@ArtifactStep input
         val workDir = Files.createDirectories(c.workDir.resolve("forge-binpatch-pack"))
         val output = workDir.resolve("patched.jar")
@@ -92,19 +102,30 @@ class BinpatchesPackStepType : RemapStepType<BinpatchesPackStepSpec> {
                 }
             }
             val side = spec.side.get()
-            // 1.x patches each side's clean jar *before* merging; the
-            // merged environment only has the combined jar, so both
-            // patch sets apply with per-entry side attribution against
-            // the raw side jars
-            val sides = if (side == "joined") listOf("client", "server")
-            else listOf(side)
-            // lzma decompress + pack200 unpack once — both side patch
+            // lzma decompress + pack200 unpack once — all side patch
             // sets read from the same unpacked pack jar
             val packBytes = BinpatchesPackPatcher.unpackPack(pack)
+            // the pack dictates which patch sets apply: FG2 dev
+            // packages (`devbinpatches.pack.lzma`) carry a single
+            // `merged` set authored against the merged dev jar, while
+            // universal `binpatches.pack` archives split
+            // `client`/`server` — the joined env applies both with
+            // per-entry side attribution against the raw side jars
+            // (1.x patched each side's clean jar *before* merging)
+            val sides = BinpatchesPackPatcher.packSides(packBytes).let { avail ->
+                when {
+                    "merged" in avail -> listOf("merged")
+                    side == "joined" -> avail.ifEmpty {
+                        listOf("client", "server")
+                    }.toList()
+                    else -> listOf(side)
+                }
+            }
             val sideInputs = sides.map { s ->
                 val jar = when (s) {
                     "client" -> spec.clientJar.orNull?.asFile?.toPath()
-                    else -> spec.serverJar.orNull?.asFile?.toPath()
+                    "server" -> spec.serverJar.orNull?.asFile?.toPath()
+                    else -> null
                 }
                 BinpatchesPackPatcher.SidePatchInput(
                     s, jar, BinpatchesPackPatcher.readPatches(packBytes, s)

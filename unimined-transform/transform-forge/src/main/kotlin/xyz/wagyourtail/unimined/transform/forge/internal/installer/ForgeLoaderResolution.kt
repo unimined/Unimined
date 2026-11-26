@@ -80,8 +80,17 @@ internal class ResolvedForge(
      *  (1.x `actualSideMarker` read `forge.dependencies.last()`).
      *  Defaults to [jar]; the FG2 `userdev3` dev package overrides it
      *  with the universal jar it was resolved alongside — userdev3
-     *  carries no loader classes. */
-    val markerJar: Path = jar
+     *  carries no loader classes. The FG2 `userdev` dev package does
+     *  the same via [universalJar]. */
+    val markerJar: Path = jar,
+    /** The `universal` artifact resolved alongside an FG2 `userdev`
+     *  dev package — the canonical `binpatches.pack.lzma` carrier.
+     *  The package's own `devbinpatches.pack` is authored against
+     *  FML's workspace merge (MC classes recompiled with the
+     *  `forgepatches` source patches applied — its input checksums
+     *  never match a canonical merged jar), so it is only a fallback
+     *  when no universal resolves. `null` outside that case. */
+    val universalJar: Path? = null
 )
 
 /** Resolve + classify the primary loader artifact lazily — see
@@ -89,13 +98,39 @@ internal class ResolvedForge(
 internal fun contributeLoaderResolution(
     project: Project,
     environment: MinecraftEnvironment
-): Provider<ResolvedForge> = project.provider {
-    val spec = environment.loaderSpec.orNull
-        ?: return@provider null
-    val descriptor = LoaderRegistry.resolveBuiltin(spec.name)
-        ?.takeIf { it.family == "forge" }
-        ?: return@provider null
-    resolveForgeLoader(project, environment, spec, descriptor)
+): Provider<ResolvedForge> {
+    // Compute once: the provider is consumed inside deferred
+    // pipeline/step providers that can materialize in
+    // resolution-restricted contexts (transform-param isolation,
+    // `withDependencies` hooks, task-input fingerprinting), where a
+    // fresh detached resolution throws "attempted without an
+    // exclusive lock". The first evaluation is forced at config
+    // time (ForgeEnvironmentWiring's afterDslEval hooks) — every
+    // later read reuses this value.
+    var computed = false
+    var cache: ResolvedForge? = null
+    return project.provider {
+        if (!computed) {
+            val spec = environment.loaderSpec.orNull
+            val descriptor = spec?.let {
+                LoaderRegistry.resolveBuiltin(it.name)
+            }?.takeIf { it.family == "forge" }
+            if (spec != null && descriptor != null) {
+                // commit the cache only once the resolution actually
+                // runs — this provider is read while the env DSL is
+                // still configuring (probeResolver/envArtifactBindings
+                // during binding, before `forge()` sets loaderSpec) and
+                // in resolution-restricted contexts where a detached
+                // resolve can throw; an early/throwing read must stay
+                // retryable or the transient null/failure poisons every
+                // convention keyed off this provider permanently
+                cache = resolveForgeLoader(
+                    project, environment, spec, descriptor)
+                computed = true
+            }
+        }
+        cache
+    }
 }
 
 /**
@@ -195,9 +230,20 @@ internal fun resolveForgeLoader(
                 "@zip forms all failed — check the coordinate, the " +
                 "serving repository, and whether you are offline"
         )
+    val profile = ForgeInstallerProbe.inspect(jar)
+    // FG2 `userdev` dev package — resolve the `universal` alongside
+    // it: the package ships metadata only (no runtime classes for
+    // marker detection) and its `devbinpatches` input checksums
+    // target FML's source-patched workspace merge, not the canonical
+    // merged jar
+    val universal = if ((profile as? ForgeProfile.Binpatches)
+            ?.devPackage != null
+    ) tryResolve("$base:universal") else null
     return ResolvedForge(
-        descriptor, ForgeInstallerProbe.inspect(jar), notation!!, jar,
-        mergeJars ?: listOf(jar), markerJar ?: jar
+        descriptor, profile, notation!!, jar,
+        mergeJars ?: listOf(jar),
+        markerJar = markerJar ?: universal ?: jar,
+        universalJar = universal
     )
 }
 

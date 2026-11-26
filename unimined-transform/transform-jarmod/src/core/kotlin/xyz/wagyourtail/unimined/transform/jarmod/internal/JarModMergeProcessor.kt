@@ -15,15 +15,19 @@ import java.util.zip.ZipOutputStream
 /**
  * Merges the env's `jarMod` configuration into the dev Minecraft jar —
  * the 1.x jarmod FileSystem merge as a [JarProcessor] so it rides the
- * dev-Minecraft transform (content-fingerprinted, cached).
+ * dev-Minecraft transform (content-fingerprinted, cached). Forge
+ * wiring feeds the same `jarmod:merge` env-artifact binding to
+ * shadow loader classes into the product (FG1 forge zips, FG2
+ * universal jar).
  *
- * Jarmod entries win on collisions. Signature material is always
- * dropped from jarmod sources; `deleteMetaInf` additionally strips the
- * base jar's META-INF.
+ * Merge-source entries win on collisions. Signature material is
+ * always dropped from merge sources; `deleteMetaInf` additionally
+ * strips the base jar's META-INF.
  */
-internal class JarModMergeProcessor(
+class JarModMergeProcessor(
     private val jarMod: List<Path>? = null,
-    private val deleteMetaInf: (() -> Boolean)? = null
+    private val deleteMetaInf: (() -> Boolean)? = null,
+    private val excludeEntries: Set<String> = emptySet()
 ) : JarProcessor {
 
     override val name = "jarmod-merge"
@@ -35,19 +39,21 @@ internal class JarModMergeProcessor(
 
     private data class Spec(
         val jars: List<Entry>,
-        val deleteMetaInf: Boolean
+        val deleteMetaInf: Boolean,
+        val excludes: List<String> = emptyList()
     ) : JarProcessor.JarProcessorSpec {
         data class Entry(val path: String, val sha1: String) : java.io.Serializable
+
     }
 
     override fun buildSpec(context: JarProcessor.SpecContext): JarProcessor.JarProcessorSpec? {
         val jars = (jarMod.orEmpty() + context.envArtifacts("jarmod:merge"))
             .filter { java.nio.file.Files.isRegularFile(it) }
         if (jars.isEmpty()) return null
-        if (jars.isEmpty()) return null
         return Spec(
             jars.map { Spec.Entry(it.toAbsolutePath().toString(), sha1(it.toFile())) },
-            deleteMetaInf?.invoke() ?: false
+            deleteMetaInf?.invoke() ?: false,
+            excludeEntries.toList()
         )
     }
 
@@ -55,18 +61,22 @@ internal class JarModMergeProcessor(
         spec as Spec
         return buildString {
             append(spec.deleteMetaInf)
+            append('\n').append(spec.excludes.size)
+            for (p in spec.excludes) append('\n').append(p)
             for (e in spec.jars) append('\n').append(e.path).append(':').append(e.sha1)
         }
     }
 
     override fun deserializeSpec(payload: String): JarProcessor.JarProcessorSpec {
         val lines = payload.split('\n')
+        val excludeCount = lines.getOrNull(1)?.toIntOrNull() ?: 0
         return Spec(
-            lines.drop(1).filter { it.isNotEmpty() }.map {
+            lines.drop(2 + excludeCount).filter { it.isNotEmpty() }.map {
                 val i = it.lastIndexOf(':')
                 Spec.Entry(it.substring(0, i), it.substring(i + 1))
             },
-            lines.first().toBoolean()
+            lines.first().toBoolean(),
+            lines.drop(2).take(excludeCount)
         )
     }
 
@@ -80,12 +90,19 @@ internal class JarModMergeProcessor(
             ZipOutputStream(Files.newOutputStream(tmp)).use { out ->
                 val emittedDirs = mutableSetOf<String>()
                 val seen = mutableSetOf<String>()
+                val excludes = spec.excludes.map(::Regex)
                 fun copyFrom(path: Path, stripAllMetaInf: Boolean, isModJar: Boolean) {
                     ZipFile(path.toFile()).use { zip ->
                         zip.entries().asSequence()
                             .filter { !it.isDirectory }
                             .forEach { entry ->
                                 var name = entry.name.replace('\\', '/')
+                                // merge-source content ships runtime patch
+                                // material (e.g. forge's binpatches.pack) —
+                                // FML would try to apply it at launch
+                                if (isModJar && excludes.any { it.matches(name) }) {
+                                    return@forEach
+                                }
                                 // FML-era convention: `_`-prefixed class
                                 // entries mark replacements for the bare-named
                                 // class — strip so the patch overwrites it

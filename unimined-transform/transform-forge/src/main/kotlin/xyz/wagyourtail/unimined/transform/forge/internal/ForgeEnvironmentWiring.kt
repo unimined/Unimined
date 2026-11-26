@@ -138,16 +138,43 @@ internal object ForgeEnvironmentWiring {
                 }
             } else null
         }
-        // `jarmod:merge` env binding: the probed loader jar is the
-        // FG1 zip-patches merge input — bound lazily so resolution
-        // stays inside provider evaluation
+        // `jarmod:merge` env binding: FG1's zip-patches jars and
+        // FG2's universal jar both shadow loader classes into the
+        // product — the binpatch pack only carries MC-class patches;
+        // fml/forge binaries come from the jar merge (1.x merged the
+        // universal whole). Bound lazily so resolution stays inside
+        // provider evaluation
         project.extensions.findByType(TransformExtension::class.java)
             ?.sourceSet(environment.environmentId)
-            ?.envArtifactBindings?.set("jarmod:merge") {
-                val r = resolved.get()
-                r.takeIf { it.profile is ForgeProfile.ZipPatches }
-                    ?.mergeJars
-                    .orEmpty()
+            ?.let { envSpec ->
+                envSpec.envArtifactBindings["jarmod:merge"] = {
+                    val r = resolved.get()
+                    when (val p = r.profile) {
+                        is ForgeProfile.ZipPatches -> r.mergeJars
+                        is ForgeProfile.Binpatches -> listOfNotNull(
+                            r.universalJar ?: r.jar.takeIf {
+                                p.devPackage == null
+                            }
+                        )
+
+                        else -> emptyList()
+                    }
+                }
+                // the binding is inert without a processor consuming
+                // it — JarModMergeProcessor overlays the jars onto
+                // the flowing artifact pre-remap, META-INF stripped.
+                // Runtime patch packs (binpatches.pack.lzma) must not
+                // land in the product — FML's ClassPatchManager reads
+                // them at launch and NPEs when the obf-named class
+                // bytes they index aren't present in a dev-mapped jar
+                // (1.x fixForge stripped them)
+                envSpec.jarProcessors += xyz.wagyourtail.unimined
+                    .transform.jarmod.internal.JarModMergeProcessor(
+                        deleteMetaInf = { false },
+                        excludeEntries = setOf(
+                            "(.+/)?binpatches\\.pack\\.lzma",
+                            "(.+/)?devbinpatches\\.pack\\.lzma"
+                        ))
             }
         // `forge:jsCoremodRemap` — default-on for FG3-era
         // (userdev) envs: forge's universal ships coremod js that
