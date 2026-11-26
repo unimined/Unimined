@@ -2020,16 +2020,16 @@ from one declaration.</p>
 <code>loader.development</code>) from the env wiring — no run-config edits
 needed. Anything else is ordinary <code>jvmArgs</code>/<code>environmentVariables</code>.</p>
 <h2 id="dry-run">Dry-run<a class="headerlink" href="#dry-run" title="Permanent link">&para;</a></h2>
-<p><code>-Punimined.run.dryRun</code> prints the assembled launch (main class,
+<p><code>-Punimined.run.dryRun=true</code> prints the assembled launch (main class,
 args, classpath) instead of exec'ing — the quickest way to inspect
 what a run would do:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./gradlew<span class="w"> </span>runClient<span class="w"> </span>-Punimined.run.dryRun
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./gradlew<span class="w"> </span>runClient<span class="w"> </span>-Punimined.run.dryRun<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <h2 id="verifying-a-launch">Verifying a launch<a class="headerlink" href="#verifying-a-launch" title="Permanent link">&para;</a></h2>
-<p><code>-Punimined.run.verify</code> audits the assembled launch plan without
+<p><code>-Punimined.run.verify=true</code> audits the assembled launch plan without
 starting a JVM and fails the task on violations a real launch would
 hit at class-load:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>runFabricProdClient<span class="w"> </span>-Punimined.run.verify
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>runFabricProdClient<span class="w"> </span>-Punimined.run.verify<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p>Checks: every classpath entry exists on disk, the resolved main class
 is present on the classpath, loader-required resources are present
