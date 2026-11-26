@@ -52,7 +52,7 @@ features you'll hit while porting (each links to its guide page):
 - **`uniminedRuns` report** — one line per declared run (task,
   env, side, type, main class)
   ([Run configs](guide/run-configs.md#listing-runs)); plus
-  `-Punimined.run.dryRun` to print an assembled launch without
+  `-Punimined.run.dryRun=true` to print an assembled launch without
   exec'ing.
 - **Run surface fill-out** — `systemProperties`, `logLevel`/
   `loggingConfigFile`, `additionalRuntimeClasspath` + the

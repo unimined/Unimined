@@ -147,22 +147,22 @@ needed. Anything else is ordinary `jvmArgs`/`environmentVariables`.
 
 ## Dry-run
 
-`-Punimined.run.dryRun` prints the assembled launch (main class,
+`-Punimined.run.dryRun=true` prints the assembled launch (main class,
 args, classpath) instead of exec'ing — the quickest way to inspect
 what a run would do:
 
 ```bash
-./gradlew runClient -Punimined.run.dryRun
+./gradlew runClient -Punimined.run.dryRun=true
 ```
 
 ## Verifying a launch
 
-`-Punimined.run.verify` audits the assembled launch plan without
+`-Punimined.run.verify=true` audits the assembled launch plan without
 starting a JVM and fails the task on violations a real launch would
 hit at class-load:
 
 ```bash
-./gradlew runFabricProdClient -Punimined.run.verify
+./gradlew runFabricProdClient -Punimined.run.verify=true
 ```
 
 Checks: every classpath entry exists on disk, the resolved main class

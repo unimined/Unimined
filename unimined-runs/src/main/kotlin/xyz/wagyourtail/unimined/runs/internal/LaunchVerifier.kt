@@ -8,7 +8,7 @@ import java.util.jar.JarFile
  * bugs a successful exec would surface as launch-time failures
  * (`ClassNotFoundException: KnotClient` when the loader never made
  * the prod classpath). Runs inside `run<Name>` when
- * `-Punimined.run.verify` is set; no JVM is forked.
+ * `-Punimined.run.verify=true` is set; no JVM is forked.
  *
  * Checks:
  * - every classpath entry exists on disk (stale conf wiring)

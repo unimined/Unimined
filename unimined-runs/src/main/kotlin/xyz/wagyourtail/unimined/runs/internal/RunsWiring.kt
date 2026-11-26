@@ -521,14 +521,14 @@ internal object RunsWiring {
             task.height.set(run.height)
             task.downloadAssets.set(run.downloadAssets)
             task.offline.set(project.gradle.startParameter.isOffline)
-            // `-Punimined.run.dryRun` prints the assembled launch
+            // `-Punimined.run.dryRun=true` prints the assembled launch
             // instead of exec'ing — the runs-verification surface
             task.dryRun.set(
                 project.providers
                     .gradleProperty("unimined.run.dryRun")
                     .map { it.toBoolean() }
                     .orElse(false))
-            // `-Punimined.run.verify` audits the assembled plan
+            // `-Punimined.run.verify=true` audits the assembled plan
             // (main class + required resources on the classpath,
             // entry/agent/asset-index existence) without exec'ing
             task.verify.set(

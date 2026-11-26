@@ -11,7 +11,7 @@ import java.util.jar.JarOutputStream
 import kotlin.io.path.outputStream
 
 /**
- * `LaunchVerifier` — the `-Punimined.run.verify` audit must catch the
+ * `LaunchVerifier` — the `-Punimined.run.verify=true` audit must catch the
  * wiring failures a real launch surfaces at class-load: the resolved
  * main class absent from the classpath (the `runFabricProdClient`
  * `KnotClient` CNFE), missing classpath entries, and the
