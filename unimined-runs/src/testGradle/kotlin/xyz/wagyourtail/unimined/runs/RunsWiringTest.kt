@@ -677,9 +677,11 @@ class RunsWiringTest {
     /** `beforeRun` — both forms become `run<Name>` prerequisites:
      *  a declared TaskProvider joins `dependsOn`, and each Action
      *  materializes a `preRun<Name><i>` DefaultTask in declaration
-     *  order (the closure twin routes through the same channel). */
+     *  order. Actions are execution-time hooks: they must not run while
+     *  the run is being wired (the closure twin routes through the same
+     *  channel). */
     @Test
-    fun `beforeRun wires task deps and pre tasks in declaration order`() {
+    fun `beforeRun wires task deps and execution-time pre tasks`() {
         val project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)
         ext.sourceSet("main") { env ->
@@ -688,13 +690,14 @@ class RunsWiringTest {
 
         val buildMod = project.tasks.register("buildMod")
         val runs = project.extensions.getByType(RunsExtension::class.java)
+        val executed = mutableListOf<String>()
         runs.named("client") { run ->
             run.beforeRun(buildMod)
-            run.beforeRun(org.gradle.api.Action<org.gradle.api.Task> { t ->
-                t.description = "first pre task"
+            run.beforeRun(org.gradle.api.Action<org.gradle.api.Task> {
+                executed += "first pre task"
             })
-            run.beforeRun(org.gradle.api.Action<org.gradle.api.Task> { t ->
-                t.description = "second pre task"
+            run.beforeRun(org.gradle.api.Action<org.gradle.api.Task> {
+                executed += "second pre task"
             })
         }
         (project as org.gradle.api.internal.project.ProjectInternal)
@@ -702,11 +705,14 @@ class RunsWiringTest {
 
         val task = project.tasks.getByName("runClient") as MinecraftRunTask
 
-        // action registrations materialize pre<Name><i> in order
+        // action registrations materialize pre<Name><i> in order, but
+        // their hooks only run at task execution time
         val pre0 = project.tasks.getByName("preRunClient0")
         val pre1 = project.tasks.getByName("preRunClient1")
-        assertEquals("first pre task", pre0.description)
-        assertEquals("second pre task", pre1.description)
+        assertEquals(emptyList<String>(), executed)
+        pre0.actions.forEach { it.execute(pre0) }
+        pre1.actions.forEach { it.execute(pre1) }
+        assertEquals(listOf("first pre task", "second pre task"), executed)
 
         // every declared prerequisite is a run<Name> dependency —
         // inspect `dependsOn` (TaskProvider.getName() doesn't
