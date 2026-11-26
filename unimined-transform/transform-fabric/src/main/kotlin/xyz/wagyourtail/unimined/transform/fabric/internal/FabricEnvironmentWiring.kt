@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.remapper.access.ClassTweaker
 import xyz.wagyourtail.unimined.transform.TransformExtension
 import xyz.wagyourtail.unimined.transform.fabric.processor.ModJavadocJarProcessor
 import xyz.wagyourtail.unimined.transform.fabric.processor.fabricSpecContext
+import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.afterDslEval
@@ -29,6 +30,22 @@ import java.io.File
 import org.gradle.api.tasks.SourceSetContainer
 import java.nio.file.Files
 import java.nio.file.Path
+
+/**
+ * The environment-effective production namespace — descriptors may
+ * declare a `prodNamespaceGenTemplate` capability (ornithe's
+ * `calamusGen%d`) which wins when the env's `ornitheGenVersion` is
+ * gen >= 2, else the descriptor's static `prodNamespace`.
+ */
+internal fun LoaderDescriptor.effectiveProdNamespace(
+    environment: MinecraftEnvironment
+): String {
+    val gen = environment.mappingsSpec.ornitheGenVersion
+    return capabilities["prodNamespaceGenTemplate"]
+        ?.takeIf { gen >= 2 }
+        ?.format(gen)
+        ?: prodNamespace
+}
 
 /**
  * Per-environment fabric wiring. Binding callbacks can run before the
@@ -64,11 +81,31 @@ internal object FabricEnvironmentWiring {
                 if (LoaderRegistry.resolveBuiltin(it.name)?.family == "fabric") "native" else null
             }
         )
-        // the library overlay is gen-dependent on user mapping config
-        // (`ornitheGenVersion`) — it stays post-DSL while the
-        // substitutions themselves land at loader declaration
+        // gen-aware prod namespaces (ornithe's `calamusGen<N>`): the
+        // global `loaderModSourceNamespaces` registration holds the
+        // descriptor default — the env's effective prod column follows
+        // its configured mapping gen. The descriptor is resolved
+        // eagerly here (not inside a provider) because ServiceLoader
+        // lookups fail under the instrumented classloader used during
+        // dependency resolution. A user `set()` still wins over the
+        // convention.
         project.afterDslEval {
-            FabricDependencyContributions.contributeLibraryOverlayCapability(it, environment)
+            val descriptor = environment.loaderSpec.orNull?.name
+                ?.let { LoaderRegistry().resolve(it) }
+                ?.takeIf { it.family == "fabric" }
+            if (descriptor != null) {
+                environment.modSourceNamespaces.convention(
+                    project.provider {
+                        // unobfuscated mc (26.x) has no intermediary
+                        // column — prod runs at mojmap, same as forge's
+                        // `obfuscated` gate in its convention
+                        if (!environment.obfuscated.get()) listOf("mojmap")
+                        else listOf(descriptor.effectiveProdNamespace(environment))
+                    }
+                )
+            }
+            FabricDependencyContributions.contributeLibraryOverlayCapability(
+                it, environment)
         }
         FabricDependencyContributions.contributeIntermediaryMappings(project, environment)
         FabricDependencyContributions.contributeLoaderDependency(project, environment)
@@ -177,7 +214,7 @@ internal object FabricEnvironmentWiring {
                     synthesizeInjectedInterfacesCt(
                         jar,
                         ctCacheDir.resolve(UniminedCache.artifactKey(jar.toPath())),
-                        descriptor.prodNamespace
+                        descriptor.effectiveProdNamespace(environment)
                     )
                 }
             }
@@ -236,7 +273,7 @@ internal object FabricEnvironmentWiring {
             val descriptor = loaderSpec.orNull?.name
                 ?.let { LoaderRegistry.resolveBuiltin(it) }
             if (descriptor?.family == "fabric") {
-                mapOf("intermediary" to descriptor.prodNamespace)
+                mapOf("intermediary" to descriptor.effectiveProdNamespace(environment))
             } else emptyMap()
         })
         // coordinate-consumed access docs

@@ -28,13 +28,20 @@ class FabricLoaderDescriptorsTest {
         // into the shared intermediary column before the member merge —
         // every fabric-family descriptor with a coord-fed upstream
         // source declares the same hop; `markSplitOfficial`'s split-era
-        // gate confines it to pre-1.3 versions
-        val expected = SplitMergeSpec(
-            listOf("clientOfficial", "serverOfficial"), "intermediary"
+        // gate confines it to pre-1.3 versions. Loaders whose prod
+        // column relabels upstream `intermediary` during composition
+        // (legacyfabric/babric) declare the relabeled target — the
+        // composed tree the merge consumes never carries a bare
+        // `intermediary` column for them
+        val expected = mapOf(
+            "fabric" to "intermediary",
+            "quilt" to "intermediary",
+            "legacyfabric" to "legacyIntermediary",
+            "babric" to "babricIntermediary",
         )
-        for (id in listOf("fabric", "quilt", "legacyfabric", "babric")) {
+        for ((id, column) in expected) {
             assertEquals(
-                expected,
+                SplitMergeSpec(listOf("clientOfficial", "serverOfficial"), column),
                 LoaderRegistry.resolveBuiltin(id)!!.splitMerge,
                 "$id should declare the split-era merge"
             )

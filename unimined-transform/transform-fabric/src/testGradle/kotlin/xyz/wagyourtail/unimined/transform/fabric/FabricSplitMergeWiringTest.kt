@@ -69,6 +69,16 @@ class FabricSplitMergeWiringTest {
         // afterDslEval — evaluate() fires it
         (project as org.gradle.api.internal.project.ProjectInternal)
             .evaluate()
+        // the merge targets the loader's prod column — upstream rows
+        // relabel onto it during composition, so the composed tree
+        // never carries a bare `intermediary` column for the
+        // relabeling loaders
+        val mergeColumns = mapOf(
+            "fabric" to "intermediary",
+            "quilt" to "intermediary",
+            "legacyfabric" to "legacyIntermediary",
+            "babric" to "babricIntermediary",
+        )
         for ((loader, env) in envs) {
             assertTrue(
                 env.mappingsSpec.splitOfficial,
@@ -80,7 +90,7 @@ class FabricSplitMergeWiringTest {
                 "$loader splitOfficialNamespaces"
             )
             assertEquals(
-                "intermediary", env.mappingsSpec.splitMergeNamespace,
+                mergeColumns[loader], env.mappingsSpec.splitMergeNamespace,
                 "$loader splitMergeNamespace"
             )
         }

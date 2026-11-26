@@ -189,7 +189,8 @@ internal object FabricDependencyContributions {
                 listOf(intermediaryJar.singleFile)
             }
         })
-        environment.mappingsSpec.defaultSources += MappingsSpecImpl.Source.File(files)
+        val intermediarySource = MappingsSpecImpl.Source.File(files)
+        environment.mappingsSpec.defaultSources += intermediarySource
 
         // split-era loaders (babric): the upstream artifact carries
         // per-side obf columns on a bare File source, so no channel
@@ -201,10 +202,32 @@ internal object FabricDependencyContributions {
             environment.loaderSpec.orNull?.name
                 ?.let { LoaderRegistry.resolveBuiltin(it) }
                 ?.takeIf { it.family == "fabric" }
-                ?.splitMerge?.let {
-                    environment.mappingsSpec.markSplitOfficial(
-                        it.fromNamespaces, it.mergeNamespace
-                    )
+                ?.let { descriptor ->
+                    // the per-side merge targets the loader's prod
+                    // column — upstream rows, loader mapping rows, and
+                    // published mod jars all key on that name
+                    descriptor.splitMerge?.let {
+                        environment.mappingsSpec.markSplitOfficial(
+                            it.fromNamespaces,
+                            descriptor.effectiveProdNamespace(environment)
+                        )
+                    }
+                    // loaders whose prod column isn't literally
+                    // `intermediary` (babric's `babricIntermediary`,
+                    // legacyfabric's `legacyIntermediary`): the upstream
+                    // artifact's own `intermediary` header must relabel
+                    // to that column, or the composed tree keeps two
+                    // parallel `class_N` column sets — upstream rows
+                    // with no named dst and the loader mappings' named
+                    // rows — and remaps read the former, silently
+                    // passing classes through
+                    if (descriptor.effectiveProdNamespace(environment)
+                        != "intermediary") {
+                        intermediarySource.mapNamespace(
+                            "intermediary",
+                            descriptor.effectiveProdNamespace(environment)
+                        )
+                    }
                 }
         }
     }
@@ -440,7 +463,7 @@ internal object FabricDependencyContributions {
                     exportLoaderMappings(
                         mappingsTree.get(),
                         devNs.orNull,
-                        descriptor.prodNamespace,
+                        descriptor.effectiveProdNamespace(environment),
                         environment.environmentId,
                         loaderMappingsDir
                     ).toFile()

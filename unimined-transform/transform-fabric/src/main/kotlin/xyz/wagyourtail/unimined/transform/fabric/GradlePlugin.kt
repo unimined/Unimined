@@ -21,7 +21,17 @@ class GradlePlugin : Plugin<Project> {
     override fun apply(target: Project) {
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
-            minecraft.loaderModSourceNamespaces["fabric"] = listOf("intermediary")
+            // every family descriptor publishes prod jars in its own
+            // column (intermediary/legacyIntermediary/babricIntermediary/
+            // calamus) — registering them all lets mod-source and
+            // source-namespace resolution use the declared prod column
+            // rather than the tree-sniffing heuristic
+            xyz.wagyourtail.unimined.transform.loader.LoaderRegistry()
+                .family("fabric").forEach { descriptor ->
+                    minecraft.loaderModSourceNamespaces.putIfAbsent(
+                        descriptor.id, listOf(descriptor.prodNamespace)
+                    )
+                }
             UniminedRepos(target).fabric.ensure()
             // loader repos for loaders actually selected — registering
             // the whole family's repos eagerly would add unrelated (and

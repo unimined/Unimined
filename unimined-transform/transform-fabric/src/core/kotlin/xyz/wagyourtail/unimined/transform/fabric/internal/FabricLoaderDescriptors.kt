@@ -35,6 +35,17 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
         "intermediary"
     )
 
+    /** [splitEraIntermediaryMerge] retargeted for loaders whose
+     *  canonical prod column isn't literally `intermediary`: their
+     *  upstream artifact's `intermediary` column relabels onto the
+     *  loader's own column during composition (published mappings/mod
+     *  jars key on that name), so the per-side merge must target the
+     *  relabeled column. */
+    private fun relabeledSplitMerge(column: String) = SplitMergeSpec(
+        listOf("clientOfficial", "serverOfficial"),
+        column
+    )
+
     override fun descriptors(): List<LoaderDescriptor> = listOf(
         LoaderDescriptor(
             id = "fabric",
@@ -123,7 +134,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             prodNamespace = "legacyIntermediary",
             // 1.x legacyFabricRevisionTransform: generation-keyed group
             intermediaryCoords = { mc -> "net.legacyfabric:intermediary:$mc:v2" },
-            splitMerge = splitEraIntermediaryMerge,
+            splitMerge = relabeledSplitMerge("legacyIntermediary"),
             capabilities = mapOf(
                 // dev-launch mod classpath groups serialize into
                 // this sysprop — fabric-loader #585 (loom.mods
@@ -163,7 +174,7 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             intermediaryCoords = { mc -> "babric:intermediary-upstream:$mc:v2" },
             // babric targets beta only — client/server obf spaces are
             // disjoint; upstream's tiny carries both side columns
-            splitMerge = splitEraIntermediaryMerge,
+            splitMerge = relabeledSplitMerge("babricIntermediary"),
             capabilities = mapOf(
                 // dev-launch mod classpath groups serialize into
                 // this sysprop — fabric-loader #585 (loom.mods
@@ -213,6 +224,11 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                         "-Dfabric-api.datagen -Dfabric-api.datagen.output-dir={output} -Dfabric-api.datagen.modid={modid}",
                 "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 "libraryOverlayMeta" to "https://meta.ornithemc.net",
+                // prod column is gen-keyed: `calamus` on gen1,
+                // `calamusGen<N>` for `ornitheGenVersion >= 2` —
+                // `effectiveProdNamespace` picks between this and
+                // `prodNamespace`
+                "prodNamespaceGenTemplate" to "calamusGen%d",
                 "skipMcProvider" to "-Dfabric.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
