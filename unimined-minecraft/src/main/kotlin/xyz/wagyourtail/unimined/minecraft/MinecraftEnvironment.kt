@@ -4,6 +4,7 @@ import groovy.lang.MissingMethodException
 import groovy.lang.MissingPropertyException
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import xyz.wagyourtail.unimined.api.util.NoGroovyTwin
 import xyz.wagyourtail.unimined.api.util.UniminedProblems
 import xyz.wagyourtail.unimined.api.util.callDelegate
 import xyz.wagyourtail.unimined.api.util.delegatingTo
@@ -678,6 +679,7 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      * hook, not user DSL; handlers must be cheap and must not resolve
      * artifacts or configurations.
      */
+    @NoGroovyTwin("transform-plugin wiring hook — not a build-script DSL verb")
     fun onPrimaryLoaderDeclared(handler: (LoaderSpec) -> Unit) {
         primaryLoaderDeclaredHandlers += handler
         loaderSpec.orNull?.let(handler)
