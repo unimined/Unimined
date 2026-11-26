@@ -424,4 +424,11 @@ class GenerateModMetadataTaskTest {
         }
     }
 
+    @Test
+    fun `files left in the output dir by an earlier run are removed`() {
+        val stale = write("mod.accesswidener", aw, dir.resolve("gen"))
+        task("fabric", emptyList()).generate()
+        assertFalse(Files.exists(stale))
+    }
+
 }

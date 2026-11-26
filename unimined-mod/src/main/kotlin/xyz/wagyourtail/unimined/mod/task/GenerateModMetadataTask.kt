@@ -212,7 +212,8 @@ abstract class GenerateModMetadataTask : DefaultTask() {
         interfaceInjectionScan.convention(false)
     }
 
-    /** Generated output; wired into the source set's resources. */
+    /** Generated output; wired into the source set's resources. The task
+     *  owns this directory and clears it on every run. */
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -232,10 +233,14 @@ abstract class GenerateModMetadataTask : DefaultTask() {
 
     @TaskAction
     fun generate() {
+        // the task owns its output dir — a file it no longer generates
+        // must not keep shipping from an earlier run
+        val outputRoot = outputDir.get().asFile
+        check(outputRoot.deleteRecursively()) { "unimined: could not clear $outputRoot" }
+        Files.createDirectories(outputRoot.toPath())
         if (auxEnv.get()) {
             // still produce the file outputs — the jar manifest merge
             // and processResources exclusion read them unconditionally
-            Files.createDirectories(outputDir.get().asFile.toPath())
             Files.createDirectories(manifestFile.get().asFile.toPath().parent)
             Files.write(
                 manifestFile.get().asFile.toPath(),
