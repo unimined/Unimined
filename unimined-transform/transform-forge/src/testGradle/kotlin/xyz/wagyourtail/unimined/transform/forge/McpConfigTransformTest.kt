@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigDescriptorFormat
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.McpConfigFunctionSource
+import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.cleanJarTargetStep
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.mcpConfigCacheKey
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.sideCacheKey
 import xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig.withToolOverride
@@ -78,6 +79,59 @@ class McpConfigTransformTest {
         assertNotEquals(salted, sideCacheKey("server", fart102))
         assertNotEquals(salted, sideCacheKey("client", fart0122))
         assertNull(Regex("[^A-Za-z0-9._-]").find(salted), "fs-safe: $salted")
+    }
+
+    /**
+     * MCPConfig 1.13–1.16 inserts `mcinject` between `rename` and
+     * `decompile`. That instrumentation is decompilation-only: Forge's
+     * joined binpatches checksum the `rename` output (verified against
+     * 1.16.5-36.2.42, whose `WorldBorder$Serializer` input checksum is
+     * the rename bytes, not the mcinject bytes).
+     */
+    @Test
+    fun `clean jar target is rename when mcinject feeds decompile`() {
+        val pipeline = DeclaredSubpipeline(
+            steps = listOf(
+                SubStep("merge", "merge"),
+                SubStep("rename", "rename", mapOf("input" to "{mergeOutput}")),
+                SubStep("mcinject", "mcinject", mapOf("input" to "{renameOutput}")),
+                SubStep("decompile", "decompile", mapOf("input" to "{mcinjectOutput}"))
+            )
+        )
+        assertEquals(
+            "rename",
+            cleanJarTargetStep(pipeline, "joined", notchObf = false),
+            "obfuscated userdev binpatches must not consume mcinject output")
+    }
+
+    /** notchObf-era packs checksum the pre-rename merge/strip output. */
+    @Test
+    fun `clean jar target is rename input for notchObf`() {
+        val pipeline = DeclaredSubpipeline(
+            steps = listOf(
+                SubStep("merge", "merge"),
+                SubStep("rename", "rename", mapOf("input" to "{mergeOutput}")),
+                SubStep("decompile", "decompile", mapOf("input" to "{renameOutput}"))
+            )
+        )
+        assertEquals(
+            "merge",
+            cleanJarTargetStep(pipeline, "joined", notchObf = true))
+    }
+
+    /** Unobfuscated 26.x descriptors have no rename boundary; the
+     *  decompile input is already the binary chain tail. */
+    @Test
+    fun `clean jar target falls back to decompile input without rename`() {
+        val pipeline = DeclaredSubpipeline(
+            steps = listOf(
+                SubStep("merge", "merge"),
+                SubStep("decompile", "decompile", mapOf("input" to "{mergeOutput}"))
+            )
+        )
+        assertEquals(
+            "merge",
+            cleanJarTargetStep(pipeline, "joined", notchObf = false))
     }
 
     /** `withToolOverride` replaces only the named function's coords. */

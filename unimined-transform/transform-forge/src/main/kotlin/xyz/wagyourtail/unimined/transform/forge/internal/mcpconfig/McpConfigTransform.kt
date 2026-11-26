@@ -19,6 +19,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
+import xyz.wagyourtail.unimined.transform.step.subpipeline.DeclaredSubpipeline
 import xyz.wagyourtail.unimined.transform.step.subpipeline.FormatContext
 import xyz.wagyourtail.unimined.transform.step.subpipeline.SubpipelineExecutor
 import java.io.File
@@ -118,32 +119,9 @@ abstract class McpConfigTransform @Inject constructor(
         if (renameOverride != null) {
             pipeline = pipeline.withToolOverride("rename", renameOverride)
         }
-        // the clean jar is `decompile`'s input — the step that
-        // produced it is the one to run through. Pipelines vary: srg-era
-        // descriptors decompile `{renameOutput}`, unobf'd (26.x)
-        // descriptors have no `rename` at all and decompile
-        // `{mergeOutput}`/`{stripOutput}`. `untilStep` falls through to
-        // the chain tail when the name is absent — a missing `rename`
-        // silently yields the `patch` sources jar, so the step name
-        // must be read off the descriptor, not guessed.
-        val decompileInput = pipeline.steps
-            .firstOrNull { it.name == "decompile" }
-            ?.args?.get("input")
-            ?.let {
-                Regex("\\{(.+)Output\\}").find(it)?.groupValues?.get(1)
-            }
-        val step = if (params.notchObf.get()) {
-            // notchObf binpatches index the *pre-rename* jar — the
-            // obfNamespace boundary (1.x `executeMcp("merge")` for
-            // joined). Derive it from `rename`'s input rather than
-            // hardcoding `merge`: joined reads `{mergeOutput}`, split
-            // sides read the strip output.
-            pipeline.steps.firstOrNull { it.name == "rename" }
-                ?.args?.get("input")
-                ?.let {
-                    Regex("\\{(.+)Output\\}").find(it)?.groupValues?.get(1)
-                } ?: if (side == "joined") "merge" else "rename"
-        } else decompileInput ?: "rename"
+        val step = cleanJarTargetStep(
+            pipeline, side, params.notchObf.get()
+        )
         val output = SubpipelineExecutor(
             pipeline,
             McpConfigDescriptorFormat(),
@@ -212,6 +190,52 @@ abstract class McpConfigTransform @Inject constructor(
             output.toFile().copyTo(out, overwrite = true)
         }
     }
+}
+
+/**
+ * Select the mcpconfig step whose output is the binary clean jar that
+ * userdev binpatches checksum against.
+ *
+ * This is deliberately **not** `decompile`'s input: MCPConfig 1.13–1.16
+ * descriptors insert `mcinject` between `rename` and `decompile` to add
+ * decompilation-only constructor/access/LVT metadata. Forge's binary
+ * patches are generated before that instrumentation — 1.x always used
+ * `executeMcp("rename")` for obfuscated userdev — so consuming
+ * `{mcinjectOutput}` produces checksum mismatches even though the
+ * decompile chain itself is correct. NeoForm 26.x-style descriptors have
+ * no rename step or obfuscation boundary; there the decompile input is
+ * the binary chain tail (`merge`/`strip`) and remains the right output.
+ */
+internal fun cleanJarTargetStep(
+    pipeline: DeclaredSubpipeline,
+    side: String,
+    notchObf: Boolean
+): String {
+    fun outputStepRef(value: String?): String? =
+        value?.let { Regex("\\{(.+)Output\\}").find(it)?.groupValues?.get(1) }
+
+    if (notchObf) {
+        // notchObf binpatches index the *pre-rename* jar — the
+        // obfNamespace boundary (1.x `executeMcp("merge")` for joined).
+        // Derive it from `rename`'s input rather than hardcoding `merge`:
+        // joined reads `{mergeOutput}`, split sides read the strip output.
+        return outputStepRef(
+            pipeline.steps.firstOrNull { it.name == "rename" }
+                ?.args?.get("input")
+        ) ?: if (side == "joined") "merge" else "rename"
+    }
+
+    // Obfuscated userdev patch packs checksum the renamed binary, even
+    // when the source-decompilation chain subsequently runs mcinject.
+    if (pipeline.steps.any { it.name == "rename" }) return "rename"
+
+    // Unobfuscated descriptors have no rename boundary. Their decompile
+    // input is the binary chain tail; fall back to the historical name
+    // only for malformed descriptors that declare neither shape.
+    return outputStepRef(
+        pipeline.steps.firstOrNull { it.name == "decompile" }
+            ?.args?.get("input")
+    ) ?: "rename"
 }
 
 /**
