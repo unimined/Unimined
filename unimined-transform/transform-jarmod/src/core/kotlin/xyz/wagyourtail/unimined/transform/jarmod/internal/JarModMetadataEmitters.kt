@@ -79,6 +79,66 @@ class LiteLoaderModMetadataEmitter : ModMetadataEmitter {
 }
 
 /**
+ * `loader("nil")` — `{modid}.nilmod.css`: nilloader's qdcss metadata
+ * doc (`@nilmod` identity block + `entrypoints` map). nilloader is a
+ * pure javaagent — classes join the classpath raw, so the doc only
+ * declares the mod and its premain hook.
+ */
+class NilModMetadataEmitter : ModMetadataEmitter {
+    override val loader = "nil"
+
+    override fun emit(context: ModMetadataEmitter.EmitContext): Map<String, ByteArray> {
+        val meta = context.metadata
+        val sb = StringBuilder()
+        sb.append("@nilmod {\n")
+        sb.append("\tname: ").append(qdcssString(meta.name ?: meta.id!!)).append(";\n")
+        meta.description?.let {
+            sb.append("\tdescription: ").append(qdcssString(it)).append(";\n")
+        }
+        if (meta.authors.isNotEmpty()) {
+            sb.append("\tauthors: ").append(qdcssString(meta.authors.joinToString(" "))).append(";\n")
+        }
+        sb.append("\tversion: ").append(qdcssString(meta.version ?: "0.0.0")).append(";\n")
+        sb.append("}\n")
+        val entrypoints = meta.sections[loader]?.entrypoints.orEmpty()
+        if (entrypoints.isNotEmpty()) {
+            sb.append("\nentrypoints {\n")
+            entrypoints.forEach { (kind, classes) ->
+                classes.forEach { cls ->
+                    sb.append('\t').append(kind).append(": ")
+                        .append(qdcssString(cls)).append(";\n")
+                }
+            }
+            sb.append("}\n")
+        }
+        return mapOf("${meta.id}.nilmod.css" to sb.toString().toByteArray())
+    }
+
+    companion object {
+        /**
+         * Quote one qdcss string value. qdcss uses Java-ish quoted
+         * strings; raw interpolation previously let `"` or a newline
+         * terminate the value and made every following key parse as
+         * part of the wrong declaration.
+         */
+        internal fun qdcssString(value: String): String = buildString(value.length + 2) {
+            append('"')
+            value.forEach { c ->
+                when (c) {
+                    '"' -> append("\\\"")
+                    '\\' -> append("\\\\")
+                    '\n' -> append("\\n")
+                    '\r' -> append("\\r")
+                    '\t' -> append("\\t")
+                    else -> append(c)
+                }
+            }
+            append('"')
+        }
+    }
+}
+
+/**
  * `loader("rift")` — `riftmod.json`: Rift's own manifest (dimdev's
  * 1.13-era loader). `id` is required; `entrypoints`/`listeners` are
  * the keys RiftLoader scans — emitted empty so a bare project jar

@@ -90,6 +90,10 @@ internal object JarModEnvironmentWiring {
                 RiftWiring.wire(project, environment)
                 return
             }
+            "nil" -> {
+                NilWiring.wire(project, environment)
+                return
+            }
         }
         // envs can now bind inside the same environments.all pass that
         // declared them — before the plugin-level createConfigurations

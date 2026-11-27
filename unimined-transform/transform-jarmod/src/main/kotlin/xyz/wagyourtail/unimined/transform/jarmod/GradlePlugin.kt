@@ -25,6 +25,9 @@ class GradlePlugin : Plugin<Project> {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
             // jarmod mods run in the vanilla jar's own namespace
             minecraft.loaderModSourceNamespaces["jarmod"] = listOf("official")
+            // published nilmods ship official-named — nil rides the
+            // same prod-namespace convention as jarmod
+            minecraft.loaderModSourceNamespaces["nil"] = listOf("official")
             // LiteLoader artifacts are srg/searge-named binaries. Without
             // this, the no-loader-default falls back to the tree's
             // `official` column and searge member rows (`func_*`/`field_*`)

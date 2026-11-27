@@ -145,6 +145,32 @@ internal class JarModLoaderDescriptors : LoaderDescriptorSource {
             wiringVariant = "rift",
             transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod",
             metadata = LoaderMetadataSpec(fileName = "riftmod.json")
+        ),
+        // NilLoader is a pure javaagent (Premain-Class NilAgent) —
+        // the same GAV serves compile classpath and -javaagent; the
+        // game jar itself is untouched, so prod mods re-obfuscate back
+        // to `official` like jarmod. Version-agnostic by design —
+        // nilloader carries no MC-version-shaped artifacts.
+        LoaderDescriptor(
+            id = "nil",
+            family = "jarmod",
+            supportedProducts = setOf("*"),
+            repos = listOf(
+                LoaderRepo.Maven(
+                    "https://repo.sleeping.town",
+                    includeGroupRegex = "com\\.unascribed")
+            ),
+            loaderCoords = { _, v -> "com.unascribed:nilloader:$v" },
+            prodNamespace = "official",
+            // NilLoader scans the working directory's top-level `nilmods/`
+            // directory (it also scans `mods/`, but `nilmods` is the
+            // layering-safe path NilLoader documents for use beside
+            // another loader). Folder staging is mandatory in dev: unlike
+            // fabric/forge, the agent has no exploded-classpath mod
+            // discovery channel.
+            capabilities = mapOf("modsDir" to "nilmods"),
+            wiringVariant = "nil",
+            transformPlugin = "xyz.wagyourtail.unimined.transform.jarmod"
         )
     )
 }

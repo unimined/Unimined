@@ -161,8 +161,6 @@ abstract class MinecraftEnvironment @Inject internal constructor(
                     "`jarMod(\"risugami:modloader:<mc>\")` dependency " +
                     "(auto-patched by jarmod-modloader-fixes)"
         this["risugami"] = this["modloader"]!!
-        this["nil"] = "NilLoader has no 2.0 loader descriptor — " +
-                "planned, not yet supported"
         this["jarMod"] = loader("jarMod", "jarmod")
         this["foxLoader"] = loader("foxLoader", "foxloader")
         this["liteloader"] = loader("liteloader", "liteloader")
@@ -1657,6 +1655,15 @@ abstract class MinecraftEnvironment @Inject internal constructor(
     /** Groovy spec-config twin — `rift "1.0.4", { }`. */
     fun rift(version: String, action: Closure<*>) =
         loader("rift", version, action)
+
+    /** Declares the NilLoader loader — `loader("nil", version)`.
+     *  NilLoader is a javaagent; the nilloader jar also lands on the
+     *  env's compile/runtime classpath. */
+    fun nil(version: String) = loader("nil", version)
+
+    /** Groovy spec-config twin — `nil "1.3.6", { }`. */
+    fun nil(version: String, action: Closure<*>) =
+        loader("nil", version, action)
 
     /** Declares the Spigot loader — `loader("spigot", version)`. */
     fun spigot(version: String) = loader("spigot", version)

@@ -8,6 +8,8 @@ dependencies {
     "coreApi"(libs.asm)
     api(project(":unimined-transform"))
     api(project(":unimined-remap"))
+    // nil mappings scan task + uml-backed mod-artifact steps
+    implementation(project(":unimined-remap:remapper-uml"))
     // access-doc apply step for user-declared AT/AW/CT files
     implementation(project(":unimined-remap:remapper-access"))
     "coreApi"(project(":unimined-mod"))
