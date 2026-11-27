@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.internal.env
 
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.util.UniminedCache
 import xyz.wagyourtail.unimined.api.util.failProblem
@@ -257,11 +258,30 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
                     .filter { dep -> environment.libraryFilters.all { it(dep) } }
             )
         }
-        project.configurations.named(sourceSet.compileClasspathConfigurationName) {
-            it.extendsFrom(librariesBucket)
+        project.configurations.named(sourceSet.compileClasspathConfigurationName) { conf ->
+            conf.extendsFrom(librariesBucket)
+            conf.withDependencies {
+                // the java plugin derives `jvm.version` from the
+                // compile task's emit level (`options.release`/target)
+                // — mods may emit Java 8 bytecode against a newer
+                // dependency floor, and variant matching then rejects
+                // the env's own MC/loader libraries. Re-stamp with the
+                // level the compile actually reads class files at
+                conf.attributes.attribute(
+                    TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
+                    environment.compileJavaVersion.get()
+                )
+            }
         }
-        project.configurations.named(sourceSet.runtimeClasspathConfigurationName) {
-            it.extendsFrom(librariesBucket)
+        project.configurations.named(sourceSet.runtimeClasspathConfigurationName) { conf ->
+            conf.extendsFrom(librariesBucket)
+            conf.withDependencies {
+                // runtime resolution is bound by the env's launch floor
+                conf.attributes.attribute(
+                    TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
+                    environment.requiredJavaVersion.get()
+                )
+            }
         }
 
         registerMinecraftTransform(environment)
