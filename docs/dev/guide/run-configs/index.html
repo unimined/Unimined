@@ -2055,8 +2055,10 @@ classification in dev, set <code>mod { loader("forge") { fmlModType("LANGPROVIDE
 from one declaration.</p>
 <p>Loader dev-mode flags are wired per-loader: fabric-family runs get
 <code>-Dloader.development=true</code>/<code>fabric.development</code> (and quilt's
-<code>loader.development</code>) from the env wiring — no run-config edits
-needed. Anything else is ordinary <code>jvmArgs</code>/<code>environmentVariables</code>.</p>
+<code>loader.development</code>) from the env wiring; FoxLoader 1.x conversion
+runs get <code>-Dfoxloader.dev-mode=true</code> because their Minecraft artifact
+is pre-patched at build time — no run-config edits needed. Anything
+else is ordinary <code>jvmArgs</code>/<code>environmentVariables</code>.</p>
 <h2 id="dry-run">Dry-run<a class="headerlink" href="#dry-run" title="Permanent link">&para;</a></h2>
 <p><code>-Punimined.run.dryRun=true</code> prints the assembled launch (main class,
 args, classpath) instead of exec'ing — the quickest way to inspect

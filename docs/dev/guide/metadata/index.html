@@ -1922,6 +1922,17 @@ still reach the jar and the dev classpath.</p>
 <p>On LaunchWrapper-era forge-family loaders (≤1.12.2), <code>MixinConfigs</code> is
 paired with the <code>TweakClass</code> manifest attribute — LaunchWrapper only
 registers mixin containers whose manifest names the mixin tweaker.</p>
+<p>FoxLoader is likewise manifest-based, but its attribute family changed
+with ReIndev 2.9's loader rewrite. For FoxLoader 1.x (ReIndev &lt; 2.9),
+the loader-neutral <code>main</code> entrypoint kind emits <code>CommonMod</code>, while
+<code>client</code>/<code>server</code> kinds emit <code>ClientMod</code>/<code>ServerMod</code>; the first mixin
+config emits <code>CommonMixin</code>. For FoxLoader 2.x, <code>main</code> emits <code>ModMain</code>
+and the mixin config emits <code>ModMixin</code>. <code>ModId</code> and the descriptive
+attributes are common to both eras. Dev runs stage the built env jar in
+<code>mods/</code>, so no <code>foxloader.inject-mod</code> argument is needed (passing both
+would double-register the same mod); FoxLoader 1.x dev runs do receive
+<code>-Dfoxloader.dev-mode=true</code> because the conversion pipeline pre-patches
+the Minecraft artifact at build time.</p>
 <p>Loader-contributed extras merge verbatim: <code>environment.manifestAttributes</code>
 (env channel — e.g. <code>manifestAttributes["FMLModType"] = "LANGPROVIDER"</code>
 or ornithe's <code>Calamus-Generation</code>) plus emitter attrs

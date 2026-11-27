@@ -669,6 +669,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#nilloader-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NilLoader mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1540,6 +1551,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#nilloader-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NilLoader mappings
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1740,6 +1762,11 @@ accepted spellings that map to the same descriptor:</p>
 <td></td>
 </tr>
 <tr>
+<td><code>nil(v)</code></td>
+<td><code>nil</code></td>
+<td></td>
+</tr>
+<tr>
 <td><code>spigot(v)</code></td>
 <td><code>spigot</code></td>
 <td></td>
@@ -1896,6 +1923,64 @@ then register only through the <code>--mixin</code> args):</p>
 </div>
 </div>
 </div>
+<h2 id="nilloader-mappings">NilLoader mappings<a class="headerlink" href="#nilloader-mappings" title="Permanent link">&para;</a></h2>
+<p><code>nil(v)</code> environments generate <code>META-INF/nil/mappings.json</code>
+automatically — NilLoader's per-mod runtime remapping table. The
+<code>scanNilMappings</code> task (<code>scan&lt;Env&gt;NilMappings</code> for named envs) runs a
+tracked scan over the compiled mod classes and emits the dev→<code>official</code>
+reference usage NilLoader resolves at runtime:</p>
+<ul>
+<li><strong>Bytecode references</strong> — method/field/type refs, covering
+  ship-named mode where the agent performs the real remap at runtime
+  (inheritance-completed, so exact-owner lookups resolve through
+  subclass references the way NilGradle's scan did).</li>
+<li><strong><code>@Patch.Class</code>/<code>@Patch.Method</code> annotation strings</strong> — mini
+  transformer targets.</li>
+<li><strong>String literals</strong> — <code>remapType</code>/<code>remapField</code>/<code>remapMethod</code> args
+  and <code>InsnBuilder</code>-style owner/name/desc ldc triples (literal strings
+  only — computed strings are statically unresolvable, same limitation
+  as NilGradle).</li>
+<li><strong><code>widen</code></strong> — members/classes needing runtime access widening.</li>
+</ul>
+<p>The generated file is injected into the jar copy spec, so it rides
+both the plain jar (identity/ship-named mode) and the <code>remapJar</code>
+output (ship-official mode — the default, since nilmods re-obfuscate
+to <code>official</code> like jarmods). Because every runtime lookup keys on
+dev-namespace owners, nil envs also opt out of class-name <code>ldc</code> string
+rewriting in the mod-artifacts step automatically — owner/desc
+literals must stay in the compile namespace for the json lookups to
+hit.</p>
+<p>If a hand-maintained <code>src/main/resources/META-INF/nil/mappings.json</code>
+exists, remove it — the generated file replaces it. Knobs on
+<code>scanNilMappings</code>: <code>keepAllMappings</code> emits the full namespace-pair
+tree instead of the tracked minimum (NilGradle parity), and
+<code>extraTarget(id, bundle, targetNamespace)</code> adds mapping sets beyond
+<code>"default"</code> while keeping the bundle/file/namespace inputs in sync.
+The env wiring points <code>accessTruthJars</code> at the pristine
+source-namespace Minecraft artifact automatically, so access widening
+is measured before any dev-side access transform can hide required
+widens.</p>
+<p>NilLoader discovers only jar files in <code>nilmods/</code> (and <code>mods/</code>), not
+exploded classpath entries. Nil environments therefore stage dev and
+production mod jars into <code>nilmods/</code> rather than treating the runtime
+classpath as a discovery mechanism. When a <code>mods { }</code> group names the
+same logical mod (<code>mod.id</code>, or the only group when <code>mod.id</code> is unset),
+that group's leaf source-set outputs are scanned and embedded into the
+env jar. This is what lets shared resources such as a root-level
+<code>*.nilmod.css</code> live in a common <code>main</code> source set while NilLoader still
+discovers one mod jar.</p>
+<p>Recursive shadow-mode <code>combineWith</code> output is <strong>not</strong> auto-scanned in
+v1. Expanding those packaging providers back into scan inputs creates a
+task/provider dependency cycle (<code>jar</code> depends on the scan while the scan
+would depend on jar composition). Rewire <code>classDirs</code> manually when such
+a layout needs mappings.</p>
+<p>Raw source output in a <code>mods { }</code> group is assumed to be valid in the
+nil environment's dev namespace — <code>mods { }</code> has no namespace-hop or
+remap channel, and scanning cross-namespace output as the env
+namespace would emit incorrect rows. Cross-era binary slices must be
+pre-remapped by the build (for example as <code>modFiles</code>) and are not
+auto-scanned in v1; rewire the scan task manually if such a slice
+needs mappings. Rewire <code>classDirs</code> for other exotic layouts.</p>
 
 
 
