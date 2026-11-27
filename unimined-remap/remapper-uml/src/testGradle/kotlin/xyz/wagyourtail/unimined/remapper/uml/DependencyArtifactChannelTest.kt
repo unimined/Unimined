@@ -170,7 +170,7 @@ class DependencyArtifactChannelTest {
         tiny	2	0	searge	mcp	official
         c	net/minecraft/server/MinecraftServer	net/minecraft/server/MinecraftServer	net/minecraft/server/MinecraftServer
             m	()V	func_71190_q	updateTimeLightAndEntities	D
-        """.trimIndent()), dir
+        """.tinyDocument()), dir
     )
 
     private fun liteMixinBytes(): ByteArray = classBytes(liteMixin) {
@@ -423,8 +423,12 @@ class DependencyArtifactChannelTest {
             it.desc == "Lorg/spongepowered/asm/mixin/injection/Inject;"
         }
         val methodValues = inject.values[inject.values.indexOf("method") + 1] as List<*>
-        assertEquals(listOf("notifyEntityAdded"), methodValues,
-            "the intermediary refmap row must resolve through ClientWorld's inherited World member")
+        assertEquals(
+            listOf("Lnet/minecraft/client/world/ClientWorld;notifyEntityAdded(Lnet/minecraft/entity/Entity;)V"),
+            methodValues,
+            "the intermediary refmap row must resolve through ClientWorld's inherited World member " +
+                "and emit UML's canonical owner-qualified method spec"
+        )
     }
 
     // ---------- LaunchWrapper coremod string-descriptor channel ----------
@@ -440,7 +444,7 @@ class DependencyArtifactChannelTest {
         tiny	2	0	searge	featherGen2
         c	net/minecraft/crash/CrashReport	net/minecraft/util/crash/CrashReport
         c	net/minecraft/crash/CrashReportCategory	net/minecraft/util/crash/CrashReportCategory
-        """.trimIndent()), dir
+        """.tinyDocument()), dir
     )
 
     private fun transformerJar(tag: String): Path {

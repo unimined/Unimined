@@ -147,12 +147,10 @@ class LegacyRefmapClassTargetExtension(
         if (!resolvesInSourceNamespace(owner, name, memberDesc, isField)) return value
         val parsed = MemberRefParts.parse(mappedSource, isField) ?: return value
         val resolved = parsed.resolve(ctx, emptyList(), isField) ?: return value
-        // Preserve the annotation's written shape: a bare compile key becomes
-        // a bare target name, while an already owner-qualified pointcut stays
-        // owner-qualified. The refmap value is only the bridge, not the shape
-        // to emit.
-        val written = MemberRefParts.parse(value, isField)
-        return written?.render(resolved) ?: parsed.render(resolved)
+        // UML canonicalizes resolved member refs: even a bare compile key is
+        // emitted owner-qualified once resolution has identified the member,
+        // avoiding ambiguous bare names in collapsed production namespaces.
+        return parsed.render(resolved)
     }
 
     /**
