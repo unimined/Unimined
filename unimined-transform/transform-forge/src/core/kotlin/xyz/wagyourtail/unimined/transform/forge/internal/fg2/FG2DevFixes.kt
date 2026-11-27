@@ -54,25 +54,9 @@ object FG2DevFixes {
             "net/minecraftforge/fml/common/launcher/FMLTweaker.class",
             "cpw/mods/fml/common/launcher/FMLTweaker.class",
         ),
-        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.discovery.ModClassesTweakerTx" to listOf(
-            "net/minecraftforge/fml/common/launcher/FMLTweaker.class",
-            "cpw/mods/fml/common/launcher/FMLTweaker.class",
-            "net/minecraftforge/fml/common/launcher/FMLServerTweaker.class",
-            "cpw/mods/fml/common/launcher/FMLServerTweaker.class",
-            "net/minecraftforge/fml/common/launcher/FMLDeobfTweaker.class",
-            "cpw/mods/fml/common/launcher/FMLDeobfTweaker.class",
-        ),
-        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.discovery.ModDiscovererTx" to listOf(
-            "cpw/mods/fml/common/discovery/ModDiscoverer.class",
-            "net/minecraftforge/fml/common/discovery/ModDiscoverer.class",
-        ),
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfRemapperTx" to listOf(
             "cpw/mods/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
             "net/minecraftforge/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
-        ),
-        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfTransformerTx" to listOf(
-            "cpw/mods/fml/common/asm/transformers/DeobfuscationTransformer.class",
-            "net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class",
         ),
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.coremods.CoreModManagerCpwTx" to listOf(
             "cpw/mods/fml/relauncher/CoreModManager.class",
@@ -107,8 +91,53 @@ object FG2DevFixes {
         ),
     )
 
-    fun fix(fs: FileSystem) =
-        ClassTransformJarFix.fix(fs, transformers,
+    /**
+     * `net/minecraftforge/registries/ObjectHolderRegistry` is the one
+     * transformer target whose entry exists in *both* eras: 1.12.2
+     * ships it in the modern package with an *instance*
+     * {@code scanTarget(Map,Map,String,String,String,Z,Z)}, while
+     * 1.13+ carries a *static* scanTarget whose signature drifted
+     * again in 1.15+ (gained Class/extra String params). The
+     * instance-era and static-era transformers can't validly apply on
+     * each other's shape — classtransform requires the handler's
+     * staticness to match the enclosing method, and a missed combi
+     * throws MethodNotFoundException which aborts every handler for
+     * the class. Exists-gating can't tell the eras apart (the entry
+     * is present either way), so select by the actual scanTarget
+     * shape in the jar: instance-shaped jars get only
+     * [ObjectHolderRegistryTx], static-shaped jars get only
+     * [ObjectHolderRegistryModLauncherTx].
+     */
+    private const val OHR_ENTRY =
+        "net/minecraftforge/registries/ObjectHolderRegistry.class"
+    private const val OHR_TX =
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.registry.ObjectHolderRegistryTx"
+    private const val OHR_MODLAUNCHER_TX =
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.registry.ObjectHolderRegistryModLauncherTx"
+
+    fun fix(fs: FileSystem): Unit {
+        val selected = transformers.toMutableMap()
+        val ohr = fs.getPath(OHR_ENTRY)
+        if (ohr.exists()) {
+            val node = org.objectweb.asm.tree.ClassNode()
+            org.objectweb.asm.ClassReader(ohr.readBytes()).accept(node, 0)
+            val scanTarget = node.methods.firstOrNull { it.name == "scanTarget" }
+            val staticEra = scanTarget == null ||
+                    (scanTarget.access and org.objectweb.asm.Opcodes.ACC_STATIC) != 0
+            if (staticEra) {
+                // static scanTarget (1.13+) — or, defensively, no
+                // scanTarget at all: the instance-era transformer's
+                // redirect can't validly apply either way
+                selected[OHR_TX] = selected.getValue(OHR_TX) - OHR_ENTRY
+            } else {
+                // instance scanTarget (1.7.10–1.12.2): the
+                // static-handler ModLauncher transformer would clash
+                // with the enclosing method's staticness
+                selected.remove(OHR_MODLAUNCHER_TX)
+            }
+        }
+        ClassTransformJarFix.fix(fs, selected,
             listOf(HELPER_ENTRY, HELPER_NAME_ENTRY))
+    }
 
 }

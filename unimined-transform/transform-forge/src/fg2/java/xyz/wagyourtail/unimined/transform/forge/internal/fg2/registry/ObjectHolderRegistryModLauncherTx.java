@@ -34,9 +34,22 @@ import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2;
 @CTransformer(name = "net.minecraftforge.registries.ObjectHolderRegistry")
 public class ObjectHolderRegistryModLauncherTx {
 
-    // ModLauncher era (1.13+): scanTarget is *static*.
+    // ModLauncher era (1.13+): scanTarget is *static* in every
+    // version of this package. The signature drifted over time —
+    // 1.13/1.14 carry (Map,Map,Type,String,String,Z,Z) while 1.15+
+    // (verified through 1.21.1/52.x) carry
+    // (Map,Map,Type,String,Class,String,String,Z,Z) — so the method
+    // pattern is a wildcard: the redirect rewrites the
+    // Class.forName(String,Z,ClassLoader) probe *inside* whichever
+    // overload exists, and the handler's own parameters describe the
+    // redirected call rather than the enclosing method, making the
+    // redirect valid for every overload. An exact-descriptor match
+    // would miss the other variants entirely, throwing
+    // MethodNotFoundException out of the InfoFiller and skipping
+    // every handler in the class — including, on modern userdev
+    // jars, the net.minecraft.init widening below.
     @CInline
-    @CRedirect(method = "scanTarget(Ljava/util/Map;Ljava/util/Map;Lorg/objectweb/asm/Type;Ljava/lang/String;Ljava/lang/String;ZZ)V",
+    @CRedirect(method = "scanTarget*",
             target = @CTarget(value = "INVOKE",
             target = "Ljava/lang/Class;forName(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;",
             optional = true))
