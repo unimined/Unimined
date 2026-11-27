@@ -379,6 +379,68 @@ class EnvironmentClasspathWiringTest {
         }
     }
 
+    /** Serve a tiny Maven module. [dependencies] are `g:a:v` compile-scope
+     *  coordinates encoded into the POM so transitive resolution is real. */
+    private fun serveMavenModule(coords: String, dependencies: List<String> = emptyList()) {
+        val (g, a, v) = coords.split(":")
+        val moduleDir = dir.resolve("repo/${g.replace('.', '/')}/$a/$v").toFile()
+        moduleDir.mkdirs()
+        moduleDir.resolve("$a-$v.jar").writeBytes(
+            byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+        )
+        val deps = dependencies.joinToString("") { dep ->
+            val (dg, da, dv) = dep.split(":")
+            "<dependency><groupId>$dg</groupId><artifactId>$da</artifactId>" +
+                    "<version>$dv</version><scope>compile</scope></dependency>"
+        }
+        moduleDir.resolve("$a-$v.pom").writeText(
+            "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">" +
+                    "<modelVersion>4.0.0</modelVersion><groupId>$g</groupId>" +
+                    "<artifactId>$a</artifactId><version>$v</version>" +
+                    "<dependencies>$deps</dependencies></project>"
+        )
+    }
+
+    @Test
+    fun `minecraft library coordinates win over mod transitives but not direct deps`() {
+        val project = project(listOf("xyz.wagyourtail.unimined.transform"))
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val gameGson = project.dependencies.create("com.google.code.gson:gson:2.13.2")
+        ext.registry.register(YarnIntermediaryFakeProvider(
+            project, declaredLibraries = listOf(gameGson)
+        ))
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+
+        serveMavenModule("com.google.code.gson:gson:2.13.2")
+        serveMavenModule("com.google.code.gson:gson:2.10.1")
+        serveMavenModule(
+            "com.example:modlib:1.0",
+            listOf("com.google.code.gson:gson:2.10.1")
+        )
+        project.repositories.maven { it.url = dir.resolve("repo").toFile().toURI() }
+
+        project.dependencies.add("modImplementation", "com.example:modlib:1.0")
+        val transitiveNames = project.configurations.getByName("modImplementationDirect")
+            .resolve().map { it.name }
+        assertTrue("modlib-1.0.jar" in transitiveNames, transitiveNames.toString())
+        assertFalse(
+            "gson-2.10.1.jar" in transitiveNames,
+            "the game already provides gson; the older mod transitive must not duplicate it: $transitiveNames"
+        )
+
+        // Configuration excludes apply to transitives, not a direct user
+        // dependency — an explicit override remains possible when a mod
+        // genuinely needs to manage the conflict itself.
+        project.dependencies.add("modRuntimeOnly", "com.google.code.gson:gson:2.10.1")
+        val directNames = project.configurations.getByName("modRuntimeOnlyDirect")
+            .resolve().map { it.name }
+        assertTrue(
+            "gson-2.10.1.jar" in directNames,
+            "direct user dependencies must not be excluded: $directNames"
+        )
+    }
+
     @Test
     fun `modern java library variants resolve against the env runtime floor`() {
         val project = project(listOf("xyz.wagyourtail.unimined.transform"))
@@ -893,7 +955,8 @@ class EnvironmentClasspathWiringTest {
 
 private class YarnIntermediaryFakeArtifacts(
     private val project: Project,
-    private val javaVersion: Int = 8
+    private val javaVersion: Int = 8,
+    private val declaredLibraries: List<Dependency> = emptyList()
 ) : ProductArtifacts {
     override val artifacts: Map<ArtifactKey, Provider<RegularFile>> = emptyMap()
     override val obfuscatedAuxArtifacts: Provider<List<Provider<RegularFile>>> =
@@ -907,7 +970,7 @@ private class YarnIntermediaryFakeArtifacts(
             minecraftVersion = "1.20.1", javaVersion = javaVersion
         )
     }
-    override val libraries: Provider<List<Dependency>> = project.provider { emptyList() }
+    override val libraries: Provider<List<Dependency>> = project.provider { declaredLibraries }
     override val extraDependencies = project.objects.fileCollection()
     override val extraCompileSources = project.objects.fileCollection()
     override val assets: Provider<AssetIndex> = project.provider { null }
@@ -916,11 +979,12 @@ private class YarnIntermediaryFakeArtifacts(
 
 private class YarnIntermediaryFakeProvider(
     private val project: Project,
-    private val javaVersion: Int = 8
+    private val javaVersion: Int = 8,
+    private val declaredLibraries: List<Dependency> = emptyList()
 ) : ProductProvider {
     override val name = "fake"
     override fun supports(spec: ProductSpec) = spec.version.version == "1.20.1"
     override fun resolve(spec: ProductSpec, ctx: ProviderContext): ProductArtifacts =
-        YarnIntermediaryFakeArtifacts(project, javaVersion)
+        YarnIntermediaryFakeArtifacts(project, javaVersion, declaredLibraries)
 }
 }

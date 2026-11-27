@@ -105,6 +105,45 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             isCanBeConsumed = false
             isCanBeResolved = false
         }
+
+        // Remapped mod artifacts enter source-set classpaths as files, so
+        // Gradle cannot conflict-resolve their transitives against the
+        // separate Minecraft-library bucket. Exclude game-library coordinates
+        // from each mod dependency's *transitive* graph at resolution time:
+        // the game copy is the only copy that can safely win at runtime.
+        // These must be dependency-level excludes — configuration-level
+        // excludes remove direct user dependencies too, while dependency-level
+        // excludes leave an explicit `modImplementation("g:a:v")` override in
+        // place and only filter what that dependency pulls in. Resolve the
+        // provider library list lazily here — doing so during DSL evaluation
+        // would violate the configuration-cache contract.
+        listOf(
+            environment.modApiConfigurationName,
+            environment.modImplementationConfigurationName,
+            environment.modCompileOnlyConfigurationName,
+            environment.modCompileOnlyApiConfigurationName,
+            environment.modRuntimeOnlyConfigurationName,
+            environment.modLocalRuntimeConfigurationName
+        ).forEach { bucketName ->
+            project.configurations.named(bucketName) { conf ->
+                conf.withDependencies { deps ->
+                    if (!environment.version.isPresent) return@withDependencies
+                    val moduleDeps = deps.filterIsInstance<org.gradle.api.artifacts.ModuleDependency>()
+                    if (moduleDeps.isEmpty()) return@withDependencies
+                    val gameLibraryExcludes = ext.artifacts(environment.environmentId)
+                        .get().libraries.get()
+                        .filter { dep -> environment.libraryFilters.all { it(dep) } }
+                        .mapNotNull { dep ->
+                            dep.group?.let { group -> group to dep.name }
+                        }
+                    moduleDeps.forEach { modDep ->
+                        gameLibraryExcludes.forEach { (group, module) ->
+                            modDep.exclude(mapOf("group" to group, "module" to module))
+                        }
+                    }
+                }
+            }
+        }
         // resolvable — the production-jar JiJ post-pass resolves its
         // artifacts for embedded file+coordinate pairs
         project.configurations.maybeCreate(
