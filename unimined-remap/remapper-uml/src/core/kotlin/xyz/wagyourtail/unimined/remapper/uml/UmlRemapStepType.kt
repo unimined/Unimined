@@ -310,6 +310,27 @@ class UmlRemapStepType : RemapStepType<RemapStepSpec> {
                         "identity remap"
                 )
             }
+        } else if (view.classes.any { it.names.containsKey(tns) } &&
+            probe.any {
+                view.getClass(fns, InternalName.unchecked(it)) != null
+            }) {
+            // sampled classes DO live in the src column but nothing was
+            // expected to rename — the wrong-src-namespace signature
+            // (babric's parallel `intermediary`/`babricIntermediary`
+            // columns: src rows exist, their dst values are absent on
+            // the picked column). MC-side artifacts always carry
+            // thousands of mapped classes, so an empty rename set here
+            // is almost always a miswired namespace pick. Warn rather
+            // than fail — a small jar whose sampled classes all
+            // legitimately identity-map is possible.
+            slog.warning(
+                "uml:remap ${input.fileName}: no class renames were " +
+                    "expected for '${ctx.state.currentNamespace}' -> " +
+                    "'${spec.targetNamespace}' — the output is an " +
+                    "identity copy; if this artifact should have " +
+                    "remapped, its source namespace may not match the " +
+                    "jar's actual content"
+            )
         }
         // publish the artifact's new namespace so downstream steps
         // validate against the post-remap truth
