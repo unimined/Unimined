@@ -14,6 +14,9 @@ dependencies {
     implementation(libs.condor)
 
     testImplementation(libs.junit.jupiter)
+    // dependency-channel tests compose mapping documents through the
+    // production composer rather than reimplementing its merge/fill rules
+    testImplementation(project(":unimined-mapping"))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

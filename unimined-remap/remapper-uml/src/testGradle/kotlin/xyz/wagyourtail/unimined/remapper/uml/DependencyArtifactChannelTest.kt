@@ -20,8 +20,14 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodNode
+import xyz.wagyourtail.unimined.api.mapping.MappingComposeRequest
+import xyz.wagyourtail.unimined.api.mapping.MappingContext
 import xyz.wagyourtail.unimined.api.mapping.MappingData
 import xyz.wagyourtail.unimined.api.mapping.UmlMappingData
+import xyz.wagyourtail.unimined.api.mapping.MappingBundle
+import xyz.wagyourtail.unimined.mapping.DefaultMappingComposer
+import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.api.spec.ClasspathScanAlias
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Reader
 import xyz.wagyourtail.unimined.remap.ModArtifactsStepSpec
@@ -49,13 +55,11 @@ class DependencyArtifactChannelTest {
     private class Harness(
         override val sourceNamespace: String,
         override val targetNamespace: String,
-        val treeText: String,
+        val mappings: MappingData,
         val work: Path,
+        override val scanAliases: List<ClasspathScanAlias> = emptyList(),
     ) : RemapSpec {
         override val classpath: List<Path> = emptyList()
-        val mappings: MappingData = UmlMappingData(runBlocking {
-            TinyV2Reader.read(treeText)
-        })
 
         fun ctx(): StepContext = object : StepContext {
             override val surface = RemapSurface.JAR
@@ -70,6 +74,38 @@ class DependencyArtifactChannelTest {
                 Logging.getLogger(DependencyArtifactChannelTest::class.java)
             )
         }
+    }
+
+    private fun tinyData(treeText: String): MappingData = UmlMappingData(runBlocking {
+        TinyV2Reader.read(treeText)
+    })
+
+    /** Tiny rows use leading tabs for member entries; spell that indentation
+     *  as spaces in source so patches stay whitespace-clean, then restore the
+     *  wire-format tab after margin stripping. */
+    private fun String.tinyDocument(): String =
+        trimIndent().replace(Regex("^    ", RegexOption.MULTILINE), "\t")
+
+    /**
+     * Compose per-channel tiny documents through the same composer the
+     * environment mapping resolver uses. The legacy-fabric failure shape is
+     * composition-sensitive: legacy intermediary and calamus are sibling
+     * hops off `official`, with feather chained from calamus, so a single
+     * already-joined four-column document is not an equivalent probe.
+     */
+    private fun composeTinyDocuments(vararg treeTexts: String): MappingData {
+        val ctx = object : MappingContext {
+            override val environmentId = "dependency-artifact-channel-test"
+            override val logger = xyz.wagyourtail.unimined.api.util.uniminedLogger(
+                Logging.getLogger(DependencyArtifactChannelTest::class.java)
+            )
+            override val cacheDir: Path? = null
+            override fun resolveMaven(notation: String): Path =
+                throw UnsupportedOperationException("no maven resolution in this test")
+        }
+        return DefaultMappingComposer().compose(
+            MappingComposeRequest(treeTexts.map(::tinyData)), ctx
+        )
     }
 
     private fun writeJar(path: Path, entries: Map<String, ByteArray>) {
@@ -130,11 +166,11 @@ class DependencyArtifactChannelTest {
         "Lnet/minecraft/server/MinecraftServer;updateTimeLightAndEntities()V"
 
     private fun liteHarness() = Harness(
-        "searge", "mcp", """
+        "searge", "mcp", tinyData("""
         tiny	2	0	searge	mcp	official
         c	net/minecraft/server/MinecraftServer	net/minecraft/server/MinecraftServer	net/minecraft/server/MinecraftServer
-        	m	()V	func_71190_q	updateTimeLightAndEntities	D
-        """.trimIndent(), dir
+            m	()V	func_71190_q	updateTimeLightAndEntities	D
+        """.trimIndent()), dir
     )
 
     private fun liteMixinBytes(): ByteArray = classBytes(liteMixin) {
@@ -249,6 +285,148 @@ class DependencyArtifactChannelTest {
         }
     }
 
+    // ---------- Legacy Fabric inherited-member refmap channel ----------
+
+    private val lfMixin = "net/legacyfabric/fabric/mixin/event/lifecycle/client/ClientWorldMixin"
+
+    /**
+     * legacy-fabric-api's lifecycle mixin shape: annotation keys are compile
+     * names (`onEntitySpawned`), the shipped refmap points at the
+     * intermediary owner (`class_478;method_3626`), but the member is really
+     * inherited from `World` (`class_1150`) rather than declared on
+     * `ClientWorld` (`class_478`). The scan-alias inheritance graph is the
+     * only thing that can resolve that indirection.
+     */
+    @Test
+    fun `legacyfabric refmap resolves inherited client world member through scan alias`() {
+        // Production shape: legacyfabric's intermediary hop and ornithe's
+        // calamus hop are sibling branches off official; feather then chains
+        // from calamus. The composer must stitch rows across all three
+        // documents — a direct four-column document does not exercise that.
+        val legacyIntermediaryDoc = """
+        tiny	2	0	official	legacyIntermediary
+        c	amu	net/minecraft/class_1150
+            m	(Lvg;)V	b	method_3626
+            m	(Lvg;)V	c	method_3663
+        c	bsb	net/minecraft/class_478
+        c	vg	net/minecraft/class_864
+        """.tinyDocument()
+        val calamusDoc = """
+        tiny	2	0	official	calamusGen2
+        c	amu	net/minecraft/unmapped/C_64041439
+            m	(Lvg;)V	b	m_15771998
+            m	(Lvg;)V	c	m_93270146
+        c	bsb	net/minecraft/unmapped/C_34399650
+        c	vg	net/minecraft/unmapped/C_42232651
+        """.tinyDocument()
+        val featherDoc = """
+        tiny	2	0	calamusGen2	featherGen2
+        c	net/minecraft/unmapped/C_64041439	net/minecraft/world/World
+            m	(Lnet/minecraft/unmapped/C_42232651;)V	m_15771998	notifyEntityAdded
+            m	(Lnet/minecraft/unmapped/C_42232651;)V	m_93270146	notifyEntityRemoved
+        c	net/minecraft/unmapped/C_34399650	net/minecraft/client/world/ClientWorld
+        c	net/minecraft/unmapped/C_42232651	net/minecraft/entity/Entity
+        """.tinyDocument()
+        val composed = composeTinyDocuments(
+            legacyIntermediaryDoc, calamusDoc, featherDoc
+        )
+
+        fun officialClass(name: String, superName: String = "java/lang/Object", methods: List<Pair<String, String>> = emptyList()) =
+            classBytes(name) {
+                this.superName = superName
+                methods.forEach { (methodName, desc) ->
+                    this.methods.add(MethodNode(Opcodes.ACC_PUBLIC, methodName, desc, null, null).apply {
+                        instructions.add(InsnNode(Opcodes.RETURN))
+                    })
+                }
+            }
+        val mcJar = dir.resolve("lf-official-mc.jar")
+        writeJar(mcJar, mapOf(
+            "vg.class" to officialClass("vg"),
+            "amu.class" to officialClass("amu", methods = listOf(
+                "b" to "(Lvg;)V",
+                "c" to "(Lvg;)V",
+            )),
+            "bsb.class" to officialClass("bsb", "amu"),
+        ))
+
+        val probe = Harness("legacyIntermediary", "featherGen2", composed, dir)
+        val aliasMappings = dir.resolve("lf-scan-alias.bundle")
+        Files.write(
+            aliasMappings,
+            MappingBundle.capture(
+                "official", "legacyIntermediary",
+                probe.mappings.view(MappingTree::class.java)!!
+            ).toJson().encodeToByteArray()
+        )
+        val harness = Harness(
+            "legacyIntermediary", "featherGen2", composed, dir,
+            scanAliases = listOf(ClasspathScanAlias(mcJar, "official", aliasMappings))
+        )
+
+        val mixinBytes = classBytes(lfMixin) {
+            visibleAnnotations = listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/Mixin;").apply {
+                values = listOf("value", listOf(Type.getObjectType("net/minecraft/class_478")))
+            })
+            methods.add(MethodNode(
+                Opcodes.ACC_PUBLIC,
+                "unloadEntity",
+                "(Lnet/minecraft/class_864;Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V",
+                null,
+                null,
+            ).apply {
+                visibleAnnotations = listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/injection/Inject;").apply {
+                    values = listOf(
+                        "method", listOf("onEntitySpawned"),
+                        "at", listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/injection/At;").apply {
+                            values = listOf("value", "TAIL")
+                        }),
+                    )
+                })
+                instructions.add(InsnNode(Opcodes.RETURN))
+            })
+        }
+        val refmap = """{
+          "mappings": {
+            "$lfMixin": {
+              "onEntitySpawned": "Lnet/minecraft/class_478;method_3626(Lnet/minecraft/class_864;)V"
+            }
+          },
+          "data": {
+            "named:intermediary": {
+              "$lfMixin": {
+                "onEntitySpawned": "Lnet/minecraft/class_478;method_3626(Lnet/minecraft/class_864;)V"
+              }
+            }
+          }
+        }"""
+        val input = dir.resolve("lf-lifecycle.jar")
+        writeJar(input, mapOf(
+            "$lfMixin.class" to mixinBytes,
+            "legacy-fabric-lifecycle-events-v1-common.mixins.json" to """{
+              "required": true,
+              "package": "net.legacyfabric.fabric.mixin.event.lifecycle",
+              "client": ["client.ClientWorldMixin"],
+              "refmap": "legacy-fabric-lifecycle-events-v1-common-refmap.json"
+            }""".encodeToByteArray(),
+            "legacy-fabric-lifecycle-events-v1-common-refmap.json" to refmap.encodeToByteArray(),
+        ))
+
+        val out = remapAndPostProcess(
+            harness, input,
+            ModArtifactsStepSpec().apply { emitRefmap = false },
+            "lf-lifecycle"
+        )
+        val node = readClass(out, lfMixin)
+        val method = node.methods.first { it.name == "unloadEntity" }
+        val inject = method.visibleAnnotations.first {
+            it.desc == "Lorg/spongepowered/asm/mixin/injection/Inject;"
+        }
+        val methodValues = inject.values[inject.values.indexOf("method") + 1] as List<*>
+        assertEquals(listOf("notifyEntityAdded"), methodValues,
+            "the intermediary refmap row must resolve through ClientWorld's inherited World member")
+    }
+
     // ---------- LaunchWrapper coremod string-descriptor channel ----------
 
     private val oldCrashDesc =
@@ -258,11 +436,11 @@ class DependencyArtifactChannelTest {
     private val transformerName = "io/example/compat/asm/EnhanceCrashReportsTransformer"
 
     private fun crashHarness() = Harness(
-        "searge", "featherGen2", """
+        "searge", "featherGen2", tinyData("""
         tiny	2	0	searge	featherGen2
         c	net/minecraft/crash/CrashReport	net/minecraft/util/crash/CrashReport
         c	net/minecraft/crash/CrashReportCategory	net/minecraft/util/crash/CrashReportCategory
-        """.trimIndent(), dir
+        """.trimIndent()), dir
     )
 
     private fun transformerJar(tag: String): Path {

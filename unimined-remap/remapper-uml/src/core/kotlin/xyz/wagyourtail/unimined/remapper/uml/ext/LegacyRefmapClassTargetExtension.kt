@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.mapping.element.mapping.ClassMapping
+import xyz.wagyourtail.unimined.mapping.inheritance.HasInheritanceTree
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.remapper.ExtensionContext
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension
@@ -143,13 +144,64 @@ class LegacyRefmapClassTargetExtension(
         val isMethod = desc.startsWith("(")
         val isField = !isMethod
         val memberDesc = if (isMethod) desc else desc.removePrefix(":")
-        if (ctx.memberCandidateCount(owner, name, isField) == 0) return value
-        if (ctx.resolveMemberDesc(owner, name, isField) != ctx.mapDesc(memberDesc, isField)) {
-            return value
-        }
+        if (!resolvesInSourceNamespace(owner, name, memberDesc, isField)) return value
         val parsed = MemberRefParts.parse(mappedSource, isField) ?: return value
         val resolved = parsed.resolve(ctx, emptyList(), isField) ?: return value
-        return parsed.render(resolved)
+        // Preserve the annotation's written shape: a bare compile key becomes
+        // a bare target name, while an already owner-qualified pointcut stays
+        // owner-qualified. The refmap value is only the bridge, not the shape
+        // to emit.
+        val written = MemberRefParts.parse(value, isField)
+        return written?.render(resolved) ?: parsed.render(resolved)
+    }
+
+    /**
+     * Validate a shipped-refmap member as a real source-namespace member.
+     * Refmap owners are callsite owners; virtual members are commonly
+     * declared only on an ancestor (legacy-fabric's ClientWorld refmap rows
+     * point at ClientWorld, whose entity callbacks live on World). The raw
+     * mapping-tree lookup used by [ExtensionContext.memberCandidateCount]
+     * does not perform that hierarchy walk, so validate every scanned
+     * declaring owner in the hierarchy and accept the first one carrying a
+     * source mapping row. Foreign production rows (the LiteLoader notch-row
+     * failure this validation guards against) have no such member in the
+     * source-namespace scan and still fail closed.
+     */
+    private fun resolvesInSourceNamespace(
+        owner: String, name: String, desc: String, isField: Boolean
+    ): Boolean {
+        val candidateOwners = sourceDeclaringOwners(owner, name, desc, isField)
+        return candidateOwners.any { candidate ->
+            ctx.memberCandidateCount(candidate, name, isField) > 0 &&
+                ctx.resolveMemberDesc(candidate, name, isField) == ctx.mapDesc(desc, isField)
+        }
+    }
+
+    /** owner plus scanned ancestors declaring the exact member, nearest-first;
+     *  falls back to the callsite owner when no scan/hierarchy is available. */
+    private fun sourceDeclaringOwners(
+        owner: String, name: String, desc: String, isField: Boolean
+    ): List<String> {
+        val inheritance = (ctx.tree as? HasInheritanceTree)?.inheritance
+            ?: return listOf(owner)
+        val start = inheritance.classes[InternalName.unchecked(owner)]
+            ?: return listOf(owner)
+        val found = linkedSetOf<String>()
+        val visited = mutableSetOf<InternalName>()
+        val queue = ArrayDeque(listOf(start))
+        while (queue.isNotEmpty()) {
+            val cls = queue.removeFirst()
+            if (!visited.add(cls.name)) continue
+            val declares = if (isField) {
+                cls.fields.any { it.name.value == name && it.descriptor.toString() == desc }
+            } else {
+                cls.methods.any { it.name.value == name && it.descriptor.toString() == desc }
+            }
+            if (declares) found += cls.name.value
+            cls.superClass?.let(queue::add)
+            queue.addAll(cls.interfaceClasses)
+        }
+        return found.ifEmpty { listOf(owner) }.toList()
     }
 
     private fun remapTarget(value: String, entries: Map<String, String>): String {
