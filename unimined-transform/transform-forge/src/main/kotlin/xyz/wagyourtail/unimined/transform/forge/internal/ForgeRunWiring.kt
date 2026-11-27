@@ -350,6 +350,14 @@ internal fun contributeRunMutators(
                 run.jvmArgs.add(
                     "-Dunprotect.mappings=${unprotectMappings.get()}"
                 )
+                if (!run.prod) {
+                    // dev launches discover mod classes through
+                    // MOD_CLASSES dirs — cleanroom's foundation reads
+                    // the same env shape upstream FG dev launches use;
+                    // prod discovers the staged `mods/` jar instead
+                    run.environment["MOD_CLASSES"] =
+                        UserdevRunConfigs.groupsString(groupsProvider())
+                }
             }
 
             is ForgeProfile.Binpatches -> {
