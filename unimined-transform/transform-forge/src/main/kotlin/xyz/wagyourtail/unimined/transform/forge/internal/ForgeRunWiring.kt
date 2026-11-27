@@ -522,6 +522,59 @@ internal fun forgeGroups(
             own.addAll(own.size - 1, dirs)
         }
     }
+    // 1.x `detectCombineWithSourceSets` + the non-forge merge: any
+    // source set whose output dirs ride this env's runtime classpath
+    // (an `implementation(otherSourceSet.output)` dep, e.g. a shared
+    // multiversion impl source set) must join a MOD_CLASSES group.
+    // Left on `-cp`, FML's bootstrap turns the dir into its own
+    // automatic module, which split-packages the mod's package against
+    // the group union (`Modules A and B export package C` resolution
+    // crash). Forge-family env outputs form their own group; every
+    // other detected output merges into the owning group.
+    val envSourceSet = project.extensions
+        .findByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+        ?.findByName(spec.environmentId)
+    val runtimeClasspath = envSourceSet?.let { ss ->
+        project.configurations.findByName(ss.runtimeClasspathConfigurationName)
+            ?.files?.map { it.absolutePath }?.toSet()
+    } ?: emptySet()
+    if (runtimeClasspath.isNotEmpty()) {
+        val covered = groups.values.flatten().toMutableSet()
+        for (proj in project.rootProject.allprojects) {
+            val container = proj.extensions
+                .findByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+                ?: continue
+            for (ss in container.asMap.values) {
+                val outDirs = listOfNotNull(
+                    ss.output.resourcesDir?.absolutePath) +
+                        ss.output.classesDirs.files.map { it.absolutePath }
+                if (outDirs.isEmpty() || outDirs.any { it in covered } ||
+                    outDirs.none { it in runtimeClasspath }) continue
+                covered += outDirs
+                val loader = runGroups.contribution(proj.path, ss.name)
+                    ?.loaderName?.orNull
+                    ?: proj.extensions
+                        .findByType(MinecraftExtension::class.java)
+                        ?.environments?.findByName(ss.name)
+                        ?.loaderSpec?.orNull?.name ?: ""
+                if (LoaderRegistry.resolveBuiltin(loader)
+                        ?.family == "forge") {
+                    groups.getOrPut("${proj.path}:${ss.name}") {
+                        mutableListOf()
+                    }.addAll(outDirs)
+                } else {
+                    proj.logger.warn(
+                        "[Unimined/ForgeLike] Non-forge " +
+                            "${proj.path}:${ss.name} found in forge " +
+                            "classpath groups, merging with current " +
+                            "($ownKey), this should've been manually " +
+                            "specified with `combineWith`")
+                    val own = groups.getValue(ownKey)
+                    own.addAll(own.size - 1, outDirs)
+                }
+            }
+        }
+    }
     // a forge-family inherited env forms its own group — it needs
     // its own trailing manifest member too
     groups.entries.forEach { (key, dirs) ->

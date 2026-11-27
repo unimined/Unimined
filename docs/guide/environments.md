@@ -508,7 +508,12 @@ mod-grouping channel:
   (fabric-loader's classpath-group contract — loom `mods { }` parity),
   groups separated by a doubled path separator;
 - **forge-family** — `id%%dir` entries appended to `MOD_CLASSES`
-  alongside the loader's own source-set groups.
+  alongside the loader's own source-set groups. Source-set outputs that
+  ride the environment runtime classpath as file dependencies (for
+  example `implementation(otherSourceSet.output)`) are autodetected
+  into these groups so the dev runtime does not split them into
+  conflicting automatic modules; explicit `combineWith` remains the
+  clearer way to compose full environments.
 
 A run loads every declared group by default; `loadedMods` on the run
 selects a subset (see
