@@ -61,6 +61,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // this sysprop — fabric-loader #585 (loom.mods
                 // parity): groups `::`-separated, files `:`
                 "classpathGroups" to "fabric.classPathGroups",
+                // explicit MC artifact discovery — fabric-loader reads
+                // fabric.gameJarPath[.client/.server] before scanning
+                "gameJarPath" to "fabric.gameJarPath",
                 // loom convention — `fabricApi.configureDataGeneration`:
                 // fabric-api's executor boots the datagen entrypoints
                 "datagenJvmArgs" to
@@ -114,6 +117,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // (SystemProperties.PATH_GROUPS); groups
                 // `::`-separated, files `:`
                 "classpathGroups" to "loader.classPathGroups",
+                // quilt-loader forked the same discovery keys under the
+                // unprefixed loader.* namespace
+                "gameJarPath" to "loader.gameJarPath",
                 "skipMcProvider" to "-Dloader.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
@@ -142,6 +148,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // this sysprop — fabric-loader #585 (loom.mods
                 // parity): groups `::`-separated, files `:`
                 "classpathGroups" to "fabric.classPathGroups",
+                // explicit MC artifact discovery — fabric-loader reads
+                // fabric.gameJarPath[.client/.server] before scanning
+                "gameJarPath" to "fabric.gameJarPath",
                 "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 // 1.x Legacy-Fabric-Intermediary-Version manifest attr
                 "manifestAttr.Legacy-Fabric-Intermediary-Version" to "1",
@@ -182,6 +191,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // this sysprop — fabric-loader #585 (loom.mods
                 // parity): groups `::`-separated, files `:`
                 "classpathGroups" to "fabric.classPathGroups",
+                // explicit MC artifact discovery — fabric-loader reads
+                // fabric.gameJarPath[.client/.server] before scanning
+                "gameJarPath" to "fabric.gameJarPath",
                 "replaceLwjgl" to "2.9.4+legacyfabric.18",
                 // b1.7.3 ships argo/** inside the server jar — keep it
                 // through the merge library-strip (1.x includeGlobs)
@@ -221,6 +233,9 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
                 // this sysprop — fabric-loader #585 (loom.mods
                 // parity): groups `::`-separated, files `:`
                 "classpathGroups" to "fabric.classPathGroups",
+                // explicit MC artifact discovery — fabric-loader reads
+                // fabric.gameJarPath[.client/.server] before scanning
+                "gameJarPath" to "fabric.gameJarPath",
                 // OSL takes care of datagen
                 "datagenJvmArgs" to
                         "-Dfabric-api.datagen -Dfabric-api.datagen.output-dir={output} -Dfabric-api.datagen.modid={modid}",

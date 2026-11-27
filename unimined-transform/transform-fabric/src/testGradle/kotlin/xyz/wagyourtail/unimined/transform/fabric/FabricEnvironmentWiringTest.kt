@@ -246,7 +246,17 @@ class FabricEnvironmentWiringTest {
         ext.sourceSet("quilt") { env ->
             env.version.set("1.20.1")
             env.loader("quilt", "0.30.1")
+            // a single-file runtime view exercises explicit gameJarPath
+            // emission without needing the full MC transform pipeline
+            env.devRunViewName = "quiltGameRuntimeView"
         }
+        val gameJar = dir.resolve("game.jar").toFile()
+        gameJar.writeBytes(byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18)))
+        project.configurations.create("quiltGameRuntimeView") { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+        }
+        project.dependencies.add("quiltGameRuntimeView", project.files(gameJar))
 
         // the mutator identifies Quilt by probing for its knot class —
         // serve a minimal local artifact with that entry rather than
@@ -300,8 +310,8 @@ class FabricEnvironmentWiringTest {
             "official is not the namespace of pre-remapped dev artifacts"
         )
         assertTrue(
-            "-Dloader.gameVersion=1.20.1" in devArgs,
-            "quilt-loader reads loader.gameVersion rather than fabric.gameVersion: $devArgs"
+            "-Dloader.gameJarPath.client=${gameJar.absolutePath}" in devArgs,
+            "quilt dev launches must identify the exact runtime MC artifact: $devArgs"
         )
         assertTrue(
             "-Dloader.experimental.minecraft.targetNamespace=intermediary" in
@@ -703,11 +713,15 @@ class FabricEnvironmentWiringTest {
         // wired onto runtimeClasspath yields it (full `.files`
         // resolution would pull the product artifact transform, which
         // can't isolate params under ProjectBuilder)
+        fun flattenFiles(value: Any?): List<java.io.File> = when (value) {
+            is java.io.File -> listOf(value)
+            is org.gradle.api.file.FileCollection -> value.files.toList()
+            is Collection<*> -> value.flatMap(::flattenFiles)
+            else -> emptyList()
+        }
         val wired = client.runtimeClasspath.from.any { src ->
             (src as? org.gradle.api.provider.Provider<*>)
-                ?.let { p ->
-                    (p.orNull as? Collection<*>)?.contains(modJar) == true
-                } == true
+                ?.let { p -> flattenFiles(p.orNull).contains(modJar) } == true
         }
         assertTrue(wired,
             "modFiles jar must be wired onto the run runtime classpath")

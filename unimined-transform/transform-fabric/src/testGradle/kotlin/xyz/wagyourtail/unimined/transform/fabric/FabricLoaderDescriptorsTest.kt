@@ -35,6 +35,14 @@ class FabricLoaderDescriptorsTest {
             "fabric.classPathGroups",
             LoaderRegistry.resolveBuiltin("fabric")!!.capabilities["classpathGroups"]
         )
+        assertEquals(
+            "loader.gameJarPath",
+            LoaderRegistry.resolveBuiltin("quilt")!!.capabilities["gameJarPath"]
+        )
+        assertEquals(
+            "fabric.gameJarPath",
+            LoaderRegistry.resolveBuiltin("fabric")!!.capabilities["gameJarPath"]
+        )
     }
 
     @Test

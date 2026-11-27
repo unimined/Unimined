@@ -444,6 +444,42 @@ internal object FabricEnvironmentWiring {
             "fabricLoader${environment.environmentId.capitalized()}"
         )
         val loaderFiles = project.files(loader)
+        val minecraft = project.extensions.getByType(MinecraftExtension::class.java)
+        // Mirror EnvironmentBinding's runtime-view pick exactly: a
+        // loader-specific devRunViewName wins, identity/simple pipelines may
+        // run the raw artifact, and env-scoped JAR work forces the dev view.
+        // Resolving the wrong view here would make gameJarPath disagree with
+        // the launch classpath it is meant to describe.
+        val devGameViewName = project.providers.provider {
+            if (environment.devRunViewName.isNotEmpty()) {
+                environment.devRunViewName
+            } else {
+                val devView = minecraft.devViewConfigurations[environment.environmentId]
+                val rawView = minecraft.rawView(environment.environmentId)
+                if (devView == null) {
+                    rawView?.name ?: environment.minecraftRawViewName
+                } else {
+                    val useRaw = if (minecraft.materializeDevArtifact[
+                        environment.environmentId]?.orNull != true) {
+                        val artifacts = minecraft.artifacts(environment.environmentId).get()
+                        val dev = minecraft.devNamespace(environment.environmentId).orNull
+                        val source = minecraft.sourceNamespace(environment.environmentId).orNull
+                        artifacts.namespaceMode.get() ==
+                                xyz.wagyourtail.unimined.minecraft.spi.NamespaceMode.IDENTITY ||
+                                (dev != null && dev == source)
+                    } else false
+                    (if (useRaw) rawView else devView)?.name
+                        ?: environment.minecraftRawViewName
+                }
+            }
+        }
+        val devGameJarFiles = project.files(
+            devGameViewName.flatMap { project.configurations.named(it) }
+        )
+        val prodGameJarFiles = project.files(
+            project.providers.provider { environment.prodRunViewName }
+                .flatMap { project.configurations.named(it) }
+        )
 
         transform.sourceSet(environment.environmentId).runMutators += Action<RunConfigSpec> { config ->
             val descriptor = loaderSpec.orNull?.name?.let { LoaderRegistry.resolveBuiltin(it) }
@@ -516,17 +552,21 @@ internal object FabricEnvironmentWiring {
                     config.jvmArgs += "-Dfabric.defaultModDistributionNamespace=named"
                 }
             }
-            // the loader otherwise sniffs the version from jar bytecode
-            // — renamed dev jars defeat the analyzer and version
-            // predicates (conditional mixins, mod depends) then evaluate
-            // against an empty version. The raw env version is fine:
-            // McVersionLookup normalizes it internally.
-            // Quilt reads its own game-version key; there is no fabric.*
-            // compatibility fallback in MinecraftGameProvider.
-            config.jvmArgs += if (isQuilt) {
-                "-Dloader.gameVersion=${environment.version.get()}"
-            } else {
-                "-Dfabric.gameVersion=${environment.version.get()}"
+            // Explicit gameJarPath is the version/discovery contract: both
+            // loaders read the version from that artifact. No gameVersion
+            // override is needed here — ordinary dev/production launches should
+            // not bypass the jar's own metadata.
+            // Locate the game explicitly before classpath scanning. Fabric and
+            // Quilt both give the first declared gameJarPath precedence; without
+            // it a scan can classify the wrong artifact as Minecraft when more
+            // than one namespace/product jar is visible. Only emit for a
+            // single-file view — split/multi-artifact products need the
+            // loader's common+side property pair, which is a separate contract.
+            val gameJar = (if (config.prod) prodGameJarFiles else devGameJarFiles)
+                .files.singleOrNull()
+            val gameJarPathProp = descriptor.capabilities["gameJarPath"]
+            if (gameJar != null && gameJarPathProp != null) {
+                config.jvmArgs += "-D$gameJarPathProp.$side=${gameJar.absolutePath}"
             }
         }
     }
