@@ -31,8 +31,10 @@ import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeP
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
+import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.transform.forge.internal.installer.ResolvedForge
 
 /**
@@ -49,6 +51,17 @@ internal fun contributeMappingHop(
     val obfNs: Provider<String> = resolved.map { r ->
         (r.profile as? ForgeProfile.Userdev)?.config
             ?.obfNamespaceFor(!environment.obfuscated.get())
+            ?: "official"
+    }
+    // srg-column provider for the userdev hop — ATs, dep-mod ATs and
+    // srg-authored mod refs all name the *patched* product's members
+    // (`searge` for mcp_config-era — notchObf included — `mojmap` for
+    // neoform); `obfNs` is the patch *source*/pipeline-content ns and
+    // contributes an `official` identity source for notchObf, which
+    // would leave the srg column stub-only
+    val patchedNs: Provider<String> = resolved.map { r ->
+        (r.profile as? ForgeProfile.Userdev)?.config
+            ?.patchedNamespaceFor(!environment.obfuscated.get())
             ?: "official"
     }
     val mcpVersion: Provider<String> = resolved.map { r ->
@@ -97,8 +110,42 @@ internal fun contributeMappingHop(
                 )
             )
         }
+        else if (resolved.orNull?.profile is ForgeProfile.Binpatches) {
+            // 1.x `beforeMappingsResolve` parity — FG2 era: mc >= 1.7.10
+            // gets the MCPConfig `searge` source (the dep remap's
+            // `searge -> dev` hop, srg exports and srg-runtime remapper
+            // all read it — a stub-overlay-only column leaves deps'
+            // srg-authored refs unresolvable); older FG2 gets the
+            // forge-bundled MCP set. A user-declared searge-family
+            // builtin suppresses the default — the `customSearge`
+            // opt-out.
+            val declaredSearge = sources.any { s ->
+                (s as? MappingsSpecImpl.Source.Builtin)
+                    ?.nameProvider?.orNull in listOf(
+                    "searge", "forgeBuiltinMCP")
+            }
+            val modern = environment.version.map {
+                xyz.wagyourtail.unimined.mapping.internal
+                    .MinecraftVersions.compare(it, "1.7.10") >= 0
+            }
+            when {
+                declaredSearge -> emptyList()
+                modern.orElse(false).get() -> listOf(
+                    MappingsSpecImpl.Source.Builtin(
+                        project.provider { "searge" },
+                        mapOf("version" to environment.version)
+                    )
+                )
+                else -> listOf(
+                    MappingsSpecImpl.Source.Builtin(
+                        project.provider { "forgeBuiltinMCP" },
+                        mapOf("version" to project.provider { spec.version })
+                    )
+                )
+            }
+        }
         else listOf(
-            MappingsSpecImpl.Source.Builtin(obfNs, mapOf("version" to mcpVersion))
+            MappingsSpecImpl.Source.Builtin(patchedNs, mapOf("version" to mcpVersion))
         )
     }
     // the dev pipeline's core remap sees content at the profile's
@@ -132,6 +179,46 @@ internal fun exportSrgToMcp(
             ),
         cacheDir
     ).toString()
+
+/**
+ * FG2 `srgRuntime` — `devNs -> prodNs` SRG, LZMA-wrapped for FML's
+ * `FMLDeobfuscatingRemapper.setupLoadOnly` (its only file-path entry
+ * reads through `LZMAInputSupplier`; there is no plain-text path).
+ * Rides the same content-keyed dir as the `mcp2srg.srg` sibling —
+ * same sha guarantees identical content, so an existing `.lzma` is
+ * already correct (encoder output is deterministic).
+ */
+internal fun exportDevToSrgLzma(
+    tree: xyz.wagyourtail.unimined.mapping.MappingTree,
+    devNs: String,
+    srgNs: String,
+    cacheDir: Path,
+    fileName: String = "mcp2srg.srg"
+): String {
+    val srg = xyz.wagyourtail.unimined.transform.internal
+        .RuntimeMappingExports.export(
+            tree,
+            xyz.wagyourtail.unimined.transform.internal.RuntimeMappingExports
+                .Spec(
+                    format = xyz.wagyourtail.unimined.transform.internal
+                        .RuntimeMappingExports.Format.SRG,
+                    srcNs = devNs, dstNs = srgNs,
+                    fileName = fileName
+                ),
+            cacheDir
+        )
+    val lzma = srg.resolveSibling("$fileName.lzma")
+    if (!lzma.exists()) {
+        Files.createDirectories(lzma.parent)
+        lzma.writeAtomically { tmp ->
+            org.apache.commons.compress.compressors.lzma
+                .LZMACompressorOutputStream(
+                    Files.newOutputStream(tmp)
+                ).use { out -> Files.copy(srg, out) }
+        }
+    }
+    return lzma.toString()
+}
 
 /**
  * 1.x `srgToMCPAsMCP` — MCP-zip `prodNs -> devNs` export:

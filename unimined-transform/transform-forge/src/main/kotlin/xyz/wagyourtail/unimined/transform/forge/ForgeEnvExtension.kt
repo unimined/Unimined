@@ -16,6 +16,7 @@ import xyz.wagyourtail.unimined.transform.TransformEnvironmentSpec
  */
 class ForgeEnvExtension(
     private val spec: TransformEnvironmentSpec,
+    private val environment: xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment,
     objects: ObjectFactory
 ) {
 
@@ -35,6 +36,10 @@ class ForgeEnvExtension(
                     "forge:srgRuntime",
                     ForgeSrgRuntimeStepSpec::class.java
                 ) {}
+                // dev launches carry the prod (searge) view — obf
+                // class names + FML's runtime deobf gives srg names
+                // at load, matching the mod-source boundary
+                environment.devRunViewName = environment.minecraftProdViewName
             }
             field = value
         }

@@ -52,13 +52,93 @@ object ClassTransformJarFix {
                 val path = fs.getPath(file)
                 if (!path.exists()) continue
                 val name = file.removeSuffix(".class").replace('/', '.')
-                manager.transform(name, path.readBytes())?.let(path::writeBytes)
+                manager.transform(name, path.readBytes())?.let {
+                    path.writeBytes(fixInterfaceInvokes(it, provider))
+                }
             }
         }
 
         for (helper in helpers) {
             splice(fs, helper)
         }
+    }
+
+    /**
+     * Two repairs on classtransform output before it lands back in
+     * the jar:
+     *
+     * 1. `CStub` emits `INVOKEVIRTUAL` for every non-static member
+     * stub — including stubs whose owner is an interface (FML's
+     * `ModContainer` is one), which links as
+     * `IncompatibleClassChangeError` at runtime. An `invokevirtual`
+     * on an interface owner is always invalid, so rewriting it to
+     * `invokeinterface` is strictly a repair.
+     * 2. `CShadow` resolves the target member but only remaps its
+     * *name* at use sites — a stub declared with a placeholder type
+     * (`Object` for an era-specific type) leaves method calls and
+     * field accesses carrying the stub's desc, which resolves nothing
+     * (`NoSuchMethodError`/`NoSuchFieldError`). A same-owner ref that
+     * matches no member by desc but exactly one by name gets the real
+     * member's desc.
+     */
+    private fun fixInterfaceInvokes(
+        bytes: ByteArray,
+        provider: net.lenni0451.classtransform.utils.tree.IClassProvider
+    ): ByteArray {
+        val node = org.objectweb.asm.tree.ClassNode()
+        org.objectweb.asm.ClassReader(bytes).accept(node, 0)
+        val accessCache = HashMap<String, Int?>()
+        fun accessOf(owner: String): Int? = accessCache.getOrPut(owner) {
+            try {
+                provider.getClass(owner)?.let {
+                    org.objectweb.asm.ClassReader(it).access
+                }
+            } catch (e: Throwable) { null }
+        }
+        var changed = false
+        for (method in node.methods) {
+            for (insn in method.instructions) {
+                when (insn) {
+                    is org.objectweb.asm.tree.MethodInsnNode -> {
+                        if (insn.opcode == org.objectweb.asm.Opcodes.INVOKEVIRTUAL &&
+                            ((accessOf(insn.owner) ?: 0) and
+                                    org.objectweb.asm.Opcodes.ACC_INTERFACE) != 0
+                        ) {
+                            insn.opcode = org.objectweb.asm.Opcodes.INVOKEINTERFACE
+                            insn.itf = true
+                            changed = true
+                        }
+                        if (insn.owner == node.name &&
+                            node.methods.none { it.name == insn.name && it.desc == insn.desc }
+                        ) {
+                            val candidates = node.methods.filter { it.name == insn.name }
+                            if (candidates.size == 1) {
+                                insn.desc = candidates[0].desc
+                                changed = true
+                            }
+                        }
+                    }
+                    is org.objectweb.asm.tree.FieldInsnNode -> {
+                        // same CShadow name-only remap, for field stubs:
+                        // `Object`-typed shadows emit the stub's desc —
+                        // rewrite to the real same-named field's desc
+                        if (insn.owner == node.name &&
+                            node.fields.none { it.name == insn.name && it.desc == insn.desc }
+                        ) {
+                            val candidates = node.fields.filter { it.name == insn.name }
+                            if (candidates.size == 1) {
+                                insn.desc = candidates[0].desc
+                                changed = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!changed) return bytes
+        val writer = org.objectweb.asm.ClassWriter(0)
+        node.accept(writer)
+        return writer.toByteArray()
     }
 
     /** Copy a compiled class from the plugin classpath into the jar. */

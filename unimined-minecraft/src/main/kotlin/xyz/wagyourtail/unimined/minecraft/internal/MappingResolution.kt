@@ -309,21 +309,18 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                         ?: project.failProblem("mappings/searge-version",
                             "unimined: mappings { searge() } requires a " +
                                 "version parameter")
-                    if (MinecraftVersions
-                            .compare(version.substringBefore('-'), "1.12.2") < 0
-                    ) {
-                        project.failProblem(
-                            "mappings/searge-era",
-                            "unimined: mappings { searge($version) } — " +
-                                "FG1-era mcp/srg channels are not yet " +
-                                "supported",
-                            "declare the mapping archive via maven() or " +
-                                "file() instead"
-                        )
-                    }
                     UniminedRepos(project).minecraftForge.ensure()
                     listOf(
-                        resolveMavenNotation("de.oceanlabs.mcp:mcp_config:$version@zip")
+                        resolveMavenNotation(
+                            // FG2-era (<1.12.2) predates MCPConfig —
+                            // 1.x resolved the old mcp srg archive
+                            // (joined.srg: official -> searge) instead
+                            if (MinecraftVersions.compare(
+                                    version.substringBefore('-'),
+                                    "1.12.2") < 0
+                            ) "de.oceanlabs.mcp:mcp:$version:srg@zip"
+                            else "de.oceanlabs.mcp:mcp_config:$version@zip"
+                        )
                     )
                 }
 
@@ -541,11 +538,15 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
      *  lazily. */
     internal fun sourceNamespace(environmentId: String): Provider<String> =
         providers.provider {
-            // split-side merged env: the produced artifact lives in the
-            // shared merge namespace (each side was remapped into it
-            // pre-merge), not the union official namespace
-            if (ext.sourceSet(environmentId).mappingsSpec.splitOfficial) {
-                modSourceNamespaces(environmentId).orNull?.singleOrNull()
+            val environment = ext.sourceSet(environmentId)
+            val tree = ext.artifacts(environmentId).get().mappings.get()
+            if (environment.mappingsSpec.splitOfficial) {
+                // split-side merged env: the produced artifact lives in
+                // the shared merge namespace (each side was remapped into
+                // it pre-merge — the declared mod-source column), not the
+                // union official namespace
+                modSourceNamespaces(environmentId).orNull
+                    ?.singleOrNull()
                     ?: project.failProblem(
                         "env/mod-source-namespaces",
                         "unimined: environment '$environmentId' declares " +
@@ -554,8 +555,12 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
                         "remap.remappedViews for mixed inputs"
                     )
             } else {
+                // non-merged envs read the produced jar's own column
+                // (official-obf ornithe/forge jars, intermediary fabric
+                // jars...) — the declared mod-source column may be a
+                // loader-only hop unrelated to jar content (calamusGen2)
                 jarSourceNamespace(
-                    ext.artifacts(environmentId).get().mappings.get(),
+                    tree,
                     namedNamespaces(environmentId).orNull ?: emptySet()
                 )
             }

@@ -38,6 +38,7 @@ import java.util.Map;
  * Behavior is gated at runtime by {@code unimined.fg2.autoCoremods}
  * inside {@link UniminedFg2}.
  */
+@CReplaceCallback
 @CTransformer(name = "cpw.mods.fml.relauncher.CoreModManager")
 public class CoreModManagerCpwTx {
 
@@ -62,7 +63,8 @@ public class CoreModManagerCpwTx {
 
     @CInline
     @CModifyExpressionValue(method = "discoverCoreMods*", target = @CTarget(value = "INVOKE",
-            target = "L*LibraryManager;gatherLegacyCanidates*()Ljava/util/List;", optional = true))
+            target = "Lcpw/mods/fml/relauncher/libraries/LibraryManager;gatherLegacyCanidates(Ljava/io/File;)Ljava/util/List;",
+            optional = true))
     private static List<File> wrapGatherLegacyCandidates(List<File> candidates) {
         candidates.addAll(Arrays.asList(UniminedFg2.addClasspath(new File[0])));
         return candidates;

@@ -154,15 +154,14 @@ internal class ForgeLoaderDescriptors : LoaderDescriptorSource {
                 }
             },
             prodNamespace = "mojmap",
-            // 1.20.1 ships `net.neoforged:forge` — FML-era ASM can't
-            // parse JDK-25 classes. ≥1.20.2 ships `neoforge` +
-            // securejarhandler 3.x — class file 69
-            javaVersion = { mc, _ ->
-                val m = Regex("^1\\.(\\d+)\\.(\\d+)").find(mc)
-                val minor = m?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                val patch = m?.groupValues?.get(2)?.toIntOrNull() ?: 0
-                if (minor < 20 || (minor == 20 && patch < 2)) 21 else 25
-            },
+            // NeoForge's own floor — 1.20.1's `net.neoforged:forge`
+            // artifact is JDK-21 bytecode; ≥1.20.2 neoforge is built on
+            // 21 too. securejarhandler 3.x tolerates newer class files,
+            // but the bundled sponge-mixin's ASM cannot parse JDK-25's
+            // major-69 JDK classes during target scanning — floor 25
+            // crashes every dev launch (`Unsupported class file major
+            // version 69`), so the floor stays 21 for all eras.
+            javaVersion = { _, _ -> 21 },
             capabilities = mapOf(
                 "atTool" to "8.2.2",
                 // neoforge datagen is the dev launch with a data

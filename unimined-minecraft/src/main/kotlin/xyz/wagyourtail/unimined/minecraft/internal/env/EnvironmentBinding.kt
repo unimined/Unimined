@@ -297,7 +297,24 @@ internal class EnvironmentBinding(private val ext: MinecraftExtension) {
             }
         )
         sourceSet.compileClasspath += contribution
-        sourceSet.runtimeClasspath += contribution
+        // dev-run MC view — the compile pick by default; loader wiring
+        // may aim dev launches at a different namespace artifact
+        // (`devRunViewName` — FG2 `srgRuntime` puts the searge/prod
+        // view on the launch classpath). Read lazily so post-binding
+        // wiring still takes effect
+        sourceSet.runtimeClasspath += objects.fileCollection().from(
+            useRawView.flatMap { useRaw ->
+                providers.provider { environment.devRunViewName }
+                    .flatMap { runView ->
+                        if (runView.isNotEmpty()) {
+                            project.configurations.named(runView)
+                        } else devViewName.flatMap { name ->
+                            project.configurations.named(
+                                if (useRaw) rawView.name else name)
+                        }
+                    }
+            }
+        )
 
         val extraDependencies = objects.fileCollection().from(providers.provider {
             ext.artifacts(environmentId).get().extraDependencies

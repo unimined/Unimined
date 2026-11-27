@@ -19,7 +19,8 @@ import kotlin.io.path.writeBytes
  *
  * Driven by classtransform transformers grouped by runtime flag in
  * `fg2.coremods` / `fg2.resources` / `fg2.deobf` — `@CInline`
- * handlers mean the transformed classes never reference the
+ * handlers plus `@CReplaceCallback` (rewrites InjectionCallback to a
+ * plain `Object[]`) mean the transformed classes never reference the
  * transformer classes or classtransform at runtime; behavior lives
  * in the spliced [xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2].
  * `FolderResourcePackTx` uses a class-level `@CASM` handler for its
@@ -40,12 +41,22 @@ object FG2DevFixes {
 
     private const val HELPER_ENTRY =
         "xyz/wagyourtail/unimined/transform/forge/internal/fg2/rt/UniminedFg2.class"
+    private const val HELPER_NAME_ENTRY =
+        "xyz/wagyourtail/unimined/transform/forge/internal/fg2/rt/UniminedFg2NameTransformer.class"
 
     /** Transformer classes applied per matching jar entry. */
     private val transformers = mapOf(
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfTweakerTx" to listOf(
             "net/minecraftforge/fml/common/launcher/FMLDeobfTweaker.class",
             "cpw/mods/fml/common/launcher/FMLDeobfTweaker.class",
+        ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.launch.FMLTweakerTx" to listOf(
+            "net/minecraftforge/fml/common/launcher/FMLTweaker.class",
+            "cpw/mods/fml/common/launcher/FMLTweaker.class",
+        ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfRemapperTx" to listOf(
+            "cpw/mods/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
+            "net/minecraftforge/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
         ),
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.coremods.CoreModManagerCpwTx" to listOf(
             "cpw/mods/fml/relauncher/CoreModManager.class",
@@ -71,9 +82,17 @@ object FG2DevFixes {
             "cpw/mods/fml/client/FMLFolderResourcePack.class",
             "net/minecraftforge/fml/client/FMLFolderResourcePack.class",
         ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.registry.ObjectHolderRegistryTx" to listOf(
+            "cpw/mods/fml/common/registry/ObjectHolderRegistry.class",
+            "net/minecraftforge/registries/ObjectHolderRegistry.class",
+        ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.registry.ObjectHolderRegistryModLauncherTx" to listOf(
+            "net/minecraftforge/registries/ObjectHolderRegistry.class",
+        ),
     )
 
     fun fix(fs: FileSystem) =
-        ClassTransformJarFix.fix(fs, transformers, listOf(HELPER_ENTRY))
+        ClassTransformJarFix.fix(fs, transformers,
+            listOf(HELPER_ENTRY, HELPER_NAME_ENTRY))
 
 }

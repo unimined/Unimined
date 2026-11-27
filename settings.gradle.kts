@@ -33,6 +33,10 @@ dependencyResolutionManagement {
             // stonecutter — adapter-stonecutter's compileOnly dep
             content { includeGroup("dev.kikugie") }
         }
+        maven("https://libraries.minecraft.net/") {
+            // launchwrapper — transform-forge's compileOnly dep
+            content { includeGroup("net.minecraft") }
+        }
         gradlePluginPortal()
     }
 }

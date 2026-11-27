@@ -22,6 +22,15 @@ class GradlePlugin : Plugin<Project> {
         Perf.syncFrom(target)
         target.pluginManager.withPlugin("xyz.wagyourtail.unimined.minecraft") {
             val minecraft = target.extensions.getByType(MinecraftExtension::class.java)
+            // every forge-family descriptor publishes prod jars in its
+            // declared prod column (searge/mojmap) — register them all so
+            // mod-source and source-namespace resolution use the declared
+            // column rather than the tree-sniffing heuristic
+            LoaderRegistry().family("forge").forEach { descriptor ->
+                minecraft.loaderModSourceNamespaces.putIfAbsent(
+                    descriptor.id, listOf(descriptor.prodNamespace)
+                )
+            }
             // every registered forge product contributes its maven repo;
             // `artifact()` metadata source — forge mavens host jar-only
             // artifacts (scala `_*_mc` FML libs, etc.) without poms
@@ -54,7 +63,8 @@ class GradlePlugin : Plugin<Project> {
                     }, { environment })
                         // per-env `forge` DSL object — `env.forge {
                         // srgRuntime = true }` and friends
-                        val forgeExt = ForgeEnvExtension(spec, target.objects)
+                        val forgeExt = ForgeEnvExtension(
+                            spec, environment, target.objects)
                         (environment as org.gradle.api.plugins.ExtensionAware)
                             .extensions.add("forge", forgeExt)
                         // replay `env.forge {}` calls that ran while

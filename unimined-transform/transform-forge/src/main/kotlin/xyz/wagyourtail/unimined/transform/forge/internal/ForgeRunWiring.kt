@@ -168,6 +168,36 @@ internal fun contributeRunMutators(
                 }
             )
         }
+        if (ctx.prod && resolved.orNull?.profile.isFmlRuntimeDeobfEra()) {
+            // FML's `ClassPatchManager` verifies the binpatch
+            // pack's input checksums against the untouched Mojang
+            // side jar — the merged raw artifact already carries
+            // merge-side patches and fails them — so the prod
+            // classpath resolves the pristine download matching
+            // this run's side (the side-independent universal jar
+            // rides `prodRunViewName`; fall back to MERGED for
+            // products that ship no side jars). The remapped mod
+            // jar itself stays on the classpath — FML's
+            // ClasspathLocator discovers it there; a `mods/` copy
+            // would double-register it
+            ctx.task.configure { t ->
+                @Suppress("UNCHECKED_CAST")
+                (t.property("runtimeClasspath") as?
+                        org.gradle.api.file.ConfigurableFileCollection)
+                    ?.from(project.files(project.provider {
+                        val key = if (ctx.type == "server")
+                            xyz.wagyourtail.unimined.minecraft.spi
+                                .ArtifactKey.SERVER
+                        else xyz.wagyourtail.unimined.minecraft.spi
+                            .ArtifactKey.CLIENT
+                        val a = artifacts.get().artifacts
+                        listOfNotNull(
+                            (a[key] ?: a[xyz.wagyourtail.unimined
+                                .minecraft.spi.ArtifactKey.MERGED])
+                                ?.orNull?.asFile)
+                    }))
+            }
+        }
     }
     // unprotect — always-on for Userdev (1.x FG3 parity:
     // `unprotectRuntime = true`). The agent needs tiny mappings
@@ -227,6 +257,37 @@ internal fun contributeRunMutators(
                     )
                 }
             },
+            srgMapLzma = {
+                val tree = artifacts.get().mappings.get()
+                // same boundary as srgToMcpAsSrg, reversed: FML's
+                // remapper maps dev (mod-bytecode) refs -> the patched
+                // jar's member namespace
+                val prodNs =
+                    (r.profile as? ForgeProfile.Userdev)?.config
+                        ?.patchedNamespace
+                        ?: r.descriptor.prodNamespace
+                val runtimeDevNs = tree.namespaces.last().name
+                exportDevToSrgLzma(tree, runtimeDevNs, prodNs, cacheDir)
+            },
+            srgToDevMapLzma = {
+                val tree = artifacts.get().mappings.get()
+                // prod→dev direction: the feather dev jar runs
+                // feather-named, but forge/mod reflection probes
+                // (`ObfuscationReflectionHelper`) carry srg/mcp member
+                // names — FMLDeobfuscatingRemapper translates them
+                // only when fed this srg→dev map
+                val prodNs =
+                    (r.profile as? ForgeProfile.Userdev)?.config
+                        ?.patchedNamespace
+                        ?: r.descriptor.prodNamespace
+                // probes carry `field_*`/`func_*` names — only a
+                // srg-side product column answers them
+                if (prodNs != "searge") "" else {
+                    val runtimeDevNs = tree.namespaces.last().name
+                    exportDevToSrgLzma(tree, prodNs, runtimeDevNs, cacheDir,
+                        "srg2mcp.srg")
+                }
+            },
             groupSeparator = bootstrapDevVersion(r)?.let {
                 if (bootstrapDevNeedsSemicolon(it)) ";" else
                     java.io.File.pathSeparator
@@ -242,6 +303,33 @@ internal fun contributeRunMutators(
             { classpathPathFor(run.name).toString() }
         run.properties["source_roots"] = { ctx.argValue("{source_roots}") }
         run.properties["mcp_mappings"] = { "unimined.stub" }
+        // strip template args duplicating options unimined already
+        // supplies — jopt-simple rejects a second value for single-arg
+        // options (MultipleArgumentsForOptionException on gameDir, then
+        // version, at ArgumentHandler.setArgs)
+        val owned = setOf(
+            "--gameDir", "--version", "--assetsDir",
+            "--assetIndex", "--username", "--uuid",
+            "--accessToken", "--clientId", "--xuid",
+            "--versionType"
+        )
+        fun stripOwnedArgs(args: List<String>): List<String> {
+            val out = mutableListOf<String>()
+            var i = 0
+            while (i < args.size) {
+                val a = args[i]
+                val opt = a.substringBefore('=')
+                if (opt in owned) {
+                    i += if ('=' in a ||
+                        args.getOrNull(i + 1)
+                            ?.startsWith("--") != false
+                    ) 1 else 2
+                    continue
+                }
+                out.add(a); i++
+            }
+            return out
+        }
         when (r.profile) {
             is ForgeProfile.Userdev -> {
                 val defaultTweak = "net.minecraftforge.fml.common.launcher." +
@@ -252,36 +340,7 @@ internal fun contributeRunMutators(
                     type = run.type
                 ) ?: return@Action
                 run.mainClass = spec.mainClass
-                // strip template args duplicating options unimined
-                // already supplies — jopt-simple rejects a second
-                // value for single-arg options
-                // (MultipleArgumentsForOptionException on gameDir,
-                // then version, at ArgumentHandler.setArgs)
-                val owned = setOf(
-                    "--gameDir", "--version", "--assetsDir",
-                    "--assetIndex", "--username", "--uuid",
-                    "--accessToken", "--clientId", "--xuid",
-                    "--versionType"
-                )
-                run.programArgs.addAll(
-                    spec.args.let { args ->
-                        val out = mutableListOf<String>()
-                        var i = 0
-                        while (i < args.size) {
-                            val a = args[i]
-                            val opt = a.substringBefore('=')
-                            if (opt in owned) {
-                                i += if ('=' in a ||
-                                    args.getOrNull(i + 1)
-                                        ?.startsWith("--") != false
-                                ) 1 else 2
-                                continue
-                            }
-                            out.add(a); i++
-                        }
-                        out
-                    }
-                )
+                run.programArgs.addAll(stripOwnedArgs(spec.args))
                 run.jvmArgs.addAll(spec.jvmArgs)
                 run.environment.putAll(spec.environment)
                 // 1.x FG3 `unprotectRuntime = true` — the javaagent
@@ -307,7 +366,7 @@ internal fun contributeRunMutators(
                 run.mainClass = run.mainClass ?: (profile.mainClass
                     ?: "net.minecraft.launchwrapper.Launch")
                 if (profile.programArgs.isNotEmpty()) {
-                    run.programArgs.addAll(profile.programArgs)
+                    run.programArgs.addAll(stripOwnedArgs(profile.programArgs))
                 } else {
                     detectTweakClass(r.jar, run.name)?.let {
                         run.programArgs.addAll(listOf("--tweakClass", it))
@@ -321,18 +380,40 @@ internal fun contributeRunMutators(
                         // transformer registered; the dev flags
                         // would assert an already-deobfuscated jar
                         "-Dunimined.fg2.runtimeDeobf"
+                    ) else if (srgRuntime.get()) listOf(
+                        // srg-runtime dev launch — the prod-view jar
+                        // ships obf class names, so FML must keep its
+                        // runtime deobf transformer (the
+                        // `deobfuscatedEnvironment` flag would skip
+                        // it and leave srg names unresolved);
+                        // DeobfTweakerTx's strip+probe wrap read this
+                        // flag at launch, and `srgMap` hands
+                        // UniminedFg2 the dev->srg map GradleStart
+                        // used to feed FMLDeobfuscatingRemapper
+                        "-Dunimined.fg2.runtimeDeobf",
+                        "-Dunimined.fg2.srgMap=${ctx.srgMapLzma()}",
+                        "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
                     ) else listOf(
                         "-Dfml.deobfuscatedEnvironment=true",
                         "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
-                    ) + if (srgRuntime.get()) listOf(
-                        // keep FML's deobf transformer registered —
-                        // DeobfTweakerTx's strip reads this flag at
-                        // launch; the prod-view jar is srg-named
-                        "-Dunimined.fg2.runtimeDeobf"
+                    ) + if (ctx.srgToDevMapLzma().isNotEmpty()) listOf(
+                        // launch via `Launch`+`FMLTweaker` — no
+                        // GradleStart on the path to read `srg.srg-mcp`,
+                        // so UniminedFg2 feeds the srg→dev map to
+                        // FMLDeobfuscatingRemapper itself — `map`
+                        // resolves srg probes to dev jar names
+                        "-Dunimined.fg2.srgMap=${ctx.srgToDevMapLzma()}"
                     ) else emptyList()
                 )
-                run.environment["MOD_CLASSES"] =
-                    UserdevRunConfigs.groupsString(groupsProvider())
+                if (!run.prod) {
+                    // dev launches discover mod classes through
+                    // MOD_CLASSES dirs; prod discovers the staged
+                    // `mods/` jar — dev dirs would carry
+                    // dev-namespace classes the srg runtime can't
+                    // resolve
+                    run.environment["MOD_CLASSES"] =
+                        UserdevRunConfigs.groupsString(groupsProvider())
+                }
             }
 
             else -> {}

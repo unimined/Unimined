@@ -211,7 +211,13 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                         "did not resolve the MCPConfig artifact"
             )
         val tsrg = readZipEntry(zip, "config/joined.tsrg")
-            ?: throw IllegalStateException("MCPConfig artifact $zip has no config/joined.tsrg")
+        // FG2-era mcp srg archive (mcp:<version>:srg@zip) ships
+        // joined.srg instead of MCPConfig's config/joined.tsrg
+        val joinedSrg = if (tsrg == null) readZipEntry(zip, "joined.srg") else null
+        if (tsrg == null && joinedSrg == null)
+            throw IllegalStateException(
+                "searge artifact $zip has neither config/joined.tsrg nor joined.srg"
+            )
 
         val official = Namespace("official")
         val srg = Namespace("srg")
@@ -221,7 +227,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
         // recover descs from — so they must round-trip desc-less member
         // rows; tiny v2 silently drops them (its `f` line requires a desc),
         // UMF does not
-        val tsrgV1 = !layered && !tsrg.trimStart().startsWith("tsrg2")
+        val tsrgV1 = !layered && tsrg != null && !tsrg.trimStart().startsWith("tsrg2")
 
         val out = writeDerived(
             channelCacheDir(ctx, "searge"),
@@ -249,7 +255,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                     // trips init/clinit name invariants on fill/merge)
                     Perf.span("mappings.materialize.read", "fmt" to "tsrg") {
                         TsrgV2Reader.read(
-                            tsrg, tree,
+                            tsrg!!, tree,
                             tree.nsFiltered(setOf(Namespace("id")), inverted = true),
                             mapOf("obf" to "official"),
                             FormatReaderSettings(unchecked = true)
@@ -275,6 +281,21 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                             UMFB.write(sink),
                             nsFilter = listOf(official, mojmapNs, searge))
                     }
+                } else if (joinedSrg != null) {
+                    // FG2-era mcp srg archive — joined.srg is plain SRG
+                    // (CL/FD/MD rows, obf -> srg)
+                    Perf.span("mappings.materialize.read", "fmt" to "srg") {
+                        SrgReader.read(
+                            joinedSrg, tree,
+                            mapOf("source" to "official", "target" to "searge"),
+                            FormatReaderSettings(unchecked = true)
+                        )
+                    }
+                    Perf.span("mappings.materialize.emit") {
+                        tree.emit(
+                            UMFB.write(sink),
+                            nsFilter = listOf(official, searge))
+                    }
                 } else if (tsrgV1) {
                     // mcpconfig ≤1.12.x ships headerless tsrg v1
                     // (`a FIELD` entries — no `id` column to filter);
@@ -294,7 +315,7 @@ class BuiltinMappingSourceProvider : MappingSourceProvider {
                 } else {
                     Perf.span("mappings.materialize.read", "fmt" to "tsrg") {
                         TsrgV2Reader.read(
-                            tsrg, tree,
+                            tsrg!!, tree,
                             tree.nsFiltered(setOf(Namespace("id")), inverted = true),
                             mapOf("obf" to "official", "srg" to "searge"),
                             FormatReaderSettings(unchecked = true)

@@ -261,14 +261,38 @@ internal object ForgeEnvironmentWiring {
         // detached resolution that must land after the env DSL body
         project.afterDslEval {
             val r = resolved.orNull
-            // FG2-era production runs the shipped obf jar under
-            // FML's runtime deobf (FMLDeobfTweaker +
-            // deobf_data.lzma → searge) — the prod view's
-            // pre-mapped jar is dev/analysis material, not what
-            // an installed pack launches
+            // FG2-era production runs launch like an installed
+            // pack: the pristine Mojang side jar + the compiled
+            // universal (`cpw/mods/fml` + `binpatches.pack.lzma`)
+            // under FML's runtime deobf — the prod view's
+            // pre-mapped jar is dev/analysis material, and the
+            // merged raw artifact already carries merge-side
+            // patches that fail `ClassPatchManager`'s binpatch
+            // input checksums, so neither rides the prod
+            // classpath. The universal is side-independent and
+            // lives on this dedicated view conf; the per-run
+            // side jar is contributed in ForgeRunWiring. The dev
+            // package (`r.notation`) ships sources only —
+            // `universalJar` (or `r.jar` where it *is* the
+            // universal) is the FML-carrying artifact. The conf
+            // extends nothing, so its srg-namespace FML classes
+            // can't leak onto compile classpaths
             if (environment.obfuscated.get() &&
                 r?.profile.isFmlRuntimeDeobfEra()) {
-                environment.prodRunViewName = environment.minecraftRawViewName
+                val prodRuntime = project.configurations.create(
+                    "forgeProdRuntime" + environment.environmentId
+                        .replaceFirstChar(Char::uppercase)
+                ) {
+                    it.isCanBeConsumed = false
+                    it.isCanBeResolved = true
+                }
+                prodRuntime.dependencies.add(
+                    project.dependencies.create(project.files(
+                        resolved.map {
+                            (it.universalJar ?: it.jar).toFile()
+                        }))
+                )
+                environment.prodRunViewName = prodRuntime.name
             }
             // cleanroom replaces vanilla 1.12.2's platform libs with
             // modern forks (lwjgl3, netty 4.2, oshi-ffm, icu4j, jna 5)

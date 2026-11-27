@@ -133,6 +133,13 @@ class UserdevConfig(val json: JsonObject) {
     val patchedNamespace: String
         get() = if (mcp.contains("neoform")) "mojmap" else "searge"
 
+    /** [patchedNamespace] adjusted for the environment's MC
+     *  obfuscation — the namespace extracted AT/classTweaker rules
+     *  target (they name the patched product's members, not the
+     *  patch source's), so unobf'd products read mojmap. */
+    fun patchedNamespaceFor(unobfuscated: Boolean): String =
+        if (unobfuscated) "mojmap" else patchedNamespace
+
     /** `notchObf` — runtime is notch-obfuscated (pre-1.16.5-era). */
     val notchObf: Boolean
         get() =

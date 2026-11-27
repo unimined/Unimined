@@ -288,7 +288,7 @@ internal fun contributeDevFixes(
         .newInstance(FG2DevFixesStepSpec::class.java)
     fixesSpec.enabled.set(resolved.map {
         it.profile is ForgeProfile.Binpatches ||
-                (it.profile as? ForgeProfile.Userdev)?.config?.notchObf == true
+                it.profile is ForgeProfile.Userdev
     }.orElse(false))
     environmentSpec.contributeStep(
         RemapSurface.JAR, fixesSpec, StepScope.ENVIRONMENT_ARTIFACT

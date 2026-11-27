@@ -9,6 +9,8 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixes
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -150,6 +152,74 @@ class FG2DevFixesTest {
                 it is org.objectweb.asm.tree.MethodInsnNode &&
                         it.name == "searchDirForLanguages"
             } > 1, "injected searchDirForLanguages call missing")
+        }
+    }
+
+    @Test
+    fun `deobfRemapper replaces findAndMergeSuperMaps with dev-name lookup`() {
+        val jar = dir.resolve("deobf.jar")
+        val remapper =
+            "cpw/mods/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper"
+        writeJar(
+            jar, mapOf(
+                "$remapper.class" to deobfRemapper(
+                    remapper, "cpw/mods/fml/common/patcher/ClassPatchManager"
+                ),
+            )
+        )
+        FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
+        FileSystems.newFileSystem(jar).use { fs ->
+            val node = node(fs.getPath("$remapper.class"))
+            val method = node.methods.single { it.name == "findAndMergeSuperMaps" }
+            val insns = method.instructions.toArray().toList()
+            // head inject: runtimeDeobf gate first
+            assertTrue(insns.any {
+                it is LdcInsnNode && it.cst == "unimined.fg2.runtimeDeobf"
+            }, "runtimeDeobf gate missing")
+            // dev jar byte reads: srg name then mapped-name fallback
+            assertTrue(insns.count {
+                it is MethodInsnNode && it.name == "getClassBytes"
+            } >= 2, "getClassBytes reads missing")
+            // super/interface names unmapped back to srg before merge
+            assertTrue(insns.any {
+                it is MethodInsnNode && it.name == "unmap"
+            }, "unmap call missing")
+            assertTrue(insns.any {
+                it is MethodInsnNode && it.name == "mergeSuperMaps"
+            }, "mergeSuperMaps call missing")
+            // the stock body stays reachable under runtimeDeobf
+            // (the gate returns without cancelling)
+            assertTrue(insns.any {
+                it is MethodInsnNode && it.name == "getPatchedResource"
+            }, "stock getPatchedResource path removed")
+        }
+    }
+
+    @Test
+    fun `fmlTweaker preloads ClassLoader$1 before setSecurityManager`() {
+        val jar = dir.resolve("tweaker.jar")
+        val tweaker = "net/minecraftforge/fml/common/launcher/FMLTweaker"
+        writeJar(
+            jar, mapOf(
+                "$tweaker.class" to fmlTweaker(tweaker),
+            )
+        )
+        FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
+        FileSystems.newFileSystem(jar).use { fs ->
+            val node = node(fs.getPath("$tweaker.class"))
+            val insns = node.methods.single { it.name == "<init>" }
+                .instructions.toArray().toList()
+            val preloadIdx = insns.indexOfFirst {
+                it is MethodInsnNode && it.name == "preloadSmRaceGuard"
+            }
+            val setSmIdx = insns.indexOfFirst {
+                it is MethodInsnNode && it.name == "setSecurityManager"
+            }
+            assertTrue(preloadIdx >= 0, "preloadSmRaceGuard inject missing")
+            assertTrue(
+                preloadIdx in 0 until setSmIdx,
+                "preload not ahead of setSecurityManager"
+            )
         }
     }
 
@@ -322,6 +392,156 @@ class FG2DevFixesTest {
             )
             insn(Opcodes.ARETURN)
             visitMaxs(2, 2)
+            visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    /**
+     * Mirrors FML's `FMLTweaker.<init>`: super() then
+     * {@code System.setSecurityManager(new FMLSecurityManager())}.
+     */
+    private fun fmlTweaker(self: String): ByteArray {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(
+            Opcodes.V17, Opcodes.ACC_PUBLIC, self, null,
+            "java/lang/Object", null
+        )
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "<init>", "()V", null, null
+        ).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitMethodInsn(
+                Opcodes.INVOKESPECIAL, "java/lang/Object",
+                "<init>", "()V", false
+            )
+            visitTypeInsn(
+                Opcodes.NEW,
+                "net/minecraftforge/fml/relauncher/FMLSecurityManager"
+            )
+            insn(Opcodes.DUP)
+            visitMethodInsn(
+                Opcodes.INVOKESPECIAL,
+                "net/minecraftforge/fml/relauncher/FMLSecurityManager",
+                "<init>", "()V", false
+            )
+            visitMethodInsn(
+                Opcodes.INVOKESTATIC, "java/lang/System",
+                "setSecurityManager",
+                "(Ljava/lang/SecurityManager;)V", false
+            )
+            insn(Opcodes.RETURN)
+            visitMaxs(2, 1)
+            visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    /**
+     * Mirrors FML's `findAndMergeSuperMaps`: getPatchedResource for
+     * the class bytes, then mergeSuperMaps(name, cr.getSuperName(),
+     * cr.getInterfaces()).
+     */
+    private fun deobfRemapper(self: String, patchManager: String): ByteArray {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(
+            Opcodes.V17, Opcodes.ACC_PUBLIC, self, null,
+            "java/lang/Object", null
+        )
+        cw.visitField(
+            Opcodes.ACC_PUBLIC, "classLoader",
+            "Lnet/minecraft/launchwrapper/LaunchClassLoader;", null, null
+        )
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "map",
+            "(Ljava/lang/String;)Ljava/lang/String;", null, null
+        ).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 1)
+            insn(Opcodes.ARETURN)
+            visitMaxs(1, 2)
+            visitEnd()
+        }
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "unmap",
+            "(Ljava/lang/String;)Ljava/lang/String;", null, null
+        ).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 1)
+            insn(Opcodes.ARETURN)
+            visitMaxs(1, 2)
+            visitEnd()
+        }
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "mergeSuperMaps",
+            "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V",
+            null, null
+        ).apply {
+            visitCode()
+            insn(Opcodes.RETURN)
+            visitMaxs(0, 4)
+            visitEnd()
+        }
+        cw.visitMethod(
+            Opcodes.ACC_PRIVATE, "findAndMergeSuperMaps",
+            "(Ljava/lang/String;)V", null, null
+        ).apply {
+            visitCode()
+            // ClassPatchManager.INSTANCE.getPatchedResource(name, map(name), classLoader)
+            visitFieldInsn(
+                Opcodes.GETSTATIC, patchManager, "INSTANCE",
+                "L$patchManager;"
+            )
+            visitVarInsn(Opcodes.ALOAD, 1)
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitVarInsn(Opcodes.ALOAD, 1)
+            visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, self, "map",
+                "(Ljava/lang/String;)Ljava/lang/String;", false
+            )
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitFieldInsn(
+                Opcodes.GETFIELD, self, "classLoader",
+                "Lnet/minecraft/launchwrapper/LaunchClassLoader;"
+            )
+            visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, patchManager, "getPatchedResource",
+                "(Ljava/lang/String;Ljava/lang/String;Lnet/minecraft/launchwrapper/LaunchClassLoader;)[B",
+                false
+            )
+            visitVarInsn(Opcodes.ASTORE, 2)
+            // ClassReader cr = new ClassReader(classBytes)
+            visitTypeInsn(Opcodes.NEW, "org/objectweb/asm/ClassReader")
+            insn(Opcodes.DUP)
+            visitVarInsn(Opcodes.ALOAD, 2)
+            visitMethodInsn(
+                Opcodes.INVOKESPECIAL, "org/objectweb/asm/ClassReader",
+                "<init>", "([B)V", false
+            )
+            visitVarInsn(Opcodes.ASTORE, 3)
+            // mergeSuperMaps(name, cr.getSuperName(), cr.getInterfaces())
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitVarInsn(Opcodes.ALOAD, 1)
+            visitVarInsn(Opcodes.ALOAD, 3)
+            visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, "org/objectweb/asm/ClassReader",
+                "getSuperName", "()Ljava/lang/String;", false
+            )
+            visitVarInsn(Opcodes.ALOAD, 3)
+            visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, "org/objectweb/asm/ClassReader",
+                "getInterfaces", "()[Ljava/lang/String;", false
+            )
+            visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, self, "mergeSuperMaps",
+                "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V",
+                false
+            )
+            insn(Opcodes.RETURN)
+            visitMaxs(5, 4)
             visitEnd()
         }
         cw.visitEnd()

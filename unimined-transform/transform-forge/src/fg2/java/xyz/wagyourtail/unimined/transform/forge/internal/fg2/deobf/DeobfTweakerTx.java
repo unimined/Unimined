@@ -1,8 +1,10 @@
 package xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf;
 
 import net.lenni0451.classtransform.annotations.CInline;
+import net.lenni0451.classtransform.annotations.CTarget;
 import net.lenni0451.classtransform.annotations.CTransformer;
 import net.lenni0451.classtransform.annotations.injection.CModifyConstant;
+import net.lenni0451.classtransform.annotations.injection.CModifyExpressionValue;
 import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2;
 
 /**
@@ -22,6 +24,24 @@ import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2;
         "cpw.mods.fml.common.launcher.FMLDeobfTweaker",
 })
 public class DeobfTweakerTx {
+
+    /**
+     * {@code fml.deobfuscatedEnvironment} blackboard read — FML's
+     * probe only tests class names, which an srg jar passes (srg
+     * renames members, not classes), so a srg-runtime launch would
+     * skip the transformer block it needs. Forced off when
+     * {@code unimined.fg2.runtimeDeobf} is set.
+     */
+    @CInline
+    @CModifyExpressionValue(
+            method = "injectIntoClassLoader*",
+            target = @CTarget(value = "INVOKE",
+                    target = "Ljava/lang/Boolean;booleanValue()Z",
+                    optional = true)
+    )
+    private boolean wrapDeobfEnvProbe(boolean deobfEnv) {
+        return UniminedFg2.deobfEnvProbe(deobfEnv);
+    }
 
     // `injectIntoClassLoader` has a dozen String LDCs — the exact
     // transformer-name constant must be targeted (an untargeted

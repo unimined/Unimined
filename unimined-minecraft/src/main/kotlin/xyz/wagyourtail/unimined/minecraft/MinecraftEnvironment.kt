@@ -1231,6 +1231,16 @@ abstract class MinecraftEnvironment @Inject internal constructor(
      *  read at run-task realization. */
     var prodRunViewName: String = minecraftProdViewName
 
+    /** The MC artifact view `client`/`server` (dev) runs put on the
+     *  launch classpath — the dev/raw pick by default (empty); loader
+     *  wiring overrides where dev launches carry MC in a different
+     *  namespace than the compile classpath (FG2-era forge
+     *  `srgRuntime`: the searge/prod view plus runtime deobf). Affects
+     *  the run/test launch classpath only — compile keeps the dev
+     *  view. Wiring surface, not user DSL — set during environment
+     *  wiring, read lazily at run-task resolution. */
+    var devRunViewName: String = ""
+
     /** Resolvable+declarable conf for coordinate-consumed access docs
      *  (`unimined<Env>AccessTransformer("g:a:v")` — plan §4.1, NG
      *  `accessTransformer` parity). */

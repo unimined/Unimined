@@ -61,6 +61,15 @@ internal object UserdevRunConfigs {
         val modules: () -> List<String> = { emptyList() },
         /** `GradleStart.srg.srg-mcp` path for legacydev `-D` args. */
         val srgToMcpAsSrg: () -> String = { "" },
+        /** FG2 `srgRuntime` — LZMA'd dev→prod srg map fed to
+         *  `FMLDeobfuscatingRemapper.setupLoadOnly` via
+         *  `-Dunimined.fg2.srgMap`. */
+        val srgMapLzma: () -> String = { "" },
+        /** Normal dev launches on an srg-named product — LZMA'd
+         *  prod→dev map for the same `setupLoadOnly` feed; FML's
+         *  `ObfuscationReflectionHelper` probes srg/mcp names that
+         *  only resolve when the remapper carries them. */
+        val srgToDevMapLzma: () -> String = { "" },
         /** 1.x `properties.minecraft_classpath_file` — the legacy
          *  classpath listing path. */
         val minecraftClasspathFile: () -> String = { "" },
@@ -147,7 +156,16 @@ internal object UserdevRunConfigs {
                 ) else listOf(
                     "-Dfml.deobfuscatedEnvironment=true",
                     "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${ctx.srgToMcpAsSrg()}"
-                ),
+                ) + if (ctx.srgToDevMapLzma().isNotEmpty()) listOf(
+                    // dev jar runs dev-namespace-named but FML's probes
+                    // (Class.forName/scanTarget/ObfuscationReflectionHelper)
+                    // carry srg names — feed the srg→dev map so `map`
+                    // resolves them probe→local, matching the remapper's
+                    // own member-map keying (rawFieldMaps are srg-keyed);
+                    // UniminedFg2's name-transformer + probeClassForName
+                    // + ObfuscationReflectionHelper all consume it
+                    "-Dunimined.fg2.srgMap=${ctx.srgToDevMapLzma()}"
+                ) else emptyList(),
                 environment = mapOf("MOD_CLASSES" to ctx.groupsString()),
                 tweakClass = tweakClass,
                 legacyDev = true,

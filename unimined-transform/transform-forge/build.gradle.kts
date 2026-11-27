@@ -25,6 +25,13 @@ dependencies {
     implementation(libs.asm.tree)
     implementation(libs.classtransform)
     implementation(libs.classtransform.acp)
+    // fg2 bytecode handlers reference LaunchClassLoader as a real type
+    // (DeobfRemapperTx's shadowed `classLoader` field); provided by the
+    // dev jar at runtime
+    compileOnly(libs.launchwrapper)
+    // testGradle's classtransform class-provider resolves the same type
+    // while rewriting the synthetic remapper
+    "testGradleImplementation"(libs.launchwrapper)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit.jupiter)

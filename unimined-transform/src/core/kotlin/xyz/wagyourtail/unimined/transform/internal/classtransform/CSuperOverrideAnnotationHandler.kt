@@ -43,6 +43,23 @@ class CSuperOverrideAnnotationHandler : AnnotationHandler() {
             method.accept(copy)
             copy.visibleAnnotations?.removeIf { it.desc == annotationDesc }
             copy.invisibleAnnotations?.removeIf { it.desc == annotationDesc }
+            // the copied method still refers to its unannotated
+            // fields/other methods through the *transformer* class as
+            // owner (`this.unimined$dirs` compiled to
+            // `getfield Tx.unimined$dirs`) — those members land on the
+            // target, so self-owner refs must point there too
+            for (insn in copy.instructions) {
+                when (insn) {
+                    is org.objectweb.asm.tree.FieldInsnNode ->
+                        if (insn.owner == transformer.name) {
+                            insn.owner = transformedClass.name
+                        }
+                    is org.objectweb.asm.tree.MethodInsnNode ->
+                        if (insn.owner == transformer.name) {
+                            insn.owner = transformedClass.name
+                        }
+                }
+            }
             transformedClass.methods.removeIf { it.name == superName && it.desc == desc }
             transformedClass.methods.add(copy)
         }

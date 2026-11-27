@@ -20,6 +20,7 @@ import java.util.Map;
  * {@code gatherLegacyCanidates} (the 1.12.x discovery path), which
  * gets the same classpath-candidate append.
  */
+@CReplaceCallback
 @CTransformer(name = "net.minecraftforge.fml.relauncher.CoreModManager")
 public class CoreModManagerForgeTx {
 
@@ -44,7 +45,8 @@ public class CoreModManagerForgeTx {
 
     @CInline
     @CModifyExpressionValue(method = "discoverCoreMods*", target = @CTarget(value = "INVOKE",
-            target = "L*LibraryManager;gatherLegacyCanidates*()Ljava/util/List;", optional = true))
+            target = "Lnet/minecraftforge/fml/relauncher/libraries/LibraryManager;gatherLegacyCanidates(Ljava/io/File;)Ljava/util/List;",
+            optional = true))
     private static List<File> wrapGatherLegacyCandidates(List<File> candidates) {
         candidates.addAll(Arrays.asList(UniminedFg2.addClasspath(new File[0])));
         return candidates;

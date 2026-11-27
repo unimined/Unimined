@@ -26,6 +26,7 @@ commons-gradle = { module = "xyz.wagyourtail.commons:commons-gradle", version.re
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 minecraftauth = { module = "net.raphimc:MinecraftAuth", version = "4.1.1" }
+launchwrapper = { module = "net.minecraft:launchwrapper", version = "1.12" }
 xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
 # Ornithe merged-bridge access fixup — the same thin artifact Ploceus consumes
 preen = { module = "net.ornithemc:preen", version = "1.1.0" }
