@@ -232,6 +232,15 @@ class ConversionProvider : ProductProvider {
                     "org.apache.logging.log4j:log4j-api:2.19.0",
                     "org.apache.logging.log4j:log4j-core:2.19.0",
                     "org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0",
+                    // The dist shades Gson 2.10.1 verbatim but its thin
+                    // manifest declares no gson coordinate. Without this
+                    // managed version, sponge-mixin's legacy transitive
+                    // gson 2.2.4 is the only external copy and can be
+                    // loaded first — BTA 8 calls JsonParser.parseReader
+                    // (added in gson 2.8.6) during startup. Declaring
+                    // the shaded version lets conflict resolution pick
+                    // 2.10.1 and strips the duplicate out of the dist.
+                    "com.google.code.gson:gson:2.10.1",
                     // paulscode.sound.* lived inside the obf b1.7.3 jar
                     // itself — never declared by any version doc, and not
                     // shaded into the deobf dist either. The patched
@@ -273,11 +282,11 @@ class ConversionProvider : ProductProvider {
 
         /** The `org.lwjgl:*:3.3.3` modules BTA 7.3_04 actually needs —
          *  the `*-babric` LWJGL2 set the stale manifest declares can't
-         *  serve it (the game hard-checks). Also bumps `gson` off the
-         *  b1.7.3-era `2.2.4` the manifest pins — the loader calls
-         *  `JsonParser.parseString` (gson ≥2.8.6). Entries carry the
-         *  artifact + `natives-<os>` classifiers the Mojang-schema
-         *  natives resolution reads, off `libraries.minecraft.net`. */
+         *  serve it (the game hard-checks). Entries carry the artifact +
+         *  `natives-<os>` classifiers the Mojang-schema natives
+         *  resolution reads, off `libraries.minecraft.net`. Gson is not
+         *  injected here: it is a product-level shaded dependency in
+         *  `extraLibraries`, not a 7.3_04-only manifest correction. */
         private fun btaDoc73(doc: JsonObject): JsonObject {
             // Knot replaces launchwrapper — keeping it pulls the whole
             // b1.7.3-era lwjgl2 set back in transitively (its pom deps
@@ -324,34 +333,10 @@ class ConversionProvider : ProductProvider {
                     val n = el["name"]?.jsonPrimitive?.content ?: ""
                     drop.none { n.startsWith(it) }
                 } ?: emptyList()
-            // `JsonParser.parseString` needs gson ≥2.8.6 — the manifest's
-            // b1.7.3-era 2.2.4 predates it. Maven-central artifact.
-            val gson = buildJsonObject {
-                put("name", "com.google.code.gson:gson:2.10.1")
-                putJsonObject("downloads") {
-                    putJsonObject("artifact") {
-                        put(
-                            "path",
-                            "com/google/code/gson/gson/2.10.1/gson-2.10.1.jar"
-                        )
-                        put(
-                            "url",
-                            "https://repo1.maven.org/maven2/com/google/" +
-                                    "code/gson/gson/2.10.1/gson-2.10.1.jar"
-                        )
-                    }
-                }
-            }
             return JsonObject(doc.toMutableMap().apply {
                 put(
                     "libraries",
-                    JsonArray(
-                        buildList {
-                            addAll(keep)
-                            addAll(modules.map(::lib))
-                            add(gson)
-                        }
-                    )
+                    JsonArray(keep + modules.map(::lib))
                 )
             })
         }

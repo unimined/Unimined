@@ -63,16 +63,45 @@ class ConversionProviderTest {
 
     private fun spec(
         product: String,
-        source: DeclaredSource? = DeclaredSource.LocalFile("dist.jar")
+        source: DeclaredSource? = DeclaredSource.LocalFile("dist.jar"),
+        version: String = "1.0"
     ) = RuntimeProductSpec(
         environmentId = "main",
         sourceSetName = "main",
-        version = RuntimeVersionSpec("1.0"),
+        version = RuntimeVersionSpec(version),
         side = Side.CLIENT,
         loader = null,
         product = product,
         declaredSource = source?.let { DeclaredSourceSpec(it, "official", null) }
     )
+
+    /** Stage just enough offline metadata for a BTA library projection —
+     *  the product's thin manifest plus the b1.7.3 base document it
+     *  inherits. No network or dist jar is needed: [ProductArtifacts.libraries]
+     *  reads metadata only. */
+    private fun stageBtaMetadata(version: String) {
+        val cache = File(projectDir, ".gradle/unimined/native-cache")
+        File(cache, "metadata/conversion").mkdirs()
+        File(cache, "metadata/versions").mkdirs()
+        File(cache, "metadata/conversion/bta-$version.json").writeText(
+            """{"id":"v$version","type":"release","libraries":[
+                {"name":"net.minecraft:launchwrapper:1.5"},
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.4-babric.1"}
+            ]}""".trimIndent()
+        )
+        File(cache, "metadata/version-manifest-v2.json").writeText(
+            """{"latest":{"release":"b1.7.3","snapshot":"b1.7.3"},
+                "versions":[{"id":"b1.7.3","type":"release",
+                "url":"https://example.test/b1.7.3.json",
+                "time":"-","releaseTime":"-"}]}""".trimIndent()
+        )
+        File(cache, "metadata/versions/b1.7.3.json").writeText(
+            """{"id":"b1.7.3","type":"release","libraries":[
+                {"name":"net.minecraft:launchwrapper:1.5"},
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.0"}
+            ]}""".trimIndent()
+        )
+    }
 
     @Test
     fun `claims conversion products, rejects others`() {
@@ -112,6 +141,26 @@ class ConversionProviderTest {
             .resolve(spec("minecraft:bta"), ctx())
         // rootId keys off spec.version (the dist version)
         assertEquals("bta-1.0", artifacts.launch?.rootId)
+    }
+
+    @Test
+    fun `bta declares the gson version shaded into the dist`() {
+        // Regression: sponge-mixin drags gson 2.2.4 onto the dev runtime;
+        // without a managed modern coordinate there is no conflict winner
+        // and the stale jar can shadow the dist's embedded 2.10.1 classes.
+        listOf("7.3_04", "8.0.1").forEach { version ->
+            stageBtaMetadata(version)
+            val artifacts = ConversionProvider().resolve(
+                spec("minecraft:bta", version = version), ctx()
+            )
+            val coords = artifacts.libraries.get().map {
+                "${it.group}:${it.name}:${it.version}"
+            }
+            assertTrue(
+                "com.google.code.gson:gson:2.10.1" in coords,
+                "bta $version libraries were $coords"
+            )
+        }
     }
 
 }
