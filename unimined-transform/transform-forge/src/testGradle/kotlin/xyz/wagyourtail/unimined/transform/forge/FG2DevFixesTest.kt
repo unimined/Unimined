@@ -220,7 +220,7 @@ class FG2DevFixesTest {
     }
 
     @Test
-    fun `deobfuscationTransformer unmapClassName gets the dev-namespace collision guard`() {
+    fun `deobfuscationTransformer class-name methods get the dev-namespace collision guard`() {
         val jar = dir.resolve("deobfTx.jar")
         val tx = "net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer"
         writeJar(
@@ -241,31 +241,31 @@ class FG2DevFixesTest {
         FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
         FileSystems.newFileSystem(jar).use { fs ->
             val node = node(fs.getPath("$tx.class"))
-            val insns = node.methods.single { it.name == "unmapClassName" }
-                .instructions.toArray().toList()
-            // runtimeDeobf gate first — stock inverse mapping survives
-            // under it for srg-runtime launches
-            assertTrue(insns.any {
-                it is LdcInsnNode && it.cst == "unimined.fg2.runtimeDeobf"
-            }, "runtimeDeobf gate missing")
-            // dev jar ground truth: resource-exists probe on the input
-            assertTrue(insns.any {
-                it is MethodInsnNode && it.name == "getResource"
-            }, "resource-exists probe missing")
-            // srg-probe miss path: forward lookup through the remapper,
-            // resolved reflectively through the launch loader
-            assertTrue(insns.any {
-                it is MethodInsnNode && it.name == "loadClass"
-            }, "reflective remapper resolution missing")
-            assertTrue(insns.any {
-                it is MethodInsnNode && it.name == "invoke"
-            }, "forward map invocation missing")
-            // remapClassName is untouched — the forward (map) direction
-            // is already correct for dev inputs
-            val remap = node.methods.single { it.name == "remapClassName" }
-            assertTrue(remap.instructions.toArray().none {
-                it is LdcInsnNode && it.cst == "unimined.fg2.runtimeDeobf"
-            }, "remapClassName should not be patched")
+            // both directions carry the guard: unmap inverse-hits dev
+            // names back to srg; remap forward-hits dev names that
+            // collide with an srg key (net/minecraft/potion/Potion ->
+            // entity/living/effect/StatusEffect misdefine)
+            for (methodName in listOf("unmapClassName", "remapClassName")) {
+                val insns = node.methods.single { it.name == methodName }
+                    .instructions.toArray().toList()
+                // runtimeDeobf gate first — stock inverse mapping survives
+                // under it for srg-runtime launches
+                assertTrue(insns.any {
+                    it is LdcInsnNode && it.cst == "unimined.fg2.runtimeDeobf"
+                }, "$methodName: runtimeDeobf gate missing")
+                // dev jar ground truth: resource-exists probe on the input
+                assertTrue(insns.any {
+                    it is MethodInsnNode && it.name == "getResource"
+                }, "$methodName: resource-exists probe missing")
+                // srg-probe miss path: forward lookup through the remapper,
+                // resolved reflectively through the launch loader
+                assertTrue(insns.any {
+                    it is MethodInsnNode && it.name == "loadClass"
+                }, "$methodName: reflective remapper resolution missing")
+                assertTrue(insns.any {
+                    it is MethodInsnNode && it.name == "invoke"
+                }, "$methodName: forward map invocation missing")
+            }
         }
     }
 

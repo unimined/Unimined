@@ -12,8 +12,8 @@ import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2;
 import java.lang.reflect.Method;
 
 /**
- * {@code DeobfuscationTransformer.unmapClassName} dev-namespace
- * collision guard.
+ * {@code DeobfuscationTransformer.unmapClassName}/{@code remapClassName}
+ * dev-namespace collision guard.
  *
  * <p><b>Why:</b> a unimined dev jar is dev-namespace-named on disk,
  * but {@code unmapClassName} inverse-maps through the fed
@@ -23,9 +23,16 @@ import java.lang.reflect.Method;
  * resource path that does not exist — every dev-named class load
  * ends in {@code ClassNotFoundException} ({@code
  * net.minecraft.util.crash.CrashReportDetail} is merely the first).
+ * {@code remapClassName} hits the same collision from the other
+ * side: a dev name that is also an srg <i>key</i> (feather's {@code
+ * net/minecraft/potion/Potion} — the srg key maps to {@code
+ * net/minecraft/entity/living/effect/StatusEffect}) forward-rewrites
+ * to the wrong class, so {@code defineClass} receives bytes whose
+ * internal name mismatches and the load dies in {@code
+ * NoClassDefFoundError}.
  * FG2-era FML never hits this because the dev environments it was
  * written for carry srg==mcp class names; feather-style mappings
- * rename classes into different packages, exposing the inverse hit.
+ * rename classes into different packages, exposing both directions.
  *
  * <p>LexForge-era dev launches dodge the stock transformer entirely
  * — {@link DeobfTweakerTx} substitutes {@code UniminedFg2NameTransformer}
@@ -73,15 +80,23 @@ import java.lang.reflect.Method;
 public class DeobfTransformerTx {
 
     /**
-     * Head replacement for {@code unmapClassName(String)} — see the
-     * class javadoc for the collision-guard semantics. Cancels in
-     * every non-runtimeDeobf case: the output is always either the
-     * input (resource exists / unmapped) or the forward-translated
-     * dev name, matching {@code UniminedFg2NameTransformer}'s
-     * translation contract exactly.
+     * Head replacement for {@code unmapClassName(String)} and
+     * {@code remapClassName(String)} — see the class javadoc for the
+     * collision-guard semantics. Both directions need the guard:
+     * {@code unmapClassName} inverse-hits dev names back to srg, and
+     * {@code remapClassName} forward-hits dev names that collide with
+     * an srg key — feather's {@code net/minecraft/potion/Potion} is a
+     * real dev class, but the fed table maps the like-named srg key
+     * to {@code net/minecraft/entity/living/effect/StatusEffect}, so
+     * the forward rewrite defines the bytes under the wrong name and
+     * the load dies in {@code NoClassDefFoundError}. Cancels in every
+     * non-runtimeDeobf case: the output is always either the input
+     * (resource exists / unmapped) or the forward-translated dev
+     * name, matching {@code UniminedFg2NameTransformer}'s translation
+     * contract exactly.
      */
     @CInline
-    @CInject(method = "unmapClassName*",
+    @CInject(method = {"unmapClassName*", "remapClassName*"},
             target = @CTarget("HEAD"), cancellable = true)
     private void devUnmap(String name, InjectionCallback callback) {
         if (System.getProperty(UniminedFg2.PROP_RUNTIME_DEOBF) != null) return;
