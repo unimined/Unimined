@@ -107,6 +107,8 @@ xyz.wagyourtail.unimined.transform.forge.internal.binpatch
 xyz.wagyourtail.unimined.transform.forge.internal.fg2
 xyz.wagyourtail.unimined.transform.forge.internal.fg2.coremods
 xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf
+xyz.wagyourtail.unimined.transform.forge.internal.fg2.launch
+xyz.wagyourtail.unimined.transform.forge.internal.fg2.registry
 xyz.wagyourtail.unimined.transform.forge.internal.fg2.resources
 xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt
 xyz.wagyourtail.unimined.transform.forge.internal.mcpconfig

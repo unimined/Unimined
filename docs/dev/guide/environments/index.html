@@ -2208,7 +2208,20 @@ mod-grouping channel:</p>
   (fabric-loader's classpath-group contract — loom <code>mods { }</code> parity),
   groups separated by a doubled path separator;</li>
 <li><strong>forge-family</strong> — <code>id%%dir</code> entries appended to <code>MOD_CLASSES</code>
-  alongside the loader's own source-set groups.</li>
+  alongside the loader's own source-set groups. Every forge-family dev
+  runtime groups the variable purely by the <code>%%</code> label — one label is
+  one exploded mod target / SecureJar union — so the environment's own
+  output carries its <em>mod id</em> as the label (resolved from <code>mod.id</code> or a
+  <code>*.mod.json</code> resource, falling back to a synthetic env key) and
+  unions with the same-named mods{} group into a single mod. Within
+  each label a metadata-bearing resource root (<code>META-INF/mods.toml</code>,
+  <code>mcmod.info</code>) orders first and the generated manifest member trails.
+  Source-set outputs that ride the environment runtime classpath as
+  file dependencies (for example
+  <code>implementation(otherSourceSet.output)</code>) are autodetected into these
+  groups so the dev runtime does not split them into conflicting
+  automatic modules; explicit <code>combineWith</code> remains the clearer way to
+  compose full environments.</li>
 </ul>
 <p>A run loads every declared group by default; <code>loadedMods</code> on the run
 selects a subset (see

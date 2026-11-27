@@ -145,6 +145,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1205092637%2FProperties%2F-1299449172" anchor-label="PROP_SRG_MAP" id="-1205092637%2FProperties%2F-1299449172" data-filterable-set=":unimined-transform:transform-forge/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform:transform-forge/main" data-filterable-set=":unimined-transform:transform-forge/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-p-r-o-p_-s-r-g_-m-a-p.html"><span>PROP_</span><wbr><span>SRG_</span><wbr><span>MAP</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1205092637%2FProperties%2F-1299449172"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-p-r-o-p_-s-r-g_-m-a-p.html">PROP_SRG_MAP</a><span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a><span class="token operator"> = </span><span class="token string">"unimined.fg2.srgMap"</span></div><div class="brief ">File path of the LZMA-compressed dev→srg map fed to <code class="lang-java">FMLDeobfuscatingRemapper</code> when <a href="-p-r-o-p_-r-u-n-t-i-m-e_-d-e-o-b-f.html">PROP_RUNTIME_DEOBF</a> is active — the <code class="lang-java">srg-mcp</code> job GradleStart used to do.</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div data-togglable="FUNCTION">
@@ -164,6 +179,21 @@
               </div>
             </div>
           </div>
+<a data-name="468754657%2FFunctions%2F-1299449172" anchor-label="deobfEnvProbe" id="468754657%2FFunctions%2F-1299449172" data-filterable-set=":unimined-transform:transform-forge/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform:transform-forge/main" data-filterable-set=":unimined-transform:transform-forge/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="deobf-env-probe.html"><span>deobf</span><wbr><span>Env</span><wbr><span><span>Probe</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="468754657%2FFunctions%2F-1299449172"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="deobf-env-probe.html"><span class="token function">deobfEnvProbe</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">deobfEnv<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><code class="lang-java">FMLDeobfTweaker</code> blackboard-probe wrapper — FML's deobfuscated-environment test probes class names only, so an srg jar (srg keeps mcp-style class names; only members are renamed) registers as deobfuscated and the transformer block gets skipped.</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="1557521067%2FFunctions%2F-1299449172" anchor-label="deobfTransformerNameOrNull" id="1557521067%2FFunctions%2F-1299449172" data-filterable-set=":unimined-transform:transform-forge/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":unimined-transform:transform-forge/main" data-filterable-set=":unimined-transform:transform-forge/main">
             <div class="main-subrow keyValue ">
@@ -174,7 +204,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="deobf-transformer-name-or-null.html"><span class="token function">deobfTransformerNameOrNull</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a></div><div class="brief "><code class="lang-java">FMLDeobfTweaker</code> LDC replacement — returns <code class="lang-java">null</code> (strip the transformer) unless <a href="-p-r-o-p_-r-u-n-t-i-m-e_-d-e-o-b-f.html">PROP_RUNTIME_DEOBF</a> is set, in which case the original class name passes through.</div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="deobf-transformer-name-or-null.html"><span class="token function">deobfTransformerNameOrNull</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -280,6 +310,36 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="is-on-classpath.html"><span class="token function">isOnClasspath</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">file<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/File.html">File</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><code class="lang-java">CoreModManager.unimined$isOnClasspath</code>.</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="742632123%2FFunctions%2F-1299449172" anchor-label="preloadSmRaceGuard" id="742632123%2FFunctions%2F-1299449172" data-filterable-set=":unimined-transform:transform-forge/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform:transform-forge/main" data-filterable-set=":unimined-transform:transform-forge/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="preload-sm-race-guard.html"><span>preload</span><wbr><span>Sm</span><wbr><span>Race</span><wbr><span><span>Guard</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="742632123%2FFunctions%2F-1299449172"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="preload-sm-race-guard.html"><span class="token function">preloadSmRaceGuard</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><code class="lang-java">FMLTweaker.&lt;init&gt;</code> prologue (injected ahead of <code class="lang-java">System.setSecurityManager</code>).</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="539074148%2FFunctions%2F-1299449172" anchor-label="probeClassForName" id="539074148%2FFunctions%2F-1299449172" data-filterable-set=":unimined-transform:transform-forge/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":unimined-transform:transform-forge/main" data-filterable-set=":unimined-transform:transform-forge/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="probe-class-for-name.html"><span>probe</span><wbr><span>Class</span><wbr><span>For</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="539074148%2FFunctions%2F-1299449172"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":unimined-transform:transform-forge/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="probe-class-for-name.html"><span class="token function">probeClassForName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">init<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token punctuation">, </span></span><span class="parameter ">loader<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/ClassLoader.html">ClassLoader</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html">Class</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span></div><div class="brief "><code class="lang-java">Class.forName</code> substitute for srg-authored probe names — <code class="lang-java">ObjectHolderRegistry.scanTarget</code> (and other FML sites) probe hardcoded <code class="lang-java">net.minecraft.init.*</code> literals, but the dev jar is dev-namespace-named and the JVM requires the loaded class's name to equal the requested one, so the probe string itself must be translated first.</div></div></div>
                 </div>
               </div>
             </div>
