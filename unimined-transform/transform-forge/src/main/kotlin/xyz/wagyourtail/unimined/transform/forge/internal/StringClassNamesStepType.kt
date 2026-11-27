@@ -47,6 +47,14 @@ abstract class StringClassNamesStepSpec : DevArtifactOnlyStepSpec {
      *  `neoforge.registries` on neoforge). */
     @get:Input
     abstract val classes: ListProperty<String>
+
+    /** Namespaces the string names are authored in, tried in order —
+     *  forge's reflection strings carry *production* names (searge on
+     *  FG2, mojmap on FG5+), which the dev remap's own source
+     *  namespace (official) can't resolve. Empty falls back to the
+     *  pipeline's `sourceNamespace`. */
+    @get:Input
+    abstract val sourceNamespaces: ListProperty<String>
 }
 
 class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
@@ -65,7 +73,10 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
             if (!spec.enabled.getOrElse(false)) return@ArtifactStep input
             val tree = ctx.mappings?.view<MappingTree>()
                 ?: return@ArtifactStep input
-            val fromNs = Namespace(c.spec.sourceNamespace)
+            val fromNs = spec.sourceNamespaces.getOrElse(emptyList())
+                .map { Namespace(it) }.ifEmpty {
+                    listOf(Namespace(c.spec.sourceNamespace))
+                }
             val toNs = Namespace(c.spec.targetNamespace)
             val scoped = spec.classes.getOrElse(emptyList()).toSet()
             if (scoped.isEmpty()) return@ArtifactStep input
@@ -114,7 +125,7 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
     private fun remapString(
         value: String,
         tree: MappingTree,
-        fromNs: Namespace,
+        fromNs: List<Namespace>,
         toNs: Namespace,
         logger: xyz.wagyourtail.commons.core.logger.Logger
     ): String {
@@ -148,8 +159,10 @@ class StringClassNamesStepType : RemapStepType<StringClassNamesStepSpec> {
     private fun mapClassName(
         tree: MappingTree,
         name: String,
-        fromNs: Namespace,
+        fromNs: List<Namespace>,
         toNs: Namespace
-    ): String = tree.getClass(fromNs, InternalName.unchecked(name))
-        ?.names?.get(toNs)?.toString() ?: name
+    ): String = fromNs.firstNotNullOfOrNull { ns ->
+        tree.getClass(ns, InternalName.unchecked(name))
+            ?.names?.get(toNs)?.toString()
+    } ?: name
 }

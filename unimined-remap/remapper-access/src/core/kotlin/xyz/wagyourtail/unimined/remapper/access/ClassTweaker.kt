@@ -101,14 +101,20 @@ class ClassTweaker private constructor(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
     ): List<AccessElement> {
         val exact = lookup(MethodTarget(owner, name, desc), transitiveOnly)
-        return exact + wildcardChanges(owner, desc, true, transitiveOnly)
+        // desc-less directives target the member by name alone —
+        // they match any actual descriptor (ATs omit field descs)
+        val named = if (desc.isEmpty()) exact
+        else exact + lookup(MethodTarget(owner, name, ""), transitiveOnly)
+        return named + wildcardChanges(owner, desc, true, transitiveOnly)
     }
 
     fun fieldChanges(
         owner: String, name: String, desc: String, transitiveOnly: Boolean = false
     ): List<AccessElement> {
         val exact = lookup(FieldTarget(owner, name, desc), transitiveOnly)
-        return exact + wildcardChanges(owner, desc, false, transitiveOnly)
+        val named = if (desc.isEmpty()) exact
+        else exact + lookup(FieldTarget(owner, name, ""), transitiveOnly)
+        return named + wildcardChanges(owner, desc, false, transitiveOnly)
     }
 
     /** Wildcard rules whose descriptor constraint (if any) matches [desc]. */

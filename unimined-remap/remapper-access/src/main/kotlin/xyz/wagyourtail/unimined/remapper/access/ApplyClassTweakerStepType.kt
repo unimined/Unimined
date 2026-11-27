@@ -5,6 +5,7 @@ import org.objectweb.asm.*
 import xyz.wagyourtail.unimined.api.mapping.view
 import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
+import xyz.wagyourtail.unimined.mapping.element.AddRemove
 import xyz.wagyourtail.unimined.mapping.element.metadata.AccessElement
 import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
 import xyz.wagyourtail.unimined.mapping.jvms.four.ElementType
@@ -330,6 +331,7 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
         val reader = ClassReader(bytes)
         val writer = ClassWriter(reader, 0)
         var className = ""
+        var classIsInterface = false
         reader.accept(object : ClassVisitor(Opcodes.ASM9, writer) {
 
             override fun visit(
@@ -337,6 +339,7 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 signature: String?, superName: String?, interfaces: Array<out String>?
             ) {
                 className = name
+                classIsInterface = access and Opcodes.ACC_INTERFACE != 0
                 visited?.classes?.add(name)
                 // an interface the class already declares (or one several
                 // docs inject) must not be listed twice in the signature
@@ -432,13 +435,20 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 changes: (ClassTweaker, Boolean) -> List<AccessElement>
             ): Int {
                 val flags = AccessFlag.of(type, access).toMutableSet()
+                // interface methods can never carry ACC_FINAL — upstream's
+                // makeFinalIfPrivate exempts them entirely, and any other
+                // final-add would be illegal bytecode here regardless
+                fun List<AccessElement>.applicable() =
+                    if (type == ElementType.METHOD && classIsInterface) {
+                        filter { !(it.type == AddRemove.ADD && it.value == AccessFlag.FINAL) }
+                    } else this
                 for (tweaker in tweakers) {
-                    for (element in changes(tweaker, false)) element.apply(flags)
+                    for (element in changes(tweaker, false).applicable()) element.apply(flags)
                 }
                 // dependency tweakers contribute only their transitive-*
                 // directives to the shared artifact (TransitiveOnlyFilter)
                 for (tweaker in depTweakers) {
-                    for (element in changes(tweaker, true)) element.apply(flags)
+                    for (element in changes(tweaker, true).applicable()) element.apply(flags)
                 }
                 return AccessFlag.toInt(flags)
             }

@@ -144,7 +144,7 @@ class ClassTweakerTest {
 
     @Test
     fun `accessible class and method become public`() {
-        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or 0x200 /*super*/, privateMethod = true)
+        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         val aw = ClassTweaker.parse(
             "mod.accesswidener",
             "accessWidener\tv2\tnamed\n" +
@@ -159,7 +159,7 @@ class ClassTweakerTest {
     fun `accessible private method also gains final`() {
         // loader semantic (UML +PRIVATE conditional): a widened private
         // method is marked final so subclasses can't silently override it
-        val bytes = writeClass(access = 0x200, privateMethod = true)
+        val bytes = writeClass(access = Opcodes.ACC_SUPER, privateMethod = true)
         val aw = ClassTweaker.parse(
             "mod.accesswidener",
             "accessWidener\tv2\tnamed\n" +
@@ -181,11 +181,111 @@ class ClassTweakerTest {
     }
 
     @Test
+    fun `accessible ctor never gains final`() {
+        // upstream makeFinalIfPrivate exempts <init> — constructors can
+        // never be final (JVMS 4.6); fabric's transitive-access-wideners
+        // widen registry-type ctors (SensorType, MenuType, FishingHook),
+        // and a final ctor is a ClassFormatError at class load
+        val writer = ClassWriter(0)
+        writer.visit(Opcodes.V17, Opcodes.ACC_SUPER, "a/b/C", null, "java/lang/Object", null)
+        val ctor = writer.visitMethod(Opcodes.ACC_PRIVATE, "<init>", "()V", null, null)
+        ctor.visitCode()
+        ctor.visitVarInsn(Opcodes.ALOAD, 0)
+        ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
+        ctor.visitInsn(Opcodes.RETURN)
+        ctor.visitMaxs(1, 1)
+        ctor.visitEnd()
+        writer.visitEnd()
+
+        val aw = ClassTweaker.parse(
+            "mod.accesswidener",
+            "accessWidener\tv2\tnamed\n" +
+                    "accessible\tmethod\ta/b/C\t<init>\t()V"
+        )
+        val out = apply(writer.toByteArray(), own = listOf(aw))
+        val methodAccess = IntArray(1)
+        ClassReader(out).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitMethod(
+                access: Int, name: String, descriptor: String,
+                signature: String?, exceptions: Array<out String>?
+            ): org.objectweb.asm.MethodVisitor {
+                methodAccess[0] = access
+                return object : org.objectweb.asm.MethodVisitor(Opcodes.ASM9) {}
+            }
+        }, 0)
+        assertEquals(Opcodes.ACC_PUBLIC, methodAccess[0] and Opcodes.ACC_PUBLIC)
+        assertEquals(0, methodAccess[0] and Opcodes.ACC_FINAL,
+            "ctors must never gain final — illegal modifiers: 0x11")
+    }
+
+    @Test
+    fun `accessible private interface method never gains final`() {
+        // upstream makeFinalIfPrivate exempts interface-declared methods —
+        // ACC_FINAL is illegal on interface methods regardless of the
+        // private-final widening rule
+        val writer = ClassWriter(0)
+        writer.visit(Opcodes.V17, Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT, "a/b/I", null, "java/lang/Object", null)
+        val method = writer.visitMethod(Opcodes.ACC_PRIVATE, "hidden", "()V", null, null)
+        method.visitCode()
+        method.visitInsn(Opcodes.RETURN)
+        method.visitMaxs(0, 1)
+        method.visitEnd()
+        writer.visitEnd()
+
+        val aw = ClassTweaker.parse(
+            "mod.accesswidener",
+            "accessWidener\tv2\tnamed\n" +
+                    "accessible\tmethod\ta/b/I\thidden\t()V"
+        )
+        val out = apply(writer.toByteArray(), own = listOf(aw))
+        val methodAccess = IntArray(1)
+        ClassReader(out).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitMethod(
+                access: Int, name: String, descriptor: String,
+                signature: String?, exceptions: Array<out String>?
+            ): org.objectweb.asm.MethodVisitor {
+                methodAccess[0] = access
+                return object : org.objectweb.asm.MethodVisitor(Opcodes.ASM9) {}
+            }
+        }, 0)
+        assertEquals(Opcodes.ACC_PUBLIC, methodAccess[0] and Opcodes.ACC_PUBLIC)
+        assertEquals(0, methodAccess[0] and Opcodes.ACC_FINAL,
+            "interface methods must never gain final — illegal on interfaces")
+    }
+
+    @Test
+    fun `accessible private static method never gains final`() {
+        // upstream makeFinalIfPrivate exempts statics — the conditional
+        // carries -STATIC
+        val bytes = writeClass(Opcodes.ACC_SUPER, privateMethod = false,
+            methodAccess = Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC)
+        val aw = ClassTweaker.parse(
+            "mod.accesswidener",
+            "accessWidener\tv2\tnamed\n" +
+                    "accessible\tmethod\ta/b/C\thidden\t()V"
+        )
+        val out = apply(bytes, own = listOf(aw))
+        val methodAccess = IntArray(1)
+        ClassReader(out).accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            override fun visitMethod(
+                access: Int, name: String, descriptor: String,
+                signature: String?, exceptions: Array<out String>?
+            ): org.objectweb.asm.MethodVisitor {
+                methodAccess[0] = access
+                return object : org.objectweb.asm.MethodVisitor(Opcodes.ASM9) {}
+            }
+        }, 0)
+        assertEquals(Opcodes.ACC_PUBLIC, methodAccess[0] and Opcodes.ACC_PUBLIC)
+        assertEquals(0, methodAccess[0] and Opcodes.ACC_FINAL,
+            "static methods never gain final (upstream makeFinalIfPrivate)")
+    }
+
+    @Test
     fun `extendable does not demote a public method to protected`() {
         // UML's conditional model: extendable's PROTECTED only applies
         // when the method isn't already PUBLIC — the old set/clear
         // implementation would have downgraded public to protected
-        val bytes = writeClass(0x200, privateMethod = false, methodAccess = Opcodes.ACC_PUBLIC)
+        val bytes = writeClass(Opcodes.ACC_SUPER, privateMethod = false, methodAccess = Opcodes.ACC_PUBLIC)
         val aw = ClassTweaker.parse(
             "mod.accesswidener",
             "accessWidener\tv2\tnamed\n" +
@@ -225,10 +325,60 @@ class ClassTweakerTest {
     }
 
     @Test
+    fun `fg2 headerless srg at de-finales a rebased field`() {
+        // FG2 (1.7.10) ships headerless `fml_at.cfg`/`forge_at.cfg`
+        // with srg names; the pipeline binds the anonymous `source`
+        // namespace to `searge` and rebases onto the dev namespace
+        val tree = mappingTree("official", "searge", "feather") {
+            clazz(
+                "qn", "net/minecraft/util/RegistryNamespaced",
+                "net/minecraft/util/registry/IdRegistry"
+            ) {
+                field("a", "field_148759_a", "ids")
+            }
+        }
+        val bytes = writeClass(
+            access = Opcodes.ACC_PUBLIC,
+            privateMethod = false,
+            className = "net/minecraft/util/registry/IdRegistry",
+            fields = listOf(
+                Triple(
+                    "ids",
+                    "Lnet/minecraft/util/CrudeIncrementalIntIdentityHashMap;",
+                    Opcodes.ACC_PROTECTED or Opcodes.ACC_FINAL
+                )
+            )
+        )
+        val at = ClassTweaker.parse(
+            "fml_at.cfg",
+            "protected-f net.minecraft.util.RegistryNamespaced " +
+                    "field_148759_a # identitymap",
+            mapOf("source" to "searge")
+        )
+        val entries = mapOf("net/minecraft/util/registry/IdRegistry.class" to bytes)
+        val out = apply(entries, own = listOf(at), tree = tree, target = "feather")
+        val access = IntArray(1)
+        ClassReader(out["net/minecraft/util/registry/IdRegistry.class"]!!)
+            .accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+                override fun visitField(
+                    access2: Int, name: String, desc: String,
+                    sig: String?, value: Any?
+                ): org.objectweb.asm.FieldVisitor? {
+                    if (name == "ids") access[0] = access2
+                    return null
+                }
+            }, 0)
+        assertEquals(0, access[0] and Opcodes.ACC_FINAL,
+            "protected-f must remove FINAL from the rebased field")
+        assertEquals(Opcodes.ACC_PROTECTED,
+            access[0] and Opcodes.ACC_PROTECTED)
+    }
+
+    @Test
     fun `transitive directives in own files apply to the jar`() {
         // a mod's own transitive rules apply to itself too — the loader
         // propagates them to dependents on top of that
-        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or 0x200, privateMethod = false)
+        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = false)
         val aw = ClassTweaker.parse(
             "mod.accesswidener",
             "accessWidener\tv2\tnamed\n" +
@@ -244,7 +394,7 @@ class ClassTweakerTest {
         // Loom's TransitiveOnlyFilter: a dependency's plain directives
         // widen for the dependency itself only; dependents get just the
         // transitive-* rules
-        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or 0x200, privateMethod = false)
+        val bytes = writeClass(access = Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = false)
         val aw = ClassTweaker.parse(
             "mod.accesswidener",
             "accessWidener\tv2\tnamed\n" +
@@ -305,6 +455,7 @@ class ClassTweakerTest {
         assertEquals(0, mutableField.change.set)
         assertEquals(Opcodes.ACC_FINAL, mutableField.change.clear and Opcodes.ACC_FINAL)
     }
+
 
     @Test
     fun `at wildcard rules apply to every class member`() {
@@ -553,7 +704,7 @@ class ClassTweakerTest {
         // (MappedRegistry$TagSet / NamespacedWrapper on modern Forge)
         val inner = writeInnerClass()
         val outer = writeClass(
-            Opcodes.ACC_PUBLIC or 0x200, false, className = "a/b/Outer",
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER, false, className = "a/b/Outer",
             innerClasses = listOf(Triple("a/b/Outer\$Inner", "a/b/Outer", Opcodes.ACC_STATIC))
         )
         // headerless AT files declare the `source` namespace — the
@@ -591,7 +742,7 @@ class ClassTweakerTest {
 
     @Test
     fun `top level class directive still merges into the class header`() {
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = false)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = false)
         val at = ClassTweaker.parse(
             "accesstransformer.cfg",
             "public a/b/C",
@@ -682,7 +833,7 @@ class ClassTweakerTest {
     @Test
     fun `validateDocs returns nothing when every declared target exists`() {
         val bytes = writeClass(
-            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true,
             fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
         )
         val unmatched = validateDocsCore(
@@ -698,7 +849,7 @@ class ClassTweakerTest {
 
     @Test
     fun `validateDocs reports unmatched targets with source names`() {
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         val unmatched = validateDocsCore(
             bytes,
             "mod.accesswidener" to (
@@ -712,7 +863,7 @@ class ClassTweakerTest {
 
     @Test
     fun `validateDocs binds headerless docs to the given namespace`() {
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         val unmatched = validateDocsCore(
             bytes,
             "accesstransformer.cfg" to (
@@ -758,7 +909,7 @@ class ClassTweakerTest {
     @Test
     fun `validate passes when every declared target exists`() {
         val bytes = writeClass(
-            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true,
             fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
         )
         runStep(
@@ -773,7 +924,7 @@ class ClassTweakerTest {
 
     @Test
     fun `validate fails on an unmatched class target`() {
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         val e = assertThrows(org.gradle.api.GradleException::class.java) {
             runStep(
                 bytes,
@@ -789,7 +940,7 @@ class ClassTweakerTest {
     @Test
     fun `validate fails on an unmatched member target`() {
         val bytes = writeClass(
-            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true,
             fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
         )
         val e = assertThrows(org.gradle.api.GradleException::class.java) {
@@ -809,7 +960,7 @@ class ClassTweakerTest {
         // AT syntax declares fields without descriptors — `state` must
         // match the `state I` field on name alone
         val bytes = writeClass(
-            Opcodes.ACC_PRIVATE or 0x200, privateMethod = true,
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true,
             className = "a/b/C",
             fields = listOf(Triple("state", "I", Opcodes.ACC_PRIVATE))
         )
@@ -824,7 +975,7 @@ class ClassTweakerTest {
     fun `dependency declared targets are not validated`() {
         // NFRT parity: only user-declared docs are validated — a dep's
         // stale transitive rule must not break this build
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         runStep(
             bytes,
             "mod.accesswidener" to (
@@ -840,7 +991,7 @@ class ClassTweakerTest {
 
     @Test
     fun `unmatched targets are silent when validate is off`() {
-        val bytes = writeClass(Opcodes.ACC_PRIVATE or 0x200, privateMethod = true)
+        val bytes = writeClass(Opcodes.ACC_PRIVATE or Opcodes.ACC_SUPER, privateMethod = true)
         runStep(
             bytes,
             "mod.accesswidener" to (
@@ -916,8 +1067,8 @@ class ClassTweakerTest {
     private fun assertAccess(out: ByteArray) {
         val reader = ClassReader(out)
         assertEquals(
-            Opcodes.ACC_PUBLIC or 0x200,
-            reader.access and (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED or 0x200)
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
+            reader.access and (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED or Opcodes.ACC_SUPER)
         )
         reader.accept(object : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
             override fun visitMethod(

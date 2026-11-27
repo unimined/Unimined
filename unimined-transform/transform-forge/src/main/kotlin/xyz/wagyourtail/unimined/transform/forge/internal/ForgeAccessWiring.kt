@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftEnvironment
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.remap.AccessRemapStepSpec
 import xyz.wagyourtail.unimined.remap.RemapExtension
+import xyz.wagyourtail.unimined.remap.spi.DeferredStepContribution
 import xyz.wagyourtail.unimined.remap.spi.RemapSurface
 import xyz.wagyourtail.unimined.remap.spi.StepScope
 import xyz.wagyourtail.unimined.remapper.access.ApplyClassTweakerStepSpec
@@ -110,20 +111,30 @@ internal fun contributeAccessSteps(
     val legacyAts = project.provider {
         val r = resolved.orNull ?: return@provider emptyList<Path>()
         when (val profile = r.profile) {
-            is ForgeProfile.Binpatches ->
-                // dev package: `merged_at.cfg` + universal entries;
-                // universal-only: `forge_at.cfg`/`fml_at.cfg`
+            is ForgeProfile.Binpatches -> {
+                // userdev ships its copies under `src/main/resources/`
+                // (plus `merged_at.cfg` at root when present); the
+                // universal jar carries `forge_at.cfg`/`fml_at.cfg`
+                // at root
+                val jar = profile.devPackage?.jar ?: r.jar
                 UserdevExtract.extractEntries(
-                    profile.devPackage?.jar ?: r.jar,
+                    jar,
                     if (profile.devPackage != null)
-                        listOf("merged_at.cfg", "forge_at.cfg", "fml_at.cfg")
+                        listOf(
+                            "merged_at.cfg",
+                            "src/main/resources/forge_at.cfg",
+                            "src/main/resources/fml_at.cfg",
+                            "forge_at.cfg",
+                            "fml_at.cfg",
+                        )
                     else
                         listOf("forge_at.cfg", "fml_at.cfg"),
                     forgeCache.resolve(
                         "legacy-ats/" +
-                                UniminedCache.artifactKey(r.jar)
+                                UniminedCache.artifactKey(jar)
                     )
                 )
+            }
 
             is ForgeProfile.ZipPatches ->
                 UserdevExtract.extractEntries(
@@ -188,14 +199,15 @@ internal fun contributeAccessSteps(
 
     // Headerless `*_at.cfg` files declare a literal `source`
     // namespace — bind it per origin: extracted ATs (userdev `ats`,
-    // universal-jar cfgs, dep-mod ATs) name the loader's obf
-    // namespace (srg/searge names — FML applies them against the
-    // obf-named runtime); user-authored ATs are in dev names
-    // (1.x `at2aw` defaulted to devNamespace).
+    // universal-jar cfgs, dep-mod ATs) name the patched product's
+    // member namespace (srg/searge for mcp_config-era — even notchObf,
+    // where the patch *source* is official but members sit at the srg
+    // boundary FML applies rules against); user-authored ATs are in
+    // dev names (1.x `at2aw` defaulted to devNamespace).
     val extractedObfNs = resolved.map { r ->
         when (val p = r.profile) {
             is ForgeProfile.Userdev ->
-                p.config.obfNamespaceFor(!environment.obfuscated.get())
+                p.config.patchedNamespaceFor(!environment.obfuscated.get())
             // FG1-era ATs name official-obf targets (`als.a`,
             // `baz.u`) — pre-binpatches trees have no searge column
             is ForgeProfile.ZipPatches -> "official"
@@ -238,7 +250,11 @@ internal fun contributeAccessSteps(
     environmentSpec.contributeAccessModel(project.provider {
         if (resolved.orNull == null) return@provider AccessModel(emptyList())
         val devNs = mapOf("source" to effectiveDevNs.get())
-        val obfNs = mapOf("source" to extractedObfNs.get())
+        // `resolved`/`extractedObfNs` are absent on non-forge envs —
+        // this wiring runs on every bound env; the extracted doc sets
+        // are empty there so no obf binding is ever consumed
+        val obfNs = extractedObfNs.orNull
+            ?.let { mapOf("source" to it) } ?: emptyMap()
         AccessModel(
             buildList {
                 (environment.accessWideners.files +
@@ -268,7 +284,20 @@ internal fun contributeAccessSteps(
 
     environmentSpec.contributeStep(RemapSurface.JAR, extractedSpec)
     environmentSpec.contributeStep(RemapSurface.JAR, userSpec)
-    environmentSpec.contributeStep(RemapSurface.JAR, AccessRemapStepSpec())
+    // dep jars' embedded AW/AT/CT docs rebase through their prod→dev
+    // remap — deferred + deduped: this wiring runs on every bound env,
+    // and family wirings that contribute a configured spec (fabric's
+    // labels canonicalize headers to `named`/`intermediary`) must not
+    // get a second, label-less pass stamping the raw internal dev
+    // column back over them
+    environmentSpec.contributeDeferredSteps(project.provider {
+        val already = environmentSpec.configuredSurfaces()[RemapSurface.JAR]
+            ?.contributed.orEmpty().any { it is AccessRemapStepSpec }
+        if (already) emptyList()
+        else listOf(
+            DeferredStepContribution(
+                RemapSurface.JAR, AccessRemapStepSpec()))
+    })
 
     // string-LDC class names in forge's reflection classes —
     // scoped to ObjectHolderRegistry across its three era
@@ -284,11 +313,21 @@ internal fun contributeAccessSteps(
             }.orElse(false))
             classes.set(
                 listOf(
+                    // FG2 era (cpw.mods.fml)
+                    "cpw/mods/fml/common/registry/ObjectHolderRegistry",
                     "net/minecraftforge/registries/ObjectHolderRegistry",
                     "net/minecraftforge/fml/common/registry/ObjectHolderRegistry",
                     "net/neoforged/neoforge/registries/ObjectHolderRegistry"
                 )
             )
+            // the strings carry *production* names — searge on FG2,
+            // mojmap on FG5+ — not the dev pipeline's official source.
+            // orElse([]): the env property is unset on envs with no
+            // loader namespaces (and the spec serializes even when
+            // `enabled` is false) — an absent list fails transform
+            // parameter validation; empty falls back to the
+            // pipeline's sourceNamespace at apply time
+            sourceNamespaces.set(environment.modSourceNamespaces.orElse(emptyList()))
         }
     )
 
@@ -342,7 +381,14 @@ internal fun contributeAccessSteps(
             }
         }
     })
-    environmentSpec.contributeStep(RemapSurface.SOURCES, jstSpec)
+    // deferred: this wiring runs on every bound env — `enable` only
+    // resolves non-empty when a Userdev profile ships enricher data,
+    // so non-forge envs (and enricher-less profiles) contribute no
+    // step at all rather than landing an empty toolClasspath
+    environmentSpec.contributeDeferredSteps(jstSpec.enable.map { enabled ->
+        if (enabled.isEmpty()) emptyList()
+        else listOf(DeferredStepContribution(RemapSurface.SOURCES, jstSpec))
+    })
 
     // Userdev `inject`: prefix-stripped installer entries merged
     // into the dev jar via the jar-processors channel
