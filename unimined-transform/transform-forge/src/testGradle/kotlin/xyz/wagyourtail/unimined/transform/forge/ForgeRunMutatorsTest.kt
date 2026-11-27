@@ -102,3 +102,32 @@ class DevPackageTest {
         )
     }
 }
+
+class SubstituteBrokenLibraryCoordTest {
+
+    private fun substitute(coord: String) =
+        xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
+            .substituteBrokenLibraryCoord(coord)
+
+    @Test
+    fun `securejarhandler 3_0_8 pins to 3_0_9`() {
+        // 3.0.8 was republished in place with JDK-25 bytecode while
+        // its Gradle metadata still claims jvm-version=21 — the
+        // substitution keeps dev launches on JDK-21-class bytecode
+        assertEquals("cpw.mods:securejarhandler:3.0.9",
+            substitute("cpw.mods:securejarhandler:3.0.8"))
+        assertEquals("cpw.mods:securejarhandler:3.0.9@jar",
+            substitute("cpw.mods:securejarhandler:3.0.8@jar"))
+    }
+
+    @Test
+    fun `other coords pass through`() {
+        assertEquals("cpw.mods:securejarhandler:3.0.9",
+            substitute("cpw.mods:securejarhandler:3.0.9"))
+        assertEquals("cpw.mods:securejarhandler:2.1.10",
+            substitute("cpw.mods:securejarhandler:2.1.10"))
+        assertEquals("net.minecraftforge:forge:1.21.1-52.1.0",
+            substitute("net.minecraftforge:forge:1.21.1-52.1.0"))
+        assertEquals("a:b", substitute("a:b"))
+    }
+}

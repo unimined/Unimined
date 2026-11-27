@@ -218,8 +218,9 @@ class UserdevConfig(val json: JsonObject) {
     val libraries: List<String>
         get() =
             json["libraries"]?.jsonArray?.mapNotNull {
-                (it as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull
-                    ?: it.jsonPrimitive.contentOrNull
+                ((it as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull
+                    ?: it.jsonPrimitive.contentOrNull)
+                    ?.let(::substituteBrokenLibraryCoord)
             } ?: emptyList()
 
     /** `runs` — per-side run config objects, keyed `client`/`server`/
@@ -238,7 +239,8 @@ class UserdevConfig(val json: JsonObject) {
     val modules: List<String>
         get() =
             (json["modules"] as? kotlinx.serialization.json.JsonArray)
-                ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull
+                    ?.let(::substituteBrokenLibraryCoord) } ?: emptyList()
 
     val data: JsonObject? get() = json["data"] as? JsonObject
 
@@ -264,6 +266,33 @@ class UserdevConfig(val json: JsonObject) {
             is JsonPrimitive -> listOf(el.content)
             is JsonArray -> el.flatMap(::flattenArgs)
             is JsonObject -> flattenArgs(el["value"])
+        }
+
+        /**
+         * Published coordinates that resolve to unusable artifacts,
+         * repaired to their working siblings — 1.x `apply()`'s
+         * `gson:2.8.0` → `2.8.9` pin, generalized.
+         *
+         * - `cpw.mods:securejarhandler:3.0.8` → `3.0.9`: upstream
+         *   republished 3.0.8 in place (2026-11-05) with
+         *   `JarMetadata.class` rebuilt at class-file version 69
+         *   (JDK 25) while the jar's Gradle metadata still declares
+         *   jvm-version=21 — NeoForge 21.x dev launches then crash
+         *   with `UnsupportedClassVersionError` on the JDK 21 the
+         *   bundled sponge-mixin requires. 3.0.9 is API-identical
+         *   and entirely JDK-21 bytecode.
+         */
+        fun substituteBrokenLibraryCoord(coord: String): String {
+            val atJar = coord.endsWith("@jar")
+            val parts = coord.removeSuffix("@jar").split(":")
+                .toMutableList()
+            return if (parts.size >= 3 &&
+                parts[0] == "cpw.mods" &&
+                parts[1] == "securejarhandler" &&
+                parts[2] == "3.0.8"
+            ) parts.apply { set(2, "3.0.9") }.joinToString(":") +
+                    if (atJar) "@jar" else ""
+            else coord
         }
     }
 }
