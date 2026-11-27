@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.mapping.MappingsSpecImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
+import xyz.wagyourtail.unimined.minecraft.merge.JarMerger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
@@ -131,9 +132,13 @@ class ForgeEnvironmentWiringTest {
     }
 
     /** Serve the FG2-on-userdev3 shape (`1.12.2/14.23.x`): universal
-     *  carries `binpatches.pack.lzma`; `userdev3` carries the FG3-style
-     *  config. */
-    private fun serveUserdev3(coords: String, configJson: String) {
+     *  carries `binpatches.pack.lzma` plus [universalEntries];
+     *  `userdev3` carries the FG3-style config. */
+    private fun serveUserdev3(
+        coords: String,
+        configJson: String,
+        universalEntries: Map<String, String> = emptyMap()
+    ) {
         val repo = dir.resolve("repo").toFile()
         val (g, a, v) = coords.split(":")
         val jarDir = repo.resolve("${g.replace('.', '/')}/$a/$v")
@@ -147,6 +152,11 @@ class ForgeEnvironmentWiringTest {
             out.putNextEntry(JarEntry("binpatches.pack.lzma"))
             out.write("x".toByteArray())
             out.closeEntry()
+            for ((path, text) in universalEntries) {
+                out.putNextEntry(JarEntry(path))
+                out.write(text.toByteArray())
+                out.closeEntry()
+            }
         }
         JarOutputStream(jarDir.resolve("$a-$v-userdev3.jar").outputStream()).use { out ->
             out.putNextEntry(JarEntry("config.json"))
@@ -408,6 +418,62 @@ class ForgeEnvironmentWiringTest {
         // FML runtime-deobfs production mods at the searge boundary.
         assertEquals(
             listOf("searge"), ext.modSourceNamespaces("lexforge12userdev3").get())
+    }
+
+    /** Regression: side-marker behavior belongs to the resolved runtime
+     *  artifact, not the loader selector id. `lexforge` resolves the same
+     *  `net.minecraftforge:forge` artifacts as `forge`, so userdev-era
+     *  envs must both scan FG2-era universals for FML's legacy marker and
+     *  fall back to the modern distmarker on modern userdev. */
+    @Test
+    fun `userdev side markers follow runtime coordinates rather than selector id`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+
+        serveUserdev3(
+            "net.minecraftforge:forge:1.12.2-14.23.5.2860",
+            """{"mcp":"de.oceanlabs.mcp:mcp_config:1.12.2@zip"}""",
+            mapOf("net/minecraftforge/fml/relauncher/SideOnly.class" to "")
+        )
+        serveUserdev("net.minecraftforge:forge:1.20.1-47.3.0")
+        serveUserdev("net.neoforged:forge:1.20.1-47.1.79")
+
+        val legacyForge = forgeEnv(
+            ext, "forge", "1.12.2", "14.23.5.2860", "legacyForge")
+        val legacyLexforge = forgeEnv(
+            ext, "lexforge", "1.12.2", "14.23.5.2860", "legacyLexforge")
+        val modernForge = forgeEnv(
+            ext, "forge", "1.20.1", "47.3.0", "modernForge")
+        val modernLexforge = forgeEnv(
+            ext, "lexforge", "1.20.1", "47.3.0", "modernLexforge")
+        val neoforge = forgeEnv(
+            ext, "neoforge", "1.20.1", "47.1.79", "neoforge20")
+
+        assertEquals(
+            listOf(JarMerger.SideMarker.FORGE_FML),
+            legacyForge.sideMarkers.get()
+        )
+        assertEquals(
+            legacyForge.sideMarkers.get(),
+            legacyLexforge.sideMarkers.get(),
+            "lexforge must scan the same FG2 universal side marker as forge"
+        )
+        assertEquals(
+            listOf(JarMerger.SideMarker.FORGE_MODERN),
+            modernForge.sideMarkers.get()
+        )
+        assertEquals(
+            modernForge.sideMarkers.get(),
+            modernLexforge.sideMarkers.get(),
+            "lexforge must use forge's modern userdev side-marker fallback"
+        )
+        assertEquals(
+            listOf(JarMerger.SideMarker.NEOFORGE),
+            neoforge.sideMarkers.get(),
+            "net.neoforged:forge must not be misclassified by artifact name"
+        )
     }
 
     /** Cleanroom swaps vanilla 1.12.2's platform libs for modern forks

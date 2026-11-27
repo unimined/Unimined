@@ -11,6 +11,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import xyz.wagyourtail.unimined.api.access.AccessModel
+import xyz.wagyourtail.unimined.api.util.MavenCoords
 import xyz.wagyourtail.unimined.api.util.afterDslEval
 import xyz.wagyourtail.unimined.api.util.reportProblem
 import xyz.wagyourtail.unimined.api.spec.LoaderSpec
@@ -86,25 +87,30 @@ internal object ForgeEnvironmentWiring {
         // merged-env side markers — 1.x `actualSideMarker`: whichever
         // SideOnly annotation the loader jar itself ships is the era
         // its runtime reads; absent → no stamping (warn, like 1.x).
-        // NeoForge `Userdev` is invariant (net.neoforged.api.distmarker
-        // .OnlyIn) — no jar scan. Forge `Userdev` spans both eras:
-        // FG2's userdev3 jar probes as Userdev too, so scan markerJar
-        // (the universal pair) for a shipped FML-era marker first —
-        // modern universals ship none, which falls back to FORGE_MODERN.
-        // FG1-era artifacts get detected from the runtime jar with a
-        // warn-on-empty, like 1.x `actualSideMarker`.
+        // Product behavior follows the resolved runtime coordinate, not
+        // the selector id: lexforge is an alias selector for the same
+        // net.minecraftforge:forge artifacts as forge. NeoForge `Userdev`
+        // is invariant (net.neoforged.api.distmarker.OnlyIn) — no jar
+        // scan. MinecraftForge `Userdev` spans both eras: FG2's userdev3
+        // jar probes as Userdev too, so scan markerJar (the universal
+        // pair) for a shipped FML-era marker first — modern universals
+        // ship none, which falls back to FORGE_MODERN. FG1-era artifacts
+        // get detected from the runtime jar with a warn-on-empty, like
+        // 1.x `actualSideMarker`.
         // `resolved` is absent on non-forge/loaderless envs — `addAll`
         // of an absent provider poisons the whole property (convention
         // AND explicit set values), so the contribution must orElse
         // to a present empty list when the env isn't forge-family
         environment.sideMarkers.addAll(resolved.map { r ->
             r?.let {
+                val coords = MavenCoords(it.notation)
                 when {
                     it.profile is ForgeProfile.Userdev -> when {
-                        it.descriptor.id.contains("neo") ->
+                        coords.group == "net.neoforged" ->
                             listOf(xyz.wagyourtail.unimined.minecraft
                                 .merge.JarMerger.SideMarker.NEOFORGE)
-                        it.descriptor.id == "forge" -> listOf(
+                        coords.group == "net.minecraftforge" &&
+                                coords.artifact == "forge" -> listOf(
                             xyz.wagyourtail.unimined.minecraft.merge
                                 .JarMerger.SideMarker
                                 .detectSideMarker(it.markerJar) { }
