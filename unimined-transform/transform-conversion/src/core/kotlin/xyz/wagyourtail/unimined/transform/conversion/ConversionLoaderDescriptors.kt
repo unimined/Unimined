@@ -84,9 +84,14 @@ internal class ConversionLoaderDescriptors : LoaderDescriptorSource {
             // descriptor model doesn't cover yet
             loaderCoords = { _, v -> "net.fabricmc:fabric-loader:$v" },
             supportedProducts = setOf("minecraft:bta"),
-            // fabric-loader fork — consumes a standard `mods/` dir
+            // fabric-loader fork — consumes a standard `mods/` dir in
+            // production and fabric-loader's dev classpath discovery in
+            // development. The fork is upstream enough to implement
+            // fabric-loader #585 (`fabric.classPathGroups`) unchanged —
+            // verified against the published 0.18.4-bta.11 sources.
             capabilities = mapOf(
                 "modsDir" to "mods",
+                "classpathGroups" to "fabric.classPathGroups",
                 // a fabric-loader jar — launches via knot, not the
                 // version doc's legacy launchwrapper/VanillaTweaker
                 "launcher" to "knot",

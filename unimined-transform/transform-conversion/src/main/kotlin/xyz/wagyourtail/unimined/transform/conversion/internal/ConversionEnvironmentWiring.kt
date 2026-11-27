@@ -68,6 +68,12 @@ object ConversionEnvironmentWiring {
                     } else {
                         "net.fabricmc.loader.impl.launch.knot.KnotClient"
                     }
+                    // fabric-loader forks only scan the launch classpath
+                    // for mod metadata in development mode
+                    // (`ClasspathModCandidateFinder`). Without this the
+                    // mod under development is invisible even when its
+                    // classes/resources are already on -cp.
+                    config.jvmArgs += "-Dfabric.development=true"
                 }
         }
 
