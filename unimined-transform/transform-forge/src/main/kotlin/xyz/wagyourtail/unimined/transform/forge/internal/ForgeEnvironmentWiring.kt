@@ -160,6 +160,14 @@ internal object ForgeEnvironmentWiring {
                         else -> emptyList()
                     }
                 }
+                // obf→named package relocation turns formerly
+                // package-legal protected/package-private accesses into
+                // cross-package violations. UML's remap-time package
+                // access pass runs before forge's ATs widen private
+                // members to protected, so it cannot see those later
+                // protected accesses; the post-remap processor can.
+                envSpec.jarProcessors += xyz.wagyourtail.unimined
+                    .transform.jarmod.internal.AccessWideningProcessor()
                 // the binding is inert without a processor consuming
                 // it — JarModMergeProcessor overlays the jars onto
                 // the flowing artifact pre-remap, META-INF stripped.
