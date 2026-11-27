@@ -218,6 +218,31 @@ class ConversionProcessorsTest {
     }
 
     @Test
+    fun `foxloader strip-back preserves patched jar entry order`() {
+        // FoxLoader 1.x's RegistryTransformer is stateful across the
+        // patch pass: Block.class must be visited before ItemMap.class.
+        // Zipfs tree-walking does not honor the central-directory order
+        // the patcher emitted, so the strip-back pass must stream the
+        // patched jar in central-directory order.
+        val block = "net/minecraft/src/game/block/Block.class"
+        val itemMap = "net/minecraft/src/game/item/ItemMap.class"
+        val own = jar("mc-order.jar", mapOf(
+            block to byteArrayOf(1),
+            itemMap to byteArrayOf(2)))
+        val other = jar("other-order.jar", emptyMap())
+        val p = FoxLoaderPatchProcessor()
+        p.processJar(own, FoxLoaderPatchProcessor.Spec(
+            listOf(compileInvoker().toString()), other.toString()), ctx)
+        val names = ZipFile(own.toFile()).use { z ->
+            z.entries().toList().filter { !it.isDirectory }.map { it.name }
+        }
+        assertEquals(
+            listOf(block, itemMap, "patched.marker", "argv.txt"),
+            names
+        )
+    }
+
+    @Test
     fun `foxloader invoker failure propagates with tool output`() {
         val own = jar("mc.jar",
             mapOf("FAILPATCH" to byteArrayOf(0)))

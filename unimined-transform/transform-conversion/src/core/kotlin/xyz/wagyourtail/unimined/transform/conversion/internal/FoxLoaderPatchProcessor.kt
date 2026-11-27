@@ -2,12 +2,16 @@ package xyz.wagyourtail.unimined.transform.conversion.internal
 
 import xyz.wagyourtail.unimined.api.util.writeAtomically
 import xyz.wagyourtail.unimined.transform.processor.JarProcessor
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.Serializable
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 /**
  * FoxLoader hooks the game by *patching* the Minecraft jar at
@@ -122,28 +126,34 @@ class FoxLoaderPatchProcessor : JarProcessor {
             }
 
             // strip-back: copy patched -> jar minus other-side-only
-            // entries. In-place is unsafe mid-iteration — write a tmp
+            // entries. This must stream the patched jar in central-
+            // directory order: FoxLoader 1.x's RegistryTransformer is
+            // stateful across the runtime pre-patch pass and requires
+            // Block.class before ItemMap.class. A zipfs Files.walk is
+            // provider tree order (in practice nearly reverse insertion
+            // order here), not jar order, and silently breaks that
+            // contract. In-place is unsafe mid-iteration — write a tmp
             // then move over.
             jar.writeAtomically { tmp ->
-                FileSystems.newFileSystem(patched).use { inFs ->
-                    FileSystems.newFileSystem(
-                        tmp, mapOf("create" to true)
-                    ).use { outFs ->
-                        inFs.rootDirectories.single().let { root ->
-                            Files.walk(root).use { stream ->
-                                stream.filter { !Files.isDirectory(it) }
-                                    .forEach { src ->
-                                        val name = src.toString()
-                                            .removePrefix("/")
-                                        if (name in otherOnlyNames)
-                                            return@forEach
-                                        val dst = outFs.getPath(name)
-                                        dst.parent?.let {
-                                            Files.createDirectories(it)
-                                        }
-                                        Files.copy(src, dst)
-                                    }
+                ZipFile(patched.toFile()).use { zip ->
+                    ZipOutputStream(
+                        BufferedOutputStream(Files.newOutputStream(tmp))
+                    ).use { out ->
+                        val written = mutableSetOf<String>()
+                        val entries = zip.entries()
+                        while (entries.hasMoreElements()) {
+                            val src = entries.nextElement()
+                            if (src.name in otherOnlyNames || !written.add(src.name))
+                                continue
+                            val dst = ZipEntry(src.name)
+                            if (src.time >= 0) dst.time = src.time
+                            out.putNextEntry(dst)
+                            if (!src.isDirectory) {
+                                zip.getInputStream(src).use { input ->
+                                    input.copyTo(out)
+                                }
                             }
+                            out.closeEntry()
                         }
                     }
                 }
