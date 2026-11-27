@@ -11,6 +11,7 @@
 || `rift` | DimDev's 1.13-era LaunchWrapper loader — versions MC-keyed (`org.dimdev:rift:<mc>`) |
 || `foxloader` | ReIndev's loader |
 || `liteloader` | |
+|| `nil` | NilLoader — pure javaagent, version-agnostic |
 || `craftbukkit`, `spigot`, `paper` | server-side |
 || `fg1` | ForgeGradle 1 |
 || `jarmod` | pseudo-loader — jar-injected mods |

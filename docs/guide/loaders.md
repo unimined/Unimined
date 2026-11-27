@@ -61,6 +61,7 @@ accepted spellings that map to the same descriptor:
 | `foxloader(v)`, `foxloader()` | `foxloader` | `foxLoader` |
 | `liteloader(v)` | `liteloader` | |
 | `rift(v)` | `rift` | |
+| `nil(v)` | `nil` | |
 | `spigot(v)` | `spigot` | |
 | `paper(v)` | `paper` | |
 | `craftbukkit(v)` | `craftbukkit` | `craftBukkit`, `bukkit` |
@@ -207,3 +208,67 @@ then register only through the `--mixin` args):
         }
     }
     ```
+
+## NilLoader mappings
+
+`nil(v)` environments generate `META-INF/nil/mappings.json`
+automatically — NilLoader's per-mod runtime remapping table. The
+`scanNilMappings` task (`scan<Env>NilMappings` for named envs) runs a
+tracked scan over the compiled mod classes and emits the dev→`official`
+reference usage NilLoader resolves at runtime:
+
+- **Bytecode references** — method/field/type refs, covering
+  ship-named mode where the agent performs the real remap at runtime
+  (inheritance-completed, so exact-owner lookups resolve through
+  subclass references the way NilGradle's scan did).
+- **`@Patch.Class`/`@Patch.Method` annotation strings** — mini
+  transformer targets.
+- **String literals** — `remapType`/`remapField`/`remapMethod` args
+  and `InsnBuilder`-style owner/name/desc ldc triples (literal strings
+  only — computed strings are statically unresolvable, same limitation
+  as NilGradle).
+- **`widen`** — members/classes needing runtime access widening.
+
+The generated file is injected into the jar copy spec, so it rides
+both the plain jar (identity/ship-named mode) and the `remapJar`
+output (ship-official mode — the default, since nilmods re-obfuscate
+to `official` like jarmods). Because every runtime lookup keys on
+dev-namespace owners, nil envs also opt out of class-name `ldc` string
+rewriting in the mod-artifacts step automatically — owner/desc
+literals must stay in the compile namespace for the json lookups to
+hit.
+
+If a hand-maintained `src/main/resources/META-INF/nil/mappings.json`
+exists, remove it — the generated file replaces it. Knobs on
+`scanNilMappings`: `keepAllMappings` emits the full namespace-pair
+tree instead of the tracked minimum (NilGradle parity), and
+`extraTarget(id, bundle, targetNamespace)` adds mapping sets beyond
+`"default"` while keeping the bundle/file/namespace inputs in sync.
+The env wiring points `accessTruthJars` at the pristine
+source-namespace Minecraft artifact automatically, so access widening
+is measured before any dev-side access transform can hide required
+widens.
+
+NilLoader discovers only jar files in `nilmods/` (and `mods/`), not
+exploded classpath entries. Nil environments therefore stage dev and
+production mod jars into `nilmods/` rather than treating the runtime
+classpath as a discovery mechanism. When a `mods { }` group names the
+same logical mod (`mod.id`, or the only group when `mod.id` is unset),
+that group's leaf source-set outputs are scanned and embedded into the
+env jar. This is what lets shared resources such as a root-level
+`*.nilmod.css` live in a common `main` source set while NilLoader still
+discovers one mod jar.
+
+Recursive shadow-mode `combineWith` output is **not** auto-scanned in
+v1. Expanding those packaging providers back into scan inputs creates a
+task/provider dependency cycle (`jar` depends on the scan while the scan
+would depend on jar composition). Rewire `classDirs` manually when such
+a layout needs mappings.
+
+Raw source output in a `mods { }` group is assumed to be valid in the
+nil environment's dev namespace — `mods { }` has no namespace-hop or
+remap channel, and scanning cross-namespace output as the env
+namespace would emit incorrect rows. Cross-era binary slices must be
+pre-remapped by the build (for example as `modFiles`) and are not
+auto-scanned in v1; rewire the scan task manually if such a slice
+needs mappings. Rewire `classDirs` for other exotic layouts.
