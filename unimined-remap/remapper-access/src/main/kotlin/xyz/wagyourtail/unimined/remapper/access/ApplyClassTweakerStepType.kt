@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.api.spec.RemapSpec
 import xyz.wagyourtail.unimined.mapping.MappingTree
 import xyz.wagyourtail.unimined.mapping.element.AddRemove
 import xyz.wagyourtail.unimined.mapping.element.metadata.AccessElement
+import xyz.wagyourtail.unimined.mapping.jvms.ext.condition.AccessConditions
 import xyz.wagyourtail.unimined.mapping.jvms.four.AccessFlag
 import xyz.wagyourtail.unimined.mapping.jvms.four.ElementType
 import xyz.wagyourtail.unimined.mapping.remapper
@@ -434,7 +435,8 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                 type: ElementType,
                 changes: (ClassTweaker, Boolean) -> List<AccessElement>
             ): Int {
-                val flags = AccessFlag.of(type, access).toMutableSet()
+                val original = AccessFlag.of(type, access)
+                val flags = original.toMutableSet()
                 // interface methods can never carry ACC_FINAL — upstream's
                 // makeFinalIfPrivate exempts them entirely, and any other
                 // final-add would be illegal bytecode here regardless
@@ -442,13 +444,28 @@ class ApplyClassTweakerStepType : RemapStepType<ApplyClassTweakerStepSpec> {
                     if (type == ElementType.METHOD && classIsInterface) {
                         filter { !(it.type == AddRemove.ADD && it.value == AccessFlag.FINAL) }
                     } else this
+
+                /**
+                 * UML's access-condition contract (see
+                 * `InheritanceTree.applyAccessChanges`) is original-vs-evolving:
+                 * predicates such as `+PRIVATE-STATIC` test the bytecode flags
+                 * as scanned, while the mutations themselves accumulate in
+                 * [flags]. Re-checking a condition inside [AccessElement.apply]
+                 * after the public/protected widening has already removed
+                 * PRIVATE would suppress the conditional FINAL marker.
+                 */
+                fun apply(element: AccessElement) {
+                    if (!element.condition.check(original)) return
+                    AccessElement(element.type, element.value, AccessConditions.ALL).apply(flags)
+                }
+
                 for (tweaker in tweakers) {
-                    for (element in changes(tweaker, false).applicable()) element.apply(flags)
+                    for (element in changes(tweaker, false).applicable()) apply(element)
                 }
                 // dependency tweakers contribute only their transitive-*
                 // directives to the shared artifact (TransitiveOnlyFilter)
                 for (tweaker in depTweakers) {
-                    for (element in changes(tweaker, true).applicable()) element.apply(flags)
+                    for (element in changes(tweaker, true).applicable()) apply(element)
                 }
                 return AccessFlag.toInt(flags)
             }
