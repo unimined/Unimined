@@ -48,9 +48,13 @@ import xyz.wagyourtail.unimined.transform.forge.internal.ForgeProfile
  * mutators and dev-bootstrap logic share.
  */
 internal fun bootstrapDevVersion(resolved: ResolvedForge): String? {
-    if (resolved.descriptor.id != "forge") return null
     val profile = resolved.profile as? ForgeProfile.Userdev
         ?: return null
+    // Product-shape detection, not product-id detection: lexforge is a
+    // distinct selector for the same net.minecraftforge userdev artifacts,
+    // so it needs the same bootstrap-dev companion as the `forge` id.
+    // NeoForge/cleanroom naturally miss this coordinate-shaped probe unless
+    // their own userdev metadata really declares net.minecraftforge:bootstrap.
     return UserdevExtract.libraryCoords(profile.config)
         .firstNotNullOfOrNull { coord ->
             val parts = coord.split(":")

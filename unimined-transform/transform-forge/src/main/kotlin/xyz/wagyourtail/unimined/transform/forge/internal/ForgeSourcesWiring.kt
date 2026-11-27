@@ -533,9 +533,11 @@ internal fun contributeUserdevLibraries(
 
 /**
  * `net.minecraftforge:bootstrap-dev` version for this userdev
- * profile — the `bootstrap:<ver>` entry in the config's
- * `libraries`, when the product is `forge`. `null` pre-49 or when
- * forge ships no bootstrap lib. Mirrors arch-loom's
+ * profile — the `bootstrap:<ver>` entry in the config's `libraries`.
+ * The probe is deliberately coordinate-shaped rather than product-id
+ * shaped: `lexforge` selects the same net.minecraftforge userdev line
+ * as `forge` and needs the same companion artifact. `null` pre-49 or
+ * when the product ships no bootstrap lib. Mirrors arch-loom's
  * `MIN_BOOTSTRAP_DEV_VERSION = 49` check via the library list
  * itself rather than a version matrix.
  */

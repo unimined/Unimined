@@ -1072,6 +1072,36 @@ class ForgeEnvironmentWiringTest {
         }
     }
 
+    /** Regression: `lexforge` is a product selector for the same
+     *  net.minecraftforge userdev line as `forge`. Its userdev libraries
+     *  must include `bootstrap-dev` when the config declares
+     *  `net.minecraftforge:bootstrap`; without it bootstrap never explodes
+     *  MOD_CLASSES into SecureJar groups and FML silently discovers only
+     *  minecraft+forge, not the development mod. */
+    @Test
+    fun `lexforge userdev libraries include bootstrap dev`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.21.1")
+        ext.main.provider.set("fake")
+        serveUserdev("net.minecraftforge:forge:1.21.1-52.1.0", """
+            {"mcp":"de.oceanlabs.mcp:mcp_config:1.21.1@zip",
+             "libraries":[
+               "net.minecraftforge:bootstrap:2.1.8",
+               "net.minecraftforge:accesstransformers:8.2.2"
+             ]}
+        """.trimIndent())
+        forgeEnv(ext, "lexforge", "1.21.1", "52.1.0", "lexforgeModern")
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val coordsInConf = project.configurations
+            .getByName("forgeUserdevLibrariesLexforgeModern")
+            .incoming.dependencies
+            .map { "${it.group}:${it.name}:${it.version}" }
+        assertTrue("net.minecraftforge:bootstrap-dev:2.1.8" in coordsInConf,
+            "lexforge must receive forge's bootstrap-dev companion: $coordsInConf")
+    }
+
     /** Exact-coordinate repairs are data-driven userdev metadata fixes,
      *  not version preferences scattered through the transformer. */
     @Test
