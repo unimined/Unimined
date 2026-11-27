@@ -387,7 +387,11 @@ object ConversionEnvironmentWiring {
             } ?: return emptyList()
         val libs = Json.parseToJsonElement(file.toFile().readText())
             .jsonObject["libraries"]?.jsonObject ?: return emptyList()
-        val sides = listOf("common") + when (environment.side.orNull) {
+        // `development` carries dev-time libs the loader metadata
+        // declares outside the runtime sides (e.g. bta-babric's
+        // mixinextras — mods compile against it but the prod runtime
+        // resolves the loader's bundled nested-jar copy)
+        val sides = listOf("common", "development") + when (environment.side.orNull) {
             Side.SERVER -> listOf("server")
             Side.CLIENT -> listOf("client")
             else -> listOf("client", "server")
