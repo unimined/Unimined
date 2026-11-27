@@ -285,6 +285,113 @@ class DependencyArtifactChannelTest {
         }
     }
 
+    // ---------- Rift top-level-only shipped-refmap channel ----------
+
+    private val riftMixin = "org/dimdev/rift/mixin/hook/client/MixinGameSettings"
+    private val riftTargetRef =
+        "Lnet/minecraft/client/options/GameOptions;load()V"
+
+    /**
+     * Rift's refmap has no `data.<sourceNs>` bridge: its top-level production
+     * table is also the correct source-namespace table because the dependency
+     * binary itself is obfuscated. `disableRefmap()` therefore depends on the
+     * final in-place rewrite — neutralizing the refmap without rewriting the
+     * bare compile key leaves Rift's listener hooks inert.
+     */
+    @Test
+    fun `rift top-level refmap bridges bare compile keys before refmap neutralization`() {
+        val mappings = tinyData("""
+        tiny	2	0	official	featherGen2
+        c	cfw	net/minecraft/client/options/GameOptions
+            m	()V	a	load
+            m	(I)V	a	overload
+        """.tinyDocument())
+        val mcJar = dir.resolve("rift-scan-mc.jar")
+        writeJar(mcJar, mapOf(
+            "cfw.class" to classBytes("cfw") {
+                methods.add(MethodNode(Opcodes.ACC_PRIVATE, "a", "()V", null, null).apply {
+                    instructions.add(InsnNode(Opcodes.RETURN))
+                })
+                methods.add(MethodNode(Opcodes.ACC_PUBLIC, "a", "(I)V", null, null).apply {
+                    instructions.add(InsnNode(Opcodes.RETURN))
+                })
+            }
+        ))
+        val harness = Harness("official", "featherGen2", mappings, dir,
+            scanAliases = listOf(ClasspathScanAlias(mcJar, "official", dir.resolve("unused-scan-alias.bundle"))))
+        val mixinBytes = classBytes(riftMixin) {
+            visibleAnnotations = listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/Mixin;").apply {
+                values = listOf("value", listOf(Type.getObjectType("cfw")))
+            })
+            methods.add(MethodNode(
+                Opcodes.ACC_PRIVATE,
+                "onLoadOptions",
+                "(Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V",
+                null,
+                null,
+            ).apply {
+                visibleAnnotations = listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/injection/Inject;").apply {
+                    values = listOf(
+                        "method", listOf("loadOptions"),
+                        "at", listOf(AnnotationNode("Lorg/spongepowered/asm/mixin/injection/At;").apply {
+                            values = listOf("value", "HEAD")
+                        }),
+                    )
+                })
+                instructions.add(InsnNode(Opcodes.RETURN))
+            })
+        }
+        val input = dir.resolve("rift-like.jar")
+        writeJar(input, mapOf(
+            "$riftMixin.class" to mixinBytes,
+            "mixins.rift.hooks.json" to """{
+              "required": true,
+              "package": "org.dimdev.rift.mixin.hook",
+              "refmap": "mixins.rift.refmap.json",
+              "client": ["client.MixinGameSettings"]
+            }""".encodeToByteArray(),
+            "mixins.rift.refmap.json" to """{
+              "mappings": {
+                "$riftMixin": {
+                  "loadOptions": "Lcfw;a()V"
+                }
+              },
+              "data": {
+                "notch": {
+                  "$riftMixin": {
+                    "loadOptions": "Lcfw;a()V"
+                  }
+                },
+                "searge": {
+                  "$riftMixin": {
+                    "loadOptions": "Lnet/minecraft/client/GameSettings;func_74300_a()V"
+                  }
+                }
+              }
+            }""".encodeToByteArray(),
+        ))
+
+        val out = remapAndPostProcess(
+            harness, input,
+            ModArtifactsStepSpec().apply { emitRefmap = false },
+            "rift-like"
+        )
+        val node = readClass(out, riftMixin)
+        val method = node.methods.first { it.name == "onLoadOptions" }
+        val inject = method.visibleAnnotations.first {
+            it.desc == "Lorg/spongepowered/asm/mixin/injection/Inject;"
+        }
+        @Suppress("UNCHECKED_CAST")
+        val methodValues = inject.values[inject.values.indexOf("method") + 1] as List<Any?>
+        assertEquals(listOf(riftTargetRef), methodValues,
+            "the obfuscated top-level refmap row is the source-namespace bridge for rift")
+        ZipFile(out.toFile()).use { zip ->
+            val refmap = zip.getInputStream(zip.getEntry("mixins.rift.refmap.json"))
+                .readBytes().decodeToString()
+            assertEquals("{\"mappings\":{}}", refmap)
+        }
+    }
+
     // ---------- Legacy Fabric inherited-member refmap channel ----------
 
     private val lfMixin = "net/legacyfabric/fabric/mixin/event/lifecycle/client/ClientWorldMixin"

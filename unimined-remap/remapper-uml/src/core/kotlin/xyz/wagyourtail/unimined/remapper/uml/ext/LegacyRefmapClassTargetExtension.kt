@@ -9,7 +9,10 @@ import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.mapping.element.mapping.ClassMapping
 import xyz.wagyourtail.unimined.mapping.inheritance.HasInheritanceTree
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.two.UnqualifiedName
 import xyz.wagyourtail.unimined.mapping.remapper.ExtensionContext
 import xyz.wagyourtail.unimined.mapping.remapper.asm.AsmExtension
 import xyz.wagyourtail.unimined.mapping.remapper.ext.annotation.MemberRefParts
@@ -170,8 +173,24 @@ class LegacyRefmapClassTargetExtension(
     ): Boolean {
         val candidateOwners = sourceDeclaringOwners(owner, name, desc, isField)
         return candidateOwners.any { candidate ->
-            ctx.memberCandidateCount(candidate, name, isField) > 0 &&
-                ctx.resolveMemberDesc(candidate, name, isField) == ctx.mapDesc(desc, isField)
+            val cls = ctx.tree.getClass(ctx.fns, InternalName.unchecked(candidate))
+                ?: return@any false
+            val unqualified = UnqualifiedName.unchecked(name)
+            // The refmap value already carries the member descriptor — query
+            // that exact row. A desc-less existence/ambiguity probe is wrong
+            // in obfuscated namespaces, where one-letter method names are
+            // heavily overloaded (rift's GameOptions.a alone has many shapes):
+            // resolveMemberDesc deliberately returns null for that ambiguity,
+            // which used to reject every descriptor-bearing legacy bridge.
+            with(ctx.tree) {
+                if (isField) {
+                    cls.getField(ctx.fns, unqualified,
+                        FieldDescriptor.unchecked(desc)) != null
+                } else {
+                    cls.getMethods(ctx.fns, unqualified,
+                        MethodDescriptor.unchecked(desc)).isNotEmpty()
+                }
+            }
         }
     }
 
