@@ -31,6 +31,15 @@ class RunsWiringTest {
             project.plugins.apply("xyz.wagyourtail.unimined.runs")
         }
 
+    /** Expand the intentionally dependency-carrying file collections that
+     *  `ModGroupSpec.launchOutputs` returns as nested elements. */
+    private fun flattenFiles(value: Any?): List<java.io.File> = when (value) {
+        is java.io.File -> listOf(value)
+        is org.gradle.api.file.FileCollection -> value.files.toList()
+        is Collection<*> -> value.flatMap(::flattenFiles)
+        else -> emptyList()
+    }
+
     @Test
     fun `main environment gets runClient and runServer`() {
         val project = project()
@@ -526,9 +535,7 @@ class RunsWiringTest {
         // ProjectBuilder)
         assertTrue(task.runtimeClasspath.from.any { src ->
             (src as? org.gradle.api.provider.Provider<*>)
-                ?.let { p ->
-                    (p.orNull as? Collection<*>)?.contains(modJar) == true
-                } == true
+                ?.let { p -> flattenFiles(p.orNull).contains(modJar) } == true
         }, "group launch files should feed the launch classpath")
 
         // modGroupsEnv capability → MOD_CLASSES `id%%dir` entries
@@ -538,6 +545,42 @@ class RunsWiringTest {
         assertTrue("jarMod%%${modJar.absolutePath}" in modClasses!!,
             "jarMod entry: $modClasses")
         assertTrue(modClasses.contains("ss%%"), "ss entry: $modClasses")
+    }
+
+    /** Generated exploded-mod roots are valid `modFiles` inputs: the run's
+     *  runtime classpath must carry the producing tasks, not merely the final
+     *  paths. This is the shape Quilt dev mods use when classes and resources
+     *  are staged into separate classpath-group roots. */
+    @Test
+    fun `generated modFiles outputs carry task dependencies into the run`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        val env = ext.sourceSet("main") { e ->
+            e.version.set("1.20.1")
+            e.provider.set("fake")
+            e.loader("testfabric", "1.0")
+        }
+        val classes = project.tasks.register(
+            "produceModClasses", org.gradle.api.tasks.Sync::class.java) {
+            it.into(dir.resolve("modroot/classes").toFile())
+        }
+        val resources = project.tasks.register(
+            "produceModResources", org.gradle.api.tasks.Sync::class.java) {
+            it.into(dir.resolve("modroot/resources").toFile())
+        }
+        env.mods { mods ->
+            mods.register("generated") { it.modFiles(classes, resources) }
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal)
+            .evaluate()
+
+        val task = project.tasks.findByName("runClient") as MinecraftRunTask
+        val dependencies = task.runtimeClasspath.buildDependencies
+            .getDependencies(task)
+        assertTrue(classes.get() in dependencies,
+            "classes producer must be a runtimeClasspath dependency: $dependencies")
+        assertTrue(resources.get() in dependencies,
+            "resources producer must be a runtimeClasspath dependency: $dependencies")
     }
 
     /** `run.loadedMods` narrows the serialized selection — only the
