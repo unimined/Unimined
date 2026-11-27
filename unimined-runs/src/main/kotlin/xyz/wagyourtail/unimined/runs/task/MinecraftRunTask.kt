@@ -366,22 +366,29 @@ abstract class MinecraftRunTask @Inject constructor(
         // deps may still drag in modular asm — LaunchWrapper
         // tolerates split packages (first-wins), so keep both.
         var runtimeFiles = runtimeClasspath.files.toList()
-        val launchwrapperEra = (mainClass.orNull ?: document.mainClass)
-            ?.startsWith("net.minecraft.launchwrapper.") == true
+        val launchEnvironment = mutatedEnvironment.get() +
+                environmentVariables.get()
+        // Vanilla FG2 enters Launch directly; cleanroom enters its own
+        // bootstrap main but declares the same FML tweaker contract in
+        // its userdev environment. Both are LaunchWrapper-era launches.
+        val launchwrapperEra = isLaunchWrapperEraLaunch(
+            mainClass.orNull ?: document.mainClass, launchEnvironment)
         // forge-family `modGroupsEnv` (MOD_CLASSES `id%%dir` pairs) is
         // the ModLauncher-era mod-discovery channel — a dir it names
         // must not also sit on java.class.path: ClasspathLocator scans
         // -cp, finds the same mods.toml dir, and registers the mod a
         // second time (LoadingModList duplicate-key crash). Strip
-        // matching dirs by path. LaunchWrapper-era runs exempt — FML's
-        // own dev layout puts mod classes on -cp there.
-        val modClassesDirs = (mutatedEnvironment.get() +
-                environmentVariables.get()).values.flatMap { v ->
+        // matching dirs by path. This applies to LaunchWrapper-era
+        // runs too: unimined injects those dirs into the launch
+        // classloader before MixinBootstrap instead. Leaving them on
+        // the app classpath makes parent-first delegation load config
+        // plugins in a different classloader from Mixin's interfaces.
+        val modClassesDirs = launchEnvironment.values.flatMap { v ->
             v.split(File.pathSeparatorChar)
                 .filter { "%%" in it }
                 .map { it.substringAfter("%%") }
         }.toSet()
-        if (!launchwrapperEra && modClassesDirs.isNotEmpty())
+        if (modClassesDirs.isNotEmpty())
             runtimeFiles = runtimeFiles.filterNot {
                 it.absolutePath in modClassesDirs
             }
@@ -708,4 +715,27 @@ abstract class MinecraftRunTask @Inject constructor(
 </Configuration>
 """
 
+}
+
+/**
+ * Whether a launch enters FML's LaunchWrapper-era tweaker chain.
+ * Vanilla FG2 uses `net.minecraft.launchwrapper.Launch` as the process
+ * main; cleanroom uses its own bootstrap main and exposes the contract
+ * through the userdev `tweakClass` environment entry instead. The run
+ * task uses this only for era-sensitive classpath policy; exploded mod
+ * outputs themselves still belong to the launch classloader through
+ * MOD_CLASSES injection, not the app classpath.
+ */
+internal fun isLaunchWrapperEraLaunch(
+    mainClass: String?,
+    environment: Map<String, String>
+): Boolean {
+    if (mainClass?.startsWith("net.minecraft.launchwrapper.") == true) {
+        return true
+    }
+    val tweak = environment.entries.firstOrNull {
+        it.key.equals("tweakClass", ignoreCase = true)
+    }?.value ?: return false
+    return tweak.startsWith("net.minecraftforge.fml.common.launcher.FML") ||
+            tweak.startsWith("cpw.mods.fml.common.launcher.FML")
 }

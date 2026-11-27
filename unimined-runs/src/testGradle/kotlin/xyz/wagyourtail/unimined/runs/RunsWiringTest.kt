@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xyz.wagyourtail.unimined.minecraft.MinecraftExtension
 import xyz.wagyourtail.unimined.runs.task.MinecraftRunTask
+import xyz.wagyourtail.unimined.runs.task.isLaunchWrapperEraLaunch
 import xyz.wagyourtail.unimined.runs.task.PrepareRunTask
 import xyz.wagyourtail.unimined.runs.task.RunsReportTask
 import java.nio.file.Path
@@ -38,6 +39,28 @@ class RunsWiringTest {
         is org.gradle.api.file.FileCollection -> value.files.toList()
         is Collection<*> -> value.flatMap(::flattenFiles)
         else -> emptyList()
+    }
+
+    @Test
+    fun `launchwrapper era detection covers direct and cleanroom bootstrap shapes`() {
+        assertTrue(isLaunchWrapperEraLaunch(
+            "net.minecraft.launchwrapper.Launch", emptyMap()))
+        assertTrue(isLaunchWrapperEraLaunch(
+            "com.cleanroommc.boot.MainClient",
+            mapOf("tweakClass" to
+                    "net.minecraftforge.fml.common.launcher.FMLTweaker")
+        ))
+        assertTrue(isLaunchWrapperEraLaunch(
+            "com.cleanroommc.boot.MainServer",
+            mapOf("TWEAKCLASS" to
+                    "cpw.mods.fml.common.launcher.FMLServerTweaker")
+        ))
+        assertFalse(isLaunchWrapperEraLaunch(
+            "net.minecraft.client.main.Main", emptyMap()))
+        assertFalse(isLaunchWrapperEraLaunch(
+            "net.minecraft.client.main.Main",
+            mapOf("tweakClass" to "forge.DevLaunch")
+        ))
     }
 
     @Test

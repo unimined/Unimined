@@ -283,18 +283,330 @@ class FG2DevFixesTest {
             val node = node(fs.getPath("$tweaker.class"))
             val insns = node.methods.single { it.name == "<init>" }
                 .instructions.toArray().toList()
+            val urlIdx = insns.indexOfFirst {
+                it is MethodInsnNode && it.name == "injectModClassUrlsIntoLaunch"
+            }
             val preloadIdx = insns.indexOfFirst {
                 it is MethodInsnNode && it.name == "preloadSmRaceGuard"
             }
             val setSmIdx = insns.indexOfFirst {
                 it is MethodInsnNode && it.name == "setSecurityManager"
             }
+            assertTrue(urlIdx >= 0, "constructor MOD_CLASSES inject missing")
             assertTrue(preloadIdx >= 0, "preloadSmRaceGuard inject missing")
+            assertTrue(
+                urlIdx in 0 until preloadIdx,
+                "constructor MOD_CLASSES injection must precede the security preload"
+            )
             assertTrue(
                 preloadIdx in 0 until setSmIdx,
                 "preload not ahead of setSecurityManager"
             )
         }
+    }
+
+    @Test
+    fun `cleanroom fmlTweaker injects MOD_CLASSES before mixin bootstrap`() {
+        val jar = dir.resolve("tweaker-cleanroom.jar")
+        val tweaker = "net/minecraftforge/fml/common/launcher/FMLTweaker"
+        writeJar(
+            jar, mapOf(
+                "$tweaker.class" to fmlTweaker(tweaker, securityManager = false),
+            )
+        )
+        FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
+        FileSystems.newFileSystem(jar).use { fs ->
+            val node = node(fs.getPath("$tweaker.class"))
+            val insns = node.methods.single { it.name == "<init>" }
+                .instructions.toArray().toList()
+            val urlIdx = insns.indexOfFirst {
+                it is MethodInsnNode && it.name == "injectModClassUrlsIntoLaunch"
+            }
+            val mixinIdx = insns.indexOfFirst {
+                it is MethodInsnNode && it.owner ==
+                        "org/spongepowered/asm/launch/MixinBootstrap" &&
+                        it.name == "init"
+            }
+            assertTrue(urlIdx >= 0, "constructor MOD_CLASSES inject missing")
+            assertTrue(mixinIdx >= 0, "synthetic MixinBootstrap anchor missing")
+            assertTrue(
+                urlIdx in 0 until mixinIdx,
+                "MOD_CLASSES injection must precede MixinBootstrap.init"
+            )
+        }
+    }
+
+    @Test
+    fun `tweakers get MOD_CLASSES url injection at injectIntoClassLoader head`() {
+        for ((entry, self) in listOf(
+            "net/minecraftforge/fml/common/launcher/FMLTweaker" to
+                    "net/minecraftforge/fml/common/launcher/FMLTweaker",
+            "cpw/mods/fml/common/launcher/FMLServerTweaker" to
+                    "cpw/mods/fml/common/launcher/FMLServerTweaker",
+        )) {
+            val jar = dir.resolve("tweaker-${self.substringAfterLast('/')}2.jar")
+            writeJar(
+                jar, mapOf(
+                    "$entry.class" to tweakerWithInject(self),
+                )
+            )
+            FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
+            FileSystems.newFileSystem(jar).use { fs ->
+                val node = node(fs.getPath("$entry.class"))
+                val method = node.methods.single {
+                    it.name == "injectIntoClassLoader"
+                }
+                val insns = method.instructions.toArray().toList()
+                val injectIdx = insns.indexOfFirst {
+                    it is MethodInsnNode && it.name == "injectModClassUrls"
+                }
+                assertTrue(injectIdx >= 0, "$self: injectModClassUrls missing")
+                // HEAD: nothing but the pre-existing body instructions may
+                // precede it — the synthetic body's first insn is a RETURN,
+                // so the injection must come first
+                val retIdx = insns.indexOfFirst {
+                    it.opcode == Opcodes.RETURN
+                }
+                assertTrue(
+                    injectIdx < retIdx,
+                    "$self: injection not at head"
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `mod discoverer gets MOD_CLASSES candidate epilogue`() {
+        val jar = dir.resolve("mod-discoverer.jar")
+        val disc = "net/minecraftforge/fml/common/discovery/ModDiscoverer"
+        writeJar(
+            jar, mapOf(
+                "$disc.class" to modDiscoverer(disc),
+            )
+        )
+        FileSystems.newFileSystem(jar).use { FG2DevFixes.fix(it) }
+        FileSystems.newFileSystem(jar).use { fs ->
+            val node = node(fs.getPath("$disc.class"))
+            val method = node.methods.single {
+                it.name == "findClasspathMods"
+            }
+            val insns = method.instructions.toArray().toList()
+            val injectIdx = insns.indexOfFirst {
+                it is MethodInsnNode &&
+                        it.name == "injectModClassCandidates"
+            }
+            assertTrue(
+                injectIdx >= 0,
+                "injectModClassCandidates epilogue missing"
+            )
+            // epilogue: the injection follows the original body's RETURN-less
+            // fall-through — with the void synthetic body, the only RETURN
+            // is the epilogue's own, so the call must precede it
+            assertTrue(insns.any {
+                it is MethodInsnNode && it.owner.endsWith("UniminedFg2")
+            }, "helper invocation missing")
+        }
+    }
+
+    @Test
+    fun `injectModClassCandidates uses the protected resource-aware constructor when present`() {
+        val resources = Files.createDirectories(dir.resolve("resources/main")).toFile()
+        Files.write(resources.toPath().resolve("mcmod.info"), "[]".toByteArray())
+        val classes = Files.createDirectories(dir.resolve("classes/java/main")).toFile()
+        val (loader, discoverer) = discoveryFixture(includeTwoArg = true)
+        val modCandidate = loader.loadClass(
+            "net.minecraftforge.fml.common.discovery.ModCandidate")
+        @Suppress("UNCHECKED_CAST")
+        val candidates = discoverer.javaClass.getDeclaredField("candidates")
+            .apply { isAccessible = true }.get(discoverer) as MutableList<Any>
+        // cleanroom's native consecutive pairing claims resources/main as
+        // the scan root. The supplement must still add classes/java/main:
+        // its mod-container identity differs under the correct constructor.
+        val native = modCandidate.getDeclaredConstructor(
+            java.io.File::class.java, java.io.File::class.java)
+            .apply { isAccessible = true }
+            .newInstance(resources, classes)
+        candidates.add(native)
+
+        UniminedFg2.injectModClassCandidates(
+            discoverer,
+            "omnilook%%${resources.absolutePath}" +
+                    java.io.File.pathSeparator +
+                    "omnilook%%${classes.absolutePath}"
+        )
+
+        assertEquals(2, candidates.size,
+            "the correct class-root candidate must survive dedup")
+        val supplement = candidates[1]
+        fun getter(name: String) = supplement.javaClass
+            .getMethod(name).invoke(supplement)
+        assertEquals(classes, getter("getClassPathRoot"))
+        assertEquals(resources, getter("getResourcePathRoot"))
+        assertEquals(classes, getter("getModContainer"))
+    }
+
+    @Test
+    fun `injectModClassCandidates five-arg fallback keeps the class root as candidate identity`() {
+        val resources = Files.createDirectories(dir.resolve("resources/main")).toFile()
+        Files.write(resources.toPath().resolve("mcmod.info"), "[]".toByteArray())
+        val classes = Files.createDirectories(dir.resolve("classes/java/main")).toFile()
+        val (_, discoverer) = discoveryFixture(includeTwoArg = false)
+
+        UniminedFg2.injectModClassCandidates(
+            discoverer,
+            "omnilook%%${resources.absolutePath}" +
+                    java.io.File.pathSeparator +
+                    "omnilook%%${classes.absolutePath}"
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val candidates = discoverer.javaClass.getDeclaredField("candidates")
+            .apply { isAccessible = true }.get(discoverer) as MutableList<Any>
+        assertEquals(1, candidates.size)
+        val candidate = candidates.single()
+        fun getter(name: String) = candidate.javaClass
+            .getMethod(name).invoke(candidate)
+        assertEquals(classes, getter("getClassPathRoot"))
+        assertEquals(classes, getter("getResourcePathRoot"),
+            "the five-arg constructor cannot carry a distinct resource root")
+        assertEquals(classes, getter("getModContainer"),
+            "the resource root must not become the dedup identity")
+    }
+
+    @Test
+    fun `modClassCandidatePairs pairs era class dirs with the metadata root`() {
+        // the fixture shape: resources/main carries mcmod.info, the era
+        // source set has no resources output of its own, nonexistent
+        // members drop out, the manifest member pairs like any other
+        val resourcesMain = Files.createDirectories(
+            dir.resolve("build/resources/main")).toFile()
+        Files.write(resourcesMain.toPath().resolve("mcmod.info"),
+            "[]".toByteArray())
+        val classesMain = Files.createDirectories(
+            dir.resolve("build/classes/java/main")).toFile()
+        val classesEra = Files.createDirectories(
+            dir.resolve("build/classes/java/lexforge12")).toFile()
+        val manifestMember = Files.createDirectories(
+            dir.resolve("build/mod-classes/_env")).toFile()
+        val absent = dir.resolve("build/resources/lexforge12").toFile()
+        val sep = java.io.File.pathSeparator
+        val serialized = listOf(
+            "omnilook%%${resourcesMain.absolutePath}",
+            "omnilook%%${classesMain.absolutePath}",
+            "omnilook%%${classesEra.absolutePath}",
+            "omnilook%%${absent.absolutePath}",
+            "omnilook%%${manifestMember.absolutePath}",
+        ).joinToString(sep)
+
+        val pairs = UniminedFg2.modClassCandidatePairs(serialized)
+        assertEquals(
+            mapOf(
+                classesMain to resourcesMain,
+                classesEra to resourcesMain,
+                manifestMember to resourcesMain,
+            ),
+            pairs,
+            "every existing non-root member pairs with the " +
+                "mcmod.info-bearing root; the root itself is not scanned"
+        )
+    }
+
+    @Test
+    fun `modClassCandidatePairs falls back to first member and handles single-dir groups`() {
+        val only = Files.createDirectories(dir.resolve("only")).toFile()
+        val a = Files.createDirectories(dir.resolve("a")).toFile()
+        val b = Files.createDirectories(dir.resolve("b")).toFile()
+        val sep = java.io.File.pathSeparator
+        val serialized = listOf(
+            "solo%%${only.absolutePath}",
+            "duo%%${a.absolutePath}",
+            "duo%%${b.absolutePath}",
+        ).joinToString(sep)
+
+        val pairs = UniminedFg2.modClassCandidatePairs(serialized)
+        assertEquals(
+            mapOf(
+                only to only,
+                b to a,
+            ),
+            pairs,
+            "no mcmod.info anywhere: root falls back to the first " +
+                "member; a single-dir group pairs with itself"
+        )
+    }
+
+    @Test
+    fun `injectModClassUrls appends existing deduped members only`() {
+        val present = Files.createDirectories(dir.resolve("present")).toFile()
+        val absent = dir.resolve("absent").toFile()
+        val sep = java.io.File.pathSeparator
+        val serialized = listOf(
+            "omnilook%%${present.absolutePath}",
+            "omnilook%%${absent.absolutePath}",
+            "omnilook%%${present.absolutePath}",
+            "malformed",
+        ).joinToString(sep)
+
+        val loader = object : java.net.URLClassLoader(arrayOf()) {
+            public override fun addURL(url: java.net.URL?) {
+                super.addURL(url)
+            }
+        }
+        UniminedFg2.injectModClassUrls(loader, serialized)
+        assertEquals(
+            listOf(present.toURI().toURL()),
+            loader.getURLs().toList(),
+            "only the existing member lands, once"
+        )
+    }
+
+    /**
+     * Mirrors the FG2-era tweakers'
+     * {@code injectIntoClassLoader(LaunchClassLoader)} — an empty void
+     * body the HEAD injection must precede.
+     */
+    private fun tweakerWithInject(self: String): ByteArray {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(
+            Opcodes.V17, Opcodes.ACC_PUBLIC, self, null,
+            "java/lang/Object", null
+        )
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "injectIntoClassLoader",
+            "(Lnet/minecraft/launchwrapper/LaunchClassLoader;)V",
+            null, null
+        ).apply {
+            visitCode()
+            insn(Opcodes.RETURN)
+            visitMaxs(0, 2)
+            visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    /**
+     * Mirrors FML's {@code findClasspathMods(ModClassLoader)} —
+     * empty void body.
+     */
+    private fun modDiscoverer(self: String): ByteArray {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(
+            Opcodes.V17, Opcodes.ACC_PUBLIC, self, null,
+            "java/lang/Object", null
+        )
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC, "findClasspathMods",
+            "(Lnet/minecraftforge/fml/common/ModClassLoader;)V",
+            null, null
+        ).apply {
+            visitCode()
+            insn(Opcodes.RETURN)
+            visitMaxs(0, 2)
+            visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
     }
 
     private fun languageRegistry(self: String): ByteArray {
@@ -336,6 +648,158 @@ class FG2DevFixesTest {
             )
             insn(Opcodes.RETURN)
             visitMaxs(4, 3)
+            visitEnd()
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    // ---- runtime ModCandidate constructor harness ----------------------
+
+    /** Dedup semantics mirror ModDiscoverer#addCandidate. */
+    object ModCandidateHarness {
+        @JvmStatic
+        fun addCandidateDedup(candidates: MutableList<Any>, candidate: Any) {
+            val container = candidate.javaClass
+                .getMethod("getModContainer").invoke(candidate)
+            val duplicate = candidates.any {
+                it.javaClass.getMethod("getModContainer").invoke(it) == container
+            }
+            if (!duplicate) candidates.add(candidate)
+        }
+    }
+
+    private class BytesClassLoader(
+        private val classes: Map<String, ByteArray>
+    ) : ClassLoader(FG2DevFixesTest::class.java.classLoader) {
+        override fun findClass(name: String): Class<*> {
+            val bytes = classes[name] ?: throw ClassNotFoundException(name)
+            return defineClass(name, bytes, 0, bytes.size)
+        }
+    }
+
+    private fun discoveryFixture(includeTwoArg: Boolean): Pair<ClassLoader, Any> {
+        val candidate = "net.minecraftforge.fml.common.discovery.ModCandidate"
+        val container = "net.minecraftforge.fml.common.discovery.ContainerType"
+        val discoverer = "test.TestDiscoverer"
+        val loader = BytesClassLoader(mapOf(
+            candidate to modCandidateBytes(includeTwoArg),
+            container to containerTypeBytes(),
+            discoverer to discovererBytes(),
+        ))
+        return loader to loader.loadClass(discoverer)
+            .getDeclaredConstructor().newInstance()
+    }
+
+    private fun containerTypeBytes(): ByteArray {
+        val owner = "net/minecraftforge/fml/common/discovery/ContainerType"
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, owner, null,
+            "java/lang/Object", null)
+        cw.visitField(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC,
+            "DIR", "L$owner;", null, null).visitEnd()
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    private fun modCandidateBytes(includeTwoArg: Boolean): ByteArray {
+        val owner = "net/minecraftforge/fml/common/discovery/ModCandidate"
+        val container = "net/minecraftforge/fml/common/discovery/ContainerType"
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, owner, null,
+            "java/lang/Object", null)
+        for (field in listOf("classPathRoot", "resourcePathRoot", "modContainer")) {
+            cw.visitField(Opcodes.ACC_PRIVATE, field, "Ljava/io/File;",
+                null, null).visitEnd()
+        }
+
+        fun ctor(access: Int, desc: String, locals: Int,
+                 resourceArg: Int, containerArg: Int) {
+            cw.visitMethod(access, "<init>", desc, null, null).apply {
+                visitCode()
+                visitVarInsn(Opcodes.ALOAD, 0)
+                visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object",
+                    "<init>", "()V", false)
+                fun assign(field: String, arg: Int) {
+                    visitVarInsn(Opcodes.ALOAD, 0)
+                    visitVarInsn(Opcodes.ALOAD, arg)
+                    visitFieldInsn(Opcodes.PUTFIELD, owner, field,
+                        "Ljava/io/File;")
+                }
+                assign("classPathRoot", 1)
+                assign("resourcePathRoot", resourceArg)
+                assign("modContainer", containerArg)
+                visitInsn(Opcodes.RETURN)
+                visitMaxs(2, locals)
+                visitEnd()
+            }
+        }
+        ctor(Opcodes.ACC_PUBLIC,
+            "(Ljava/io/File;Ljava/io/File;L$container;ZZ)V",
+            6, resourceArg = 1, containerArg = 2)
+        if (includeTwoArg) {
+            ctor(Opcodes.ACC_PROTECTED,
+                "(Ljava/io/File;Ljava/io/File;)V",
+                3, resourceArg = 2, containerArg = 1)
+        }
+        for ((method, field) in listOf(
+            "getClassPathRoot" to "classPathRoot",
+            "getResourcePathRoot" to "resourcePathRoot",
+            "getModContainer" to "modContainer",
+        )) {
+            cw.visitMethod(Opcodes.ACC_PUBLIC, method,
+                "()Ljava/io/File;", null, null).apply {
+                visitCode()
+                visitVarInsn(Opcodes.ALOAD, 0)
+                visitFieldInsn(Opcodes.GETFIELD, owner, field,
+                    "Ljava/io/File;")
+                visitInsn(Opcodes.ARETURN)
+                visitMaxs(1, 1)
+                visitEnd()
+            }
+        }
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    private fun discovererBytes(): ByteArray {
+        val owner = "test/TestDiscoverer"
+        val candidate = "net/minecraftforge/fml/common/discovery/ModCandidate"
+        val harness = "xyz/wagyourtail/unimined/transform/forge/" +
+                "FG2DevFixesTest\$ModCandidateHarness"
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, owner, null,
+            "java/lang/Object", null)
+        cw.visitField(Opcodes.ACC_PRIVATE, "candidates",
+            "Ljava/util/List;", null, null).visitEnd()
+        cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object",
+                "<init>", "()V", false)
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitTypeInsn(Opcodes.NEW, "java/util/ArrayList")
+            visitInsn(Opcodes.DUP)
+            visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/ArrayList",
+                "<init>", "()V", false)
+            visitFieldInsn(Opcodes.PUTFIELD, owner, "candidates",
+                "Ljava/util/List;")
+            visitInsn(Opcodes.RETURN)
+            visitMaxs(3, 1)
+            visitEnd()
+        }
+        cw.visitMethod(Opcodes.ACC_PUBLIC, "addCandidate",
+            "(L$candidate;)V", null, null).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitFieldInsn(Opcodes.GETFIELD, owner, "candidates",
+                "Ljava/util/List;")
+            visitVarInsn(Opcodes.ALOAD, 1)
+            visitMethodInsn(Opcodes.INVOKESTATIC, harness,
+                "addCandidateDedup", "(Ljava/util/List;Ljava/lang/Object;)V",
+                false)
+            visitInsn(Opcodes.RETURN)
+            visitMaxs(2, 2)
             visitEnd()
         }
         cw.visitEnd()
@@ -476,7 +940,7 @@ class FG2DevFixesTest {
      * Mirrors FML's `FMLTweaker.<init>`: super() then
      * {@code System.setSecurityManager(new FMLSecurityManager())}.
      */
-    private fun fmlTweaker(self: String): ByteArray {
+    private fun fmlTweaker(self: String, securityManager: Boolean = true): ByteArray {
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
         cw.visit(
             Opcodes.V17, Opcodes.ACC_PUBLIC, self, null,
@@ -491,21 +955,31 @@ class FG2DevFixesTest {
                 Opcodes.INVOKESPECIAL, "java/lang/Object",
                 "<init>", "()V", false
             )
-            visitTypeInsn(
-                Opcodes.NEW,
-                "net/minecraftforge/fml/relauncher/FMLSecurityManager"
-            )
-            insn(Opcodes.DUP)
-            visitMethodInsn(
-                Opcodes.INVOKESPECIAL,
-                "net/minecraftforge/fml/relauncher/FMLSecurityManager",
-                "<init>", "()V", false
-            )
-            visitMethodInsn(
-                Opcodes.INVOKESTATIC, "java/lang/System",
-                "setSecurityManager",
-                "(Ljava/lang/SecurityManager;)V", false
-            )
+            if (securityManager) {
+                visitTypeInsn(
+                    Opcodes.NEW,
+                    "net/minecraftforge/fml/relauncher/FMLSecurityManager"
+                )
+                insn(Opcodes.DUP)
+                visitMethodInsn(
+                    Opcodes.INVOKESPECIAL,
+                    "net/minecraftforge/fml/relauncher/FMLSecurityManager",
+                    "<init>", "()V", false
+                )
+                visitMethodInsn(
+                    Opcodes.INVOKESTATIC, "java/lang/System",
+                    "setSecurityManager",
+                    "(Ljava/lang/SecurityManager;)V", false
+                )
+            } else {
+                // cleanroom shape: no security-manager anchor, direct
+                // mixin bootstrap in the constructor
+                visitMethodInsn(
+                    Opcodes.INVOKESTATIC,
+                    "org/spongepowered/asm/launch/MixinBootstrap",
+                    "init", "()V", false
+                )
+            }
             insn(Opcodes.RETURN)
             visitMaxs(2, 1)
             visitEnd()

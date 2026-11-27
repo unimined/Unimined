@@ -364,6 +364,316 @@ public final class UniminedFg2 {
         return new File(modSource, relative);
     }
 
+    // -----------------------------------------------------------------
+    // MOD_CLASSES dev-mod discovery — tweaker/discovery injections
+    // -----------------------------------------------------------------
+
+    /**
+     * {@code FMLTweaker.injectIntoClassLoader} HEAD prologue: append
+     * every existing {@code MOD_CLASSES} member to the launch
+     * classloader's URLs. FG2-era FML discovers classpath mods by
+     * scanning the loader's source list, and {@code ModClassLoader}
+     * delegates classloading to it — but unimined dev launches keep
+     * mod output dirs off {@code java.class.path} (they ride
+     * {@code MOD_CLASSES} instead, the loom/modlauncher shape), so
+     * without this the mod's classes are neither discoverable nor
+     * loadable. Injecting the dirs replicates the classic FG dev
+     * state — where every output dir was on the classpath — ahead of
+     * coremod setup and discovery. Client tweakers also receive a
+     * constructor-time injection before MixinBootstrap; this hook is
+     * the idempotent interface-method fallback.
+     *
+     * <p>Foundation's {@code addURL} dedups; vanilla launchwrapper
+     * accepts the rare duplicate harmlessly (URLClassPath dedups
+     * internally, and FML's candidate list dedups by file). Never
+     * fatal: a failure here leaves pre-injection behavior, which is
+     * strictly better than crashing the launch.
+     */
+    public static void injectModClassUrls(Object classLoader) {
+        injectModClassUrls(classLoader, System.getenv("MOD_CLASSES"));
+    }
+
+    /**
+     * Constructor-time form of {@link #injectModClassUrls(Object)} for
+     * {@code FMLTweaker.<init>}. MixinBootstrap runs inside that
+     * constructor — before {@code injectIntoClassLoader} — so configs
+     * and config-plugin classes must already resolve through the
+     * launch loader there. Loading them through the launch loader (not
+     * the app loader) is also what keeps config plugins in the same
+     * classloader as Mixin's {@code IMixinConfigPlugin} interface.
+     * Reflective because the helper must not initialize LaunchWrapper
+     * merely by being linked; failure leaves the later tweaker hook as
+     * the pre-existing fallback.
+     */
+    public static void injectModClassUrlsIntoLaunch() {
+        try {
+            Class<?> launch = Class.forName(
+                    "net.minecraft.launchwrapper.Launch", false,
+                    UniminedFg2.class.getClassLoader());
+            injectModClassUrls(launch.getField("classLoader").get(null));
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Parse-and-inject core of {@link #injectModClassUrls(Object)}
+     * split out for testability — entries are {@code label%%path}
+     * pairs joined by pathSeparator; nonexistent members and repeats
+     * are skipped.
+     */
+    public static void injectModClassUrls(Object classLoader, String modClasses) {
+        if (!enabled(PROP_MOD_CLASSES) || modClasses == null
+                || classLoader == null) {
+            return;
+        }
+        Method addUrl;
+        try {
+            addUrl = classLoader.getClass()
+                    .getMethod("addURL", java.net.URL.class);
+        } catch (Throwable t) {
+            return;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String entry : modClasses.split(File.pathSeparator)) {
+            int split = entry.indexOf("%%");
+            if (split < 0) continue;
+            String path = entry.substring(split + 2);
+            if (path.isEmpty() || !seen.add(path)) continue;
+            File f = new File(path);
+            if (!f.exists()) continue;
+            try {
+                addUrl.invoke(classLoader, f.toURI().toURL());
+            } catch (Throwable ignored) {
+                // one bad member must not lose the rest — discovery
+                // without it matches pre-injection behavior
+            }
+        }
+    }
+
+    /**
+     * {@code CleanroomModDiscoverer.addClasspathCandidates} RETURN
+     * epilogue: pair each {@code MOD_CLASSES} group member the native
+     * pairing logic cannot see into an explicit candidate.
+     *
+     * <p><b>Why:</b> cleanroom collects classpath directories into
+     * groups keyed by the final path segment and pairs each
+     * {@code classes/…/<name>} with a sibling literally shaped
+     * {@code …/resources/<name>} — a group without that sibling is
+     * skipped entirely. Gradle layouts only satisfy it when a source
+     * set's own resources output exists ({@code build/resources/main}
+     * pairs {@code build/classes/java/main} as the
+     * <i>resource</i> half of the preceding pair instead of a scan
+     * root — the serialization is metadata-first, so the consecutive
+     * heuristic can never represent the layout). The group's actual shape is already
+     * declared in {@code MOD_CLASSES}: one label is one logical mod,
+     * metadata-first ordered. For each label this pairs every member
+     * dir with the group's metadata-bearing root — exactly what the
+     * native logic approximates — as a reflective {@code ModCandidate}
+     * on the discoverer's own list.
+     *
+     * <p>The constructor is resolved reflectively because the shape
+     * differs across the supported jars. Cleanroom's protected two-arg
+     * {@code (classRoot, resourceRoot)} form is preferred — it is the
+     * only shape that carries the distinct resource root. Vanilla/cpw
+     * FML carry only the five-arg {@code (classRoot, modContainer,
+     * ContainerType, boolean, boolean)} form; its second file is the
+     * candidate identity, not a resource root, so the fallback receives
+     * the class root twice and metadata lookup remains the job of the
+     * {@code DirectoryDiscoverer} redirect. Never fatal for the same
+     * reason as the tweaker injection.
+     */
+    public static void injectModClassCandidates(Object discoverer) {
+        injectModClassCandidates(discoverer, System.getenv("MOD_CLASSES"));
+    }
+
+    /**
+     * Parse-and-pair core of
+     * {@link #injectModClassCandidates(Object)} split out for
+     * testability. Reflectively resolves the runtime's
+     * {@code ModCandidate} constructor — preferring cleanroom's
+     * resource-aware two-arg {@code (classRoot, resourceRoot)} shape
+     * (protected there, so reflective access is required), falling
+     * back to vanilla/cpw FML's five-arg {@code (classRoot,
+     * modContainer, ContainerType, boolean, boolean)} shape with
+     * {@code DIR}/{@code isMinecraft=false}/{@code classpath=true} —
+     * then adds each pair through the discoverer's own
+     * {@code addCandidate} so its dedup rules apply. Dirs already
+     * claimed as a candidate's
+     * scan root are skipped, so a native pairing that happened to
+     * land correctly is never duplicated (a duplicate scan of the
+     * same dir would discover the mod twice).
+     */
+    public static void injectModClassCandidates(Object discoverer,
+                                                String modClasses) {
+        if (!enabled(PROP_MOD_CLASSES) || modClasses == null) {
+            return;
+        }
+        try {
+            ClassLoader l = discoverer.getClass().getClassLoader();
+            Class<?> modCandidate = null;
+            for (String candidateClass : new String[]{
+                    "net.minecraftforge.fml.common.discovery.ModCandidate",
+                    "cpw.mods.fml.common.discovery.ModCandidate"}) {
+                try {
+                    modCandidate = Class.forName(candidateClass, false, l);
+                    break;
+                } catch (Throwable ignored) {
+                }
+            }
+            if (modCandidate == null) return;
+            Method addCandidate;
+            try {
+                addCandidate = discoverer.getClass().getMethod(
+                        "addCandidate", modCandidate);
+            } catch (Throwable t) {
+                return;
+            }
+            Constructor<?> ctor5 = null;
+            Object dirType = null;
+            try {
+                String basePackage = modCandidate.getName().substring(0,
+                        modCandidate.getName().indexOf(".discovery."));
+                Class<?> containerType = Class.forName(
+                        basePackage + ".discovery.ContainerType", false, l);
+                ctor5 = modCandidate.getConstructor(File.class, File.class,
+                        containerType, boolean.class, boolean.class);
+                dirType = containerType.getField("DIR").get(null);
+            } catch (Throwable ignored) {
+            }
+            Constructor<?> ctor2 = null;
+            try {
+                // cleanroom's resource-aware constructor is protected:
+                // getConstructor would miss it even though the runtime
+                // deliberately makes it available to ModDiscoverer. It is
+                // the only constructor whose second argument is the
+                // resource root; the five-arg form's second argument is
+                // the mod-container identity instead.
+                ctor2 = modCandidate.getDeclaredConstructor(
+                        File.class, File.class);
+                ctor2.setAccessible(true);
+            } catch (Throwable ignored) {
+                ctor2 = null;
+            }
+            if (ctor5 == null && ctor2 == null) return;
+            // scan roots the native pass already claimed
+            Set<File> claimed = new HashSet<>();
+            try {
+                Method getClassPathRoot =
+                        modCandidate.getMethod("getClassPathRoot");
+                java.lang.reflect.Field candidatesF = null;
+                for (java.lang.reflect.Field f
+                        : discoverer.getClass().getDeclaredFields()) {
+                    if (List.class.isAssignableFrom(f.getType())) {
+                        f.setAccessible(true);
+                        Object v = f.get(discoverer);
+                        if (v instanceof List
+                                && !((List<?>) v).isEmpty()
+                                && modCandidate.isInstance(
+                                        ((List<?>) v).get(0))) {
+                            candidatesF = f;
+                            break;
+                        }
+                    }
+                }
+                if (candidatesF != null) {
+                    for (Object c
+                            : (List<?>) candidatesF.get(discoverer)) {
+                        Object classPathRoot = getClassPathRoot.invoke(c);
+                        if (classPathRoot instanceof File) {
+                            claimed.add((File) classPathRoot);
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            Map<File, File> candidatePairs = modClassCandidatePairs(modClasses);
+            for (Map.Entry<File, File> pair : candidatePairs.entrySet()) {
+                File classDir = pair.getKey();
+                if (!claimed.add(classDir)) continue;
+                try {
+                    // Prefer the two-arg form whenever present: it is the
+                    // only shape that carries a distinct resource root.
+                    // The five-arg fallback cannot represent that root —
+                    // its second File is the candidate identity scanned by
+                    // DirectoryDiscoverer, so passing the resource root
+                    // there makes addCandidate dedup every supplement
+                    // against the metadata dir. Passing classDir preserves
+                    // correct scanning; DirectoryDiscovererTx resolves
+                    // mcmod.info across the MOD_CLASSES group instead.
+                    Object candidate = ctor2 != null
+                            ? ctor2.newInstance(classDir, pair.getValue())
+                            : ctor5.newInstance(classDir, classDir,
+                                    dirType, false, true);
+                    addCandidate.invoke(discoverer, candidate);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable t) {
+            // never fatal — discovery without the supplement is the
+            // pre-fix behaviour
+        }
+    }
+
+    /**
+     * The {@code classDir -> resourceRoot} pairings one
+     * {@code MOD_CLASSES} string declares, in scan order — split out
+     * of {@link #injectModClassCandidates} so the pairing rules are
+     * testable without a ModCandidate on the classpath. Per label
+     * group: existing dirs only; the resource root is the first
+     * member carrying {@code mcmod.info} (the serialization is
+     * metadata-first, so this is normally the leader), falling back
+     * to the first member; every other member pairs with it as a
+     * scan target. The root itself is not scanned unless it is the
+     * group's only existing dir — then it pairs with itself, the
+     * vanilla single-dir shape. A dir repeated across labels pairs
+     * with its first group's root.
+     */
+    public static Map<File, File> modClassCandidatePairs(String modClasses) {
+        Map<File, File> out = new LinkedHashMap<>();
+        if (modClasses == null) return out;
+        // group dirs by label, first-seen order — the serialization
+        // is metadata-first within a label, so the group's resource
+        // root leads
+        Map<String, List<File>> groups = new LinkedHashMap<>();
+        for (String entry : modClasses.split(File.pathSeparator)) {
+            int split = entry.indexOf("%%");
+            if (split < 0) continue;
+            String path = entry.substring(split + 2);
+            if (path.isEmpty()) continue;
+            File dir = new File(path).toPath().toAbsolutePath()
+                    .normalize().toFile();
+            List<File> members = groups.computeIfAbsent(
+                    entry.substring(0, split), k -> new ArrayList<>());
+            if (!members.contains(dir)) {
+                members.add(dir);
+            }
+        }
+        for (List<File> members : groups.values()) {
+            List<File> dirs = new ArrayList<>();
+            for (File member : members) {
+                if (member.isDirectory()) dirs.add(member);
+            }
+            if (dirs.isEmpty()) continue;
+            File resourceRoot = null;
+            for (File dir : dirs) {
+                if (new File(dir, "mcmod.info").isFile()) {
+                    resourceRoot = dir;
+                    break;
+                }
+            }
+            if (resourceRoot == null) resourceRoot = dirs.get(0);
+            for (File classDir : dirs) {
+                // the resource root is the metadata half of the pair,
+                // not a scan target — unless it is all the group has
+                if (classDir.equals(resourceRoot) && dirs.size() > 1) {
+                    continue;
+                }
+                out.putIfAbsent(classDir, resourceRoot);
+            }
+        }
+        return out;
+    }
+
     /**
      * {@code FMLTweaker.<init>} prologue (injected ahead of
      * {@code System.setSecurityManager}).

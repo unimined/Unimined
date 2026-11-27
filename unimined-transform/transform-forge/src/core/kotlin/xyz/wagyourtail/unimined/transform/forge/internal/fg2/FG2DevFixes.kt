@@ -54,6 +54,18 @@ object FG2DevFixes {
             "net/minecraftforge/fml/common/launcher/FMLTweaker.class",
             "cpw/mods/fml/common/launcher/FMLTweaker.class",
         ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.discovery.ModClassesTweakerTx" to listOf(
+            "net/minecraftforge/fml/common/launcher/FMLTweaker.class",
+            "cpw/mods/fml/common/launcher/FMLTweaker.class",
+            "net/minecraftforge/fml/common/launcher/FMLServerTweaker.class",
+            "cpw/mods/fml/common/launcher/FMLServerTweaker.class",
+            "net/minecraftforge/fml/common/launcher/FMLDeobfTweaker.class",
+            "cpw/mods/fml/common/launcher/FMLDeobfTweaker.class",
+        ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.discovery.ModDiscovererTx" to listOf(
+            "cpw/mods/fml/common/discovery/ModDiscoverer.class",
+            "net/minecraftforge/fml/common/discovery/ModDiscoverer.class",
+        ),
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfRemapperTx" to listOf(
             "cpw/mods/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
             "net/minecraftforge/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",

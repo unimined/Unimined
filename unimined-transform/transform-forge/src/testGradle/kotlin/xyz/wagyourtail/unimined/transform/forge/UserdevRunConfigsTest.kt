@@ -170,14 +170,25 @@ class UserdevRunConfigsTest {
     }
 
     @Test
-    fun `legacydev profiles are the FML runtime-deobf era`() {
+    fun `FML launchwrapper userdev profiles are the runtime-deobf era`() {
         val legacy = ForgeProfile.Userdev(
             cfg(""""client": {"main": "net.minecraftforge.legacydev.MainClient"}""")
+        )
+        // cleanroom enters LaunchWrapper through its own bootstrap main;
+        // the FML tweaker declaration is the semantic era marker
+        val cleanroom = ForgeProfile.Userdev(
+            cfg(""""client": {
+                "main": "com.cleanroommc.boot.MainClient",
+                "env": {
+                    "tweakClass": "net.minecraftforge.fml.common.launcher.FMLTweaker"
+                }
+            }""")
         )
         val modern = ForgeProfile.Userdev(
             cfg(""""client": {"main": "net.minecraft.client.main.Main"}""")
         )
         assertTrue(legacy.isFmlRuntimeDeobfEra())
+        assertTrue(cleanroom.isFmlRuntimeDeobfEra())
         assertFalse(modern.isFmlRuntimeDeobfEra())
         assertFalse((null as ForgeProfile?).isFmlRuntimeDeobfEra())
     }

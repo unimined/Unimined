@@ -30,7 +30,12 @@ import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2;
 })
 public class FMLTweakerTx {
 
-    /** Runs immediately before {@code System.setSecurityManager}. */
+    /**
+     * Runs immediately before {@code System.setSecurityManager}. This
+     * is also ahead of {@code MixinBootstrap.init} in the constructor,
+     * making it the earliest point at which the launch loader itself is
+     * available for MOD_CLASSES URL injection.
+     */
     @CInline
     @CInject(
             method = "<init>",
@@ -40,6 +45,25 @@ public class FMLTweakerTx {
                     optional = true)
     )
     private void preloadSmRaceGuard() {
+        UniminedFg2.injectModClassUrlsIntoLaunch();
         UniminedFg2.preloadSmRaceGuard();
+    }
+
+    /**
+     * Cleanroom removes the security-manager installation but invokes
+     * {@code MixinBootstrap.init} directly in the constructor. That
+     * call is the hard deadline: config resources and plugin classes
+     * must already resolve through the launch loader when it runs.
+     */
+    @CInline
+    @CInject(
+            method = "<init>",
+            target = @CTarget(value = "INVOKE",
+                    target = "Lorg/spongepowered/asm/launch/MixinBootstrap;init()V",
+                    shift = CTarget.Shift.BEFORE,
+                    optional = true)
+    )
+    private void injectModClassesBeforeMixinBootstrap() {
+        UniminedFg2.injectModClassUrlsIntoLaunch();
     }
 }

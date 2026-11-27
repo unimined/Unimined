@@ -317,15 +317,24 @@ internal fun JsonObject.versionLibraries(): List<String> =
 /** FG2-era (launchwrapper + `FMLDeobfTweaker`): production launches
  *  the shipped obf MC jar and remaps obf→srg at class-load via
  *  `deobf_data.lzma` — `Binpatches` profiles and `Userdev` configs
- *  whose dev.json run mains are `net.minecraftforge.legacydev.*`
- *  (the detection `UserdevRunConfigs.forSide` applies to pick the
- *  launchwrapper shape). Later eras install a pre-mapped patched
- *  jar — no launch-time class rename. */
+ *  whose dev.json runs enter FML's LaunchWrapper tweakers. Vanilla
+ *  userdev does so through `net.minecraftforge.legacydev.*` mains;
+ *  cleanroom uses its own bootstrap mains but declares the same
+ *  `net.minecraftforge.fml.common.launcher.FML*Tweaker` contract.
+ *  Later eras install a pre-mapped patched jar — no launch-time
+ *  class rename. */
 fun ForgeProfile?.isFmlRuntimeDeobfEra(): Boolean = when (this) {
     is ForgeProfile.Binpatches -> true
-    is ForgeProfile.Userdev -> config.runs.values.any {
-        it["main"]?.jsonPrimitive?.content
-            ?.startsWith("net.minecraftforge.legacydev") == true
+    is ForgeProfile.Userdev -> config.runs.values.any { run ->
+        run["main"]?.jsonPrimitive?.content
+            ?.startsWith("net.minecraftforge.legacydev") == true ||
+                ((run["env"] as? JsonObject)?.get("tweakClass")
+                    ?.jsonPrimitive?.contentOrNull.let { tweak ->
+                        tweak?.startsWith(
+                            "net.minecraftforge.fml.common.launcher.FML") == true ||
+                                tweak?.startsWith(
+                                    "cpw.mods.fml.common.launcher.FML") == true
+                    })
     }
     else -> false
 }
