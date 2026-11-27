@@ -98,7 +98,18 @@ class NativeProvider(
         when (spec.side) {
             Side.CLIENT -> artifacts[ArtifactKey.CLIENT] = artifactProvider(ArtifactKey.CLIENT)
             Side.SERVER -> artifacts[ArtifactKey.SERVER] = artifactProvider(ArtifactKey.SERVER)
-            Side.MERGED -> artifacts[ArtifactKey.MERGED] = artifactProvider(ArtifactKey.MERGED)
+            Side.MERGED -> {
+                artifacts[ArtifactKey.MERGED] = artifactProvider(ArtifactKey.MERGED)
+                // the merged jar is built from the pristine side
+                // downloads — expose them for consumers that need
+                // unmerged artifacts (e.g. FG2-era forge prod
+                // launches, where FML's binpatch checksums are
+                // verified against the untouched side jar, not the
+                // merge output). Cache hits: the merge already
+                // fetched both sides
+                artifacts[ArtifactKey.CLIENT] = artifactProvider(ArtifactKey.CLIENT)
+                artifacts[ArtifactKey.SERVER] = artifactProvider(ArtifactKey.SERVER)
+            }
             Side.COMMON -> {
                 artifacts[ArtifactKey.COMMON] = artifactProvider(ArtifactKey.COMMON)
                 // the common jar is the client/server intersection —

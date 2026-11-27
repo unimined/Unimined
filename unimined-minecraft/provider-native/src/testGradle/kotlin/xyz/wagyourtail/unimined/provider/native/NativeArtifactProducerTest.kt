@@ -92,11 +92,13 @@ class NativeArtifactProducerTest {
     }
 
     private fun request(
-        cacheDir: Path, key: ArtifactKey, offline: Boolean = false
+        cacheDir: Path, key: ArtifactKey, offline: Boolean = false,
+        preMerge: ((client: Path, server: Path) -> Pair<Path, Path>)? = null
     ) = ArtifactProductionRequest(
         cacheDir = cacheDir,
         artifactKey = key,
         offline = offline,
+        preMerge = preMerge,
         logger = uniminedLogger(
             Logging.getLogger(NativeArtifactProducer::class.java))
     )
@@ -107,7 +109,7 @@ class NativeArtifactProducerTest {
         // the only producer on this module's classpath — claims any spec
         val picked = registry.select(spec(Side.CLIENT))
         assertTrue(picked is NativeArtifactProducer)
-        assertEquals(2, picked.artifactFormatVersion)
+        assertEquals(3, picked.artifactFormatVersion)
     }
 
     @Test
@@ -149,6 +151,40 @@ class NativeArtifactProducerTest {
             // (JarMerger parity: server fills in client-absent only)
             assertEquals("client",
                 zip.getInputStream(zip.getEntry("shared.txt"))
+                    .readBytes().decodeToString())
+        }
+    }
+
+    @Test
+    fun `produce MERGED applies preMerge hooks on manifest-server versions`() {
+        val cache = dir.resolve("cache")
+        stageCache(cache)
+        var calls = 0
+        val out = NativeArtifactProducer().produce(
+            spec(Side.MERGED),
+            request(cache, ArtifactKey.MERGED, preMerge = { client, server ->
+                calls++
+                assertEquals(cache.resolve("versions/1.20.1/client.jar"), client)
+                assertEquals(cache.resolve("versions/1.20.1/server.jar"), server)
+                val patchedClient = dir.resolve("patched-client.jar")
+                val patchedServer = dir.resolve("patched-server.jar")
+                Files.write(patchedClient, jar(mapOf(
+                    "client.txt" to "patched-client",
+                    "shared.txt" to "patched-client")))
+                Files.write(patchedServer, jar(mapOf(
+                    "server.txt" to "patched-server",
+                    "shared.txt" to "patched-server")))
+                patchedClient to patchedServer
+            }))
+
+        assertEquals(1, calls,
+            "side-patch hooks must run even when version metadata ships a server download")
+        ZipFile(out.toFile()).use { zip ->
+            assertEquals("patched-client",
+                zip.getInputStream(zip.getEntry("client.txt"))
+                    .readBytes().decodeToString())
+            assertEquals("patched-server",
+                zip.getInputStream(zip.getEntry("server.txt"))
                     .readBytes().decodeToString())
         }
     }

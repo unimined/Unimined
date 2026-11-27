@@ -234,7 +234,10 @@ class NativeProviderTest {
     @Test
     fun `merged side combines server over client`() {
         val result = provider().resolve(spec(Side.MERGED), context(project()))
-        assertEquals(setOf(ArtifactKey.MERGED), result.artifacts.keys)
+        assertEquals(
+            setOf(ArtifactKey.MERGED, ArtifactKey.CLIENT, ArtifactKey.SERVER),
+            result.artifacts.keys,
+            "merged envs expose the pristine side downloads lazily for consumers such as FG2 prod launches")
         val merged = result.artifacts.getValue(ArtifactKey.MERGED).get().asFile
         ZipFile(merged).use { zip ->
             assertEquals("client", zip.getInputStream(zip.getEntry("client.txt")).readBytes().decodeToString())

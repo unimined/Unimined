@@ -170,11 +170,12 @@ internal object NativeArtifactProduction {
 
     /** The resolved client+server jars a combined artifact derives
      *  from — shared by [ArtifactKey.MERGED] and [ArtifactKey.COMMON]
-     *  production. Fetches overlap, split-era jars pass through
-     *  [preMerge] first (disjoint obf namespaces must land in a shared
-     *  one before either a member merge or an entry intersection can
-     *  pair same-named classes), and the returned tags key the output
-     *  cache on hook outputs rather than raw downloads. */
+     *  production. Fetches overlap, both jars pass through [preMerge]
+     *  hooks first (split-era jars bridge disjoint obf namespaces
+     *  into a shared one; loader side-jar patch passes apply
+     *  side-authored patches before the member merge can union them),
+     *  and the returned tags key the output cache on hook outputs
+     *  rather than raw downloads. */
     private class SidedInputs(
         val client: Path, val server: Path,
         val clientTag: String?, val serverTag: String?
@@ -221,8 +222,12 @@ internal object NativeArtifactProduction {
         var clientTag = clientRef.sha1
         var serverTag = serverRef?.sha1
         preMerge?.let { hook ->
-            if (serverRef == null) {
-                val (c, s) = hook(client, server)
+            // hooks also run on manifest-server versions — loader
+            // side-jar patch passes (forge binpatch sets authored
+            // against the clean side jars) transform the merge
+            // inputs the same way the split-era namespace bridge does
+            val (c, s) = hook(client, server)
+            if (c !== client || s !== server) {
                 client = c; server = s
                 // hook outputs replace the merge inputs — key
                 // the cache on their content, not the raw jars

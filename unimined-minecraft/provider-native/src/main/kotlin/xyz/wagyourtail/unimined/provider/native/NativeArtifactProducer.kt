@@ -19,8 +19,8 @@ class NativeArtifactProducer : ProductArtifactProducer {
 
     override val name: String = "native"
 
-    /** 2 = merge strips server-bundled `minecraftLibraries` entries. */
-    override val artifactFormatVersion: Int = 2
+    /** 3 = pre-merge hooks also apply to manifest-server versions. */
+    override val artifactFormatVersion: Int = 3
 
     override fun supports(spec: ProductSpec): Boolean = true
 
