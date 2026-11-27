@@ -104,6 +104,21 @@ class ModGroupsTest {
     }
 
     @Test
+    fun `modClassesEntries puts a metadata-bearing resource root first`() {
+        val classes = dir.resolve("classes").toFile().apply { mkdirs() }
+        val resources = dir.resolve("resources").toFile().apply {
+            resolve("META-INF").mkdirs()
+            resolve("META-INF/mods.toml").writeText("modLoader=\"javafml\"")
+        }
+        val trailing = dir.resolve("trailing").toFile().apply { mkdirs() }
+
+        assertEquals(
+            listOf(resources, classes, trailing),
+            ModGroups.metadataFirst(listOf(classes, resources, trailing)),
+            "the resource root carrying mods.toml must lead; unrelated order stays stable")
+    }
+
+    @Test
     fun `mergeModClasses keeps the loader contribution first`() {
         val sep = File.pathSeparator
         assertEquals(

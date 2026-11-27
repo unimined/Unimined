@@ -48,13 +48,39 @@ object ModGroups {
         }
 
     /**
+     * Mod-metadata files that mark a dir as a group's resource root.
+     */
+    private val MOD_METADATA_FILES = listOf(
+        "META-INF/mods.toml",
+        "META-INF/neoforge.mods.toml",
+        "mcmod.info",
+    )
+
+    /**
+     * Order a group's launch files so a dir carrying mod metadata
+     * leads — forge-family dev runtimes parse `id%%dir` MOD_CLASSES
+     * entries into `explodedTargets` pairs where the FIRST path of
+     * each group is the resource root scanned for `mods.toml` and
+     * the rest are class roots (`FMLCommonLaunchHandler`
+     * `processModClassesEnvironmentVariable`; NeoForge-era
+     * `neoforge.mods.toml`, FG2-era `mcmod.info` same shape). A
+     * metadata-less leader makes the locator skip the whole group
+     * silently. Stable: relative order of non-metadata dirs is kept.
+     */
+    fun metadataFirst(files: List<File>): List<File> =
+        files.sortedByDescending { f ->
+            MOD_METADATA_FILES.any { File(f, it).isFile }
+        }
+
+    /**
      * The `modGroupsEnv` capability entries (forge `MOD_CLASSES`) —
      * one `<id>%%<path>` pair per launch file, `:`s in the group id
-     * flattened to `_` (1.x `parent.groups` shape).
+     * flattened to `_` (1.x `parent.groups` shape). Files are
+     * [metadataFirst]-ordered — the group's resource root must lead.
      */
     fun modClassesEntries(groups: List<ModGroupSpec>): List<String> =
         groups.flatMap { g ->
-            g.launchFiles().map {
+            metadataFirst(g.launchFiles()).map {
                 "${g.name.replace(":", "_")}%%${it.absolutePath}"
             }
         }

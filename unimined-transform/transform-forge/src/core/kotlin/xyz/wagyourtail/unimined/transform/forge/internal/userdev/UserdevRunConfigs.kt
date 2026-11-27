@@ -2,8 +2,10 @@ package xyz.wagyourtail.unimined.transform.forge.internal.userdev
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import xyz.wagyourtail.unimined.minecraft.ModGroups
 import xyz.wagyourtail.unimined.transform.forge.internal.userdev.UserdevRunConfigs.groupsString
 import xyz.wagyourtail.unimined.transform.forge.internal.UserdevConfig
+import java.io.File
 
 /**
  * `runs.<side>` interpretation — 1.x `FG3MinecraftTransformer`
@@ -105,16 +107,21 @@ internal object UserdevRunConfigs {
      * `(project, sourceSet)` path with `:` flattened to `_`),
      * `File.pathSeparator`-joined across all dirs and groups — the
      * dev runtime reads `group%%dir` pairs to attribute classpath
-     * dirs to their forge group.
+     * dirs to their forge group. Dirs are
+     * [ModGroups.metadataFirst]-ordered: the runtime treats each
+     * group's first path as the resource root scanned for
+     * `META-INF/mods.toml`, so a metadata-bearing dir must lead or
+     * the group is skipped silently.
      */
     fun groupsString(
         groups: Map<String, List<String>>,
         separator: String = java.io.File.pathSeparator
     ): String =
         groups.map { (key, dirs) ->
-            dirs.joinToString(separator) {
-                "${key.replace(":", "_")}%%$it"
-            }
+            ModGroups.metadataFirst(dirs.map(::File))
+                .joinToString(separator) {
+                    "${key.replace(":", "_")}%%${it.absolutePath}"
+                }
         }.joinToString(separator)
 
     private fun Ctx.groupsString(): String = groupsString(groups(), groupSeparator)
