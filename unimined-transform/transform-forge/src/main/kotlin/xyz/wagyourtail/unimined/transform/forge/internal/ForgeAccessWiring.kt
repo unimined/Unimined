@@ -34,7 +34,6 @@ import xyz.wagyourtail.unimined.transform.forge.processor.UserdevUniversalShadeP
 import xyz.wagyourtail.unimined.transform.loader.LoaderDescriptor
 import xyz.wagyourtail.unimined.transform.loader.LoaderRegistry
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
 import xyz.wagyourtail.unimined.transform.forge.internal.StringClassNamesStepSpec
@@ -64,10 +63,7 @@ internal fun userdevAts(
         UserdevExtract.extractPrefix(
             r.jar, it, cacheDir.resolve(UniminedCache.artifactKey(r.jar))
         )
-    // the `ats/` prefix sweep also picks up NeoForge's zero-byte
-    // `_script_<brand>.cfg` installer marker — an empty doc carries
-    // no access rules, so drop it before format detection trips on it
-    }.filter { Files.size(it) > 0L }
+    }
 }
 
 /**
