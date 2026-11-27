@@ -313,10 +313,107 @@ class FabricEnvironmentWiringTest {
             "-Dloader.gameJarPath.client=${gameJar.absolutePath}" in devArgs,
             "quilt dev launches must identify the exact runtime MC artifact: $devArgs"
         )
+        // the game-version override must stay gone: once the exact runtime
+        // artifact is declared, both loaders read the version organically
+        // from its version.json — an override would bypass the jar's own
+        // metadata (regression guard for the removed `loader.gameVersion`/
+        // `fabric.gameVersion` emission)
+        assertTrue(
+            devArgs.none {
+                it.startsWith("-Dloader.gameVersion") ||
+                    it.startsWith("-Dfabric.gameVersion")
+            },
+            "dev launches must not override the game version: $devArgs"
+        )
+        val prodArgs = runConfig(prodRun = true).jvmArgs
         assertTrue(
             "-Dloader.experimental.minecraft.targetNamespace=intermediary" in
-                runConfig(prodRun = true).jvmArgs,
+                prodArgs,
             "prod quilt runs must target intermediary"
+        )
+        assertTrue(
+            prodArgs.none {
+                it.startsWith("-Dloader.gameVersion") ||
+                    it.startsWith("-Dfabric.gameVersion")
+            },
+            "prod launches must not override the game version: $prodArgs"
+        )
+    }
+
+    /** Fabric-side mirror of the quilt launch contract: the run mutator
+     *  declares the exact runtime artifact through `fabric.gameJarPath`
+     *  and emits no `fabric.gameVersion` override — the loader reads the
+     *  version organically from that jar's `version.json`. The staged
+     *  single-file runtime view lets the mutator run to completion, so
+     *  the absence assertion is non-vacuous regardless of where a
+     *  regression would reinsert the override. */
+    @Test
+    fun `fabric dev launch declares the game jar and no version override`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .maybeCreate("fabric")
+        ext.sourceSet("fabric") { env ->
+            env.version.set("1.20.1")
+            env.loader("fabric", "0.16.0")
+            // a single-file runtime view exercises explicit gameJarPath
+            // emission without needing the full MC transform pipeline
+            env.devRunViewName = "fabricGameRuntimeView"
+        }
+        val gameJar = dir.resolve("game.jar").toFile()
+        gameJar.writeBytes(byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18)))
+        project.configurations.create("fabricGameRuntimeView") { conf ->
+            conf.isCanBeConsumed = false
+            conf.isCanBeResolved = true
+        }
+        project.dependencies.add("fabricGameRuntimeView", project.files(gameJar))
+
+        // stage the loader jar so the mutator's fabricLoader* view
+        // resolves — an empty jar reads as fabric (no quilt knot class)
+        val repo = dir.resolve("repo").toFile()
+        val jarDir = repo.resolve("net/fabricmc/fabric-loader/0.16.0")
+        jarDir.mkdirs()
+        jarDir.resolve("fabric-loader-0.16.0.jar").writeBytes(
+            byteArrayOf(0x50, 0x4B, 0x05, 0x06, *ByteArray(18))
+        )
+        project.repositories.maven {
+            it.url = repo.toURI()
+            it.metadataSources { s -> s.artifact() }
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+        val mutators = project.extensions.getByType(TransformExtension::class.java)
+            .sourceSet("fabric").runMutators
+
+        val spec = object : xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
+            override val name = "fabricClient"
+            override var type = name
+            override val prod = false
+            override var mainClass: String? = null
+            override val javaagents = mutableListOf<java.nio.file.Path>()
+            override val jvmArgs = mutableListOf<String>()
+            override val programArgs = mutableListOf<String>()
+            override val environment = mutableMapOf<String, String>()
+            override val properties = mutableMapOf<String, () -> String>()
+        }
+        // as in the other run-mutator tests, absorb any late
+        // fake-provider failure after the loader arguments are emitted
+        try {
+            mutators.forEach { it.execute(spec) }
+        } catch (_: Exception) {
+        }
+        val devArgs = spec.jvmArgs
+        assertTrue(
+            "-Dfabric.gameJarPath.client=${gameJar.absolutePath}" in devArgs,
+            "fabric dev launches must identify the exact runtime MC artifact: $devArgs"
+        )
+        assertTrue(
+            devArgs.none {
+                it.startsWith("-Dfabric.gameVersion") ||
+                    it.startsWith("-Dloader.gameVersion")
+            },
+            "fabric dev launches must not override the game version: $devArgs"
         )
     }
 
