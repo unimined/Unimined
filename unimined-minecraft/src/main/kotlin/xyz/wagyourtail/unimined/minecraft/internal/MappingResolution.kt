@@ -94,8 +94,16 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
             // the env's raw jar + libraries feed a method-name
             // propagation pass over the composed tree. The spec flag is
             // tri-state: unset auto-enables when Ornithe enricher
-            // sources are declared (ploceus's isProcessorsApplied gate)
-            if (spec.hierarchyNameFill.orNull ?: spec.declaresOrnitheEnrichers()) {
+            // sources are declared (ploceus's isProcessorsApplied gate).
+            // Split-official merged trees are the exception: client/server
+            // scans are disjoint but write into one tree, and the fill's
+            // synthesized name-only rows cross-merge overloaded members
+            // (b1.7.3 ChunkSource.b()Z vs b(II)), poisoning the pre-merge
+            // remap with duplicate conflicting rows. That remap already
+            // performs the same inheritance propagation dynamically, so
+            // auto-fill is skipped there; an explicit user opt-in is kept.
+            val autoHierarchyFill = spec.declaresOrnitheEnrichers() && !spec.splitOfficial
+            if (spec.hierarchyNameFill.orNull ?: autoHierarchyFill) {
                 if (spec.postProcessors.none { it.name == "bytecode-fill" }) {
                     spec.postProcessors += BytecodeFillPostProcessor(
                         jars = bytecodeFillJars(environment),
