@@ -58,6 +58,10 @@ object FG2DevFixes {
             "cpw/mods/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
             "net/minecraftforge/fml/common/asm/transformers/deobf/FMLDeobfuscatingRemapper.class",
         ),
+        "xyz.wagyourtail.unimined.transform.forge.internal.fg2.deobf.DeobfTransformerTx" to listOf(
+            "cpw/mods/fml/common/asm/transformers/DeobfuscationTransformer.class",
+            "net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class",
+        ),
         "xyz.wagyourtail.unimined.transform.forge.internal.fg2.coremods.CoreModManagerCpwTx" to listOf(
             "cpw/mods/fml/relauncher/CoreModManager.class",
         ),
