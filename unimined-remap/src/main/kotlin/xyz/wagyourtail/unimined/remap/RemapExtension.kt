@@ -305,12 +305,17 @@ abstract class RemapExtension @Inject constructor(
             named("validate()") { environment.validate() }
             val declared = named("effectiveSteps") {
                 environment.effectiveSteps(surface) }
-            val core = if (declared.isEmpty() &&
+            val core = if (declared.none { it is RemapStepSpec } &&
                 (surface == RemapSurface.JAR || surface == RemapSurface.SOURCES)
             ) {
-                // SOURCES resolves to the uml source-remap step (remap +
-                // javadoc-from-mappings) when remapper-uml is applied
-                listOf<StepSpec>(RemapStepSpec())
+                // implicit namespace remap precedes the declared steps
+                // unless the user declared their own — post-pass
+                // declarations (modArtifacts, access, …) enhance the
+                // env pipeline rather than replace its remap (1.x
+                // `mixinRemap {}` parity: task-level config never
+                // removed the core remap). SOURCES resolves to the uml
+                // source-remap step when remapper-uml is applied
+                listOf<StepSpec>(RemapStepSpec()) + declared
             } else {
                 declared
             }
