@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingSource
 import xyz.wagyourtail.unimined.api.mapping.SerializedMappingData
 import xyz.wagyourtail.unimined.api.spec.Side
 import xyz.wagyourtail.unimined.mapping.sink.emit
+import xyz.wagyourtail.unimined.mapping.tree.impl.dollarInnerClassNames
 import java.security.MessageDigest
 import java.nio.file.Files
 
