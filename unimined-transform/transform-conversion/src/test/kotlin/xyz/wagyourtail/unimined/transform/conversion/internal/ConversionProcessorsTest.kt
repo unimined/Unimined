@@ -243,6 +243,33 @@ class ConversionProcessorsTest {
     }
 
     @Test
+    fun `foxloader 1 client argument reaches the invoker`() {
+        val own = jar("mc-client.jar",
+            mapOf("a/A.class" to byteArrayOf(1)))
+        val other = jar("other-client.jar", emptyMap())
+        val p = FoxLoaderPatchProcessor(foxLoader1Client = true)
+        p.processJar(own, FoxLoaderPatchProcessor.Spec(
+            listOf(compileInvoker().toString()), other.toString(),
+            foxLoader1Client = true), ctx)
+        val argv = entries(own)["argv.txt"]!!.decodeToString().lines()
+        assertEquals(4, argv.size)
+        assertEquals("false", argv[2])
+        assertEquals("true", argv[3])
+    }
+
+    @Test
+    fun `foxloader 2 invocation keeps the three argument form`() {
+        val own = jar("mc2.jar",
+            mapOf("a/A.class" to byteArrayOf(1)))
+        val other = jar("other2.jar", emptyMap())
+        val p = FoxLoaderPatchProcessor()
+        p.processJar(own, FoxLoaderPatchProcessor.Spec(
+            listOf(compileInvoker().toString()), other.toString()), ctx)
+        val argv = entries(own)["argv.txt"]!!.decodeToString().lines()
+        assertEquals(3, argv.size)
+    }
+
+    @Test
     fun `foxloader invoker failure propagates with tool output`() {
         val own = jar("mc.jar",
             mapOf("FAILPATCH" to byteArrayOf(0)))
@@ -260,11 +287,12 @@ class ConversionProcessorsTest {
     fun `foxloader spec payload round-trips`() {
         val p = FoxLoaderPatchProcessor()
         val spec = FoxLoaderPatchProcessor.Spec(
-            listOf("/x/a.jar", "/x/b.jar"), "/x/other.jar")
+            listOf("/x/a.jar", "/x/b.jar"), "/x/other.jar", true)
         val revived = p.deserializeSpec(
             p.serializeSpec(spec)) as FoxLoaderPatchProcessor.Spec
         assertEquals(spec.invokerClasspath, revived.invokerClasspath)
         assertEquals(spec.otherSideJar, revived.otherSideJar)
+        assertEquals(spec.foxLoader1Client, revived.foxLoader1Client)
     }
 
 }

@@ -143,8 +143,10 @@ from one declaration.
 
 Loader dev-mode flags are wired per-loader: fabric-family runs get
 `-Dloader.development=true`/`fabric.development` (and quilt's
-`loader.development`) from the env wiring — no run-config edits
-needed. Anything else is ordinary `jvmArgs`/`environmentVariables`.
+`loader.development`) from the env wiring; FoxLoader 1.x conversion
+runs get `-Dfoxloader.dev-mode=true` because their Minecraft artifact
+is pre-patched at build time — no run-config edits needed. Anything
+else is ordinary `jvmArgs`/`environmentVariables`.
 
 ## Dry-run
 

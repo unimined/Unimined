@@ -195,6 +195,18 @@ On LaunchWrapper-era forge-family loaders (≤1.12.2), `MixinConfigs` is
 paired with the `TweakClass` manifest attribute — LaunchWrapper only
 registers mixin containers whose manifest names the mixin tweaker.
 
+FoxLoader is likewise manifest-based, but its attribute family changed
+with ReIndev 2.9's loader rewrite. For FoxLoader 1.x (ReIndev < 2.9),
+the loader-neutral `main` entrypoint kind emits `CommonMod`, while
+`client`/`server` kinds emit `ClientMod`/`ServerMod`; the first mixin
+config emits `CommonMixin`. For FoxLoader 2.x, `main` emits `ModMain`
+and the mixin config emits `ModMixin`. `ModId` and the descriptive
+attributes are common to both eras. Dev runs stage the built env jar in
+`mods/`, so no `foxloader.inject-mod` argument is needed (passing both
+would double-register the same mod); FoxLoader 1.x dev runs do receive
+`-Dfoxloader.dev-mode=true` because the conversion pipeline pre-patches
+the Minecraft artifact at build time.
+
 Loader-contributed extras merge verbatim: `environment.manifestAttributes`
 (env channel — e.g. `manifestAttributes["FMLModType"] = "LANGPROVIDER"`
 or ornithe's `Calamus-Generation`) plus emitter attrs

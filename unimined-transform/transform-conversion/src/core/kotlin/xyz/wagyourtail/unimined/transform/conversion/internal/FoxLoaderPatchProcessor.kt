@@ -42,7 +42,14 @@ import java.util.zip.ZipOutputStream
  * rides `-cp`. `buildSpec` returns `null` when either binding is
  * absent so non-foxloader conversion envs (bta/nsss) get no step.
  */
-class FoxLoaderPatchProcessor : JarProcessor {
+class FoxLoaderPatchProcessor(
+    /**
+     * FoxLoader 1.x's invoker takes a fourth `<client>` argument (its
+     * dev patcher has sided transformers); FoxLoader 2.x rejects that
+     * argument. `null` = invoke the 2.x three-argument form.
+     */
+    private val foxLoader1Client: Boolean? = null,
+) : JarProcessor {
 
     override val name = "foxloader-patch"
     // identity namespace — the invoker patches vanilla entry points
@@ -52,6 +59,7 @@ class FoxLoaderPatchProcessor : JarProcessor {
     class Spec(
         val invokerClasspath: List<String>,
         val otherSideJar: String,
+        val foxLoader1Client: Boolean? = null,
     ) : JarProcessor.JarProcessorSpec, Serializable
 
     override fun buildSpec(context: JarProcessor.SpecContext): JarProcessor.JarProcessorSpec? {
@@ -61,18 +69,24 @@ class FoxLoaderPatchProcessor : JarProcessor {
         return Spec(
             invoker.map { it.toAbsolutePath().toString() },
             other.toAbsolutePath().toString(),
+            foxLoader1Client,
         )
     }
 
     override fun serializeSpec(spec: JarProcessor.JarProcessorSpec): String =
         (spec as Spec).let {
             it.invokerClasspath.joinToString(File.pathSeparator) +
-                    "@@" + it.otherSideJar
+                    "@@" + it.otherSideJar +
+                    "@@" + (it.foxLoader1Client?.toString() ?: "")
         }
 
     override fun deserializeSpec(payload: String): JarProcessor.JarProcessorSpec =
         payload.split("@@").let {
-            Spec(it[0].split(File.pathSeparator), it[1])
+            Spec(
+                it[0].split(File.pathSeparator),
+                it[1],
+                it.getOrNull(2)?.takeIf(String::isNotEmpty)?.toBooleanStrict(),
+            )
         }
 
     override fun processJar(
@@ -110,13 +124,19 @@ class FoxLoaderPatchProcessor : JarProcessor {
             val java = Path.of(
                 System.getProperty("java.home"), "bin", "java"
             ).toString()
-            val proc = ProcessBuilder(
+            val command = mutableListOf(
                 java, "-cp", spec.invokerClasspath.joinToString(File.pathSeparator),
                 "com.fox2code.foxloader.invoker.Main",
                 superset.toAbsolutePath().toString(),
                 patched.toAbsolutePath().toString(),
                 "false",
-            ).redirectErrorStream(true).start()
+            )
+            // FoxLoader 1.x only: `<in> <out> <unpick> <client>` — the
+            // dev patcher chooses client/server transformers. FoxLoader
+            // 2.x has no fourth argument, so null stays at the 2.x form.
+            spec.foxLoader1Client?.let { command += it.toString() }
+            val proc = ProcessBuilder(command)
+                .redirectErrorStream(true).start()
             val output = proc.inputStream.bufferedReader().readText()
             context.log.info(output.trim())
             if (proc.waitFor() != 0 || !Files.exists(patched)) {

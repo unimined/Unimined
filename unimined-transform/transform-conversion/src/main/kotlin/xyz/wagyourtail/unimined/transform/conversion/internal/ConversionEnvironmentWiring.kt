@@ -75,16 +75,15 @@ object ConversionEnvironmentWiring {
         // invoker patches the MC jar's entry points to call into
         // FoxLauncher (see FoxLoaderPatchProcessor); without it the
         // env would start the vanilla main and never load mods.
-        // NO `-Dfoxloader.dev-mode`: that flag selects the 1.x
-        // source-dev path (font.txt patched-file lookup + inject-mod
-        // classpath hacks); the 2.x flow just needs the patched jar
-        // on the classpath and PreLoader copies it into
-        // .foxloader/internal/patched/ itself.
         if (descriptor.id == "foxloader") {
+            val foxLoader1 = !canCombine(environment.version.get())
+            val client = environment.side.orNull == Side.CLIENT
             project.extensions.getByType(
                 xyz.wagyourtail.unimined.transform.TransformExtension::class.java
             ).sourceSet(environment.environmentId).let { envSpec ->
-                envSpec.jarProcessors += FoxLoaderPatchProcessor()
+                envSpec.jarProcessors += FoxLoaderPatchProcessor(
+                    foxLoader1Client = if (foxLoader1) client else null
+                )
                 envSpec.runMutators += org.gradle.api.Action<
                         xyz.wagyourtail.unimined.api.spec.RunConfigSpec> { config ->
                     config.mainClass = if (config.name.contains(
@@ -92,6 +91,16 @@ object ConversionEnvironmentWiring {
                         "com.fox2code.foxloader.launcher.ServerMain"
                     } else {
                         "com.fox2code.foxloader.launcher.ClientMain"
+                    }
+                    if (foxLoader1 && !config.prod) {
+                        // FoxLoader 1.x's dev contract: the build-time
+                        // invoker output is already patched, so runtime
+                        // prepatching is disabled. Unlike upstream's
+                        // minimal dev environment, unimined stages the
+                        // built dev jar in mods/ — therefore the redundant
+                        // foxloader.inject-mod path is deliberately not
+                        // passed (it would double-register the same mod).
+                        config.jvmArgs += "-Dfoxloader.dev-mode=true"
                     }
                 }
             }
