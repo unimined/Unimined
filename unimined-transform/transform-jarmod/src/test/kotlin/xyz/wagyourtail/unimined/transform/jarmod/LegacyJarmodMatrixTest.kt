@@ -49,15 +49,16 @@ class LegacyJarmodMatrixTest {
 
     private val H = RemapTestHarness
 
-    /** First-listed jar wins collisions — mirrors `sideForge + jarMod`. */
+    /** Round-trip the real spec format — merge sources win collisions. */
     private fun merge(base: Path, vararg inject: Path) {
-        val payload = buildString {
-            append("false")
-            inject.forEach { append('\n').append(it).append(':').append(H.sha1(it)) }
-        }
-        JarModMergeProcessor().processJar(
+        val processor = JarModMergeProcessor(inject.toList())
+        val spec = processor.buildSpec(object : JarProcessor.SpecContext {
+            override val productionNamespace = "official"
+            override fun mods() = emptyList<JarProcessor.ModJarInfo>()
+        }) ?: error("no jarmod merge inputs")
+        processor.processJar(
             base,
-            JarModMergeProcessor().deserializeSpec(payload),
+            processor.deserializeSpec(processor.serializeSpec(spec)),
             object : JarProcessor.ProcessorContext {
                 override val logger: xyz.wagyourtail.commons.core.logger.Logger = JavaLogWrapper(java.util.logging.Logger.getLogger("matrix"))
                 override val mappings: MappingData? = null
