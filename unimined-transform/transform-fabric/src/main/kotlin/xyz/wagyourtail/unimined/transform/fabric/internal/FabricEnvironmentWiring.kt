@@ -521,7 +521,13 @@ internal object FabricEnvironmentWiring {
             // predicates (conditional mixins, mod depends) then evaluate
             // against an empty version. The raw env version is fine:
             // McVersionLookup normalizes it internally.
-            config.jvmArgs += "-Dfabric.gameVersion=${environment.version.get()}"
+            // Quilt reads its own game-version key; there is no fabric.*
+            // compatibility fallback in MinecraftGameProvider.
+            config.jvmArgs += if (isQuilt) {
+                "-Dloader.gameVersion=${environment.version.get()}"
+            } else {
+                "-Dfabric.gameVersion=${environment.version.get()}"
+            }
         }
     }
 

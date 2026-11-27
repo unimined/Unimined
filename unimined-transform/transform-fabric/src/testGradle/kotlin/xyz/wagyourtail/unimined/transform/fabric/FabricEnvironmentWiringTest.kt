@@ -300,6 +300,10 @@ class FabricEnvironmentWiringTest {
             "official is not the namespace of pre-remapped dev artifacts"
         )
         assertTrue(
+            "-Dloader.gameVersion=1.20.1" in devArgs,
+            "quilt-loader reads loader.gameVersion rather than fabric.gameVersion: $devArgs"
+        )
+        assertTrue(
             "-Dloader.experimental.minecraft.targetNamespace=intermediary" in
                 runConfig(prodRun = true).jvmArgs,
             "prod quilt runs must target intermediary"
