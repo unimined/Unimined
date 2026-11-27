@@ -85,7 +85,10 @@ abstract class ModGroupSpec @Inject constructor(
      *  contributes its `output` file collection (carrying the
      *  compile/processResources `builtBy`), so file-consuming task
      *  inputs pick up the producing-task dependency; raw dirs alone
-     *  trip Gradle's implicit-dependency validation. */
+     *  trip Gradle's implicit-dependency validation. `modFiles` is
+     *  wrapped in a list deliberately: `ConfigurableFileCollection` is
+     *  itself iterable, so Kotlin's `list + collection` overload would
+     *  flatten it into plain files and discard its builtBy producers. */
     fun launchOutputs(): List<Any> =
-        sourceSets.map { it.output } + modFiles
+        sourceSets.map { it.output } + listOf(modFiles)
 }
