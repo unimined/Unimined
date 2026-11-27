@@ -64,6 +64,21 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
 
     private val resolvedEnvironments = mutableMapOf<String, ProductArtifacts>()
 
+    /** Envs whose provider artifacts are currently resolving. Product
+     *  resolution must stay acyclic: `spec()` runs combination
+     *  validation, but the mapping-derived arm of that validation can
+     *  itself need product metadata (`obfuscated`, auxiliary mapping
+     *  downloads). Combination validation reads this marker and treats
+     *  the derived namespace as unknown while the product is mid-flight;
+     *  the validation reruns on the mapping-resolution path once the
+     *  product value exists. */
+    private val resolvingEnvironments =
+        java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Whether [environmentId]'s product artifacts are mid-resolution. */
+    fun isResolvingProduct(environmentId: String): Boolean =
+        environmentId in resolvingEnvironments
+
     private val mappingBundleJsonCache =
         java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -135,40 +150,46 @@ internal class MappingResolution(private val ext: MinecraftExtension) {
     internal fun mappingDataProvider(environment: MinecraftEnvironment): Provider<xyz.wagyourtail.unimined.api.mapping.MappingData> =
         providers.provider { resolvedMappingData(environment) }
 
-    internal fun resolved(environment: MinecraftEnvironment): ProductArtifacts =
-        synchronized(resolvedEnvironments) {
-            resolvedEnvironments.getOrPut(environment.environmentId) {
-                if (!environment.version.isPresent) {
-                    // versionless env — a source set that was never
-                    // configured as a minecraft env (shared code pulled
-                    // into real envs via combineWith, e.g. Omnilook's
-                    // `main`). spec() would fail on the missing version,
-                    // and there is no product to probe anyway — resolve
-                    // inertly so the env behaves like the plain source
-                    // set 1.x left it as.
-                    return@getOrPut InertProductArtifacts(project)
+    internal fun resolved(environment: MinecraftEnvironment): ProductArtifacts {
+        val outermost = resolvingEnvironments.add(environment.environmentId)
+        try {
+            return synchronized(resolvedEnvironments) {
+                resolvedEnvironments.getOrPut(environment.environmentId) {
+                    if (!environment.version.isPresent) {
+                        // versionless env — a source set that was never
+                        // configured as a minecraft env (shared code pulled
+                        // into real envs via combineWith, e.g. Omnilook's
+                        // `main`). spec() would fail on the missing version,
+                        // and there is no product to probe anyway — resolve
+                        // inertly so the env behaves like the plain source
+                        // set 1.x left it as.
+                        return@getOrPut InertProductArtifacts(project)
+                    }
+                    val spec = environment.spec()
+                    // loader-aware providers (buildtools claims
+                    // craftbukkit/spigot server artifacts) negotiate on the
+                    // full spec; when none claims it, loader-agnostic
+                    // providers see the stripped 1.x view (loader transforms
+                    // wrap the artifact downstream). An explicit
+                    // `provider =` override bypasses capability selection.
+                    val override = environment.provider.orNull
+                    val provider = when {
+                        override != null -> ext.registry.select(spec, override)
+                        else -> ext.registry.probe(spec)
+                            // loader-agnostic 1.x view — transforms wrap
+                            // the loader's artifact downstream
+                            ?: ext.registry.select(
+                                (spec as? RuntimeProductSpec)
+                                    ?.copy(loader = null) ?: spec
+                            )
+                    }
+                    provider.resolve(spec, ext.providerContext)
                 }
-                val spec = environment.spec()
-                // loader-aware providers (buildtools claims
-                // craftbukkit/spigot server artifacts) negotiate on the
-                // full spec; when none claims it, loader-agnostic
-                // providers see the stripped 1.x view (loader transforms
-                // wrap the artifact downstream). An explicit
-                // `provider =` override bypasses capability selection.
-                val override = environment.provider.orNull
-                val provider = when {
-                    override != null -> ext.registry.select(spec, override)
-                    else -> ext.registry.probe(spec)
-                        // loader-agnostic 1.x view — transforms wrap
-                        // the loader's artifact downstream
-                        ?: ext.registry.select(
-                            (spec as? RuntimeProductSpec)
-                                ?.copy(loader = null) ?: spec
-                        )
-                }
-                provider.resolve(spec, ext.providerContext)
             }
+        } finally {
+            if (outermost) resolvingEnvironments.remove(environment.environmentId)
         }
+    }
 
     /**
      * Product jar(s) feeding the bytecode hierarchy fill, keyed by the

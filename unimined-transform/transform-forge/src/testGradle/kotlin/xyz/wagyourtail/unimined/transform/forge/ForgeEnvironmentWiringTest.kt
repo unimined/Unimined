@@ -253,6 +253,25 @@ class ForgeEnvironmentWiringTest {
     }
 
     @Test
+    fun `loaderless and non-forge envs do not register forge source tasks`() {
+        project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.sourceSet("forge") { e ->
+            e.version.set("1.20.1")
+            e.loader("fabric", "1.0")
+        }
+
+        // A loaderless main must not claim `genForgeSources`: that is
+        // also the canonical decompile task name for an env literally
+        // named `forge`. Likewise a non-forge env must not receive the
+        // loader-specific chain merely because the forge plugin is
+        // present in the project.
+        assertNull(project.tasks.findByName("genForgeSources"))
+        assertNull(project.tasks.findByName("genForgeForgeSources"))
+    }
+
+    @Test
     fun `non-forge feather-shaped mod view resolves through transform params`() {
         project = project()
         val ext = project.extensions.getByType(MinecraftExtension::class.java)

@@ -127,6 +127,16 @@ internal class CombinationValidation(private val ext: MinecraftExtension) {
             project.project(projectPath)
         }
         val extension = sourceProject.extensions.getByType(MinecraftExtension::class.java)
+        // Product resolution must not re-enter mapping resolution:
+        // `spec()` invokes this validation, while the derived dev
+        // namespace's loader/mapping defaults can need product metadata
+        // (`obfuscated`, auxiliary downloads). Mid-product-resolution
+        // the derived value is unknowable — compare only an explicitly
+        // declared value and defer the full derived check to the
+        // mapping-resolution validation pass.
+        if (extension.resolution.isResolvingProduct(environmentId)) {
+            return extension.sourceSet(environmentId).devNamespace.orNull
+        }
         // dev-ns resolves the composed mapping tree — when this check
         // runs inside the target env's own resolution (validate lives
         // inside resolvedMappingData), the re-entrant call short-

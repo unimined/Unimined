@@ -233,35 +233,60 @@ internal object ForgeEnvironmentWiring {
                 "minecraft-${environment.environmentId}-$it"
             })
         )
-        // mod dependencies publish at the loader's production
-        // namespace (`searge` for userdev-era, `mojmap` for neoform
-        // products) — remapped views read them into devNamespace
-        environment.modSourceNamespaces.convention(
-            resolved.map { r ->
-                // unobf'd products (26.x) dev == prod == mojmap —
-                // identity remap. Otherwise the era-correct obf
-                // namespace: searge for mcp_config-era userdev and the
-                // binpatch eras, mojmap for neoform-family and modern
-                // LexForge (MC >= 1.20.6 / Forge 50.x). `obfNamespace`
-                // is the patch input side — `official` on notchObf and
-                // `searge` even on neoform userdev — never the
-                // production column.
-                if (!environment.obfuscated.get()) listOf("mojmap")
-                else listOf(
-                    when (val profile = r.profile) {
-                        is ForgeProfile.Userdev -> when {
-                            profile.config.mcp.contains("neoform") -> "mojmap"
-                            xyz.wagyourtail.unimined.mapping.internal
-                                .MinecraftVersions.compare(
-                                    environment.version.get(), "1.20.6"
-                                ) >= 0 -> "mojmap"
-                            else -> "searge"
+        // Loader-scoped wiring that cannot be inertly self-gated. In
+        // particular, installing an absent `resolved.map` convention on
+        // a fabric/loaderless env would replace that env's real
+        // namespace convention, and registering `genForgeSources` on a
+        // loaderless `main` collides with the ordinary source task of
+        // an env literally named `forge`. Bind-time wiring runs before
+        // `loader(...)`, so install once the effective primary is
+        // known; the post-DSL fallback covers LOADER-section inherited
+        // primaries, while the declaration hook installs direct
+        // primaries before source-generation wiring reads `devSources`.
+        var loaderScopedWiringInstalled = false
+        fun installLoaderScopedWiring() {
+            if (loaderScopedWiringInstalled) return
+            val loaderName = environment.loaderSpec.orNull?.name ?: return
+            if (LoaderRegistry.resolveBuiltin(loaderName)?.family != "forge") return
+            loaderScopedWiringInstalled = true
+
+            // mod dependencies publish at the loader's production
+            // namespace (`searge` for userdev-era, `mojmap` for neoform
+            // products) — remapped views read them into devNamespace
+            environment.modSourceNamespaces.convention(
+                resolved.map { r ->
+                    // unobf'd products (26.x) dev == prod == mojmap —
+                    // identity remap. Otherwise the era-correct obf
+                    // namespace: searge for mcp_config-era userdev and the
+                    // binpatch eras, mojmap for neoform-family and modern
+                    // LexForge (MC >= 1.20.6 / Forge 50.x). `obfNamespace`
+                    // is the patch input side — `official` on notchObf and
+                    // `searge` even on neoform userdev — never the
+                    // production column.
+                    if (!environment.obfuscated.get()) listOf("mojmap")
+                    else listOf(
+                        when (val profile = r.profile) {
+                            is ForgeProfile.Userdev -> when {
+                                profile.config.mcp.contains("neoform") -> "mojmap"
+                                xyz.wagyourtail.unimined.mapping.internal
+                                    .MinecraftVersions.compare(
+                                        environment.version.get(), "1.20.6"
+                                    ) >= 0 -> "mojmap"
+                                else -> "searge"
+                            }
+                            else -> r.descriptor.prodNamespace
                         }
-                        else -> r.descriptor.prodNamespace
-                    }
-                )
-            }
-        )
+                    )
+                }
+            )
+            contributeDevSources(project, environment, resolved)
+        }
+        environment.onPrimaryLoaderDeclared {
+            installLoaderScopedWiring()
+        }
+        project.afterDslEval {
+            installLoaderScopedWiring()
+        }
         // FG1 zip-patches era: provision FML's runtime dyn-libs — the
         // same CoreFMLLibraries scan/forgeDeps/staging/checksum-patch
         // the jarmod-family path applies, shared via FG1DynLibWiring.
@@ -364,7 +389,6 @@ internal object ForgeEnvironmentWiring {
         contributeAccessSteps(project, environment, resolved)
         contributeDevFixes(project, environment, resolved)
         contributeMinecraftModuleName(project, environment, resolved)
-        contributeDevSources(project, environment, resolved)
         contributeRunMutators(project, environment, resolved)
         val remapExt = project.extensions.getByType(RemapExtension::class.java)
         // LaunchWrapper-era forge coremods implement IClassTransformer
