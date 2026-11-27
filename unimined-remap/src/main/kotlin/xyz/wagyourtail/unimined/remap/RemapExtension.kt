@@ -609,7 +609,7 @@ abstract class RemapExtension @Inject constructor(
             t.targetNamespace.set(spec.to)
             t.remapClasspath.from(spec.classpath)
             t.stepSpecs.set(artifactSteps())
-            t.jarLint.set(checks.jarLint)
+            t.jarLint.convention(checks.jarLint)
         }
     }
 
