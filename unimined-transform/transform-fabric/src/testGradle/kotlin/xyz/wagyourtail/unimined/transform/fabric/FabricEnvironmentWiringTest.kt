@@ -231,6 +231,81 @@ class FabricEnvironmentWiringTest {
         assertTrue("-Dfabric.skipMcProvider" in runConfig().jvmArgs)
     }
 
+    /** Quilt must target the canonical runtime namespace of the supplied
+     *  artifacts: `named` in dev and `intermediary` in prod. `official`
+     *  makes Quilt reject access wideners/classes already remapped into
+     *  those namespaces. */
+    @Test
+    fun `quilt target namespace follows dev and prod runtime namespaces`() {
+        val project = project()
+        val ext = project.extensions.getByType(MinecraftExtension::class.java)
+        ext.main.version.set("1.20.1")
+        ext.main.provider.set("fake")
+        project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java)
+            .maybeCreate("quilt")
+        ext.sourceSet("quilt") { env ->
+            env.version.set("1.20.1")
+            env.loader("quilt", "0.30.1")
+        }
+
+        // the mutator identifies Quilt by probing for its knot class —
+        // serve a minimal local artifact with that entry rather than
+        // hitting a live maven
+        val repo = dir.resolve("repo").toFile()
+        val jarDir = repo.resolve("org/quiltmc/quilt-loader/0.30.1")
+        jarDir.mkdirs()
+        java.util.jar.JarOutputStream(
+            jarDir.resolve("quilt-loader-0.30.1.jar").outputStream()
+        ).use { jar ->
+            jar.putNextEntry(java.util.jar.JarEntry(
+                "org/quiltmc/loader/impl/launch/knot/KnotClient.class"))
+            jar.closeEntry()
+        }
+        project.repositories.maven {
+            it.url = repo.toURI()
+            it.metadataSources { s -> s.artifact() }
+        }
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+        val mutators = project.extensions.getByType(TransformExtension::class.java)
+            .sourceSet("quilt").runMutators
+
+        fun runConfig(prodRun: Boolean): xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
+            val spec = object : xyz.wagyourtail.unimined.api.spec.RunConfigSpec {
+                override val name = if (prodRun) "quiltProdClient" else "quiltClient"
+                override var type = name
+                override val prod = prodRun
+                override var mainClass: String? = null
+                override val javaagents = mutableListOf<java.nio.file.Path>()
+                override val jvmArgs = mutableListOf<String>()
+                override val programArgs = mutableListOf<String>()
+                override val environment = mutableMapOf<String, String>()
+                override val properties = mutableMapOf<String, () -> String>()
+            }
+            // as above, absorb any late fake-provider failure after the
+            // loader arguments have been emitted
+            try {
+                mutators.forEach { it.execute(spec) }
+            } catch (_: Exception) {
+            }
+            return spec
+        }
+
+        val devArgs = runConfig(prodRun = false).jvmArgs
+        assertTrue(
+            "-Dloader.experimental.minecraft.targetNamespace=named" in devArgs,
+            "dev quilt runs must target the canonical named namespace: $devArgs"
+        )
+        assertFalse(
+            "-Dloader.experimental.minecraft.targetNamespace=official" in devArgs,
+            "official is not the namespace of pre-remapped dev artifacts"
+        )
+        assertTrue(
+            "-Dloader.experimental.minecraft.targetNamespace=intermediary" in
+                runConfig(prodRun = true).jvmArgs,
+            "prod quilt runs must target intermediary"
+        )
+    }
+
     @Test
     fun `family members contribute their own loader and intermediary deps`() {
         val project = project()

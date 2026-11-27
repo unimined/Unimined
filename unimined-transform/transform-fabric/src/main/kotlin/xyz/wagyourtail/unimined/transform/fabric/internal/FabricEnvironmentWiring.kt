@@ -478,11 +478,14 @@ internal object FabricEnvironmentWiring {
             // class-load (PackageAccessFixer) — required since remap-induced
             // cross-package access violations are inherent to dev jars
             config.jvmArgs += "-Dfabric.development=true"
-            // quilt-loader's MappingConfigurationImpl throws when its target
-            // namespace (`intermediary`) isn't resolvable from mappings jars
-            // on the classpath — fabric-loader silently skips the same check.
-            // The dev run ships the pre-remapped dev jar, so 'official' is
-            // quilt's "trust the supplied jar" escape hatch.
+            // quilt-loader validates its target namespace against the
+            // mappings jars on the classpath — fabric-loader silently skips
+            // the same check. Those mappings carry the canonical `named`
+            // dev column and `intermediary` prod column, and the supplied
+            // game/mod jars are already remapped to that runtime namespace.
+            // `official` is therefore not a valid escape hatch: it makes
+            // Quilt reject named access wideners and treat remapped classes
+            // as if they were still obfuscated.
             val isQuilt = java.util.jar.JarFile(jar.toFile()).use {
                 it.getJarEntry("org/quiltmc/loader/impl/launch/knot/KnotClient.class") != null
             }
@@ -496,7 +499,8 @@ internal object FabricEnvironmentWiring {
                 // qmj5: hand-written `quilt.mod.json` may be JSON5 in
                 // dev (loom sets the same flag)
                 config.jvmArgs += "-Dloader.enable_quilt_mod_json5_in_dev_env=true"
-                config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=official"
+                val targetNamespace = if (config.prod) "intermediary" else "named"
+                config.jvmArgs += "-Dloader.experimental.minecraft.targetNamespace=$targetNamespace"
             }
             // canonical runtime contract (see exportLoaderMappings):
             // the supplied game jar + mod jars carry internal column
