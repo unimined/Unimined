@@ -91,10 +91,19 @@ internal object ModPackagingWiring {
                 val declared = snap.sections[environment.loaderSpec
                     .orNull?.name]?.mixinConfigs.orEmpty() +
                     mod.mixins.map { it.snapshot().fileName }
+                // mods{} group source sets are part of the same dev
+                // launch union — a shared-code set (Omnilook's `main`)
+                // holds the mod's mixin configs for every env that
+                // groups it in, so their resources scan here too.
+                // combineWith composition covers the same ground
+                // through `combinedSourceDirs`
+                val modGroupResourceDirs = environment.effectiveModGroups()
+                    .flatMap { g -> g.sourceSets.flatMap { it.resources.srcDirs } }
                 val discovered = if (environment.discoverMixinConfigs.get()) {
                     ModMetadataScan.discoverMixinConfigs(
-                        (sourceSet.resources.srcDirs - outDir.get().asFile) +
-                            environment.combinedSourceDirs.files,
+                        ((sourceSet.resources.srcDirs - outDir.get().asFile) +
+                            environment.combinedSourceDirs.files +
+                            modGroupResourceDirs).distinct(),
                         exclude = declared.toSet()
                     ).map { it.first }
                 } else emptyList()
