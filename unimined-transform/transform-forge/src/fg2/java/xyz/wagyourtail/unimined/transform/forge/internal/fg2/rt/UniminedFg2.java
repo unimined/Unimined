@@ -131,7 +131,6 @@ public final class UniminedFg2 {
                 cl.set(inst, lcl);
                 remapper.getMethod("setupLoadOnly", String.class, boolean.class)
                         .invoke(inst, map, true);
-                System.out.println("[unimined] fed " + map + " to " + cls);
                 return;
             } catch (ReflectiveOperationException e) {
                 throw new IllegalStateException(
