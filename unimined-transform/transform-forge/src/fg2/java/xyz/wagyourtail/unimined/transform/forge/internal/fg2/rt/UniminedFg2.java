@@ -239,31 +239,53 @@ public final class UniminedFg2 {
     /**
      * {@code LoadController.unimined$getDirectories}: resource roots
      * for a mod source dir, parsed from {@code MOD_CLASSES}
-     * ({@code classesDir%%resourcesDir} pairs joined by pathSeparator —
-     * the GradleStart convention): entries whose classes dir matches
-     * the mod source map to their resources dirs.
+     * ({@code label%%path} pairs joined by pathSeparator): once one
+     * pair's path matches the mod source, every existing dir carrying
+     * the same label forms that mod's resource-root union.
      */
     public static File[] getDirectories(File modSource) {
-        String modClasses = System.getenv("MOD_CLASSES");
+        return getDirectories(modSource, System.getenv("MOD_CLASSES"));
+    }
+
+    /**
+     * Parse {@code MOD_CLASSES} for {@code modSource} — split out from
+     * {@link #getDirectories(File)} so the behavior is testable without
+     * mutating the process environment. Entries are {@code label%%path}
+     * pairs. Nonexistent and malformed members are ignored: Gradle does
+     * not create a resources output directory for a source set with no
+     * resources, but that nominal output dir still participates in
+     * source-set output serialization. FG2's recursive language scan
+     * dereferences {@code listFiles()} unconditionally, so passing the
+     * absent dir through crashes mod construction before FML assigns
+     * its event channels. The label match includes the {@code %%}
+     * terminator so labels that share a prefix (for example {@code mod}
+     * and {@code mod2}) do not merge.
+     */
+    public static File[] getDirectories(File modSource, String modClasses) {
         if (!enabled(PROP_MOD_CLASSES) || modClasses == null) {
             return new File[]{modSource};
         }
         String[] entries = modClasses.split(File.pathSeparator);
         List<File> out = new ArrayList<>();
-        String classesDir = null;
+        String label = null;
         for (String entry : entries) {
-            String[] pair = entry.split("%%", 2);
-            if (new File(pair[1]).equals(modSource)) {
-                classesDir = pair[0];
+            int split = entry.indexOf("%%");
+            if (split < 0) continue;
+            if (new File(entry.substring(split + 2)).equals(modSource)) {
+                label = entry.substring(0, split);
                 break;
             }
         }
-        if (classesDir == null) {
+        if (label == null) {
             return new File[]{modSource};
         }
+        String prefix = label + "%%";
         for (String entry : entries) {
-            if (entry.startsWith(classesDir)) {
-                out.add(new File(entry.substring(classesDir.length() + 2)));
+            if (entry.startsWith(prefix)) {
+                File dir = new File(entry.substring(prefix.length()));
+                if (dir.isDirectory()) {
+                    out.add(dir);
+                }
             }
         }
         return out.toArray(new File[0]);

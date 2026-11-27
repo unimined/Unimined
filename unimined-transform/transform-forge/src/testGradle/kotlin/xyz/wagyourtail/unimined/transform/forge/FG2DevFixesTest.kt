@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.transform.forge
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -12,6 +13,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import xyz.wagyourtail.unimined.transform.forge.internal.fg2.FG2DevFixes
+import xyz.wagyourtail.unimined.transform.forge.internal.fg2.rt.UniminedFg2
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -153,6 +155,28 @@ class FG2DevFixesTest {
                         it.name == "searchDirForLanguages"
             } > 1, "injected searchDirForLanguages call missing")
         }
+    }
+
+    @Test
+    fun `getDirectories skips absent malformed and prefix-colliding MOD_CLASSES members`() {
+        val source = Files.createDirectories(dir.resolve("classes/java/main")).toFile()
+        val resources = Files.createDirectories(dir.resolve("resources/main")).toFile()
+        val absent = dir.resolve("resources/absent").toFile()
+        val collision = Files.createDirectories(dir.resolve("resources/collision")).toFile()
+        val sep = java.io.File.pathSeparator
+        val serialized = listOf(
+            "omnilook%%${resources.absolutePath}",
+            "omnilook%%${absent.absolutePath}",
+            "omnilook%%${source.absolutePath}",
+            "omnilook2%%${collision.absolutePath}",
+            "malformed",
+        ).joinToString(sep)
+
+        assertEquals(
+            listOf(resources, source),
+            UniminedFg2.getDirectories(source, serialized).toList(),
+            "only existing dirs from the exact label group may be returned"
+        )
     }
 
     @Test
