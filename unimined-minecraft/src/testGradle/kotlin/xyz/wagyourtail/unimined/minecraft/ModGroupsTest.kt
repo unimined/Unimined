@@ -119,14 +119,53 @@ class ModGroupsTest {
     }
 
     @Test
-    fun `mergeModClasses keeps the loader contribution first`() {
+    fun `mergeModClasses unions entries by label`() {
         val sep = File.pathSeparator
+        // entries sharing a label interleave into one group — FML/
+        // bootstrap-dev group purely by the `%%` prefix, so a split
+        // union would split the mod into two modfiles
         assertEquals(
-            "base${sep}ours",
+            "omnilook%%a${sep}omnilook%%b",
+            ModGroups.mergeModClasses("omnilook%%a", "omnilook%%b"))
+        // distinct labels keep declaration order
+        assertEquals(
+            "x%%a${sep}y%%b",
+            ModGroups.mergeModClasses("x%%a", "y%%b"))
+        // duplicates within a label collapse
+        assertEquals(
+            "x%%a",
+            ModGroups.mergeModClasses("x%%a", "x%%a"))
+        // raw paths fall under the runtimes' own defaultmodid fallback
+        assertEquals(
+            "defaultmodid%%base${sep}defaultmodid%%ours",
             ModGroups.mergeModClasses("base", "ours"))
-        assertEquals("ours", ModGroups.mergeModClasses(null, "ours"))
-        assertEquals("base", ModGroups.mergeModClasses("base", ""))
+        assertEquals("defaultmodid%%ours",
+            ModGroups.mergeModClasses(null, "ours"))
+        assertEquals("defaultmodid%%base",
+            ModGroups.mergeModClasses("base", ""))
         assertEquals("", ModGroups.mergeModClasses(null, ""))
+    }
+
+    @Test
+    fun `mergeModClasses orders metadata roots first and manifest member last`() {
+        val sep = File.pathSeparator
+        val metadataDir = dir.resolve("res").toFile().apply {
+            resolve("META-INF").mkdirs()
+            resolve("META-INF/mods.toml").writeText("modLoader=\"javafml\"")
+        }
+        val plain = dir.resolve("classes").toFile().apply { mkdirs() }
+        val manifest = dir.resolve("mod-classes").toFile().apply { mkdirs() }
+        // plain dir leading in the input must reorder behind the
+        // metadata root; the manifest member trails even when it
+        // didn't arrive last
+        val merged = ModGroups.mergeModClasses(
+            "omnilook%%${plain.absolutePath}${sep}omnilook%%${manifest.absolutePath}",
+            "omnilook%%${metadataDir.absolutePath}")
+        assertEquals(
+            "omnilook%%${metadataDir.absolutePath}" +
+                "${sep}omnilook%%${plain.absolutePath}" +
+                "${sep}omnilook%%${manifest.absolutePath}",
+            merged)
     }
 
     @Test

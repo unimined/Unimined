@@ -490,8 +490,29 @@ internal fun forgeGroups(
     }
 
     val ownKey = "${project.path}:${spec.environmentId}"
+    // forge-family runtimes group MOD_CLASSES purely by the `%%`
+    // label — one label is one exploded mod target / SecureJar union.
+    // The mods{} channel names its groups by mod id, so the env's own
+    // output must carry the same label or the runtime splits one
+    // logical mod into two modfiles: the env-classes half then has no
+    // metadata-bearing first root (dropped entirely on modlauncher
+    // eras) or double-registers the mod id when both halves carry a
+    // descriptor. unimined-mod publishes the resolved id as the
+    // `unimined.modId.<env>` extra property; absent it (mod plugin not
+    // applied, no id declared) the synthetic env key keeps pre-existing
+    // behavior.
+    val ownLabel = run {
+        val extra = project.extensions.getByType(
+            org.gradle.api.plugins.ExtraPropertiesExtension::class.java)
+        val key = "unimined.modId.${spec.environmentId}"
+        val published = if (extra.has(key)) extra.get(key) else null
+        // `orNull`, not `get()` — the published provider is valueless
+        // when neither `mod.id` nor a `*.mod.json` resource resolves
+        ((published as? Provider<*>)?.orNull as? String)
+            ?.takeIf(String::isNotBlank) ?: ownKey
+    }
     val groups = linkedMapOf(
-        ownKey to (dirsFor(project.path, spec.environmentId) +
+        ownLabel to (dirsFor(project.path, spec.environmentId) +
                 manifestMemberFor(ownKey)).toMutableList()
     )
     for ((refPath, refEnvId) in spec.inheritedEnvironmentReferences()) {
@@ -518,7 +539,7 @@ internal fun forgeGroups(
             // inherited non-forge env dirs merge into the owning
             // group — they must land *before* its manifest member so
             // the manifest stays the union's last META-INF carrier
-            val own = groups.getValue(ownKey)
+            val own = groups.getValue(ownLabel)
             own.addAll(own.size - 1, dirs)
         }
     }
@@ -540,6 +561,12 @@ internal fun forgeGroups(
     } ?: emptySet()
     if (runtimeClasspath.isNotEmpty()) {
         val covered = groups.values.flatten().toMutableSet()
+        // dirs a mods{} group already serializes under its own mod-id
+        // label must not re-enter as a second group here
+        minecraft.environments.findByName(spec.environmentId)
+            ?.effectiveModGroups()?.forEach { g ->
+                covered += g.launchFiles().map { it.absolutePath }
+            }
         for (proj in project.rootProject.allprojects) {
             val container = proj.extensions
                 .findByType(org.gradle.api.tasks.SourceSetContainer::class.java)
@@ -567,9 +594,9 @@ internal fun forgeGroups(
                         "[Unimined/ForgeLike] Non-forge " +
                             "${proj.path}:${ss.name} found in forge " +
                             "classpath groups, merging with current " +
-                            "($ownKey), this should've been manually " +
+                            "($ownLabel), this should've been manually " +
                             "specified with `combineWith`")
-                    val own = groups.getValue(ownKey)
+                    val own = groups.getValue(ownLabel)
                     own.addAll(own.size - 1, outDirs)
                 }
             }
@@ -578,7 +605,7 @@ internal fun forgeGroups(
     // a forge-family inherited env forms its own group — it needs
     // its own trailing manifest member too
     groups.entries.forEach { (key, dirs) ->
-        if (key != ownKey &&
+        if (key != ownLabel &&
             dirs.lastOrNull()?.contains("mod-classes") != true
         ) dirs.add(manifestMemberFor(key))
     }
