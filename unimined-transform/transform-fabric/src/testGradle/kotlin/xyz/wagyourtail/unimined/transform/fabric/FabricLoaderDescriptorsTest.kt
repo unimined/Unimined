@@ -23,6 +23,21 @@ class FabricLoaderDescriptorsTest {
     }
 
     @Test
+    fun `quilt classpath groups use quilt loader's system property`() {
+        // Quilt forked fabric-loader's dev grouping mechanism but reads
+        // `loader.classPathGroups`; there is no fabric.* compatibility
+        // fallback in ClasspathModCandidateFinder/SystemProperties.
+        assertEquals(
+            "loader.classPathGroups",
+            LoaderRegistry.resolveBuiltin("quilt")!!.capabilities["classpathGroups"]
+        )
+        assertEquals(
+            "fabric.classPathGroups",
+            LoaderRegistry.resolveBuiltin("fabric")!!.capabilities["classpathGroups"]
+        )
+    }
+
+    @Test
     fun `every intermediaryCoords row declares the split-era merge`() {
         // 1.x `FabricMinecraftTransformer.merge` remapped each side jar
         // into the shared intermediary column before the member merge —

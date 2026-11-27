@@ -109,9 +109,11 @@ internal class FabricLoaderDescriptors : LoaderDescriptorSource {
             splitMerge = splitEraIntermediaryMerge,
             capabilities = mapOf(
                 // dev-launch mod classpath groups serialize into
-                // this sysprop — fabric-loader #585 (loom.mods
-                // parity): groups `::`-separated, files `:`
-                "classpathGroups" to "fabric.classPathGroups",
+                // this sysprop — unlike fabric-loader, quilt-loader's
+                // ClasspathModCandidateFinder reads the loader.* key
+                // (SystemProperties.PATH_GROUPS); groups
+                // `::`-separated, files `:`
+                "classpathGroups" to "loader.classPathGroups",
                 "skipMcProvider" to "-Dloader.skipMcProvider"
             ),
             metadata = LoaderMetadataSpec(
