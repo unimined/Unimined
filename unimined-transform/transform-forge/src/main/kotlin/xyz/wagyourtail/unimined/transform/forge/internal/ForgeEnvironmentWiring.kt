@@ -348,6 +348,32 @@ internal object ForgeEnvironmentWiring {
                         !(coord.startsWith("org.lwjgl") &&
                                 (dep.version ?: "").startsWith("2"))
                 }
+                // the keep-filter only covers *direct* version-JSON
+                // entries — `com.paulscode:librarylwjglopenal` (kept
+                // for sound) drags `org.lwjgl.lwjgl:lwjgl:2.8.3` back
+                // in transitively. With original org.lwjgl bytes on
+                // the runtime classpath, cleanroom's LWJGLTransformer
+                // *merges* instead of substituting the lwjglx shim —
+                // 2.8.3's `<clinit>` loads the lwjgl2 native, which
+                // SIGSEGVs modern JVMs inside JNI_OnLoad. Cleanroom's
+                // own pom excludes both coords from every dependency;
+                // mirror that here — runtime only, compile keeps the
+                // lwjgl2 API surface mod code references
+                // (`org.lwjgl.input.Keyboard`).
+                project.configurations.named(
+                    environment.environmentId +
+                            "RuntimeClasspath"
+                ) { conf ->
+                    conf.exclude(
+                        mapOf("group" to "org.lwjgl.lwjgl")
+                    )
+                    conf.exclude(
+                        mapOf(
+                            "group" to "com.ibm.icu",
+                            "module" to "icu4j-core-mojang"
+                        )
+                    )
+                }
             }
             if (r?.profile is ForgeProfile.ZipPatches) {
                 project.extensions.getByType(TransformExtension::class.java)
