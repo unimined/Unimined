@@ -38,12 +38,14 @@ LOG="$FIXTURE_DIR/.verify-out.log"
 TASK="resolveDevClasspath"
 # per-fixture thresholds — the transform-wave artifact pattern and
 # sourceSet classpath size scale with declared mods + loader era.
-# `*-named.jar` is the dev-ns mod/MC remap naming on named-era envs;
-# merged-era envs (ornithe/jarmod) never produce it — their wave is
-# the merged MC jar + runtime exports. Values are conservative floors
-# (first-run actuals run higher); env overrides win.
+# `*-named.jar` is the dev-ns mod/MC remap naming on literal-named-era
+# envs; relabeled named columns use their canonical namespace instead
+# (fabric-modern's yarn chain produces `*-yarn.jar`). Merged-era envs
+# (ornithe/jarmod) never produce either — their wave is the merged MC
+# jar + runtime exports. Values are conservative floors (first-run
+# actuals run higher); env overrides win.
 case "$FIXTURE" in
-    fabric-modern)    WAVE_GLOB='*-named.jar';    DEF_JARS=60; DEF_CP=100 ;;
+    fabric-modern)    WAVE_GLOB='*-yarn.jar';     DEF_JARS=60; DEF_CP=100 ;;
     forge-userdev)    WAVE_GLOB='*-mojmap.jar';   DEF_JARS=1;  DEF_CP=30 ;;
     neoforge)         WAVE_GLOB='*-mojmap.jar';   DEF_JARS=1;  DEF_CP=30 ;;
     legacy-fg2)       WAVE_GLOB='*-mcp.jar';      DEF_JARS=2;  DEF_CP=30 ;;
